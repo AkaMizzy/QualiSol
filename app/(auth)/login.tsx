@@ -25,7 +25,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ConnectivityModal from '../../components/Connectivity/ConnectivityModal';
 import CustomAlert from '../../components/CustomAlert';
-import ForgotPasswordModal from '../../components/ForgotPasswordModal';
+import ForgetPassword from '../../components/ForgetPassword';
 import ServerDownModal from '../../components/ServerHealth/ServerDownModal';
 import ServerHealthModal from '../../components/ServerHealth/ServerHealthModal';
 import { ICONS } from '../../constants/Icons';
@@ -327,10 +327,6 @@ export default function LoginScreen() {
         duration={alert.type === 'success' ? 2000 : 4000}
       />
 
-      <ForgotPasswordModal
-        visible={isForgotPasswordModalVisible}
-        onClose={() => setForgotPasswordModalVisible(false)}
-      />
 
       <ServerHealthModal
         visible={isHealthModalVisible}
@@ -353,6 +349,23 @@ export default function LoginScreen() {
           if (!offline) setConnectivityDismissed(false);
         }}
         onClose={() => setConnectivityDismissed(true)}
+      />
+
+      <ForgetPassword
+        visible={isForgotPasswordModalVisible}
+        onClose={() => setForgotPasswordModalVisible(false)}
+        onSuccess={() => {
+          // Surface top-level success and keep user on login
+          setForgotPasswordModalVisible(false);
+          setTimeout(() => {
+            setAlert({
+              visible: true,
+              type: 'success',
+              title: 'Demande envoyée',
+              message: '📩 Un e-mail vous a été envoyé. Veuillez vérifier votre boîte de réception.',
+            });
+          }, 50);
+        }}
       />
 
       {/* Floating Health FAB */}
