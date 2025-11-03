@@ -1,4 +1,6 @@
+import { ICONS } from '@/constants/Icons';
 import { getHealthStatus } from '@/services/health';
+import { Image } from 'expo-image';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -39,6 +41,15 @@ export default function ServerHealthModal({ visible, onClose }: Props) {
       <SafeAreaView style={styles.overlay}>
         <View style={styles.card} accessibilityLabel="Server status modal">
           <Text style={styles.title}>Server Health</Text>
+
+          {(status === 'down' || status === 'error') && (
+            <Image
+              source={ICONS.constructionGif}
+              style={styles.gif}
+              contentFit="contain"
+              accessibilityLabel="Illustration d'indisponibilité"
+            />
+          )}
 
           <View style={styles.statusRow}>
             <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
@@ -99,6 +110,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 12,
+  },
+  gif: {
+    width: 180,
+    height: 120,
+    alignSelf: 'center',
+    marginBottom: 8,
   },
   title: {
     fontSize: 18,

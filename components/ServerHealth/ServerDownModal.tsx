@@ -38,8 +38,8 @@ export default function ServerDownModal({ visible, onClose }: Props) {
             contentFit="contain"
             accessibilityLabel="Illustration de serveur en panne"
           />
-          <Text style={styles.title}>🛠️ Le serveur est indisponible</Text>
-          <Text style={styles.message}>Le serveur est en panne, veuillez réessayer plus tard.</Text>
+          <Text style={styles.title}>🛠️ Service momentanément indisponible</Text>
+          <Text style={styles.message}>Nous rencontrons un incident technique. Veuillez réessayer plus tard.</Text>
           <View style={styles.actions}>
             <Pressable onPress={onClose} style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Fermer">
               <Text style={styles.closeText}>Fermer</Text>
