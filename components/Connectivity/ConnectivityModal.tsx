@@ -1,15 +1,16 @@
+import { ICONS } from '@/constants/Icons';
+import { Image } from 'expo-image';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Image } from 'expo-image';
-import { ICONS } from '@/constants/Icons';
 
 type Props = {
   visible: boolean;
+  onRetry: () => void;
   onClose: () => void;
 };
 
-export default function ServerDownModal({ visible, onClose }: Props) {
+export default function ConnectivityModal({ visible, onRetry, onClose }: Props) {
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.95)).current;
 
@@ -32,17 +33,21 @@ export default function ServerDownModal({ visible, onClose }: Props) {
       <SafeAreaView style={styles.overlay}>
         <Animated.View style={[styles.backdrop, { opacity }]} />
         <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
+          
           <Image
-            source={ICONS.constructionGif}
+            source={ICONS.wifiLostGif}
             style={styles.gif}
             contentFit="contain"
-            accessibilityLabel="Illustration de serveur en panne"
+            accessibilityLabel="Illustration de connectivité"
           />
-          <Text style={styles.title}>🛠️ Service momentanément indisponible</Text>
-          <Text style={styles.message}>Veuillez réessayer plus tard.</Text>
+          <Text style={styles.title}>⚠️ Pas de connexion Internet</Text>
+          <Text style={styles.message}>Veuillez vérifier votre Wi-Fi ou vos données mobiles.</Text>
           <View style={styles.actions}>
-            <Pressable onPress={onClose} style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Fermer">
-              <Text style={styles.closeText}>Fermer</Text>
+            <Pressable onPress={onRetry} style={({ pressed }) => [styles.actionButton, styles.retryButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Réessayer">
+              <Text style={styles.actionText}>Réessayer</Text>
+            </Pressable>
+            <Pressable onPress={onClose} style={({ pressed }) => [styles.actionButton, styles.closeButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Fermer">
+              <Text style={styles.actionText}>Fermer</Text>
             </Pressable>
           </View>
         </Animated.View>
@@ -71,7 +76,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
     padding: 20,
-    shadowColor: '#f87b1b',
+    shadowColor: '#11224e',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.18,
     shadowRadius: 24,
@@ -82,11 +87,14 @@ const styles = StyleSheet.create({
     width: 180,
     height: 120,
     marginBottom: 12,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    alignSelf: 'stretch',
   },
   title: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#f87b1b',
+    color: '#11224e',
     textAlign: 'center',
     marginBottom: 6,
   },
@@ -98,15 +106,23 @@ const styles = StyleSheet.create({
   actions: {
     marginTop: 16,
     width: '100%',
+    flexDirection: 'row',
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
     alignItems: 'center',
   },
-  closeButton: {
-    backgroundColor: '#f87b1b',
-    paddingVertical: 12,
-    paddingHorizontal: 22,
-    borderRadius: 10,
+  retryButton: {
+    backgroundColor: '#16a34a',
+    marginRight: 8,
   },
-  closeText: {
+  closeButton: {
+    backgroundColor: '#11224e',
+    marginLeft: 8,
+  },
+  actionText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',

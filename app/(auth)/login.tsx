@@ -1,4 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { getConnectivity, startConnectivityMonitoring } from '@/services/connectivity';
 import { startHealthPolling } from '@/services/health';
 import { Ionicons } from '@expo/vector-icons';
 import * as Google from 'expo-auth-session/providers/google';
@@ -20,6 +21,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import ConnectivityModal from '../../components/Connectivity/ConnectivityModal';
 import CustomAlert from '../../components/CustomAlert';
 import ForgotPasswordModal from '../../components/ForgotPasswordModal';
 import ServerDownModal from '../../components/ServerHealth/ServerDownModal';
@@ -60,6 +62,8 @@ export default function LoginScreen() {
   const [isForgotPasswordModalVisible, setForgotPasswordModalVisible] = useState(false);
   const [isHealthModalVisible, setHealthModalVisible] = useState(false);
   const [isDownModalDismissed, setDownModalDismissed] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
+  const [isConnectivityDismissed, setConnectivityDismissed] = useState(false);
   const [serverStatus, setServerStatus] = useState<'unknown' | 'loading' | 'ok' | 'down' | 'error'>('unknown');
 
   const [request, response, promptAsync] = Google.useAuthRequest({
@@ -143,6 +147,16 @@ export default function LoginScreen() {
   useEffect(() => {
     setServerStatus('loading');
     const stop = startHealthPolling((res) => setServerStatus(res.status));
+    return () => stop();
+  }, []);
+
+  // Connectivity monitoring
+  useEffect(() => {
+    const stop = startConnectivityMonitoring((res) => {
+      const offline = res.status === 'offline';
+      setIsOffline(offline);
+      if (!offline) setConnectivityDismissed(false);
+    }, 15000);
     return () => stop();
   }, []);
 
@@ -338,6 +352,18 @@ export default function LoginScreen() {
       <ServerDownModal
         visible={(serverStatus === 'down' || serverStatus === 'error') && !isDownModalDismissed}
         onClose={() => setDownModalDismissed(true)}
+      />
+
+      {/* Connectivity alert */}
+      <ConnectivityModal
+        visible={isOffline && !isConnectivityDismissed}
+        onRetry={async () => {
+          const res = await getConnectivity();
+          const offline = res.status === 'offline';
+          setIsOffline(offline);
+          if (!offline) setConnectivityDismissed(false);
+        }}
+        onClose={() => setConnectivityDismissed(true)}
       />
 
       {/* Floating Health FAB */}
