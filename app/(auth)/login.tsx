@@ -1,7 +1,9 @@
 import { useAuth } from '@/contexts/AuthContext';
+import * as authService from '@/services/authService';
 import { getConnectivity, startConnectivityMonitoring } from '@/services/connectivity';
 import { startHealthPolling } from '@/services/health';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Google from 'expo-auth-session/providers/google';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -30,10 +32,7 @@ import { ICONS } from '../../constants/Icons';
 
 WebBrowser.maybeCompleteAuthSession();
 
-interface LoginForm {
-  email: string;
-  password: string;
-}
+interface LoginForm { identifier: string; password: string }
 
 interface AlertState {
   visible: boolean;
@@ -45,12 +44,9 @@ interface AlertState {
 
 
 export default function LoginScreen() {
-  const { login, signInWithGoogle, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
-  const [form, setForm] = useState<LoginForm>({
-    email: '',
-    password: '',
-  });
+  const { signInWithGoogle } = useAuth();
+  const [form, setForm] = useState<LoginForm>({ identifier: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [alert, setAlert] = useState<AlertState>({
@@ -65,6 +61,7 @@ export default function LoginScreen() {
   const [isOffline, setIsOffline] = useState(false);
   const [isConnectivityDismissed, setConnectivityDismissed] = useState(false);
   const [serverStatus, setServerStatus] = useState<'unknown' | 'loading' | 'ok' | 'down' | 'error'>('unknown');
+  const [isLoading, setIsLoading] = useState(false);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId: "1003184877153-pe30nmchbu9ji54o957qkh1isusesn34.apps.googleusercontent.com",
@@ -74,10 +71,9 @@ export default function LoginScreen() {
 
   useEffect(() => {
     if (response?.type === 'success') {
-      const { authentication } = response;
-      if (authentication?.accessToken) {
-        handleGoogleSignIn(authentication.accessToken);
-      }
+      const anyResp: any = response;
+      const { authentication } = anyResp;
+      if (authentication?.accessToken) handleGoogleSignIn(authentication.accessToken);
     }
   }, [response]);
 
@@ -85,10 +81,8 @@ export default function LoginScreen() {
     const result = await signInWithGoogle(accessToken);
     if (result.success) {
       if (result.email) {
-        // User does not exist, redirect to register screen with email pre-filled
         router.push({ pathname: '/Register', params: { email: result.email } });
       } else {
-        // User exists and is logged in
         showAlert('success', 'Login Successful!', 'Welcome back to QualiSol.');
       }
     } else {
@@ -96,12 +90,6 @@ export default function LoginScreen() {
     }
   };
 
-  // Watch for authentication changes - navigation will be handled by AuthWrapper
-  useEffect(() => {
-    if (isAuthenticated) {
-      console.log('Login successful, post-login loading will begin...');
-    }
-  }, [isAuthenticated]);
 
   const handleInputChange = (field: keyof LoginForm, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -129,17 +117,20 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
-    if (!form.email || !form.password) {
+    if (!form.identifier || !form.password) {
       showAlert('error', 'Missing Information', 'Please fill in all fields to continue.');
       return;
     }
 
-    const result = await login(form.email, form.password);
-    
+    setIsLoading(true);
+    const result = await authService.login({ identifier: form.identifier, password: form.password });
+    setIsLoading(false);
     if (result.success) {
-      showAlert('success', 'Login Successful!', 'Welcome to QualiSol. Redirecting to your workspace...');
+      await AsyncStorage.setItem('TEMP_AUTH_TOKEN', result.data.token);
+      await AsyncStorage.setItem('TEMP_AUTH_USER', JSON.stringify(result.data.user));
+      showAlert('success', 'Connexion réussie!', 'Bienvenue chez Qualiphsol');
     } else {
-      showAlert('error', 'Login Failed', result.error || 'Invalid credentials. Please check your email and password.');
+      showAlert('error', 'Login Failed', result.error || 'Invalid credentials.');
     }
   };
 
@@ -195,28 +186,28 @@ export default function LoginScreen() {
 
               {/* Form */}
               <View style={styles.form}>
-                {/* Email Input */}
+                {/* identifier Input */}
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Identifiant</Text>
+                  <Text style={styles.inputLabel}>identifier</Text>
                   <View style={[
                     styles.inputWrapper,
-                    focusedField === 'email' && styles.inputWrapperFocused
+                    focusedField === 'identifier' && styles.inputWrapperFocused
                   ]}>
                     <Ionicons
                       name="person-outline"
                       size={22}
-                      color={focusedField === 'email' ? '#f87b1b' : '#6B7280'}
+                      color={focusedField === 'identifier' ? '#f87b1b' : '#6B7280'}
                       style={styles.inputIcon}
                     />
                     <TextInput
                       style={styles.input}
-                      placeholder="Enter l'identifiant"
+                      placeholder="Entrer l'identifier (email ou ID)"
                       placeholderTextColor="#9CA3AF"
-                      value={form.email}
-                      onChangeText={(value) => handleInputChange('email', value)}
-                      onFocus={() => handleInputFocus('email')}
+                      value={form.identifier}
+                      onChangeText={(value) => handleInputChange('identifier', value)}
+                      onFocus={() => handleInputFocus('identifier')}
                       onBlur={handleInputBlur}
-                      keyboardType="email-address"
+                      keyboardType="default"
                       autoCapitalize="none"
                       autoCorrect={false}
                     />
@@ -267,7 +258,7 @@ export default function LoginScreen() {
                 >
                   <Text style={styles.forgotPasswordText}>Mot de passe oublié?</Text>
                 </TouchableOpacity>
-
+                
                 {/* Login Button */}
                 <TouchableOpacity
                   style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
@@ -280,8 +271,6 @@ export default function LoginScreen() {
                     <Text style={styles.loginButtonText}>Se connecter</Text>
                   )}
                 </TouchableOpacity>
-
-              {/* Health Check Trigger moved to floating button */}
 
                 <View style={styles.orDivider}>
                   <View style={styles.dividerLine} />
@@ -328,7 +317,7 @@ export default function LoginScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
       
-      {/* Custom Alert */}
+      
       <CustomAlert
         visible={alert.visible}
         type={alert.type}

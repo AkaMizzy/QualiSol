@@ -1,12 +1,14 @@
+import { ICONS } from '@/constants/Icons';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useEffect, useRef } from 'react';
 import {
-    Animated,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 
@@ -147,20 +149,26 @@ export default function CustomAlert({
               activeOpacity={1}
               onPress={(e) => e.stopPropagation()}
             >
-              {/* Icon */}
+              {/* Icon / Image */}
               <View style={styles.iconContainer}>
-                <View
-                  style={[
-                    styles.iconBackground,
-                    { backgroundColor: colors.primary },
-                  ]}
-                >
-                  <Ionicons
-                    name={getIconName()}
-                    size={32}
-                    color="#FFFFFF"
-                  />
-                </View>
+                {type === 'success' ? (
+                  <View style={styles.imageWrapper}>
+                    <Image source={ICONS.newIcon} style={styles.image} contentFit="contain" />
+                  </View>
+                ) : (
+                  <View
+                    style={[
+                      styles.iconBackground,
+                      { backgroundColor: colors.primary },
+                    ]}
+                  >
+                    <Ionicons
+                      name={getIconName()}
+                      size={32}
+                      color="#FFFFFF"
+                    />
+                  </View>
+                )}
               </View>
 
               {/* Content */}
@@ -228,6 +236,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 6,
+  },
+  imageWrapper: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#f87b1b',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  image: {
+    width: 50,
+    height: 50,
   },
   content: {
     paddingHorizontal: 24,

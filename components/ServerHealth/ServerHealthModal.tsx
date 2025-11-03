@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
     padding: 20,
-    shadowColor: '#11224e',
+    shadowColor: '#f87b1b',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   closeButton: {
-    backgroundColor: '#11224e',
+    backgroundColor: '#f87b1b',
     marginLeft: 8,
   },
   actionText: {
