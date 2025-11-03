@@ -19,6 +19,7 @@ export const ICONS = {
   chatgpt: require('@/assets/icons/chatgpt.png'),
   folder: require('@/assets/icons/folder.png'),
   edit: require('@/assets/icons/edit.png'),
+  google: require('@/assets/icons/google.png'),
   // GIF icons
   cameraGif: require('@/assets/icons/camera.gif'),
   constructionGif: require('@/assets/icons/construction.gif'),

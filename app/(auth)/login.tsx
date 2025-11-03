@@ -1,7 +1,9 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { startHealthPolling } from '@/services/health';
 import { Ionicons } from '@expo/vector-icons';
 import * as Google from 'expo-auth-session/providers/google';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Linking from 'expo-linking';
 import { Link, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -18,8 +20,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import CustomAlert from '../../components/CustomAlert'
+import CustomAlert from '../../components/CustomAlert';
 import ForgotPasswordModal from '../../components/ForgotPasswordModal';
+import ServerDownModal from '../../components/ServerHealth/ServerDownModal';
+import ServerHealthModal from '../../components/ServerHealth/ServerHealthModal';
 import { ICONS } from '../../constants/Icons';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -54,6 +58,9 @@ export default function LoginScreen() {
     message: '',
   });
   const [isForgotPasswordModalVisible, setForgotPasswordModalVisible] = useState(false);
+  const [isHealthModalVisible, setHealthModalVisible] = useState(false);
+  const [isDownModalDismissed, setDownModalDismissed] = useState(false);
+  const [serverStatus, setServerStatus] = useState<'unknown' | 'loading' | 'ok' | 'down' | 'error'>('unknown');
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId: "1003184877153-pe30nmchbu9ji54o957qkh1isusesn34.apps.googleusercontent.com",
@@ -131,6 +138,24 @@ export default function LoginScreen() {
       showAlert('error', 'Login Failed', result.error || 'Invalid credentials. Please check your email and password.');
     }
   };
+
+  // Server health: auto-check on mount and poll periodically via service
+  useEffect(() => {
+    setServerStatus('loading');
+    const stop = startHealthPolling((res) => setServerStatus(res.status));
+    return () => stop();
+  }, []);
+
+  function getHealthColor(): string {
+    if (serverStatus === 'ok') return '#16a34a'; // green
+    if (serverStatus === 'down' || serverStatus === 'error') return '#dc2626'; // red
+    return '#6B7280'; // neutral while loading/unknown
+  }
+
+  // Reset dismiss when server is back online
+  useEffect(() => {
+    if (serverStatus === 'ok') setDownModalDismissed(false);
+  }, [serverStatus]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -242,15 +267,26 @@ export default function LoginScreen() {
                   )}
                 </TouchableOpacity>
 
+              {/* Health Check Trigger moved to floating button */}
+
                 <View style={styles.orDivider}>
                   <View style={styles.dividerLine} />
                   <Text style={styles.orText}>OR</Text>
                   <View style={styles.dividerLine} />
                 </View>
 
-                <TouchableOpacity style={styles.googleButton} onPress={() => promptAsync()}>
-                  <Ionicons name="logo-google" size={24} color="#fff" />
-                  <Text style={styles.googleButtonText}>Sign in with Google</Text>
+                <TouchableOpacity onPress={() => promptAsync()} activeOpacity={0.9} accessibilityRole="button" accessibilityLabel="Sign in with Google">
+                  <LinearGradient
+                    colors={["#EA4335", "#FBBC05", "#34A853", "#4285F4", "#A142F4"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.googleButtonBorder}
+                  >
+                    <View style={styles.googleButtonInner}>
+                      <Image source={ICONS.google} style={styles.googleIcon} contentFit="contain" />
+                      <Text style={styles.googleButtonText}>Se connecter avec Google</Text>
+                    </View>
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
             </View>
@@ -292,6 +328,28 @@ export default function LoginScreen() {
         visible={isForgotPasswordModalVisible}
         onClose={() => setForgotPasswordModalVisible(false)}
       />
+
+      <ServerHealthModal
+        visible={isHealthModalVisible}
+        onClose={() => setHealthModalVisible(false)}
+      />
+
+      {/* Automatic server down alert */}
+      <ServerDownModal
+        visible={(serverStatus === 'down' || serverStatus === 'error') && !isDownModalDismissed}
+        onClose={() => setDownModalDismissed(true)}
+      />
+
+      {/* Floating Health FAB */}
+      <TouchableOpacity
+        style={[styles.healthFab, { backgroundColor: getHealthColor() }]}
+        onPress={() => setHealthModalVisible(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Open server health check"
+        activeOpacity={0.8}
+      >
+        <Ionicons name="pulse" size={22} color="#FFFFFF" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -320,7 +378,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 12,
   },
   logoContainer: {
     width: 130,
@@ -334,7 +392,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 15,
     elevation: 10,
-    marginBottom: 24,
+    marginBottom: 8,
     borderWidth: 2,
     borderColor: '#f87b1b',
   },
@@ -413,6 +471,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  healthFab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#16a34a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#16a34a',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+  },
   forgotPassword: {
     alignSelf: 'flex-end',
     backgroundColor: '#FFFFFF',
@@ -449,10 +523,28 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   googleButtonText: {
-    color: '#FFFFFF',
+    color: '#111827',
     fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 12,
+    fontWeight: '700',
+    marginLeft: 10,
+  },
+  googleButtonBorder: {
+    borderRadius: 14,
+    padding: 2,
+    marginTop: 12,
+  },
+  googleButtonInner: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+  },
+  googleIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 10,
   },
   forgotPasswordText: {
     color: '#f87b1b',

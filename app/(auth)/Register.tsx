@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as Google from 'expo-auth-session/providers/google';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
@@ -258,9 +259,18 @@ export default function RegisterScreen() {
           </View>
           
           <View style={styles.card}>
-            <TouchableOpacity style={styles.googleButton} onPress={() => promptAsync()}>
-              <Ionicons name="logo-google" size={24} color="#fff" />
-              <Text style={styles.googleButtonText}>S&apos;inscrire avec Gmail</Text>
+            <TouchableOpacity onPress={() => promptAsync()} activeOpacity={0.9} accessibilityRole="button" accessibilityLabel="S'inscrire avec Google">
+              <LinearGradient
+                colors={["#EA4335", "#FBBC05", "#34A853", "#4285F4", "#A142F4"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.googleButtonBorder}
+              >
+                <View style={styles.googleButtonInner}>
+                  <Image source={ICONS.google} style={styles.googleIcon} contentFit="contain" />
+                  <Text style={styles.googleButtonText}>S&apos;inscrire avec Google</Text>
+                </View>
+              </LinearGradient>
             </TouchableOpacity>
 
             <View style={styles.orDivider}>
@@ -608,19 +618,31 @@ const styles = StyleSheet.create({
       padding: 5,
     },
     googleButton: {
+      // legacy style (kept for reference); not used by new gradient button
+    },
+    googleButtonText: {
+      color: '#111827',
+      fontSize: 16,
+      fontWeight: '700',
+      marginLeft: 10,
+    },
+    googleButtonBorder: {
+      borderRadius: 10,
+      padding: 2,
+      marginBottom: 16,
+    },
+    googleButtonInner: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 8,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#4285F4',
-      borderRadius: 8,
-      padding: 16,
-      marginBottom: 16,
+      paddingVertical: 12,
     },
-    googleButtonText: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: 'bold',
-      marginLeft: 12,
+    googleIcon: {
+      width: 20,
+      height: 20,
+      marginRight: 10,
     },
     orDivider: {
       flexDirection: 'row',
