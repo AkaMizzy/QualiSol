@@ -1,4 +1,3 @@
-import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -17,56 +16,48 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppHeader from '../../components/AppHeader';
+import * as authService from '../../services/authService';
 
 export default function ChangePasswordScreen() {
   const { user } = useAuth();
-  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const passwordsMatch = newPassword === confirmPassword;
+  const isPasswordValid = newPassword.length >= 6;
+  const canSubmit = passwordsMatch && isPasswordValid && !isLoading;
 
   const handleChangePassword = async () => {
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs.');
+    setError(null);
+    setSuccess(null);
+
+    if (!passwordsMatch) {
+      setError('Les nouveaux mots de passe ne correspondent pas.');
       return;
     }
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Erreur', 'Les nouveaux mots de passe ne correspondent pas.');
-      return;
-    }
-    if (newPassword.length < 6) {
-      Alert.alert('Erreur', 'Le nouveau mot de passe doit comporter au moins 6 caractères.');
+    if (!isPasswordValid) {
+      setError('Le nouveau mot de passe doit comporter au moins 6 caractères.');
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/change-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user?.id,
-          oldPassword,
-          newPassword,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        Alert.alert('Succès', 'Votre mot de passe a été changé avec succès.', [
-          { text: 'OK', onPress: () => router.back() },
-        ]);
+      const result = await authService.changePassword(newPassword);
+      if (result.success) {
+        setSuccess('✅ Votre mot de passe a été changé avec succès.');
+        setNewPassword('');
+        setConfirmPassword('');
+        setTimeout(() => router.back(), 2000);
       } else {
-        throw new Error(data.error || 'Une erreur est survenue.');
+        setError(result.error);
       }
-    } catch (error: any) {
-      Alert.alert('Erreur', error.message || 'Échec de la modification du mot de passe. Veuillez réessayer.');
+    } catch (err: any) {
+      setError(err.message || 'Échec de la modification du mot de passe. Veuillez réessayer.');
     } finally {
       setIsLoading(false);
     }
@@ -88,28 +79,8 @@ export default function ChangePasswordScreen() {
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <View style={styles.form}>
             <View style={styles.card}>
-              {/* Current Password */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Mot de passe actuel</Text>
-                <View style={styles.inputWrapper}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Entrez votre mot de passe actuel"
-                    placeholderTextColor="#9CA3AF"
-                    secureTextEntry={!showOldPassword}
-                    value={oldPassword}
-                    onChangeText={setOldPassword}
-                  />
-                  <TouchableOpacity onPress={() => setShowOldPassword(!showOldPassword)}>
-                    <Ionicons
-                      name={showOldPassword ? 'eye-off-outline' : 'eye-outline'}
-                      size={22}
-                      color="#f87b1b"
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
+              {error && <Text style={styles.errorText}>{error}</Text>}
+              {success && <Text style={styles.successText}>{success}</Text>}
               {/* New Password */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Nouveau mot de passe</Text>
@@ -152,11 +123,14 @@ export default function ChangePasswordScreen() {
                     />
                   </TouchableOpacity>
                 </View>
+                {confirmPassword.length > 0 && !passwordsMatch && (
+                  <Text style={styles.mismatchText}>Les mots de passe ne correspondent pas.</Text>
+                )}
               </View>
               <TouchableOpacity
-                style={[styles.button, isLoading && styles.buttonDisabled]}
+                style={[styles.button, !canSubmit && styles.buttonDisabled]}
                 onPress={handleChangePassword}
-                disabled={isLoading}
+                disabled={!canSubmit}
               >
                 {isLoading ? (
                   <ActivityIndicator color="#FFFFFF" />
@@ -251,5 +225,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  errorText: {
+    color: 'red',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  successText: {
+    color: 'green',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  mismatchText: {
+    color: '#D92D20', // A red color for the error
+    fontSize: 12,
+    marginTop: 4,
   },
 });

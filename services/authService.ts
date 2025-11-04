@@ -156,3 +156,18 @@ export async function signup(data: SignupData): Promise<{ success: boolean; erro
     return { success: false, error: message };
   }
 }
+
+export type ChangePasswordResult = { success: true } | { success: false; error: string };
+
+export async function changePassword(password: string): Promise<ChangePasswordResult> {
+  try {
+    const response = await api.post('/api/users/changePassword', { newPassword: password });
+    if (response.status === 200) {
+      return { success: true };
+    }
+    return { success: false, error: "Une erreur s'est produite. Veuillez réessayer." };
+  } catch (err: any) {
+    const message = err?.response?.data?.error || 'Erreur réseau. Veuillez réessayer.';
+    return { success: false, error: message };
+  }
+}

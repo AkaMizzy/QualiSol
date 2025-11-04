@@ -244,36 +244,36 @@ export default function DashboardScreen() {
             <Pressable
               key={item.title}
               style={[styles.gridButton, item.disabled && styles.gridButtonDisabled]}
-              // onPress={() => {
-              //   if (item.title === 'Réception') {
-              //     router.push('/(tabs)/qualiphoto');
-              //   } else if (item.title === 'Planning') {
-              //     router.push('/planning');
-              //   } else if (item.title === 'Calendrier') {
-              //     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-              //     setIsCalendarVisible(prevState => !prevState);
-              //   } else if (item.title === 'Suivi') {
-              //     router.push('/manifolder');
-              //   } else if (item.title === 'Déclarations') {
-              //     router.push('/declaration');
-              //   } else if (item.title === 'Audit') {
-              //     router.push('/audit');
-              //   } else if (item.title === 'Echantillon') {
-              //     router.push('/echantillon');
-              //   } else if (item.title === 'Inventaires') {
-              //     router.push('/inventaire');
-              //   } else if (item.title === 'Projets') {
-              //     router.push('/projects');
-              //   } else if (item.title === 'Paramètres') {
-              //     router.push('/parametre');
-              //   } else if (item.title === 'Utilisateurs') {
-              //     router.push('/users');
-              //   } else if (item.title === 'Organisme') {
-              //     router.push('/company');
-              //   } else {
-              //     Alert.alert('Bientôt disponible', `La fonctionnalité ${item.title} est en cours de développement.`);
-              //   }
-              // }}
+              onPress={() => {
+                if (item.title === 'Réception') {
+                  //router.push('/(tabs)/qualiphoto');
+                } else if (item.title === 'Planning') {
+                  //router.push('/planning');
+                } else if (item.title === 'Calendrier') {
+                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                  setIsCalendarVisible(prevState => !prevState);
+                } else if (item.title === 'Suivi') {
+                  //router.push('/manifolder');
+                } else if (item.title === 'Déclarations') {
+                  //router.push('/declaration');
+                } else if (item.title === 'Audit') {
+                  //router.push('/audit');
+                } else if (item.title === 'Echantillon') {
+                  //router.push('/echantillon');
+                } else if (item.title === 'Inventaires') {
+                  //router.push('/inventaire');
+                } else if (item.title === 'Projets') {
+                  //router.push('/projects');
+                } else if (item.title === 'Paramètres') {
+                  //router.push('/parametre');
+                } else if (item.title === 'Utilisateurs') {
+                  //router.push('/users');
+                } else if (item.title === 'Organisme') {
+                  router.push('/company');
+                } else {
+                  Alert.alert('Bientôt disponible', `La fonctionnalité ${item.title} est en cours de développement.`);
+                }
+              }}
               disabled={item.disabled}
             >
               {item.image ? (
