@@ -1,4 +1,3 @@
-import { useAuth } from '@/contexts/AuthContext';
 import * as authService from '@/services/authService';
 import { getConnectivity, startConnectivityMonitoring } from '@/services/connectivity';
 import { getHealthStatus, startHealthPolling } from '@/services/health';
@@ -27,6 +26,7 @@ import ForgetPassword from '../../components/ForgetPassword';
 import ServerDownModal from '../../components/ServerHealth/ServerDownModal';
 import ServerHealthModal from '../../components/ServerHealth/ServerHealthModal';
 import { ICONS } from '../../constants/Icons';
+import { useAuth } from '../../contexts/AuthContext';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -40,9 +40,9 @@ interface AlertState {
 }
 
 export default function LoginScreen() {
+  const { setLoginData } = useAuth();
   const router = useRouter();
   const { bottom } = useSafeAreaInsets();
-  const { signInWithGoogle } = useAuth();
   const [form, setForm] = useState<LoginForm>({ identifier: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -75,16 +75,7 @@ export default function LoginScreen() {
   }, [response]);
 
   const handleGoogleSignIn = async (accessToken: string) => {
-    const result = await signInWithGoogle(accessToken);
-    if (result.success) {
-      if (result.email) {
-        router.push({ pathname: '/Register', params: { email: result.email } });
-      } else {
-        showAlert('success', 'Login Successful!', 'Welcome back to QualiSol.');
-      }
-    } else {
-      showAlert('error', 'Login Failed', result.error || 'Could not sign in with Google.');
-    }
+    showAlert('error', 'Bientôt disponible', 'La connexion avec Google est en cours de développement.');
   };
 
 
@@ -123,7 +114,9 @@ export default function LoginScreen() {
     const result = await authService.login({ identifier: form.identifier, password: form.password });
     setIsLoading(false);
     if (result.success) {
-      showAlert('success', 'Connexion réussie!', 'Bienvenue chez Qualiphsol');
+      // The router.replace will be handled by the AuthWrapper now
+      // We just need to set the login data in the context
+      await setLoginData(result.data);
     } else {
       showAlert('error', 'Login Failed', result.error || 'Invalid credentials.');
     }

@@ -18,17 +18,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AppHeader from '../../components/AppHeader';
 
 export default function ProfileScreen() {
-  const { user, logout, isAuthenticated, updateUser } = useAuth();
+  const { user, logout, updateUser, token } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
 
   // Watch for authentication changes and navigate automatically
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!user) {
       console.log('Profile screen detected logout, navigating to login...');
       router.replace('/(auth)/login');
     }
-  }, [isAuthenticated]);
+  }, [user]);
 
   const handlePickImage = async () => {
     // Request permissions
@@ -60,7 +60,7 @@ export default function ProfileScreen() {
   };
   
   const handleUploadPhoto = async (asset: ImagePicker.ImagePickerAsset) => {
-    if (!user) return;
+    if (!user || !token) return;
     setIsUploading(true);
   
     const uriParts = asset.uri.split('.');
@@ -79,8 +79,7 @@ export default function ProfileScreen() {
         body: formData,
         headers: {
           'Content-Type': 'multipart/form-data',
-          // Add auth token if needed by your backend
-          // 'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
   
@@ -117,8 +116,7 @@ export default function ProfileScreen() {
           onPress: async () => {
             console.log('Logging out...');
             await logout();
-            console.log('Logout completed, waiting for navigation...');
-            // Navigation will be handled automatically by the useEffect above
+            console.log('Logout completed, navigation will be handled by AuthWrapper.');
           },
         },
       ]

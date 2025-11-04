@@ -1,6 +1,6 @@
 import api, { setAuthToken } from './api';
 import { getHealthStatus } from './health';
-import { clearHealthToken, getHealthToken, saveAuthToken } from './secureStore';
+import { clearHealthToken, getHealthToken, saveAuthToken, saveUser } from './secureStore';
 
 export type LoginInput = { identifier: string; password: string };
 export type LoginSuccess = { token: string; user: any };
@@ -22,6 +22,7 @@ export async function login({ identifier, password }: LoginInput): Promise<Login
       if (response.status === 200 && data?.token) {
         const authToken: string = data.token;
         await saveAuthToken(authToken);
+        await saveUser(data);
         await clearHealthToken();
         setAuthToken(authToken);
         return { success: true, data: { token: authToken, user: data } };
@@ -43,6 +44,7 @@ export async function login({ identifier, password }: LoginInput): Promise<Login
           if (alt.status === 200 && data2?.token) {
             const authToken: string = data2.token;
             await saveAuthToken(authToken);
+            await saveUser(data2);
             await clearHealthToken();
             setAuthToken(authToken);
             return { success: true, data: { token: authToken, user: data2 } };

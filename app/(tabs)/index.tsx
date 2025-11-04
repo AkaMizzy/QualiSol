@@ -1,10 +1,5 @@
-import { useAuth } from '@/contexts/AuthContext';
 import { createCalendarEvent } from '@/services/calendarService';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import AppHeader from '../../components/AppHeader'
-import CalendarComp from '../../components/CalendarComp';
-import CreateCalendarEventModal from '../../components/CreateCalendarEventModal';
-import DayEventsModal from '../../components/DayEventsModal';
+import { getAuthToken, getUser } from '@/services/secureStore';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -19,10 +14,15 @@ import {
   View,
   useWindowDimensions
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import AppHeader from '../../components/AppHeader';
+import CalendarComp from '../../components/calander/CalendarComp';
+import CreateCalendarEventModal from '../../components/calander/CreateCalendarEventModal';
+import DayEventsModal from '../../components/calander/DayEventsModal';
 
 import API_CONFIG from '../config/api';
 
-const GRID_ITEMS: {
+const GRID_ITEMS: { 
   title: string;
   icon?: keyof typeof Ionicons.glyphMap;
   image?: any;
@@ -55,7 +55,8 @@ const GRID_ITEMS: {
 // ];
 
 export default function DashboardScreen() {
-  const { token, user } = useAuth();
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
   const router = useRouter();
   const { height } = useWindowDimensions();
   const [eventModalVisible, setEventModalVisible] = useState(false);
@@ -69,6 +70,16 @@ export default function DashboardScreen() {
   const [overdueActivities, setOverdueActivities] = useState<any[]>([]);
   const [upcomingActivities, setUpcomingActivities] = useState<any[]>([]);
   const [expandedSection, setExpandedSection] = useState<string | null>('overdue');
+
+  useEffect(() => {
+    async function loadAuthData() {
+      const storedToken = await getAuthToken();
+      const storedUser = await getUser();
+      setToken(storedToken);
+      setUser(storedUser);
+    }
+    loadAuthData();
+  }, []);
 
   useEffect(() => {
     (async () => {

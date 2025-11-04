@@ -1,35 +1,69 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+// import { CustomTabBar } from '@/components/CustomTabBar';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+        freezeOnBlur: true,
+        tabBarStyle: { 
+          display: 'none',
+          height: 0,
+          padding: 0,
+          margin: 0,
+        },
+        tabBarShowLabel: false,
+        tabBarActiveTintColor: 'transparent',
+        tabBarInactiveTintColor: 'transparent',
+      }}
+      // tabBar={(props) => <CustomTabBar {...props} />}
+    >
       <Tabs.Screen
-        name="index"
+        name="manifolder"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Manifold',
+          
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="declaration"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Declaration',
+          
         }}
       />
+      
+      <Tabs.Screen
+        name="audit"
+        options={{
+          title: 'Audit',
+          
+        }}
+      />
+      <Tabs.Screen
+        name="echantillon"
+        options={{
+          title: 'Echantillon',
+         
+        }}
+      />
+      <Tabs.Screen
+        name="inventaire"
+        options={{
+          title: 'Inventaire',
+        }}
+      />
+      <Tabs.Screen
+        name="parametre"
+        options={{
+          title: 'Parametre',
+        }}
+      />
+     
+      {/* Profile tab removed; accessible via header icon */}
     </Tabs>
   );
 }

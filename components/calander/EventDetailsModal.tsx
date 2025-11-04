@@ -1,10 +1,10 @@
 import API_CONFIG from '@/app/config/api';
-import { CALENDAR_CONTEXTS } from '../constants/Calendar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import React from 'react';
 import { Animated, Easing, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { CALENDAR_CONTEXTS } from '../../constants/Calendar';
 
 interface Props {
   visible: boolean;
