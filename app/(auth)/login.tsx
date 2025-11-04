@@ -14,15 +14,13 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import ConnectivityModal from '../../components/Connectivity/ConnectivityModal';
 import CustomAlert from '../../components/CustomAlert';
 import ForgetPassword from '../../components/ForgetPassword';
@@ -45,6 +43,7 @@ interface AlertState {
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { bottom } = useSafeAreaInsets();
   const { signInWithGoogle } = useAuth();
   const [form, setForm] = useState<LoginForm>({ identifier: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -153,7 +152,7 @@ export default function LoginScreen() {
 
   function getHealthColor(): string {
     if (serverStatus === 'ok') return '#16a34a'; // green
-    if (serverStatus === 'down' || serverStatus === 'error') return '#dc2626'; // red
+    if (serverStatus === 'down' || serverStatus === 'error') return '#f87b1b'; 
     return '#6B7280'; // neutral while loading/unknown
   }
 
@@ -165,13 +164,13 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        enabled={false}
+        behavior={undefined}
         style={styles.keyboardView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        keyboardVerticalOffset={0}
       >
-        <ScrollView contentContainerStyle={styles.scrollViewContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.content}>
-            <View style={styles.mainContent}>
+        <View style={styles.content}>
+          <View style={styles.mainContent}>
               {/* Header */}
               <View style={styles.header}>
                 <View style={styles.logoContainer}>
@@ -201,7 +200,7 @@ export default function LoginScreen() {
                     />
                     <TextInput
                       style={styles.input}
-                      placeholder="Entrer l'identifier (email ou ID)"
+                      placeholder="Entrer l'identifiant"
                       placeholderTextColor="#9CA3AF"
                       value={form.identifier}
                       onChangeText={(value) => handleInputChange('identifier', value)}
@@ -216,7 +215,7 @@ export default function LoginScreen() {
 
                 {/* Password Input */}
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Password</Text>
+                  <Text style={styles.inputLabel}>Mot de passe</Text>
                   <View style={[
                     styles.inputWrapper,
                     focusedField === 'password' && styles.inputWrapperFocused
@@ -295,7 +294,7 @@ export default function LoginScreen() {
             </View>
 
             {/* Footer */}
-            <View style={styles.footer}>
+            <View style={[styles.footer, { paddingBottom: Math.max(16, bottom) }]}>
               <Text style={styles.footerText}>
                 Vous n&apos;avez pas de compte?{' '}
                 <Link href="/Register" style={styles.footerLink}>
@@ -312,9 +311,8 @@ export default function LoginScreen() {
               >
                 <Text style={styles.websiteText}>www.muntaada.com</Text>
               </TouchableOpacity>
-            </View>
           </View>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
       
       
@@ -368,13 +366,14 @@ export default function LoginScreen() {
         }}
       />
 
-      {/* Floating Health FAB */}
+      {/* Floating Health FAB (non-clickable indicator) */}
       <TouchableOpacity
-        style={[styles.healthFab, { backgroundColor: getHealthColor() }]}
-        onPress={() => setHealthModalVisible(true)}
+        style={[styles.healthFab, { backgroundColor: getHealthColor(), bottom: bottom + 16 }]}
+        disabled
         accessibilityRole="button"
-        accessibilityLabel="Open server health check"
-        activeOpacity={0.8}
+        accessibilityLabel="Server health indicator"
+        accessibilityState={{ disabled: true }}
+        activeOpacity={1}
       >
         <Ionicons name="pulse" size={22} color="#FFFFFF" />
       </TouchableOpacity>
@@ -397,7 +396,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 32,
+    paddingHorizontal: 24,
     justifyContent: 'space-between',
   },
   mainContent: {
@@ -409,8 +408,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   logoContainer: {
-    width: 130,
-    height: 130,
+    width: 110,
+    aspectRatio: 1,
     borderRadius: 20,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
@@ -480,7 +479,7 @@ const styles = StyleSheet.create({
   loginButton: {
     backgroundColor: '#f87b1b',
     borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
     marginTop: 12,
     shadowColor: '#f87b1b',
@@ -532,14 +531,18 @@ const styles = StyleSheet.create({
   },
   dividerLine: {
     flex: 1,
-    height: 1,
+    height: StyleSheet.hairlineWidth,
     backgroundColor: '#E5E7EB',
   },
   orText: {
     alignSelf: 'center',
-    paddingHorizontal: 8,
+    marginHorizontal: 12,
+    paddingHorizontal: 6,
     fontSize: 14,
     color: '#6B7280',
+    backgroundColor: '#FFFFFF',
+    zIndex: 1,
+    textAlignVertical: 'center',
   },
   googleButton: {
     flexDirection: 'row',
@@ -567,7 +570,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
   },
   googleIcon: {
     width: 20,
@@ -582,6 +585,7 @@ const styles = StyleSheet.create({
   footer: {
     alignItems: 'center',
     paddingBottom: 20,
+    flexShrink: 0,
   },
   footerText: {
     fontSize: 14,
