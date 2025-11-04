@@ -39,8 +39,6 @@ interface AlertState {
   message: string;
 }
 
-
-
 export default function LoginScreen() {
   const router = useRouter();
   const { bottom } = useSafeAreaInsets();
