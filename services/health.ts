@@ -1,10 +1,12 @@
 import API_CONFIG from '@/app/config/api';
+import { clearHealthToken, saveHealthToken } from '@/services/secureStore';
 
 export type ServerHealth = 'ok' | 'down' | 'error';
 
 export type HealthResponse = {
   status: ServerHealth;
   message: string;
+  token?: string;
 };
 
 export async function getHealthStatus(): Promise<HealthResponse> {
@@ -16,14 +18,25 @@ export async function getHealthStatus(): Promise<HealthResponse> {
     const res = await fetch(url, { signal: controller.signal });
     clearTimeout(timeout);
 
-    if (!res.ok) return { status: 'down', message: `HTTP ${res.status}` };
+    if (!res.ok) {
+      await clearHealthToken();
+      return { status: 'down', message: `HTTP ${res.status}` };
+    }
 
     let body: any = null;
     try { body = await res.json(); } catch {}
     const ok = body?.status === 'ok' || body?.healthy === true || res.status === 200;
-    return { status: ok ? 'ok' : 'down', message: ok ? 'Server is healthy' : 'Server reported unhealthy' };
+    const token: string | undefined = body?.token;
+    if (ok && token) await saveHealthToken(token);
+    if (!ok) await clearHealthToken();
+    return {
+      status: ok ? 'ok' : 'down',
+      message: ok ? (body?.message ?? 'Server is healthy') : (body?.message ?? 'Server reported unhealthy'),
+      token,
+    };
   } catch (err: any) {
     const aborted = err?.name === 'AbortError';
+    await clearHealthToken();
     return { status: 'error', message: aborted ? 'Request timed out' : 'Network error' };
   }
 }

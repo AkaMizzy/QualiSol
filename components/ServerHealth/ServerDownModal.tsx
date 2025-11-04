@@ -7,9 +7,10 @@ import { ICONS } from '@/constants/Icons';
 type Props = {
   visible: boolean;
   onClose: () => void;
+  onRetry?: () => Promise<void> | void;
 };
 
-export default function ServerDownModal({ visible, onClose }: Props) {
+export default function ServerDownModal({ visible, onClose, onRetry }: Props) {
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.95)).current;
 
@@ -41,6 +42,16 @@ export default function ServerDownModal({ visible, onClose }: Props) {
           <Text style={styles.title}>🛠️ Service momentanément indisponible</Text>
           <Text style={styles.message}>Veuillez réessayer plus tard.</Text>
           <View style={styles.actions}>
+            {onRetry ? (
+              <Pressable
+                onPress={onRetry}
+                style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel="Réessayer"
+              >
+                <Text style={styles.retryText}>Réessayer</Text>
+              </Pressable>
+            ) : null}
             <Pressable onPress={onClose} style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Fermer">
               <Text style={styles.closeText}>Fermer</Text>
             </Pressable>
@@ -99,6 +110,18 @@ const styles = StyleSheet.create({
     marginTop: 16,
     width: '100%',
     alignItems: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#11224e',
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  retryText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
   closeButton: {
     backgroundColor: '#f87b1b',

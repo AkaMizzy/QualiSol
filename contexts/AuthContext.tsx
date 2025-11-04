@@ -23,8 +23,6 @@ interface AuthState {
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (formData: any) => Promise<{ success: boolean; error?: string }>;
-  signInWithGoogle: (accessToken: string) => Promise<{ success: boolean; error?: string; email?: string }>;
   logout: () => Promise<void>;
   updateUser: (userData: Partial<User>) => void;
   completePostLoginLoading: () => void;
@@ -94,52 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (formData: any): Promise<{ success: boolean; error?: string }> => {
-    try {
-      setAuthState(prev => ({ ...prev, isLoading: true }));
-  
-      const isDetailedRegistration = formData instanceof FormData;
-      const endpoint = isDetailedRegistration
-        ? `/auth/register/detailed`
-        : `/auth/register/simple`;
-  
-      const response = await api({
-        method: 'POST',
-        url: endpoint,
-        data: formData,
-        headers: isDetailedRegistration ? { 'Content-Type': 'multipart/form-data' } : {},
-      });
-  
-      const data = response.data;
-  
-      if (response.status === 201) {
-        // Store auth data
-        await Promise.all([
-          AsyncStorage.setItem(STORAGE_KEYS.TOKEN, data.token),
-          AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user)),
-        ]);
-        
-        setAuthToken(data.token); // Set token for API calls
-  
-        setAuthState({
-          user: { ...data.user, id: String(data.user.id) },
-          token: data.token,
-          isLoading: false,
-          isAuthenticated: true,
-          isPostLoginLoading: true,
-        });
-        return { success: true };
-      } else {
-        setAuthState(prev => ({ ...prev, isLoading: false }));
-        return { success: false, error: data.error || 'Registration failed' };
-      }
-    } catch (error) {
-      console.error('Registration error:', error);
-      setAuthState(prev => ({ ...prev, isLoading: false }));
-      return { success: false, error: 'Network error. Please check your connection.' };
-    }
-  };
-
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
@@ -186,47 +138,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Login error:', error);
-      setAuthState(prev => ({ ...prev, isLoading: false }));
-      return { success: false, error: 'Network error. Please check your connection.' };
-    }
-  };
-
-  const signInWithGoogle = async (accessToken: string): Promise<{ success: boolean; error?: string; email?: string }> => {
-    try {
-      setAuthState(prev => ({ ...prev, isLoading: true }));
-
-      const response = await api.post('/auth/google', { accessToken });
-      const data = response.data;
-
-      if (response.status === 200) {
-        if (data.needsRegistration) {
-          // User needs to complete registration
-          setAuthState(prev => ({ ...prev, isLoading: false }));
-          return { success: true, email: data.email };
-        } else {
-          // User is already registered, log them in
-          await Promise.all([
-            AsyncStorage.setItem(STORAGE_KEYS.TOKEN, data.token),
-            AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data)),
-          ]);
-
-          setAuthToken(data.token);
-
-          setAuthState({
-            user: { ...data, id: String(data.id) },
-            token: data.token,
-            isLoading: false,
-            isAuthenticated: true,
-            isPostLoginLoading: true,
-          });
-          return { success: true };
-        }
-      } else {
-        setAuthState(prev => ({ ...prev, isLoading: false }));
-        return { success: false, error: data.error || 'Google Sign-In failed' };
-      }
-    } catch (error) {
-      console.error('Google Sign-In error:', error);
       setAuthState(prev => ({ ...prev, isLoading: false }));
       return { success: false, error: 'Network error. Please check your connection.' };
     }
@@ -282,8 +193,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthContextType = {
     ...authState,
     login,
-    register,
-    signInWithGoogle,
     logout,
     updateUser,
     completePostLoginLoading,

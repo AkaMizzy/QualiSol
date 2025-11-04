@@ -1,9 +1,9 @@
 import { useAuth } from '@/contexts/AuthContext';
 import * as authService from '@/services/authService';
 import { getConnectivity, startConnectivityMonitoring } from '@/services/connectivity';
-import { startHealthPolling } from '@/services/health';
+import { getHealthStatus, startHealthPolling } from '@/services/health';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+ 
 import * as Google from 'expo-auth-session/providers/google';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -123,8 +123,6 @@ export default function LoginScreen() {
     const result = await authService.login({ identifier: form.identifier, password: form.password });
     setIsLoading(false);
     if (result.success) {
-      await AsyncStorage.setItem('TEMP_AUTH_TOKEN', result.data.token);
-      await AsyncStorage.setItem('TEMP_AUTH_USER', JSON.stringify(result.data.user));
       showAlert('success', 'Connexion réussie!', 'Bienvenue chez Qualiphsol');
     } else {
       showAlert('error', 'Login Failed', result.error || 'Invalid credentials.');
@@ -333,6 +331,10 @@ export default function LoginScreen() {
       <ServerDownModal
         visible={(serverStatus === 'down' || serverStatus === 'error') && !isDownModalDismissed}
         onClose={() => setDownModalDismissed(true)}
+        onRetry={async () => {
+          const res = await getHealthStatus();
+          setServerStatus(res.status);
+        }}
       />
 
       {/* Connectivity alert */}
