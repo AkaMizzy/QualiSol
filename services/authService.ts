@@ -133,7 +133,7 @@ export async function checkEmailExists(email: string): Promise<{ exists: boolean
 export interface SignupData {
   email: string;
   title: string;
-  phone1: string;
+  phone: string;
   pays: string;
   ville: string;
 }

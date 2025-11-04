@@ -1,3 +1,4 @@
+import CustomAlert from '@/components/CustomAlert';
 import { ICONS } from '@/constants/Icons';
 import { checkEmailExists, signup } from '@/services/authService';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,7 +7,6 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -31,7 +31,7 @@ export default function RegisterScreen() {
     title: '',
     pays: '',
     ville: '',
-    phone1: '',
+    phone: '',
     email: '',
   });
   const [countries, setCountries] = useState<Country[]>([]);
@@ -43,6 +43,13 @@ export default function RegisterScreen() {
   const [emailError, setEmailError] = useState('');
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [alertState, setAlertState] = useState({ visible: false, type: 'success' as 'success' | 'error', title: '', message: '' });
+  const [isEmailAvailable, setIsEmailAvailable] = useState(false);
+
+  function isValidEmail(email: string) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    return emailRegex.test(email);
+  }
 
   useEffect(() => {
     const fetchCountries = async () => {
@@ -100,6 +107,12 @@ export default function RegisterScreen() {
   const checkEmailAvailability = async () => {
     if (!formData.email) {
       setEmailError('');
+      setIsEmailAvailable(false);
+      return;
+    }
+    if (!isValidEmail(formData.email)) {
+      setEmailError("Adresse e-mail invalide.");
+      setIsEmailAvailable(false);
       return;
     }
     setIsCheckingEmail(true);
@@ -107,25 +120,32 @@ export default function RegisterScreen() {
       const { exists } = await checkEmailExists(formData.email);
       if (exists) {
         setEmailError('Cet email est déjà utilisé.');
+        setIsEmailAvailable(false);
       } else {
         setEmailError('');
+        setIsEmailAvailable(true);
       }
     } catch (error) {
       setEmailError("Erreur lors de la vérification de l'email.");
+      setIsEmailAvailable(false);
     } finally {
       setIsCheckingEmail(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (emailError) {
-      Alert.alert('Erreur', emailError);
+    if (!isValidEmail(formData.email)) {
+      setAlertState({ visible: true, type: 'error', title: 'Erreur', message: "Adresse e-mail invalide." });
       return;
     }
-    const requiredFields = ['title', 'email', 'phone1', 'pays', 'ville'];
+    if (emailError) {
+      setAlertState({ visible: true, type: 'error', title: 'Erreur', message: emailError });
+      return;
+    }
+    const requiredFields = ['title', 'email', 'phone', 'pays', 'ville'];
     for (const field of requiredFields) {
       if (!formData[field as keyof typeof formData]) {
-        Alert.alert('Champs requis', `Le champ '${field}' est requis.`);
+        setAlertState({ visible: true, type: 'error', title: 'Champs requis', message: `Le champ '${field}' est requis.` });
         return;
       }
     }
@@ -135,13 +155,10 @@ export default function RegisterScreen() {
     setIsLoading(false);
 
     if (result.success) {
-      Alert.alert(
-        'Succès',
-        '✅ Votre compte a été créé avec succès. Consultez votre boîte mail pour le mot de passe.',
-        [{ text: 'OK', onPress: () => router.push('/login') }]
-      );
+      setAlertState({ visible: true, type: 'success', title: 'Succès', message: '✅ Votre compte a été créé avec succès. Consultez votre boîte mail pour le mot de passe.' });
+      setTimeout(() => router.push('/login'), 1200);
     } else {
-      Alert.alert('Erreur', `⚠️ ${result.error}`);
+      setAlertState({ visible: true, type: 'error', title: 'Erreur', message: `⚠️ ${result.error}` });
     }
   };
 
@@ -187,23 +204,29 @@ export default function RegisterScreen() {
                 placeholder="Email"
                 style={styles.input}
                 value={formData.email}
-                onChangeText={(text) => handleInputChange('email', text)}
+                onChangeText={(text) => { setIsEmailAvailable(false); setEmailError(''); handleInputChange('email', text); }}
                 onBlur={checkEmailAvailability}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 placeholderTextColor="#888"
               />
+              {isCheckingEmail ? (
+                <ActivityIndicator size="small" />
+              ) : (
+                isEmailAvailable && !emailError ? (
+                  <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                ) : null
+              )}
             </View>
-            {isCheckingEmail && <ActivityIndicator />}
             {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
             <View style={styles.inputGroup}>
               <Ionicons name="call-outline" style={styles.inputIcon} />
               <TextInput
                 placeholder="Téléphone"
-                style={styles.input}
-                value={formData.phone1}
-                onChangeText={(text) => handleInputChange('phone1', text)}
+                style={styles.input}  
+                value={formData.phone}
+                onChangeText={(text) => handleInputChange('phone', text)}
                 keyboardType="phone-pad"
                 placeholderTextColor="#888"
               />
@@ -247,7 +270,13 @@ export default function RegisterScreen() {
       </KeyboardAvoidingView>
 
       {/* Country Modal */}
-      <Modal visible={isCountryModalVisible} animationType="slide" onRequestClose={() => setCountryModalVisible(false)}>
+      <Modal
+        visible={isCountryModalVisible}
+        animationType="slide"
+        onRequestClose={() => setCountryModalVisible(false)}
+        statusBarTranslucent={false}
+        presentationStyle="fullScreen"
+      >
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF' }} edges={['top', 'bottom']}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Sélectionner un pays</Text>
@@ -275,7 +304,13 @@ export default function RegisterScreen() {
       </Modal>
 
       {/* City Modal */}
-      <Modal visible={isCityModalVisible} animationType="slide" onRequestClose={() => setCityModalVisible(false)}>
+      <Modal
+        visible={isCityModalVisible}
+        animationType="slide"
+        onRequestClose={() => setCityModalVisible(false)}
+        statusBarTranslucent={false}
+        presentationStyle="fullScreen"
+      >
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF' }} edges={['top', 'bottom']}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Sélectionner une ville</Text>
@@ -301,6 +336,15 @@ export default function RegisterScreen() {
           />
         </SafeAreaView>
       </Modal>
+
+      <CustomAlert
+        visible={alertState.visible}
+        type={alertState.type}
+        title={alertState.title}
+        message={alertState.message}
+        onClose={() => setAlertState(prev => ({ ...prev, visible: false }))}
+        duration={5000}
+      />
     </SafeAreaView>
   );
 }
