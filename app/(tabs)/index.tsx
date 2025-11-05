@@ -267,7 +267,7 @@ export default function DashboardScreen() {
                 } else if (item.title === 'Paramètres') {
                   //router.push('/parametre');
                 } else if (item.title === 'Utilisateurs') {
-                  //router.push('/users');
+                  router.push('/users');
                 } else if (item.title === 'Organisme') {
                   router.push('/company');
                 } else {
