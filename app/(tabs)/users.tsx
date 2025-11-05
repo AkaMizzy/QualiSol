@@ -1,3 +1,9 @@
+import AppHeader from '@/components/AppHeader';
+import CreateUserModal from '@/components/users/CreateUserModal';
+import UserDetailModal from '@/components/users/UserDetailModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { getUsers } from '@/services/userService';
+import { CompanyUser } from '@/types/user';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -12,16 +18,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AppHeader from '@/components/AppHeader';
-import CreateUserModal from '@/components/users/CreateUserModal';
-import UserDetailModal from '@/components/users/UserDetailModal';
-import { useAuth } from '@/contexts/AuthContext';
-import userService from '@/services/userService';
-import { CompanyUser } from '@/types/user';
 import API_CONFIG from '../config/api';
 
 export default function UsersScreen() {
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const [users, setUsers] = useState<CompanyUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -32,11 +32,9 @@ export default function UsersScreen() {
   const [selectedUser, setSelectedUser] = useState<CompanyUser | null>(null);
 
   const fetchUsers = useCallback(async () => {
-    if (!token) return;
-    
     try {
       setLoading(true);
-      const userList = await userService.getCompanyUsers(token);
+      const userList = await getUsers();
       setUsers(userList);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -44,14 +42,12 @@ export default function UsersScreen() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   const onRefresh = useCallback(async () => {
-    if (!token) return;
-    
     setRefreshing(true);
     try {
-      const userList = await userService.getCompanyUsers(token);
+      const userList = await getUsers();
       setUsers(userList);
     } catch (error) {
       console.error('Error refreshing users:', error);
@@ -59,7 +55,7 @@ export default function UsersScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     fetchUsers();
@@ -80,14 +76,16 @@ export default function UsersScreen() {
     setSelectedUser(null);
   };
 
-  const getRoleStyle = (role: string) => {
-    return role === 'admin'
+  const getRoleStyle = (roleName?: string) => {
+    const lowerCaseRole = roleName?.toLowerCase();
+    return lowerCaseRole === 'admin'
       ? { bg: '#ffffff', color: '#11224e', border: '#11224e', label: 'Admin' }
       : { bg: '#ffffff', color: '#f87b1b', border: '#f87b1b', label: 'Utilisateur' };
   };
 
-  const getStatusStyle = (status: number) => {
-    return status === 1
+  const getStatusStyle = (statusName?: string) => {
+    const lowerCaseStatus = statusName?.toLowerCase();
+    return lowerCaseStatus === 'actif' || lowerCaseStatus === 'active'
       ? { bg: '#e9f7ef', color: '#2ecc71', border: '#c6f0d9', label: 'Actif' }
       : { bg: '#f4f5f7', color: '#6b7280', border: '#e5e7eb', label: 'Inactif' };
   };
@@ -95,7 +93,7 @@ export default function UsersScreen() {
   const filteredUsers = React.useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return users.filter((u) => {
-      if (roleFilter !== 'all' && u.role !== roleFilter) return false;
+      if (roleFilter !== 'all' && u.role?.name.toLowerCase() !== roleFilter) return false;
       if (!q) return true;
       const hay = `${u.firstname} ${u.lastname} ${u.email} ${u.phone1 ?? ''} ${u.phone2 ?? ''}`.toLowerCase();
       return hay.includes(q);
@@ -103,8 +101,8 @@ export default function UsersScreen() {
   }, [users, searchQuery, roleFilter]);
 
   const renderUserCard = ({ item }: { item: CompanyUser }) => {
-    const roleStyle = getRoleStyle(item.role);
-    const statusStyle = getStatusStyle(item.status);
+    const roleStyle = getRoleStyle(item.role?.name);
+    const statusStyle = getStatusStyle(item.status?.name);
     
     // Build avatar URL if photo exists
     const avatarUrl = item.photo 
@@ -115,7 +113,7 @@ export default function UsersScreen() {
       <TouchableOpacity 
         style={[
           styles.userCard,
-          item.role === 'admin' && styles.adminCard
+          item.role?.name === 'admin' && styles.adminCard
         ]}
         onPress={() => handleUserCardPress(item)}
         activeOpacity={0.7}
@@ -150,16 +148,20 @@ export default function UsersScreen() {
 
           {/* Badges */}
           <View style={styles.badgesContainer}>
-            <View style={[styles.badge, { backgroundColor: roleStyle.bg, borderColor: roleStyle.border }]}>
-              <Text style={[styles.badgeText, { color: roleStyle.color }]}>
-                {roleStyle.label}
-              </Text>
-            </View>
-            <View style={[styles.badge, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border, marginTop: 4 }]}>
-              <Text style={[styles.badgeText, { color: statusStyle.color }]}>
-                {statusStyle.label}
-              </Text>
-            </View>
+            {item.role?.name && (
+              <View style={[styles.badge, { backgroundColor: roleStyle.bg, borderColor: roleStyle.border }]}>
+                <Text style={[styles.badgeText, { color: roleStyle.color }]}>
+                  {roleStyle.label}
+                </Text>
+              </View>
+            )}
+            {item.status?.name && (
+              <View style={[styles.badge, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border, marginTop: 4 }]}>
+                <Text style={[styles.badgeText, { color: statusStyle.color }]}>
+                  {statusStyle.label}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </TouchableOpacity>

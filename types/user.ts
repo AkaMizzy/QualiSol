@@ -6,37 +6,45 @@ export interface CompanyUser {
   phone1?: string;
   phone2?: string;
   email_second?: string;
-  role: 'user' | 'admin';
-  status: 0 | 1; 
+  identifier: string;
+  role_id: string;
+  status_id: string;
   photo?: string;
   company_id: string;
-  company_name?: string;
+  // Optional relations that might be included
+  role?: { id: string; name: string };
+  status?: { id: string; name: string };
 }
 
 export interface CreateUserData {
   firstname: string;
   lastname: string;
   email: string;
+  identifier: string;
+  password?: string;
   phone1?: string;
   phone2?: string;
   email_second?: string;
-  role?: 'user' | 'admin';
-  status?: 0 | 1; 
+  role_id: string;
+  status_id: string;
+  company_id: string;
 }
 
 export interface CreateUserResponse {
   message: string;
   user: CompanyUser;
-  password: string;
+  password?: string;
 }
 
 export interface UpdateUserData {
   firstname?: string;
   lastname?: string;
   email?: string;
+  identifier?: string;
+  password?: string;
   phone1?: string;
   phone2?: string;
   email_second?: string;
-  role?: 'user' | 'admin';
-  status?: 0 | 1; // 0 = inactive, 1 = active
+  role_id?: string;
+  status_id?: string;
 }

@@ -10,8 +10,7 @@ import {
   View,
 } from 'react-native';
 import API_CONFIG from '../../app/config/api';
-import { useAuth } from '../../contexts/AuthContext';
-import userService from '../../services/userService';
+import { deleteUser } from '../../services/userService';
 import { CompanyUser } from '../../types/user';
 import UpdateUserComp from './UpdateUserComp';
 
@@ -24,7 +23,6 @@ interface UserDetailModalProps {
 }
 
 export default function UserDetailModal({ visible, user, onClose, onUserUpdated, onUserDeleted }: UserDetailModalProps) {
-  const { token } = useAuth();
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [currentUser, setCurrentUser] = useState<CompanyUser | null>(user);
 
@@ -34,23 +32,25 @@ export default function UserDetailModal({ visible, user, onClose, onUserUpdated,
 
   if (!currentUser) return null;
 
-  const getRoleStyle = (role: string) => {
-    return role === 'admin'
+  const getRoleStyle = (roleName?: string) => {
+    const lowerCaseRole = roleName?.toLowerCase();
+    return lowerCaseRole === 'admin'
       ? { bg: '#e3f2fd', color: '#1976d2', border: '#bbdefb', label: 'Admin' }
       : { bg: '#ffffff', color: '#f87b1b', border: '#f87b1b', label: 'Utilisateur' };
   };
 
-  const getStatusStyle = (status: number) => {
-    return status === 1
+  const getStatusStyle = (statusName?: string) => {
+    const lowerCaseStatus = statusName?.toLowerCase();
+    return lowerCaseStatus === 'actif' || lowerCaseStatus === 'active'
       ? { bg: '#e9f7ef', color: '#2ecc71', border: '#c6f0d9', label: 'Actif' }
       : { bg: '#f4f5f7', color: '#6b7280', border: '#e5e7eb', label: 'Inactif' };
   };
 
-  const roleStyle = getRoleStyle(currentUser.role);
-  const statusStyle = getStatusStyle(currentUser.status);
+  const roleStyle = getRoleStyle(currentUser.role?.name);
+  const statusStyle = getStatusStyle(currentUser.status?.name);
 
   // Build avatar URL if photo exists
-  const avatarUrl = currentUser.photo 
+  const avatarUrl = currentUser.photo
     ? `${API_CONFIG.BASE_URL}${currentUser.photo}`
     : null;
 
@@ -60,7 +60,7 @@ export default function UserDetailModal({ visible, user, onClose, onUserUpdated,
   };
 
   const handleDeleteUser = async () => {
-    if (!currentUser || !token) return;
+    if (!currentUser) return;
 
     Alert.alert(
       'Supprimer l\'utilisateur',
@@ -75,7 +75,7 @@ export default function UserDetailModal({ visible, user, onClose, onUserUpdated,
           style: 'destructive',
           onPress: async () => {
             try {
-              await userService.deleteUser(token, currentUser.id);
+              await deleteUser(currentUser.id);
               onUserDeleted?.(currentUser.id);
               onClose();
               Alert.alert('Succès', 'Utilisateur supprimé avec succès');
@@ -104,14 +104,14 @@ export default function UserDetailModal({ visible, user, onClose, onUserUpdated,
           </TouchableOpacity>
           <Text style={styles.modalTitle}>Détails de l&apos;utilisateur</Text>
           <View style={styles.headerActions}>
-            <TouchableOpacity 
-              onPress={handleDeleteUser} 
+            <TouchableOpacity
+              onPress={handleDeleteUser}
               style={styles.deleteButton}
             >
               <Ionicons name="trash" size={22} color="#ef4444" />
             </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={() => setShowUpdateModal(true)} 
+            <TouchableOpacity
+              onPress={() => setShowUpdateModal(true)}
               style={styles.editButton}
             >
               <Ionicons name="pencil" size={22} color="#f87b1b" />
@@ -145,31 +145,35 @@ export default function UserDetailModal({ visible, user, onClose, onUserUpdated,
 
           {/* Status & Role Cards */}
           <View style={styles.badgesSection}>
-            <View style={[styles.badgeCard, { backgroundColor: roleStyle.bg, borderColor: roleStyle.border }]}>
-              <View style={styles.badgeHeader}>
-                <Ionicons name="shield-checkmark" size={20} color={roleStyle.color} />
-                <Text style={[styles.badgeTitle, { color: roleStyle.color }]}>Rôle</Text>
+            {currentUser.role?.name && (
+              <View style={[styles.badgeCard, { backgroundColor: roleStyle.bg, borderColor: roleStyle.border }]}>
+                <View style={styles.badgeHeader}>
+                  <Ionicons name="shield-checkmark" size={20} color={roleStyle.color} />
+                  <Text style={[styles.badgeTitle, { color: roleStyle.color }]}>Rôle</Text>
+                </View>
+                <Text style={[styles.badgeValue, { color: roleStyle.color }]}>
+                  {roleStyle.label}
+                </Text>
               </View>
-              <Text style={[styles.badgeValue, { color: roleStyle.color }]}>
-                {roleStyle.label}
-              </Text>
-            </View>
+            )}
 
-            <View style={[styles.badgeCard, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }]}>
-              <View style={styles.badgeHeader}>
-                <Ionicons name="checkmark-circle" size={20} color={statusStyle.color} />
-                <Text style={[styles.badgeTitle, { color: statusStyle.color }]}>Statut</Text>
+            {currentUser.status?.name && (
+              <View style={[styles.badgeCard, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }]}>
+                <View style={styles.badgeHeader}>
+                  <Ionicons name="checkmark-circle" size={20} color={statusStyle.color} />
+                  <Text style={[styles.badgeTitle, { color: statusStyle.color }]}>Statut</Text>
+                </View>
+                <Text style={[styles.badgeValue, { color: statusStyle.color }]}>
+                  {statusStyle.label}
+                </Text>
               </View>
-              <Text style={[styles.badgeValue, { color: statusStyle.color }]}>
-                {statusStyle.label}
-              </Text>
-            </View>
+            )}
           </View>
 
           {/* Contact Information */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Informations de contact</Text>
-            
+
             <View style={styles.infoCard}>
               <View style={styles.infoItem}>
                 <View style={styles.infoIcon}>
@@ -222,7 +226,7 @@ export default function UserDetailModal({ visible, user, onClose, onUserUpdated,
           {/* Personal Information */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Informations personnelles</Text>
-            
+
             <View style={styles.infoCard}>
               <View style={styles.infoItem}>
                 <View style={styles.infoIcon}>
@@ -243,17 +247,6 @@ export default function UserDetailModal({ visible, user, onClose, onUserUpdated,
                   <Text style={styles.infoValue}>{currentUser.lastname}</Text>
                 </View>
               </View>
-
-              <View style={styles.infoItem}>
-                <View style={styles.infoIcon}>
-                  <Ionicons name="business" size={18} color="#11224e" />
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Entreprise</Text>
-                  <Text style={styles.infoValue}>{currentUser.company_name || 'Non spécifiée'}</Text>
-                </View>
-              </View>
-
             </View>
           </View>
         </ScrollView>
