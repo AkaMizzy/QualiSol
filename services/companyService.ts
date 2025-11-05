@@ -14,7 +14,7 @@ class CompanyService {
   }
 
   async getCompany(): Promise<Company> {
-    const response = await api.get('/api/getCompanyById');
+    const response = await api.get('/api/company/getCompanyById');
     const company: Company = response.data;
     return { ...company, logo: this.toAbsoluteUrl(company.logo) };
   }
@@ -24,24 +24,14 @@ class CompanyService {
     let headers: Record<string, string> | undefined;
 
     if (logoUri) {
-      // Use FormData for multipart/form-data
       const formData = new FormData();
-      formData.append('title', companyData.title || '');
-      if (companyData.description) formData.append('description', companyData.description);
-      formData.append('email', companyData.email || '');
-      if (companyData.foundedYear) formData.append('foundedYear', companyData.foundedYear.toString());
+      Object.keys(companyData).forEach(key => {
+        const value = companyData[key as keyof Partial<Company>];
+        if (value !== null && value !== undefined) {
+          formData.append(key, value.toString());
+        }
+      });
       
-      // Add sector data if it exists
-      if (companyData.sector) {
-        formData.append('sector', JSON.stringify({
-          phone1: companyData.sector.phone1 || null,
-          phone2: companyData.sector.phone2 || null,
-          website: companyData.sector.website || null,
-          email2: companyData.sector.email2 || null,
-        }));
-      }
-
-      // Add logo file
       const logoBlob = {
         uri: logoUri,
         type: 'image/jpeg',
@@ -50,22 +40,54 @@ class CompanyService {
       formData.append('logo', logoBlob);
 
       requestBody = formData;
-      // Don't set Content-Type for FormData, let axios handle it
-      headers = undefined;
+      headers = undefined; 
     } else {
-      // Use JSON for regular update without logo
       requestBody = companyData;
       headers = {
         'Content-Type': 'application/json',
       };
     }
 
-    const response = await api.put('/api/updateCompany', requestBody, {
+    const response = await api.put(`/api/company/updateCompany`, requestBody, {
       headers,
     });
     
-    const company: Company = response.data;
+    const company: Company = response.data.data;
     return { ...company, logo: this.toAbsoluteUrl(company.logo) };
+  }
+
+  async uploadCompanyLogo(companyId: string, authorName: string, logoUri: string): Promise<Company> {
+    const formData = new FormData();
+
+    const uriSegments = logoUri.split(/[\\\/]/);
+    const fullFileName = uriSegments[uriSegments.length - 1];
+
+    const fileNameParts = fullFileName.split('.');
+    const ext = fileNameParts.length > 1 ? fileNameParts.pop()!.toLowerCase() : 'jpeg';
+    const title = fileNameParts.join('.');
+
+    const mimeType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+    
+    formData.append('file', {
+      uri: logoUri,
+      name: fullFileName,
+      type: mimeType,
+    } as any);
+  
+    formData.append('idsource', companyId);
+    formData.append('title', title);
+    formData.append('kind', 'logo');
+    formData.append('author', authorName);
+    formData.append('updateCompanyLogo', 'true');
+    
+    await api.post('/api/geds/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  
+    const company = await this.getCompany();
+    return { ...company, logo: this.toAbsoluteUrl(company.logo) } as Company;
   }
 }
 

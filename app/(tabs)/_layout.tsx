@@ -62,8 +62,14 @@ export default function TabLayout() {
           title: 'Parametre',
         }}
       />
+      <Tabs.Screen
+        name="company"
+        options={{
+          title: 'Company',
+          
+        }}
+      />
      
-      {/* Profile tab removed; accessible via header icon */}
     </Tabs>
   );
 }

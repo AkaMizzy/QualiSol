@@ -1,10 +1,12 @@
 import { useAuth } from '@/contexts/AuthContext';
 import Ionicons from '@expo/vector-icons/build/Ionicons';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppHeader from '../../components/AppHeader';
-import CompanyEditModal from '../../components/CompanyEditModal';
+import CompanyEditModal from '../../components/company/CompanyEditModal';
+import CustomAlert from '../../components/CustomAlert';
 import companyService from '../../services/companyService';
 import { Company } from '../../types/company';
 
@@ -12,7 +14,9 @@ export default function CompanyScreen() {
   const { user } = useAuth();
   const [company, setCompany] = useState<Company | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
   const [editModalVisible, setEditModalVisible] = useState<boolean>(false);
+  const [alertVisible, setAlertVisible] = useState<boolean>(false);
 
   useEffect(() => {
     if (!user) return;
@@ -34,6 +38,37 @@ export default function CompanyScreen() {
 
   const handleCompanyUpdated = (updatedCompany: Company) => {
     setCompany(updatedCompany);
+    setAlertVisible(true);
+  };
+
+  const handleLogoUpload = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.granted === false) {
+      Alert.alert("Permission d'accès", "Vous devez autoriser l'accès à la galerie pour changer le logo.");
+      return;
+    }
+
+    const pickerResult = await ImagePicker.launchImageLibraryAsync();
+    if (pickerResult.canceled) {
+      return;
+    }
+
+    if (pickerResult.assets && pickerResult.assets.length > 0) {
+      const uri = pickerResult.assets[0].uri;
+      if (company && user) {
+        setIsUploading(true);
+        try {
+          const authorName = [user.firstname, user.lastname].filter(Boolean).join(' ');
+          const updatedCompany = await companyService.uploadCompanyLogo(company.id, authorName, uri);
+          setCompany(updatedCompany);
+          Alert.alert('Succès', 'Le logo a été mis à jour.');
+        } catch (error) {
+          Alert.alert('Erreur', error instanceof Error ? error.message : "Erreur lors de la mise à jour du logo.");
+        } finally {
+          setIsUploading(false);
+        }
+      }
+    }
   };
 
   const getStatusStyle = (status?: string) => {
@@ -95,15 +130,22 @@ export default function CompanyScreen() {
         >
           {/* Header Section */}
           <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              {company.logo ? (
-                <Image source={{ uri: company.logo }} style={styles.logo} />
-              ) : (
-                <View style={styles.defaultLogo}>
-                  <Ionicons name="business" size={32} color="#f87b1b" />
-                </View>
-              )}
-            </View>
+            <TouchableOpacity onPress={handleLogoUpload} disabled={isUploading}>
+              <View style={styles.logoContainer}>
+                {company.logo ? (
+                  <Image source={{ uri: company.logo }} style={styles.logo} />
+                ) : (
+                  <View style={styles.defaultLogo}>
+                    <Ionicons name="business" size={32} color="#f87b1b" />
+                  </View>
+                )}
+                {isUploading && (
+                  <View style={styles.uploadingOverlay}>
+                    <ActivityIndicator color="#FFFFFF" />
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
             <View style={styles.headerContent}>
               <View style={styles.titleRow}>
                 <Text style={styles.companyTitle}>{company.title}</Text>
@@ -123,24 +165,17 @@ export default function CompanyScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Informations générales</Text>
             <View style={styles.infoContainer}>
-              <InfoRow icon="mail-outline" label="Email principal" value={company.email} />
-              <InfoRow icon="calendar-outline" label="Année de création" value={company.foundedYear?.toString()} />
-              <InfoRow icon="people-outline" label="Nombre d'utilisateurs" value={company.nb_users?.toString()} />
+              <InfoRow icon="mail-outline" label="Email" value={company.email || '-'} />
+              <InfoRow icon="call-outline" label="Téléphone" value={company.phone || '-'} />
+              <InfoRow icon="business-outline" label="Adresse" value={company.address || '-'} />
+              <InfoRow icon="map-outline" label="Ville" value={company.city || '-'} />
+              <InfoRow icon="flag-outline" label="Pays" value={company.pays || '-'} />
+              <InfoRow icon="barcode-outline" label="Numéro ICE" value={company.ice_number || '-'} />
             </View>
           </View>
 
           {/* Sector Information */}
-          {company.sector && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Informations du secteur</Text>
-              <View style={styles.infoContainer}>
-                <InfoRow icon="call-outline" label="Téléphone principal" value={company.sector.phone1} />
-                <InfoRow icon="call-outline" label="Téléphone secondaire" value={company.sector.phone2} />
-                <InfoRow icon="globe-outline" label="Site web" value={company.sector.website} isLink />
-                <InfoRow icon="mail-outline" label="Email secondaire" value={company.sector.email2} />
-              </View>
-            </View>
-          )}
+    
 
           {/* Actions */}
           <View style={styles.actionsContainer}>
@@ -161,6 +196,15 @@ export default function CompanyScreen() {
         onClose={() => setEditModalVisible(false)}
         company={company}
         onUpdated={handleCompanyUpdated}
+      />
+
+      <CustomAlert
+        visible={alertVisible}
+        type="success"
+        title="Succès"
+        message="Les informations de l'organisme ont été mises à jour"
+        onClose={() => setAlertVisible(false)}
+        duration={3000}
       />
     </>
   );
@@ -210,6 +254,7 @@ const styles = {
   },
   logoContainer: {
     marginRight: 16,
+    position: 'relative',
   },
   logo: {
     width: 60,
@@ -224,6 +269,13 @@ const styles = {
     backgroundColor: '#f3f4f6',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  uploadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
   },
   headerContent: {
     flex: 1,

@@ -15,7 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Company } from '../types/company';
+import { Company } from '../../types/company';
 
 interface CompanyEditModalProps {
   visible: boolean;
@@ -70,11 +70,11 @@ export default function CompanyEditModal({
     title: '',
     description: '',
     email: '',
-    foundedYear: '',
-    phone1: '',
-    phone2: '',
-    website: '',
-    email2: '',
+    phone: '',
+    address: '',
+    city: '',
+    pays: '',
+    ice_number: '',
   });
 
   useEffect(() => {
@@ -83,11 +83,11 @@ export default function CompanyEditModal({
         title: company.title || '',
         description: company.description || '',
         email: company.email || '',
-        foundedYear: company.foundedYear?.toString() || '',
-        phone1: company.sector?.phone1 || '',
-        phone2: company.sector?.phone2 || '',
-        website: company.sector?.website || '',
-        email2: company.sector?.email2 || '',
+        phone: company.phone || '',
+        address: company.address || '',
+        city: company.city || '',
+        pays: company.pays || '',
+        ice_number: company.ice_number || '',
       });
     }
   }, [company]);
@@ -134,14 +134,6 @@ export default function CompanyEditModal({
       Alert.alert('Erreur', 'Veuillez entrer un email valide');
       return false;
     }
-    if (formData.email2 && !/\S+@\S+\.\S+/.test(formData.email2)) {
-      Alert.alert('Erreur', 'Veuillez entrer un email secondaire valide');
-      return false;
-    }
-    if (formData.foundedYear && (isNaN(Number(formData.foundedYear)) || Number(formData.foundedYear) < 1800 || Number(formData.foundedYear) > new Date().getFullYear())) {
-      Alert.alert('Erreur', 'Veuillez entrer une année de création valide');
-      return false;
-    }
     return true;
   };
 
@@ -154,13 +146,11 @@ export default function CompanyEditModal({
         title: formData.title.trim(),
         description: formData.description.trim() || null,
         email: formData.email.trim(),
-        foundedYear: formData.foundedYear ? parseInt(formData.foundedYear) : null,
-        sector: {
-          phone1: formData.phone1.trim() || null,
-          phone2: formData.phone2.trim() || null,
-          website: formData.website.trim() || null,
-          email2: formData.email2.trim() || null,
-        },
+        phone: formData.phone.trim() || null,
+        address: formData.address.trim() || null,
+        city: formData.city.trim() || null,
+        pays: formData.pays.trim() || null,
+        ice_number: formData.ice_number.trim() || null,
       };
 
       const updatedCompany = await companyService.updateCompany(updateData, logoUri);
@@ -249,48 +239,44 @@ export default function CompanyEditModal({
             />
 
             <InputField
-              label="Année de création"
-              value={formData.foundedYear}
-              onChangeText={(text) => handleInputChange('foundedYear', text)}
-              placeholder="2020"
-              keyboardType="numeric"
-            />
-          </View>
-
-          {/* Sector Information */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Informations du secteur</Text>
-
-            <InputField
-              label="Téléphone principal"
-              value={formData.phone1}
-              onChangeText={(text) => handleInputChange('phone1', text)}
+              label="Téléphone"
+              value={formData.phone}
+              onChangeText={(text) => handleInputChange('phone', text)}
               placeholder="+33 1 23 45 67 89"
               keyboardType="phone-pad"
             />
+          </View>
+
+          {/* More Information */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Plus d&apos;informations</Text>
 
             <InputField
-              label="Téléphone secondaire"
-              value={formData.phone2}
-              onChangeText={(text) => handleInputChange('phone2', text)}
-              placeholder="+33 1 23 45 67 90"
-              keyboardType="phone-pad"
+              label="Adresse"
+              value={formData.address}
+              onChangeText={(text) => handleInputChange('address', text)}
+              placeholder="123 Rue de l'Exemple"
             />
 
             <InputField
-              label="Site web"
-              value={formData.website}
-              onChangeText={(text) => handleInputChange('website', text)}
-              placeholder="https://www.exemple.com"
-              keyboardType="default"
+              label="Ville"
+              value={formData.city}
+              onChangeText={(text) => handleInputChange('city', text)}
+              placeholder="Paris"
             />
 
             <InputField
-              label="Email secondaire"
-              value={formData.email2}
-              onChangeText={(text) => handleInputChange('email2', text)}
-              placeholder="contact@exemple.com"
-              keyboardType="email-address"
+              label="Pays"
+              value={formData.pays}
+              onChangeText={(text) => handleInputChange('pays', text)}
+              placeholder="France"
+            />
+
+            <InputField
+              label="Numéro ICE"
+              value={formData.ice_number}
+              onChangeText={(text) => handleInputChange('ice_number', text)}
+              placeholder="001234567890123"
             />
           </View>
         </ScrollView>

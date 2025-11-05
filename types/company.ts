@@ -11,9 +11,11 @@ export interface Company {
   title: string;
   description?: string | null;
   email: string;
-  foundedYear?: number | null;
-  sector_id?: string;
-  sector?: Sector;
+  phone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  pays?: string | null;
+  ice_number?: string | null;
   logo?: string;
   nb_users?: number;
   status?: string;
