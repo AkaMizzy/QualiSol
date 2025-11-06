@@ -1,7 +1,9 @@
+import CaptchaModal from '@/components/CaptchaModal';
 import CustomAlert from '@/components/CustomAlert';
 import { ICONS } from '@/constants/Icons';
 import { checkEmailExists, signup } from '@/services/authService';
 import { Ionicons } from '@expo/vector-icons';
+import Checkbox from 'expo-checkbox';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -9,6 +11,7 @@ import {
   ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -19,6 +22,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 interface Country {
   name: string;
@@ -45,11 +49,26 @@ export default function RegisterScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [alertState, setAlertState] = useState({ visible: false, type: 'success' as 'success' | 'error', title: '', message: '' });
   const [isEmailAvailable, setIsEmailAvailable] = useState(false);
+  const [termsAccepted1, setTermsAccepted1] = useState(false);
+  const [termsAccepted2, setTermsAccepted2] = useState(false);
+  const [captcha, setCaptcha] = useState('');
+  const [validationError, setValidationError] = useState('');
+  const [isCaptchaModalVisible, setCaptchaModalVisible] = useState(false);
+
 
   function isValidEmail(email: string) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     return emailRegex.test(email);
   }
+
+  const generateCaptcha = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 4; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCaptcha(result);
+  };
 
   useEffect(() => {
     const fetchCountries = async () => {
@@ -96,6 +115,12 @@ export default function RegisterScreen() {
     }
   }, [formData.pays]);
 
+  useEffect(() => {
+    if (isCaptchaModalVisible) {
+      generateCaptcha();
+    }
+  }, [isCaptchaModalVisible]);
+
   const handleInputChange = (field: string, value: string) => {
     if (field === 'pays') {
       setFormData(prev => ({ ...prev, [field]: value, ville: '' }));
@@ -133,7 +158,29 @@ export default function RegisterScreen() {
     }
   };
 
+  const proceedWithRegistration = async () => {
+    setIsLoading(true);
+    const result = await signup(formData);
+    setIsLoading(false);
+
+    if (result.success) {
+      setAlertState({ visible: true, type: 'success', title: 'Succès', message: '✅ Votre compte a été créé avec succès. Consultez votre boîte mail pour le mot de passe.' });
+      setTimeout(() => router.push('/login'), 1200);
+    } else {
+      setAlertState({ visible: true, type: 'error', title: 'Erreur', message: `⚠️ ${result.error}` });
+    }
+  };
+
+
   const handleSubmit = async () => {
+    if (!termsAccepted1 || !termsAccepted2) {
+      setValidationError('Veuillez accepter les deux conditions avant de continuer.');
+      return;
+    }
+
+    setValidationError('');
+
+
     if (!isValidEmail(formData.email)) {
       setAlertState({ visible: true, type: 'error', title: 'Erreur', message: "Adresse e-mail invalide." });
       return;
@@ -149,18 +196,20 @@ export default function RegisterScreen() {
         return;
       }
     }
+    setCaptchaModalVisible(true);
+  };
 
-    setIsLoading(true);
-    const result = await signup(formData);
-    setIsLoading(false);
-
-    if (result.success) {
-      setAlertState({ visible: true, type: 'success', title: 'Succès', message: '✅ Votre compte a été créé avec succès. Consultez votre boîte mail pour le mot de passe.' });
-      setTimeout(() => router.push('/login'), 1200);
+  const handleCaptchaVerify = (input: string) => {
+    if (input.toLowerCase() === captcha.toLowerCase()) {
+      setCaptchaModalVisible(false);
+      proceedWithRegistration();
+      return true;
     } else {
-      setAlertState({ visible: true, type: 'error', title: 'Erreur', message: `⚠️ ${result.error}` });
+      generateCaptcha();
+      return false;
     }
   };
+
 
   const handleSelectCountry = (countryName: string) => {
     handleInputChange('pays', countryName);
@@ -251,7 +300,33 @@ export default function RegisterScreen() {
               {isFetchingCities && <ActivityIndicator size="small" />}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={isLoading}>
+            <View style={styles.checkboxContainer}>
+              <Checkbox
+                style={styles.checkbox}
+                value={termsAccepted1}
+                onValueChange={setTermsAccepted1}
+                color={termsAccepted1 ? '#f87b1b' : undefined}
+              />
+              <Text style={styles.checkboxLabel}>J&apos;accepte le règlement interne et la confidentialité de QualiSol</Text>
+            </View>
+
+            <View style={styles.checkboxContainer}>
+              <Checkbox
+                style={styles.checkbox}
+                value={termsAccepted2}
+                onValueChange={setTermsAccepted2}
+                color={termsAccepted2 ? '#f87b1b' : undefined}
+              />
+              <Text style={styles.checkboxLabel}>J&apos;accepte les conditions de Qualisol</Text>
+            </View>
+            <TouchableOpacity onPress={() => Linking.openURL('https://www.muntadaa.com/qualisol/terms')}>
+              <Text style={styles.link}>Lire les conditions générales</Text>
+            </TouchableOpacity>
+            
+            {validationError ? <Text style={styles.errorText}>{validationError}</Text> : null}
+
+
+            <TouchableOpacity style={[styles.submitButton, (!termsAccepted1 || !termsAccepted2) && styles.disabledButton]} onPress={handleSubmit} disabled={isLoading || !termsAccepted1 || !termsAccepted2}>
               {isLoading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
@@ -345,6 +420,13 @@ export default function RegisterScreen() {
         onClose={() => setAlertState(prev => ({ ...prev, visible: false }))}
         duration={5000}
       />
+      <CaptchaModal
+        visible={isCaptchaModalVisible}
+        captcha={captcha}
+        onClose={() => setCaptchaModalVisible(false)}
+        onVerify={handleCaptchaVerify}
+        onRefresh={generateCaptcha}
+      />
     </SafeAreaView>
   );
 }
@@ -407,6 +489,9 @@ const styles = StyleSheet.create({
   },
   disabledInput: {
     backgroundColor: '#e9ecef',
+  },
+  disabledButton: {
+    backgroundColor: '#cccccc',
   },
   submitButton: {
     backgroundColor: '#f87b1b',
@@ -489,5 +574,42 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
     color: '#666',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  checkbox: {
+    marginRight: 10,
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    color: '#333',
+    flex: 1,
+  },
+  link: {
+    color: '#f87b1b',
+    textDecorationLine: 'underline',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  captchaContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f2f2f2',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#f87b1b',
+  },
+  captchaText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    letterSpacing: 5,
+    color: '#11224e',
+    marginRight: 15,
   },
 });

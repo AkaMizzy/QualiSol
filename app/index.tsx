@@ -5,7 +5,6 @@ import React from 'react';
 
 export default function Index() {
   const { isAuthenticated, isLoading } = useAuth();
-
   console.log('Index component - Auth state:', { isAuthenticated, isLoading });
 
   if (isLoading) {
