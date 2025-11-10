@@ -24,6 +24,22 @@ export type ZoneType = {
   updatedAt: string;
 };
 
+export type Ged = {
+  id: string;
+  idsource: string;
+  title: string;
+  kind: string;
+  description: string | null;
+  author: string;
+  position: number | null;
+  latitude: string | null;
+  longitude: string | null;
+  url: string | null;
+  size: number | null;
+  status_id: string;
+  company_id: string;
+};
+
 type CreateZoneInput = {
   code: string;
   title: string;
@@ -138,6 +154,25 @@ export async function getAllZoneTypes(token: string): Promise<ZoneType[]> {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.error || 'Failed to fetch zone types');
+  }
+  return res.json();
+}
+
+export async function getZonePictures(token: string, zoneId: string, kind: string = 'delimitation'): Promise<Ged[]> {
+  const params = new URLSearchParams({
+    idsource: zoneId,
+    kind: kind,
+  });
+  const res = await fetch(`${API_CONFIG.BASE_URL}/api/geds/query?${params.toString()}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to fetch zone pictures');
   }
   return res.json();
 }

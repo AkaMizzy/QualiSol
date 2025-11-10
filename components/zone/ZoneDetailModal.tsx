@@ -1,10 +1,11 @@
 import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { getZoneById, type Zone } from '@/services/zoneService';
+import { getZoneById, getZonePictures, type Zone, type Ged } from '@/services/zoneService';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -13,7 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ZoneType = { id: string; title: string; description: string | null } | null;
 type Project = { id: string; title: string; code: string } | null;
@@ -30,14 +31,18 @@ type Props = {
 
 export default function ZoneDetailModal({ visible, onClose, zoneId }: Props) {
   const { token } = useAuth();
+  const insets = useSafeAreaInsets();
   const [zone, setZone] = useState<Zone | null>(null);
   const [zoneType, setZoneType] = useState<ZoneType>(null);
   const [project, setProject] = useState<Project>(null);
   const [owner, setOwner] = useState<Owner>(null);
   const [control, setControl] = useState<Control>(null);
   const [technicien, setTechnicien] = useState<Technicien>(null);
+  const [pictures, setPictures] = useState<Ged[]>([]);
+  const [isLoadingPictures, setIsLoadingPictures] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,6 +54,7 @@ export default function ZoneDetailModal({ visible, onClose, zoneId }: Props) {
         setOwner(null);
         setControl(null);
         setTechnicien(null);
+        setPictures([]);
         setError(null); 
         return; 
       }
@@ -131,6 +137,33 @@ export default function ZoneDetailModal({ visible, onClose, zoneId }: Props) {
       }
     }
     loadZone();
+    return () => { cancelled = true; };
+  }, [visible, zoneId, token]);
+
+  // Fetch zone pictures
+  useEffect(() => {
+    let cancelled = false;
+    async function loadPictures() {
+      if (!visible || !zoneId || !token) {
+        setPictures([]);
+        return;
+      }
+      setIsLoadingPictures(true);
+      try {
+        const picturesData = await getZonePictures(token, zoneId);
+        if (!cancelled) {
+          setPictures(picturesData);
+        }
+      } catch (e: any) {
+        if (!cancelled) {
+          // Silently fail for pictures - don't show error to user
+          setPictures([]);
+        }
+      } finally {
+        if (!cancelled) setIsLoadingPictures(false);
+      }
+    }
+    loadPictures();
     return () => { cancelled = true; };
   }, [visible, zoneId, token]);
 
@@ -268,8 +301,86 @@ export default function ZoneDetailModal({ visible, onClose, zoneId }: Props) {
               })()} />
             </View>
           </View>
+
+          {/* GED Pictures Section */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Photos de délimitation</Text>
+            {isLoadingPictures ? (
+              <View style={styles.picturesLoadingContainer}>
+                <ActivityIndicator color="#11224e" size="small" />
+                <Text style={styles.picturesLoadingText}>Chargement des photos...</Text>
+              </View>
+            ) : pictures.length === 0 ? (
+              <View style={styles.picturesEmptyContainer}>
+                <Ionicons name="images-outline" size={32} color="#9ca3af" />
+                <Text style={styles.picturesEmptyText}>Aucune photo disponible</Text>
+              </View>
+            ) : (
+              <View style={styles.picturesGrid}>
+                {pictures.map((picture) => {
+                  const imageUrl = picture.url
+                    ? picture.url.startsWith('http')
+                      ? picture.url
+                      : `${API_CONFIG.BASE_URL}${picture.url}`
+                    : null;
+                  
+                  return (
+                    <View key={picture.id} style={styles.pictureItem}>
+                      {imageUrl ? (
+                        <TouchableOpacity
+                          onPress={() => setPreviewImage(imageUrl)}
+                          activeOpacity={0.8}
+                        >
+                          <Image
+                            source={{ uri: imageUrl }}
+                            style={styles.pictureImage}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      ) : (
+                        <View style={styles.picturePlaceholder}>
+                          <Ionicons name="image-outline" size={24} color="#9ca3af" />
+                        </View>
+                      )}
+                      {picture.title && (
+                        <Text style={styles.pictureTitle} numberOfLines={1}>
+                          {picture.title}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Image Preview Modal */}
+      <Modal
+        visible={previewImage !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setPreviewImage(null)}
+      >
+        <SafeAreaView style={styles.previewContainer}>
+          <View style={[styles.previewHeader, { paddingTop: insets.top + 16 }]}>
+            <TouchableOpacity
+              onPress={() => setPreviewImage(null)}
+              style={styles.previewCloseButton}
+            >
+              <Ionicons name="close" size={28} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+          {previewImage && (
+            <Image
+              source={{ uri: previewImage }}
+              style={styles.previewImage}
+              resizeMode="contain"
+            />
+          )}
+        </SafeAreaView>
+      </Modal>
     </Modal>
   );
 }
@@ -301,6 +412,19 @@ const styles = StyleSheet.create({
   heroLogoPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
   meta: { color: '#374151' },
+  picturesLoadingContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 16, justifyContent: 'center' },
+  picturesLoadingText: { color: '#6b7280', fontSize: 14 },
+  picturesEmptyContainer: { alignItems: 'center', paddingVertical: 32, gap: 8 },
+  picturesEmptyText: { color: '#9ca3af', fontSize: 14 },
+  picturesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 12 },
+  pictureItem: { width: '47%', marginBottom: 8 },
+  pictureImage: { width: '100%', height: 120, borderRadius: 8, backgroundColor: '#f3f4f6' },
+  picturePlaceholder: { width: '100%', height: 120, borderRadius: 8, backgroundColor: '#f3f4f6', alignItems: 'center', justifyContent: 'center' },
+  pictureTitle: { marginTop: 6, fontSize: 12, color: '#6b7280', textAlign: 'center' },
+  previewContainer: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.95)', justifyContent: 'center', alignItems: 'center' },
+  previewHeader: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1, paddingHorizontal: 16, alignItems: 'flex-end' },
+  previewCloseButton: { padding: 8, backgroundColor: 'rgba(0, 0, 0, 0.5)', borderRadius: 20 },
+  previewImage: { width: '100%', height: '100%' },
 });
 
 
