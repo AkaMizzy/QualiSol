@@ -1,6 +1,7 @@
 import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getZoneById, getZonePictures, type Zone, type Ged } from '@/services/zoneService';
+import CreateGedModal from '@/components/zone/CreateGedModal';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
@@ -43,6 +44,7 @@ export default function ZoneDetailModal({ visible, onClose, zoneId }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isCreateGedModalVisible, setIsCreateGedModalVisible] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,9 +143,26 @@ export default function ZoneDetailModal({ visible, onClose, zoneId }: Props) {
   }, [visible, zoneId, token]);
 
   // Fetch zone pictures
+  const loadPictures = async () => {
+    if (!visible || !zoneId || !token) {
+      setPictures([]);
+      return;
+    }
+    setIsLoadingPictures(true);
+    try {
+      const picturesData = await getZonePictures(token, zoneId);
+      setPictures(picturesData);
+    } catch (e: any) {
+      // Silently fail for pictures - don't show error to user
+      setPictures([]);
+    } finally {
+      setIsLoadingPictures(false);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
-    async function loadPictures() {
+    async function fetchPictures() {
       if (!visible || !zoneId || !token) {
         setPictures([]);
         return;
@@ -163,7 +182,7 @@ export default function ZoneDetailModal({ visible, onClose, zoneId }: Props) {
         if (!cancelled) setIsLoadingPictures(false);
       }
     }
-    loadPictures();
+    fetchPictures();
     return () => { cancelled = true; };
   }, [visible, zoneId, token]);
 
@@ -304,7 +323,16 @@ export default function ZoneDetailModal({ visible, onClose, zoneId }: Props) {
 
           {/* GED Pictures Section */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Photos de délimitation</Text>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Zone délimitation</Text>
+              <TouchableOpacity
+                style={styles.addPhotoButton}
+                onPress={() => setIsCreateGedModalVisible(true)}
+              >
+                <Ionicons name="add-circle" size={20} color="#f87b1b" />
+                <Text style={styles.addPhotoButtonText}>Ajouter</Text>
+              </TouchableOpacity>
+            </View>
             {isLoadingPictures ? (
               <View style={styles.picturesLoadingContainer}>
                 <ActivityIndicator color="#11224e" size="small" />
@@ -381,6 +409,16 @@ export default function ZoneDetailModal({ visible, onClose, zoneId }: Props) {
           )}
         </SafeAreaView>
       </Modal>
+
+      {/* Create GED Modal */}
+      {zoneId && (
+        <CreateGedModal
+          visible={isCreateGedModalVisible}
+          onClose={() => setIsCreateGedModalVisible(false)}
+          zoneId={zoneId}
+          onSuccess={loadPictures}
+        />
+      )}
     </Modal>
   );
 }
@@ -405,7 +443,10 @@ const styles = StyleSheet.create({
   alertBannerText: { color: '#b45309', flex: 1, fontSize: 12 },
   content: { flex: 1, paddingHorizontal: 16, paddingBottom: 16 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginTop: 16, marginHorizontal: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3, borderWidth: 1, borderColor: '#f3f4f6' },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   cardTitle: { fontSize: 14, fontWeight: '700', color: '#11224e' },
+  addPhotoButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#f3f4f6', borderRadius: 8 },
+  addPhotoButtonText: { fontSize: 14, fontWeight: '600', color: '#f87b1b' },
   title: { fontSize: 16, fontWeight: '700', color: '#11224e' },
   sub: { color: '#6b7280', marginTop: 2 },
   heroLogo: { width: 56, height: 56, borderRadius: 10, backgroundColor: '#f3f4f6' },

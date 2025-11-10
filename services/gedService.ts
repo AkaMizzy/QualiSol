@@ -1,0 +1,79 @@
+import API_CONFIG from '@/app/config/api';
+
+export type CreateGedInput = {
+  idsource: string;
+  title: string;
+  description?: string;
+  kind: string;
+  author: string;
+  latitude?: string;
+  longitude?: string;
+  file?: {
+    uri: string;
+    type: string;
+    name: string;
+  };
+};
+
+export type Ged = {
+  id: string;
+  idsource: string;
+  title: string;
+  kind: string;
+  description: string | null;
+  author: string;
+  position: number | null;
+  latitude: string | null;
+  longitude: string | null;
+  url: string | null;
+  size: number | null;
+  status_id: string;
+  company_id: string;
+};
+
+export async function createGed(token: string, input: CreateGedInput): Promise<{ message: string; data: Ged }> {
+  const formData = new FormData();
+
+  // Append text fields
+  formData.append('idsource', input.idsource);
+  formData.append('title', input.title);
+  formData.append('kind', input.kind);
+  formData.append('author', input.author);
+  
+  if (input.description) {
+    formData.append('description', input.description);
+  }
+  
+  if (input.latitude) {
+    formData.append('latitude', input.latitude);
+  }
+  
+  if (input.longitude) {
+    formData.append('longitude', input.longitude);
+  }
+
+  // Append file if provided
+  if (input.file) {
+    formData.append('file', {
+      uri: input.file.uri,
+      type: input.file.type,
+      name: input.file.name,
+    } as any);
+  }
+
+  const res = await fetch(`${API_CONFIG.BASE_URL}/api/geds/upload`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      // Don't set Content-Type header - let the browser set it with boundary for FormData
+    },
+    body: formData,
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to create GED');
+  }
+  return data;
+}
+
