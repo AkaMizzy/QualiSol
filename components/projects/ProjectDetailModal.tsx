@@ -78,7 +78,6 @@ export default function ProjectDetailModal({ visible, onClose, project, onUpdate
   const [controlOpen, setControlOpen] = useState(false);
   const [technicienOpen, setTechnicienOpen] = useState(false);
   const [companyUsers, setCompanyUsers] = useState<{ id: string; firstname?: string; lastname?: string; email?: string }[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Rotate chevrons
@@ -117,15 +116,26 @@ export default function ProjectDetailModal({ visible, onClose, project, onUpdate
   useEffect(() => {
     let cancelled = false;
     async function loadMeta() {
-      if (!project) { setCompany(null); setOwner(null); setControl(null); setTechnicien(null); return; }
+      if (!project) { 
+        setCompany(null); 
+        setOwner(null); 
+        setControl(null); 
+        setTechnicien(null); 
+        setCompanyUsers([]);
+        return; 
+      }
       setIsLoading(true);
       setError(null);
       try {
         const tasks: Promise<void>[] = [];
+        
+        // Fetch company details with authentication token
         if (project.company_id) {
           tasks.push((async () => {
             try {
-              const res = await fetch(`${API_CONFIG.BASE_URL}/companies/${project.company_id}`);
+              const res = await fetch(`${API_CONFIG.BASE_URL}/api/company/${project.company_id}`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : undefined as any,
+              });
               const data = await res.json();
               if (!cancelled) setCompany(res.ok ? { id: String(data.id), title: data.title } : null);
             } catch {
@@ -135,51 +145,30 @@ export default function ProjectDetailModal({ visible, onClose, project, onUpdate
         } else {
           setCompany(null);
         }
-        if (project.owner_id) {
+        
+        // Fetch all company users in a single request
+        if (token) {
           tasks.push((async () => {
             try {
-              const res = await fetch(`${API_CONFIG.BASE_URL}/users/${project.owner_id}`, {
-                headers: token ? { Authorization: `Bearer ${token}` } : undefined as any,
+              const res = await fetch(`${API_CONFIG.BASE_URL}/api/users`, {
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
               });
               const data = await res.json();
-              if (!cancelled) setOwner(res.ok ? { id: String(data.id), firstname: data.firstname, lastname: data.lastname, email: data.email } : null);
+              if (!cancelled) {
+                if (res.ok && Array.isArray(data)) {
+                  setCompanyUsers(data);
+                } else {
+                  setCompanyUsers([]);
+                }
+              }
             } catch {
-              if (!cancelled) setOwner(null);
+              if (!cancelled) setCompanyUsers([]);
             }
           })());
         } else {
-          setOwner(null);
+          setCompanyUsers([]);
         }
-        if (project.control_id) {
-          tasks.push((async () => {
-            try {
-              const res = await fetch(`${API_CONFIG.BASE_URL}/users/${project.control_id}`, {
-                headers: token ? { Authorization: `Bearer ${token}` } : undefined as any,
-              });
-              const data = await res.json();
-              if (!cancelled) setControl(res.ok ? { id: String(data.id), firstname: data.firstname, lastname: data.lastname, email: data.email } : null);
-            } catch {
-              if (!cancelled) setControl(null);
-            }
-          })());
-        } else {
-          setControl(null);
-        }
-        if (project.technicien_id) {
-          tasks.push((async () => {
-            try {
-              const res = await fetch(`${API_CONFIG.BASE_URL}/users/${project.technicien_id}`, {
-                headers: token ? { Authorization: `Bearer ${token}` } : undefined as any,
-              });
-              const data = await res.json();
-              if (!cancelled) setTechnicien(res.ok ? { id: String(data.id), firstname: data.firstname, lastname: data.lastname, email: data.email } : null);
-            } catch {
-              if (!cancelled) setTechnicien(null);
-            }
-          })());
-        } else {
-          setTechnicien(null);
-        }
+        
         await Promise.all(tasks);
       } catch (e: any) {
         if (!cancelled) setError(e?.message || 'Erreur de chargement');
@@ -199,6 +188,37 @@ export default function ProjectDetailModal({ visible, onClose, project, onUpdate
       setEditTechnicien(project.technicien_id ? String(project.technicien_id) : '');
     }
   }, [project]);
+
+  // Derive owner, control, and technicien from companyUsers list
+  useEffect(() => {
+    if (!project) {
+      setOwner(null);
+      setControl(null);
+      setTechnicien(null);
+      return;
+    }
+
+    if (project.owner_id && companyUsers.length > 0) {
+      const ownerUser = companyUsers.find(u => String(u.id) === String(project.owner_id));
+      setOwner(ownerUser ? { id: String(ownerUser.id), firstname: ownerUser.firstname, lastname: ownerUser.lastname, email: ownerUser.email } : null);
+    } else if (!project.owner_id) {
+      setOwner(null);
+    }
+
+    if (project.control_id && companyUsers.length > 0) {
+      const controlUser = companyUsers.find(u => String(u.id) === String(project.control_id));
+      setControl(controlUser ? { id: String(controlUser.id), firstname: controlUser.firstname, lastname: controlUser.lastname, email: controlUser.email } : null);
+    } else if (!project.control_id) {
+      setControl(null);
+    }
+
+    if (project.technicien_id && companyUsers.length > 0) {
+      const technicienUser = companyUsers.find(u => String(u.id) === String(project.technicien_id));
+      setTechnicien(technicienUser ? { id: String(technicienUser.id), firstname: technicienUser.firstname, lastname: technicienUser.lastname, email: technicienUser.email } : null);
+    } else if (!project.technicien_id) {
+      setTechnicien(null);
+    }
+  }, [project, companyUsers]);
 
   useEffect(() => {
     let cancelled = false;
@@ -234,24 +254,6 @@ export default function ProjectDetailModal({ visible, onClose, project, onUpdate
     return () => { cancelled = true; };
   }, [visible, project?.id, token]);
 
-  useEffect(() => {
-    async function loadUsers() {
-      setLoadingUsers(true);
-      try {
-        const res = await fetch(`${API_CONFIG.BASE_URL}/api/users`, {
-          headers: token ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } : { 'Content-Type': 'application/json' },
-        });
-        const data = await res.json();
-        if (res.ok && Array.isArray(data)) setCompanyUsers(data);
-        else setCompanyUsers([]);
-      } catch {
-        setCompanyUsers([]);
-      } finally {
-        setLoadingUsers(false);
-      }
-    }
-    if (isEditing) loadUsers();
-  }, [isEditing, token]);
 
   if (!project) return null;
 
@@ -412,7 +414,7 @@ export default function ProjectDetailModal({ visible, onClose, project, onUpdate
                   {ownerOpen && (
                     <View style={{ maxHeight: 220 }}>
                       <ScrollView keyboardShouldPersistTaps="handled">
-                        {loadingUsers ? (
+                        {isLoading ? (
                           <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
                         ) : companyUsers.length === 0 ? (
                           <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
@@ -447,7 +449,7 @@ export default function ProjectDetailModal({ visible, onClose, project, onUpdate
                   {controlOpen && (
                     <View style={{ maxHeight: 220 }}>
                       <ScrollView keyboardShouldPersistTaps="handled">
-                        {loadingUsers ? (
+                        {isLoading ? (
                           <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
                         ) : companyUsers.length === 0 ? (
                           <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
@@ -482,7 +484,7 @@ export default function ProjectDetailModal({ visible, onClose, project, onUpdate
                   {technicienOpen && (
                     <View style={{ maxHeight: 220 }}>
                       <ScrollView keyboardShouldPersistTaps="handled">
-                        {loadingUsers ? (
+                        {isLoading ? (
                           <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
                         ) : companyUsers.length === 0 ? (
                           <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
