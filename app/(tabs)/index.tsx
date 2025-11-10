@@ -263,7 +263,7 @@ export default function DashboardScreen() {
                 } else if (item.title === 'Inventaires') {
                   //router.push('/inventaire');
                 } else if (item.title === 'Projets') {
-                  //router.push('/projects');
+                  router.push('/projects');
                 } else if (item.title === 'Paramètres') {
                   //router.push('/parametre');
                 } else if (item.title === 'Utilisateurs') {
