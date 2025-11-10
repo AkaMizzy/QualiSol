@@ -294,7 +294,8 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                 )}
               </View>
               
-              <View style={{ gap: 8, marginBottom: 12 }}>
+              {/* Map Zone Selection Section - Commented Out */}
+              {/* <View style={{ gap: 8, marginBottom: 12 }}>
                 <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Localisation (optionnel)</Text>
                 <TouchableOpacity style={[styles.inputWrap, { padding: 0, overflow: 'hidden', borderColor: '#e5e7eb' }]} onPress={handleLocationToggle}>
                   <View style={{ height: 100, width: '100%', position: 'relative' }}>
@@ -304,7 +305,7 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                     </View>
                   </View>
                 </TouchableOpacity>
-              </View>
+              </View> */}
 
               <View style={{ gap: 8, marginBottom: 12 }}>
                 <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Propriétaire (optionnel)</Text>
@@ -423,15 +424,15 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
               )}
             </TouchableOpacity>
           </View>
-        {/* Full Screen Map */}
-        {showLocationInput && (
+        {/* Full Screen Map - Commented Out */}
+        {/* {showLocationInput && (
           <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#FFFFFF' }}>
             <WebView source={{ html: mapHtml }} style={{ flex: 1 }} onMessage={handleMapMessage} javaScriptEnabled startInLoadingState />
             <TouchableOpacity style={{ position: 'absolute', top: 50, right: 20, backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 20, padding: 6 }} onPress={handleLocationToggle}>
               <Ionicons name="close" size={28} color="#11224e" />
             </TouchableOpacity>
           </View>
-        )}
+        )} */}
         </SafeAreaView>
       </KeyboardAvoidingView>
     </Modal>

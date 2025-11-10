@@ -77,3 +77,27 @@ export async function createGed(token: string, input: CreateGedInput): Promise<{
   return data;
 }
 
+export async function describeImage(token: string, file: { uri: string; type: string; name: string }): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', {
+    uri: file.uri,
+    type: file.type,
+    name: file.name,
+  } as any);
+
+  const res = await fetch(`${API_CONFIG.BASE_URL}/api/geds/describe-image`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      // Don't set Content-Type header - let the browser set it with boundary for FormData
+    },
+    body: formData,
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to describe image');
+  }
+  return data.description || '';
+}
+

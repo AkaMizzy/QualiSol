@@ -1,5 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { createGed, type CreateGedInput } from '@/services/gedService';
+import { createGed, describeImage, type CreateGedInput } from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -35,6 +35,7 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
   const [longitude, setLongitude] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [isDescribingImage, setIsDescribingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
@@ -51,6 +52,35 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
       setLongitude(null);
     }
   }, [visible]);
+
+  const generateImageDescription = async (asset: ImagePicker.ImagePickerAsset) => {
+    if (!token || !asset) return;
+    
+    setIsDescribingImage(true);
+    setError(null);
+    
+    try {
+      // Get file extension from URI or use default
+      const uriParts = asset.uri.split('.');
+      const fileType = asset.type || `image/${uriParts[uriParts.length - 1]}`;
+      const fileName = asset.fileName || `photo_${Date.now()}.${uriParts[uriParts.length - 1]}`;
+      
+      const generatedDescription = await describeImage(token, {
+        uri: asset.uri,
+        type: fileType,
+        name: fileName,
+      });
+      
+      if (generatedDescription) {
+        setDescription(generatedDescription);
+      }
+    } catch (err: any) {
+      // Silently fail - description is optional
+      console.error('Error generating image description:', err);
+    } finally {
+      setIsDescribingImage(false);
+    }
+  };
 
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
@@ -98,6 +128,9 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
       if (!result.canceled && result.assets[0]) {
         setSelectedImage(result.assets[0].uri);
         setImageAsset(result.assets[0]);
+        
+        // Automatically generate description using OpenAI
+        generateImageDescription(result.assets[0]);
       }
     } catch {
       Alert.alert('Erreur', 'Impossible d\'ouvrir la caméra');
@@ -256,26 +289,6 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
             />
           </View>
 
-          {/* Description Input */}
-          <View style={styles.card}>
-            <View style={styles.labelContainer}>
-              <Ionicons name="document-text-outline" size={18} color="#f87b1b" />
-              <Text style={styles.label}>Description</Text>
-            </View>
-            <TextInput
-              style={[styles.input, styles.textArea, focusedInput === 'description' && styles.inputFocused]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Ajoutez une description (optionnel)"
-              placeholderTextColor="#9ca3af"
-              multiline
-              numberOfLines={4}
-              editable={!isSubmitting}
-              onFocus={() => setFocusedInput('description')}
-              onBlur={() => setFocusedInput(null)}
-            />
-          </View>
-
           {/* Image Picker */}
           <View style={styles.card}>
             <View style={styles.labelContainer}>
@@ -291,6 +304,7 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
                     onPress={() => {
                       setSelectedImage(null);
                       setImageAsset(null);
+                      setDescription('');
                     }}
                     disabled={isSubmitting}
                   >
@@ -312,6 +326,33 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
                 <Text style={styles.imagePickerTitle}>Prendre une photo</Text>
                 <Text style={styles.imagePickerSubtitle}>Appuyez pour ouvrir la caméra</Text>
               </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Description Input */}
+          <View style={styles.card}>
+            <View style={styles.labelContainer}>
+              <Ionicons name="document-text-outline" size={18} color="#f87b1b" />
+              <Text style={styles.label}>Description</Text>
+            </View>
+            {isDescribingImage ? (
+              <View style={styles.descriptionLoadingContainer}>
+                <ActivityIndicator color="#f87b1b" size="small" />
+                <Text style={styles.descriptionLoadingText}>Analyse de l&apos;image...</Text>
+              </View>
+            ) : (
+              <TextInput
+                style={[styles.input, styles.textArea, focusedInput === 'description' && styles.inputFocused]}
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Ajoutez une description (optionnel)"
+                placeholderTextColor="#9ca3af"
+                multiline
+                numberOfLines={4}
+                editable={!isSubmitting}
+                onFocus={() => setFocusedInput('description')}
+                onBlur={() => setFocusedInput(null)}
+              />
             )}
           </View>
 
@@ -338,7 +379,6 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
                   <Ionicons name="checkmark-circle" size={24} color="#10b981" />
                 </View>
                 <View style={styles.locationInfoTextContainer}>
-                  <Text style={styles.locationInfoTitle}>Localisation capturée</Text>
                   <Text style={styles.locationInfoText}>
                     {latitude.toFixed(6)}, {longitude.toFixed(6)}
                   </Text>
@@ -590,6 +630,22 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontFamily: 'monospace',
     letterSpacing: 0.5,
+  },
+  descriptionLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    padding: 14,
+    minHeight: 100,
+    backgroundColor: '#fafafa',
+  },
+  descriptionLoadingText: {
+    fontSize: 15,
+    color: '#6b7280',
+    fontStyle: 'italic',
   },
   submitButton: {
     backgroundColor: '#f87b1b',
