@@ -1,9 +1,9 @@
 import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { createZone, getAllZoneTypes, type ZoneType } from '@/services/zoneService';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
@@ -17,37 +17,40 @@ type Props = {
 };
 
 export default function CreateZoneModal({ visible, onClose, projectId, projectTitle, projectCode, onCreated }: Props) {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const [companyUsers, setCompanyUsers] = useState<{ id: string; firstname?: string; lastname?: string; email?: string }[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [assignOpen, setAssignOpen] = useState(false);
+  const [ownerOpen, setOwnerOpen] = useState(false);
 
   const [title, setTitle] = useState('');
-  const [zoneTypeId, setZoneTypeId] = useState('');
-  const [zoneTypes, setZoneTypes] = useState<{ id: string; intitule: string }[]>([]);
+  const [description, setDescription] = useState('');
+  const [zonetypeId, setZonetypeId] = useState('');
+  const [zoneTypes, setZoneTypes] = useState<ZoneType[]>([]);
   const [zoneTypeOpen, setZoneTypeOpen] = useState(false);
   const [loadingTypes, setLoadingTypes] = useState(false);
   const [latitude, setLatitude] = useState<string>('');
   const [longitude, setLongitude] = useState<string>('');
-  const [status, setStatus] = useState<boolean>(true);
-  const [assignedUser, setAssignedUser] = useState<string>('');
-  const [control, setControl] = useState<string>('');
-  const [technicien, setTechnicien] = useState<string>('');
+  const [ownerId, setOwnerId] = useState<string>('');
+  const [controlId, setControlId] = useState<string>('');
+  const [technicienId, setTechnicienId] = useState<string>('');
   const [controlOpen, setControlOpen] = useState(false);
   const [technicienOpen, setTechnicienOpen] = useState(false);
-  const [pickedImage, setPickedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showLocationInput, setShowLocationInput] = useState(false);
 
-  const isDisabled = useMemo(() => !title || !zoneTypeId || !token || !projectId || !control || !technicien, [title, zoneTypeId, token, projectId, control, technicien]);
+  const isDisabled = useMemo(() => !title || !token || !projectId || !controlId || !technicienId, [title, token, projectId, controlId, technicienId]);
 
   function validate(): string | null {
     if (!title) return 'Le titre est requis';
-    if (!zoneTypeId) return 'Le type de zone est requis';
-    if (!control) return 'Le contrôleur est requis';
-    if (!technicien) return 'Le technicien est requis';
+    if (!controlId) return 'Le contrôleur est requis';
+    if (!technicienId) return 'Le technicien est requis';
     return null;
+  }
+
+  function generateZoneCode() {
+    const ts = Date.now().toString(36).toUpperCase();
+    return `ZON-${ts}`;
   }
 
   async function onSubmit() {
@@ -56,34 +59,17 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
     if (v) { setError(v); return; }
     try {
       setIsSubmitting(true);
-      const form = new FormData();
-      form.append('title', title);
-      form.append('id_project', String(projectId));
-      form.append('zone_type_id', String(zoneTypeId));
-      form.append('status', status ? '1' : '0');
-      form.append('control', control);
-      form.append('technicien', technicien);
-      if (assignedUser) form.append('assigned_user', assignedUser);
-      
-      if (latitude) form.append('latitude', String(Number(latitude)));
-      if (longitude) form.append('longitude', String(Number(longitude)));
-      if (pickedImage?.uri) {
-        const uri = pickedImage.uri;
-        const name = (uri.split('/').pop() || `zone-${Date.now()}.jpg`).replace(/\?.*$/, '');
-        const type = pickedImage.mimeType || 'image/jpeg';
-        form.append('logo', { uri, name, type } as any);
-      }
-
-      const res = await fetch(`${API_CONFIG.BASE_URL}/user/zones`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
+      await createZone(token, {
+        code: generateZoneCode(),
+        title,
+        description: description || undefined,
+        project_id: projectId,
+        owner_id: ownerId || undefined,
+        control_id: controlId,
+        technicien_id: technicienId,
+        zonetype_id: zonetypeId || undefined,
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error || 'Création de zone échouée');
-      }
-      setTitle(''); setZoneTypeId(''); setLatitude(''); setLongitude(''); setPickedImage(null); setError(null); setControl(''); setTechnicien('');
+      setTitle(''); setDescription(''); setZonetypeId(''); setLatitude(''); setLongitude(''); setError(null); setOwnerId(''); setControlId(''); setTechnicienId('');
       if (onCreated) await onCreated();
       onClose();
     } catch (e: any) {
@@ -91,22 +77,6 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
     } finally {
       setIsSubmitting(false);
     }
-  }
-
-  async function pickImage() {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (perm.status !== 'granted') {
-      setError("Permission d'accès aux photos refusée");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 });
-    if (!result.canceled) {
-      setPickedImage(result.assets[0]);
-    }
-  }
-
-  function clearImage() {
-    setPickedImage(null);
   }
 
   function handleLocationToggle() {
@@ -211,20 +181,19 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
 
   useEffect(() => {
     async function loadZoneTypes() {
+      if (!token) return;
       setLoadingTypes(true);
       try {
-        const res = await fetch(`${API_CONFIG.BASE_URL}/zone-types`, { headers: { 'Content-Type': 'application/json' } });
-        const data = await res.json();
-        if (res.ok && Array.isArray(data)) setZoneTypes(data.map((t: any) => ({ id: String(t.id), intitule: t.intitule })));
-        else setZoneTypes([]);
+        const data = await getAllZoneTypes(token);
+        setZoneTypes(data);
       } catch {
         setZoneTypes([]);
       } finally {
         setLoadingTypes(false);
       }
     }
-    loadZoneTypes();
-  }, []);
+    if (token) loadZoneTypes();
+  }, [token]);
 
   useEffect(() => {
     let cancelled = false;
@@ -291,14 +260,17 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                 <Ionicons name="text-outline" size={16} color="#6b7280" />
                 <TextInput placeholder="Titre" placeholderTextColor="#9ca3af" value={title} onChangeText={setTitle} style={styles.input} />
               </View>
-               {/* Code is auto-generated server-side: zone-{number}-{dd/MM} */}
+              <View style={[styles.inputWrap, { marginBottom: 12 }]}>
+                <Ionicons name="document-text-outline" size={16} color="#6b7280" />
+                <TextInput placeholder="Description (optionnel)" placeholderTextColor="#9ca3af" value={description} onChangeText={setDescription} style={styles.input} multiline numberOfLines={3} />
+              </View>
               <View style={{ gap: 8, marginBottom: 12 }}>
                 <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Type de zone</Text>
                 <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setZoneTypeOpen(v => !v)}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                     <Ionicons name="albums-outline" size={16} color="#6b7280" />
-                    <Text style={[styles.input, { color: zoneTypeId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {zoneTypeId ? (zoneTypes.find(zt => String(zt.id) === String(zoneTypeId))?.intitule || zoneTypeId) : 'Choisir un type'}
+                    <Text style={[styles.input, { color: zonetypeId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
+                      {zonetypeId ? (zoneTypes.find(zt => String(zt.id) === String(zonetypeId))?.title || zonetypeId) : 'Choisir un type (optionnel)'}
                     </Text>
                   </View>
                   <Ionicons name={zoneTypeOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
@@ -312,8 +284,8 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun type</Text></View>
                       ) : (
                         zoneTypes.map(zt => (
-                          <TouchableOpacity key={zt.id} onPress={() => { setZoneTypeId(String(zt.id)); setZoneTypeOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(zoneTypeId) === String(zt.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
-                            <Text style={{ color: '#11224e' }}>{zt.intitule}</Text>
+                          <TouchableOpacity key={zt.id} onPress={() => { setZonetypeId(String(zt.id)); setZoneTypeOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(zonetypeId) === String(zt.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
+                            <Text style={{ color: '#11224e' }}>{zt.title}</Text>
                           </TouchableOpacity>
                         ))
                       )}
@@ -334,35 +306,18 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                 </TouchableOpacity>
               </View>
 
-              {/* Status and Assignee */}
               <View style={{ gap: 8, marginBottom: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Statut</Text>
-                <View style={[styles.inputWrap, { justifyContent: 'space-between' }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Ionicons name="power-outline" size={16} color="#6b7280" />
-                    <Text style={{ color: '#111827' }}>Actif</Text>
-                  </View>
-                  <Switch
-                    value={status}
-                    onValueChange={setStatus}
-                    thumbColor={status ? '#f87b1b' : '#f4f3f4'}
-                    trackColor={{ false: '#d1d5db', true: '#fde7d4' }}
-                  />
-                </View>
-              </View>
-
-              <View style={{ gap: 8, marginBottom: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Admin</Text>
-                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setAssignOpen(v => !v)}>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Propriétaire (optionnel)</Text>
+                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setOwnerOpen(v => !v)}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                     <Ionicons name="person-outline" size={16} color="#6b7280" />
-                    <Text style={[styles.input, { color: assignedUser ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {assignedUser ? (companyUsers.find(u => String(u.id) === String(assignedUser))?.firstname ? `${companyUsers.find(u => String(u.id) === String(assignedUser))?.firstname} ${companyUsers.find(u => String(u.id) === String(assignedUser))?.lastname || ''}` : assignedUser) : 'Choisir un utilisateur'}
+                    <Text style={[styles.input, { color: ownerId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
+                      {ownerId ? (companyUsers.find(u => String(u.id) === String(ownerId))?.firstname ? `${companyUsers.find(u => String(u.id) === String(ownerId))?.firstname} ${companyUsers.find(u => String(u.id) === String(ownerId))?.lastname || ''}` : ownerId) : 'Choisir un utilisateur'}
                     </Text>
                   </View>
-                  <Ionicons name={assignOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
+                  <Ionicons name={ownerOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
                 </TouchableOpacity>
-                {assignOpen && (
+                {ownerOpen && (
                   <View style={{ maxHeight: 220, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingUsers ? (
@@ -371,11 +326,11 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
                       ) : (
                         <>
-                          <TouchableOpacity onPress={() => { setAssignedUser(''); setAssignOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(assignedUser) === '' ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
+                          <TouchableOpacity onPress={() => { setOwnerId(''); setOwnerOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(ownerId) === '' ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
                             <Text style={{ color: '#11224e' }}>Aucun</Text>
                           </TouchableOpacity>
                           {companyUsers.map(u => (
-                            <TouchableOpacity key={u.id} onPress={() => { setAssignedUser(String(u.id)); setAssignOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(assignedUser) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
+                            <TouchableOpacity key={u.id} onPress={() => { setOwnerId(String(u.id)); setOwnerOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(ownerId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
                               <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
                               {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
                             </TouchableOpacity>
@@ -392,8 +347,8 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                 <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setControlOpen(v => !v)}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                     <Ionicons name="shield-checkmark-outline" size={16} color="#6b7280" />
-                    <Text style={[styles.input, { color: control ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {control ? (companyUsers.find(u => String(u.id) === String(control))?.firstname ? `${companyUsers.find(u => String(u.id) === String(control))?.firstname} ${companyUsers.find(u => String(u.id) === String(control))?.lastname || ''}` : control) : 'Choisir un contrôleur'}
+                    <Text style={[styles.input, { color: controlId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
+                      {controlId ? (companyUsers.find(u => String(u.id) === String(controlId))?.firstname ? `${companyUsers.find(u => String(u.id) === String(controlId))?.firstname} ${companyUsers.find(u => String(u.id) === String(controlId))?.lastname || ''}` : controlId) : 'Choisir un contrôleur'}
                     </Text>
                   </View>
                   <Ionicons name={controlOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
@@ -407,7 +362,7 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
                       ) : (
                         companyUsers.map(u => (
-                          <TouchableOpacity key={u.id} onPress={() => { setControl(String(u.id)); setControlOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(control) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
+                          <TouchableOpacity key={u.id} onPress={() => { setControlId(String(u.id)); setControlOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(controlId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
                             <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
                             {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
                           </TouchableOpacity>
@@ -423,8 +378,8 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                 <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setTechnicienOpen(v => !v)}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                     <Ionicons name="construct-outline" size={16} color="#6b7280" />
-                    <Text style={[styles.input, { color: technicien ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {technicien ? (companyUsers.find(u => String(u.id) === String(technicien))?.firstname ? `${companyUsers.find(u => String(u.id) === String(technicien))?.firstname} ${companyUsers.find(u => String(u.id) === String(technicien))?.lastname || ''}` : technicien) : 'Choisir un technicien'}
+                    <Text style={[styles.input, { color: technicienId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
+                      {technicienId ? (companyUsers.find(u => String(u.id) === String(technicienId))?.firstname ? `${companyUsers.find(u => String(u.id) === String(technicienId))?.firstname} ${companyUsers.find(u => String(u.id) === String(technicienId))?.lastname || ''}` : technicienId) : 'Choisir un technicien'}
                     </Text>
                   </View>
                   <Ionicons name={technicienOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
@@ -438,7 +393,7 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
                       ) : (
                         companyUsers.map(u => (
-                          <TouchableOpacity key={u.id} onPress={() => { setTechnicien(String(u.id)); setTechnicienOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(technicien) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
+                          <TouchableOpacity key={u.id} onPress={() => { setTechnicienId(String(u.id)); setTechnicienOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(technicienId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
                             <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
                             {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
                           </TouchableOpacity>
@@ -449,26 +404,6 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                 )}
               </View>
 
-              <View style={{ gap: 8 }}>
-                <View style={{ flexDirection: 'row', gap: 12 }}>
-                  <TouchableOpacity onPress={pickImage} style={[styles.inputWrap, { flex: 1, justifyContent: 'center' }]}>
-                    <Ionicons name="image-outline" size={16} color="#6b7280" />
-                    <Text style={[styles.input, { color: '#111827' }]}>Sélectionner une image</Text>
-                  </TouchableOpacity>
-                </View>
-                {pickedImage?.uri ? (
-                  <View style={{ marginTop: 8, alignItems: 'center' }}>
-                    <View style={{ position: 'relative' }}>
-                      <Image source={{ uri: pickedImage.uri }} style={{ width: 200, height: 140, borderRadius: 12 }} />
-                      <View style={{ position: 'absolute', top: 8, right: 8, flexDirection: 'row', gap: 8 }}>
-                        <TouchableOpacity onPress={clearImage} style={{ backgroundColor: '#FFFFFF', borderColor: '#e5e7eb', borderWidth: 1, width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}>
-                          <Ionicons name="trash" size={18} color="#ef4444" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-                ) : null}
-              </View>
             </View>
           </ScrollView>
 

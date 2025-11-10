@@ -1,48 +1,25 @@
 import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { getZoneById, type Zone } from '@/services/zoneService';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { WebView } from 'react-native-webview';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-type ZoneRecord = {
-  id: string;
-  title: string;
-  code?: string | null;
-  logo?: string | null;
-  zone_logo?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  id_zone?: string | null; // parent id
-  level?: number | null;
-  zone_type_id?: string | number | null;
-  zone_type_title?: string | null;
-  id_project?: string | number | null;
-  project_title?: string | null;
-  project_code?: string | null;
-  status?: number | boolean | null;
-  assigned_user?: string | null;
-  assigned_user_firstname?: string | null;
-  assigned_user_lastname?: string | null;
-  assigned_user_email?: string | null;
-  control?: string | null;
-  control_user_firstname?: string | null;
-  control_user_lastname?: string | null;
-  technicien?: string | null;
-  technicien_user_firstname?: string | null;
-  technicien_user_lastname?: string | null;
-};
+type ZoneType = { id: string; title: string; description: string | null } | null;
+type Project = { id: string; title: string; code: string } | null;
+type Owner = { id: string; firstname?: string; lastname?: string; email?: string } | null;
+type Control = { id: string; firstname?: string; lastname?: string; email?: string } | null;
+type Technicien = { id: string; firstname?: string; lastname?: string; email?: string } | null;
 
 type Props = {
   visible: boolean;
@@ -51,48 +28,101 @@ type Props = {
   onUpdated?: () => void;
 };
 
-function getZoneLogoUrl(z?: { logo?: string | null; zone_logo?: string | null } | null) {
-  if (!z) return null;
-  const raw = z.zone_logo ?? z.logo ?? null;
-  if (!raw) return null;
-  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
-  const path = raw.startsWith('/') ? raw : `/${raw}`;
-  return `${API_CONFIG.BASE_URL}${path}`;
-}
-
 export default function ZoneDetailModal({ visible, onClose, zoneId }: Props) {
   const { token } = useAuth();
-  const insets = useSafeAreaInsets();
-  const [zone, setZone] = useState<ZoneRecord | null>(null);
+  const [zone, setZone] = useState<Zone | null>(null);
+  const [zoneType, setZoneType] = useState<ZoneType>(null);
+  const [project, setProject] = useState<Project>(null);
+  const [owner, setOwner] = useState<Owner>(null);
+  const [control, setControl] = useState<Control>(null);
+  const [technicien, setTechnicien] = useState<Technicien>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isMapVisible, setIsMapVisible] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    function toNumberOrNull(value: unknown): number | null {
-      if (value === null || value === undefined) return null;
-      const n = typeof value === 'number' ? value : Number(value);
-      return Number.isFinite(n) ? n : null;
-    }
-
     async function loadZone() {
-      if (!visible || !zoneId) { setZone(null); setError(null); return; }
+      if (!visible || !zoneId || !token) { 
+        setZone(null); 
+        setZoneType(null);
+        setProject(null);
+        setOwner(null);
+        setControl(null);
+        setTechnicien(null);
+        setError(null); 
+        return; 
+      }
       setIsLoading(true);
       setError(null);
       try {
-        const res = await fetch(`${API_CONFIG.BASE_URL}/user/zones/${zoneId}`,(token ? { headers: { Authorization: `Bearer ${token}` } } : undefined) as any);
-        const data = await res.json();
+        const zoneData = await getZoneById(token, zoneId);
         if (!cancelled) {
-          if (res.ok) {
-            const normalized: ZoneRecord = {
-              ...(data as ZoneRecord),
-              latitude: toNumberOrNull((data as any)?.latitude),
-              longitude: toNumberOrNull((data as any)?.longitude),
-            };
-            setZone(normalized);
+          setZone(zoneData);
+          
+          // Fetch related data
+          const tasks: Promise<void>[] = [];
+          
+          // Fetch zone type
+          if (zoneData.zonetype_id) {
+            tasks.push((async () => {
+              try {
+                const res = await fetch(`${API_CONFIG.BASE_URL}/api/zonetype/${zoneData.zonetype_id}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                const data = await res.json();
+                if (!cancelled && res.ok) {
+                  setZoneType({ id: data.id, title: data.title, description: data.description });
+                }
+              } catch {
+                if (!cancelled) setZoneType(null);
+              }
+            })());
           }
-          else setError(typeof data?.error === 'string' ? data.error : 'Chargement de la zone échoué');
+          
+          // Fetch project
+          if (zoneData.project_id) {
+            tasks.push((async () => {
+              try {
+                const res = await fetch(`${API_CONFIG.BASE_URL}/api/projets/${zoneData.project_id}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                const data = await res.json();
+                if (!cancelled && res.ok) {
+                  setProject({ id: data.id, title: data.title, code: data.code });
+                }
+              } catch {
+                if (!cancelled) setProject(null);
+              }
+            })());
+          }
+          
+          // Fetch all company users in a single request
+          tasks.push((async () => {
+            try {
+              const res = await fetch(`${API_CONFIG.BASE_URL}/api/users`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const users = await res.json();
+              if (!cancelled && res.ok && Array.isArray(users)) {
+                if (zoneData.owner_id) {
+                  const ownerUser = users.find((u: any) => String(u.id) === String(zoneData.owner_id));
+                  if (ownerUser) setOwner(ownerUser);
+                }
+                if (zoneData.control_id) {
+                  const controlUser = users.find((u: any) => String(u.id) === String(zoneData.control_id));
+                  if (controlUser) setControl(controlUser);
+                }
+                if (zoneData.technicien_id) {
+                  const technicienUser = users.find((u: any) => String(u.id) === String(zoneData.technicien_id));
+                  if (technicienUser) setTechnicien(technicienUser);
+                }
+              }
+            } catch {
+              // Ignore errors for user fetching
+            }
+          })());
+          
+          await Promise.all(tasks);
         }
       } catch (e: any) {
         if (!cancelled) setError(e?.message || 'Chargement de la zone échoué');
@@ -104,61 +134,60 @@ export default function ZoneDetailModal({ visible, onClose, zoneId }: Props) {
     return () => { cancelled = true; };
   }, [visible, zoneId, token]);
 
-  // Note: static OSM URL kept for potential fallback use
+// Note: static OSM URL kept for potential fallback use
 
-  function getMiniMapHtml() {
-    const lat = Number(zone?.latitude);
-    const lng = Number(zone?.longitude);
-    const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
-    const centerLat = hasCoords ? lat : 33.5731;
-    const centerLng = hasCoords ? lng : -7.5898;
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-        <style> html, body, #miniMap { height: 100%; } body { margin: 0; padding: 0; } #miniMap { width: 100%; } </style>
-      </head>
-      <body>
-        <div id="miniMap"></div>
-        <script>
-          const miniMap = L.map('miniMap', { zoomControl: false, attributionControl: false }).setView([${centerLat}, ${centerLng}], 14);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(miniMap);
-          ${hasCoords ? `L.marker([${lat}, ${lng}]).addTo(miniMap);` : ''}
-          setTimeout(() => { miniMap.invalidateSize(); }, 100);
-        </script>
-      </body>
-      </html>
-    `;
-  }
+// function getMiniMapHtml() {
+//   const lat = Number(zone?.latitude);
+//   const lng = Number(zone?.longitude);
+//   const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
+//   const centerLat = hasCoords ? lat : 33.5731;
+//   const centerLng = hasCoords ? lng : -7.5898;
+//   return `
+//     <!DOCTYPE html>
+//     <html>
+//     <head>
+//       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+//       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+//       <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+//       <style> html, body, #miniMap { height: 100%; } body { margin: 0; padding: 0; } #miniMap { width: 100%; } </style>
+//     </head>
+//     <body>
+//       <div id="miniMap"></div>
+//       <script>
+//         const miniMap = L.map('miniMap', { zoomControl: false, attributionControl: false }).setView([${centerLat}, ${centerLng}], 14);
+//         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(miniMap);
+//         ${hasCoords ? `L.marker([${lat}, ${lng}]).addTo(miniMap);` : ''}
+//         setTimeout(() => { miniMap.invalidateSize(); }, 100);
+//       </script>
+//     </body>
+//     </html>
+//   `;
+// }
 
-  function getFullViewMapHtml() {
-    if (!Number.isFinite(zone?.latitude as number) || !Number.isFinite(zone?.longitude as number)) return '';
-    const lat = Number(zone?.latitude);
-    const lng = Number(zone?.longitude);
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-        <style> html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; } </style>
-      </head>
-      <body>
-        <div id="map"></div>
-        <script>
-          const map = L.map('map').setView([${lat}, ${lng}], 15);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
-          L.marker([${lat}, ${lng}]).addTo(map);
-        </script>
-      </body>
-      </html>
-    `;
-  }
-
+// function getFullViewMapHtml() {
+//   if (!Number.isFinite(zone?.latitude as number) || !Number.isFinite(zone?.longitude as number)) return '';
+//   const lat = Number(zone?.latitude);
+//   const lng = Number(zone?.longitude);
+//   return `
+//     <!DOCTYPE html>
+//     <html>
+//     <head>
+//       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+//       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+//       <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+//       <style> html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; } </style>
+//     </head>
+//     <body>
+//       <div id="map"></div>
+//       <script>
+//         const map = L.map('map').setView([${lat}, ${lng}], 15);
+//         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
+//         L.marker([${lat}, ${lng}]).addTo(map);
+//       </script>
+//     </body>
+//     </html>
+//   `;
+// }
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <SafeAreaView style={styles.container}>
@@ -189,108 +218,57 @@ export default function ZoneDetailModal({ visible, onClose, zoneId }: Props) {
         ) : null}
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Hero: Logo + title/code */}
+          {/* Hero: title/code */}
           <View style={styles.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              {getZoneLogoUrl(zone) ? (
-                <Image source={{ uri: getZoneLogoUrl(zone) as string }} style={styles.heroLogo} resizeMode="cover" />
-              ) : (
-                <View style={[styles.heroLogo, styles.heroLogoPlaceholder]}>
-                  <Ionicons name="image-outline" size={20} color="#9ca3af" />
-                </View>
-              )}
+              <View style={[styles.heroLogo, styles.heroLogoPlaceholder]}>
+                <Ionicons name="map-outline" size={20} color="#9ca3af" />
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.title} numberOfLines={1}>{zone?.title || '—'}</Text>
                 <Text style={styles.sub} numberOfLines={1}>{zone?.code || '—'}</Text>
               </View>
-              {/* Status badge */}
-              {(() => {
-                const raw = zone?.status as any;
-                const active = raw === 1 || raw === true || raw === '1';
-                return (
-                  <View style={{ backgroundColor: active ? '#e9f7ef' : '#f4f5f7', borderColor: active ? '#c6f0d9' : '#e5e7eb', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 9999 }}>
-                    <Text style={{ color: active ? '#2ecc71' : '#6b7280', fontSize: 11, fontWeight: '600' }}>{active ? 'Actif' : 'Inactif'}</Text>
-                  </View>
-                );
-              })()}
             </View>
+            {zone?.description ? (
+              <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
+                <Text style={styles.meta}>{zone.description}</Text>
+              </View>
+            ) : null}
           </View>
 
           {/* Metadata */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Métadonnées</Text>
             <View style={{ marginTop: 8, gap: 8 }}>
-              <MetaRow icon="albums-outline" label="Type" value={zone?.zone_type_title || '—'} />
-              <MetaRow icon="trail-sign-outline" label="Niveau" value={typeof zone?.level === 'number' ? String(zone?.level) : '—'} />
-              <MetaRow icon="git-branch-outline" label="Zone parente" value={zone?.id_zone || '—'} />
-              <MetaRow icon="business-outline" label="Projet" value={zone?.project_title ? `${zone.project_title}${zone.project_code ? ` · ${zone.project_code}` : ''}` : '—'} />
-              <MetaRow icon="location-outline" label="Latitude" value={Number.isFinite(zone?.latitude as number) ? String(zone?.latitude) : '—'} />
-              <MetaRow icon="location-outline" label="Longitude" value={Number.isFinite(zone?.longitude as number) ? String(zone?.longitude) : '—'} />
-              <MetaRow icon="person-outline" label="Assigné à" value={(() => {
-                const n = [zone?.assigned_user_firstname || '', zone?.assigned_user_lastname || ''].join(' ').trim();
-                if (n) return n;
-                if (zone?.assigned_user_email) return zone.assigned_user_email;
-                if (zone?.assigned_user) return String(zone.assigned_user);
+              <MetaRow icon="albums-outline" label="Type" value={zoneType?.title || '—'} />
+              <MetaRow icon="business-outline" label="Projet" value={project ? `${project.title}${project.code ? ` · ${project.code}` : ''}` : '—'} />
+              <MetaRow icon="person-outline" label="Propriétaire" value={(() => {
+                if (owner) {
+                  const n = [owner.firstname || '', owner.lastname || ''].join(' ').trim();
+                  if (n) return n;
+                  if (owner.email) return owner.email;
+                }
                 return '—';
               })()} />
               <MetaRow icon="shield-checkmark-outline" label="Contrôleur" value={(() => {
-                const n = [zone?.control_user_firstname || '', zone?.control_user_lastname || ''].join(' ').trim();
-                if (n) return n;
-                if (zone?.control) return String(zone.control);
+                if (control) {
+                  const n = [control.firstname || '', control.lastname || ''].join(' ').trim();
+                  if (n) return n;
+                  if (control.email) return control.email;
+                }
                 return '—';
               })()} />
               <MetaRow icon="construct-outline" label="Technicien" value={(() => {
-                const n = [zone?.technicien_user_firstname || '', zone?.technicien_user_lastname || ''].join(' ').trim();
-                if (n) return n;
-                if (zone?.technicien) return String(zone.technicien);
+                if (technicien) {
+                  const n = [technicien.firstname || '', technicien.lastname || ''].join(' ').trim();
+                  if (n) return n;
+                  if (technicien.email) return technicien.email;
+                }
                 return '—';
               })()} />
             </View>
           </View>
-
-          {/* Map preview (Leaflet in WebView, like DeclarationDetailsModal) */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}> 
-              <Text style={styles.cardTitle}>Localisation</Text>
-            </View>
-            {Number.isFinite(zone?.latitude as number) && Number.isFinite(zone?.longitude as number) ? (
-              <TouchableOpacity onPress={() => setIsMapVisible(true)}>
-                <View style={styles.mapContainer}>
-                  <WebView
-                    source={{ html: getMiniMapHtml() }}
-                    style={styles.map}
-                    javaScriptEnabled
-                    scrollEnabled={false}
-                  />
-                  <View style={styles.mapOverlay}>
-                    <Text style={styles.mapCoordinates}>{`${Number(zone?.latitude).toFixed(5)}, ${Number(zone?.longitude).toFixed(5)}`}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ) : (
-              <Text style={styles.meta}>Localisation indisponible</Text>
-            )}
-          </View>
         </ScrollView>
-        {/* Full-screen Map Modal */}
-        <Modal visible={isMapVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setIsMapVisible(false)}>
-          <View style={{ flex: 1, backgroundColor: '#FFFFFF', paddingTop: insets.top }}>
-            <View style={styles.header}>
-              <TouchableOpacity onPress={() => setIsMapVisible(false)} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color="#6b7280" />
-              </TouchableOpacity>
-              <View style={styles.headerCenter}>
-                <Text style={styles.headerTitle}>Vue Carte</Text>
-              </View>
-              <View style={styles.placeholder} />
-            </View>
-            <WebView
-              source={{ html: getFullViewMapHtml() }}
-              style={{ flex: 1 }}
-              javaScriptEnabled
-            />
-          </View>
-        </Modal>
       </SafeAreaView>
     </Modal>
   );
@@ -316,7 +294,6 @@ const styles = StyleSheet.create({
   alertBannerText: { color: '#b45309', flex: 1, fontSize: 12 },
   content: { flex: 1, paddingHorizontal: 16, paddingBottom: 16 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginTop: 16, marginHorizontal: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3, borderWidth: 1, borderColor: '#f3f4f6' },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardTitle: { fontSize: 14, fontWeight: '700', color: '#11224e' },
   title: { fontSize: 16, fontWeight: '700', color: '#11224e' },
   sub: { color: '#6b7280', marginTop: 2 },
@@ -324,30 +301,6 @@ const styles = StyleSheet.create({
   heroLogoPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
   meta: { color: '#374151' },
-  mapContainer: {
-    height: 180,
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    position: 'relative',
-    marginTop: 8,
-  },
-  map: { flex: 1 },
-  mapOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    paddingVertical: 6,
-  },
-  mapCoordinates: {
-    color: '#FFFFFF',
-    textAlign: 'center',
-    fontSize: 13,
-    fontWeight: '600',
-  },
 });
 
 

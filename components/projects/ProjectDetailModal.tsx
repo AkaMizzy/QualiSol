@@ -1,6 +1,7 @@
 import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Project, updateProject } from '@/services/projectService';
+import { formatDisplayDate } from '@/utils/dateFormat';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -374,7 +375,7 @@ export default function ProjectDetailModal({ visible, onClose, project, onUpdate
                 </Pressable>
                 <Pressable android_ripple={{ color: '#f3f4f6' }} style={styles.itemRow}>
                   <Ionicons name="calendar-outline" size={16} color="#6b7280" />
-                  <Text style={styles.meta}>Période · {project.dd} → {project.df}</Text>
+                  <Text style={styles.meta}>Période · {formatDisplayDate(project.dd)} → {formatDisplayDate(project.df)}</Text>
                 </Pressable>
                 <Pressable android_ripple={{ color: '#f3f4f6' }} style={styles.itemRow}>
                   <Ionicons name="albums-outline" size={16} color="#6b7280" />

@@ -3,6 +3,7 @@ import CreateProjectModal from '@/components/projects/CreateProjectModal';
 import ProjectDetailModal from '@/components/projects/ProjectDetailModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllProjects, Project } from '@/services/projectService';
+import { formatDisplayDate } from '@/utils/dateFormat';
 import Ionicons from '@expo/vector-icons/build/Ionicons';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
@@ -75,7 +76,7 @@ export default function ProjectsScreen() {
                     </View>
                     <View style={{ marginTop: 6 }}>
                       {item.code ? <Text style={styles.cardMeta}>Code · {item.code}</Text> : <Text style={styles.cardMeta}>Code · —</Text>}
-                      <Text style={styles.cardSub}>Du {item.dd} au {item.df}</Text>
+                      <Text style={styles.cardSub}>Du {formatDisplayDate(item.dd)} au {formatDisplayDate(item.df)}</Text>
                       {item.project_type_title ? <Text style={styles.cardMeta}>Type · {item.project_type_title}</Text> : null}
                     </View>
                   </TouchableOpacity>
