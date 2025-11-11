@@ -71,11 +71,19 @@ async function getZonesByProjectId(projectId: string, token: string): Promise<Zo
   return response.data;
 }
 
+async function getAllZones(token: string): Promise<Zone[]> {
+  const response = await api.get('api/zones', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+}
+
 const folderService = {
   getAllFolders,
   createFolder,
   getAllProjects,
   getZonesByProjectId,
+  getAllZones,
 };
 
 export default folderService;

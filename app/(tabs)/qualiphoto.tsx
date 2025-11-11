@@ -38,6 +38,7 @@ export default function QualiPhotoGalleryScreen() {
   // Filter states
   const [projects, setProjects] = useState<Project[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
+  const [allZones, setAllZones] = useState<Zone[]>([]); // All zones for display purposes
   const [selectedProject, setSelectedProject] = useState<string | undefined>(undefined);
   const [selectedZone, setSelectedZone] = useState<string | undefined>(undefined);
   const [projectOpen, setProjectOpen] = useState(false);
@@ -115,6 +116,20 @@ export default function QualiPhotoGalleryScreen() {
     fetchProjects();
   }, [token]);
 
+  // Load all zones on mount (for display purposes)
+  useEffect(() => {
+    async function fetchAllZones() {
+      if (!token) return;
+      try {
+        const fetchedZones = await folderService.getAllZones(token);
+        setAllZones(fetchedZones);
+      } catch (error) {
+        console.error('Failed to load all zones', error);
+      }
+    }
+    fetchAllZones();
+  }, [token]);
+
   // Load zones when project changes
   useEffect(() => {
     async function fetchZones() {
@@ -137,32 +152,41 @@ export default function QualiPhotoGalleryScreen() {
     fetchZones();
   }, [selectedProject, token]);
 
-  const renderItem = useCallback(({ item }: { item: Folder }) => (
-    <Pressable
-        style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-        onPress={() => { setSelectedItem(item); setDetailVisible(true); }}
-    >
-        <View style={styles.cardHeader}>
-            <Image source={ICONS.folder} style={{ width: 48, height: 48, marginRight: 12 }} />
-            <Text style={styles.cardTitle} numberOfLines={2}>
-                {item.title}
-            </Text>
-        </View>
-        <View style={styles.cardBody}>
-            <View style={styles.infoRow}>
-                <Ionicons name="briefcase-outline" size={14} color="#6b7280" />
-                <Text style={styles.infoText} numberOfLines={1}>{item.project_id || 'N/A'}</Text>
-            </View>
-            <View style={styles.infoRow}>
-                <Ionicons name="location-outline" size={14} color="#6b7280" />
-                <Text style={styles.infoText} numberOfLines={1}>{item.zone_id || 'N/A'}</Text>
-            </View>
-            <View style={styles.cardFooter}>
-                 <Text style={styles.cardDate}>{formatDateForGrid(item.createdAt)}</Text>
-            </View>
-        </View>
-    </Pressable>
-  ), []);
+  const renderItem = useCallback(({ item }: { item: Folder }) => {
+    const projectTitle = item.project_id 
+      ? projects.find(p => p.id === item.project_id)?.title 
+      : null;
+    const zoneTitle = item.zone_id 
+      ? allZones.find(z => z.id === item.zone_id)?.title 
+      : null;
+
+    return (
+      <Pressable
+          style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+          onPress={() => { setSelectedItem(item); setDetailVisible(true); }}
+      >
+          <View style={styles.cardHeader}>
+              <Image source={ICONS.folder} style={{ width: 48, height: 48, marginRight: 12 }} />
+              <Text style={styles.cardTitle} numberOfLines={2}>
+                  {item.title}
+              </Text>
+          </View>
+          <View style={styles.cardBody}>
+              <View style={styles.infoRow}>
+                  <Ionicons name="briefcase-outline" size={14} color="#6b7280" />
+                  <Text style={styles.infoText} numberOfLines={1}>{projectTitle || 'N/A'}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                  <Ionicons name="location-outline" size={14} color="#6b7280" />
+                  <Text style={styles.infoText} numberOfLines={1}>{zoneTitle || 'N/A'}</Text>
+              </View>
+              <View style={styles.cardFooter}>
+                   <Text style={styles.cardDate}>{formatDateForGrid(item.createdAt)}</Text>
+              </View>
+          </View>
+      </Pressable>
+    );
+  }, [projects, allZones]);
 
   const keyExtractor = useCallback((item: Folder) => item.id, []);
 
