@@ -54,6 +54,8 @@ type ParentQualiPhotoViewProps = {
     isLoadingChildren: boolean;
     setItem: (item: Folder) => void;
     onItemUpdate: (item: Partial<Folder>) => void;
+    projectTitle: string;
+    zoneTitle: string;
   };
   
 
@@ -75,6 +77,8 @@ type ParentQualiPhotoViewProps = {
     isLoadingChildren,
     setItem,
     onItemUpdate,
+    projectTitle,
+    zoneTitle,
   }) => {
     const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
     const [isEditModalVisible, setIsEditModalVisible] = React.useState(false);

@@ -5,7 +5,7 @@ import { Audio } from 'expo-av';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Linking, Modal, Platform, StyleSheet, UIManager, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// import { CreateChildQualiPhotoForm } from './CreateChildQualiPhotoModal';
+import { CreateChildQualiPhotoForm } from './CreateChildQualiPhotoModal';
 import { ParentQualiPhotoView } from './ParentQualiPhotoView';
 
 
@@ -77,7 +77,7 @@ type Props = {
     }
   }, [visible, sound]);
 
-  /*
+  
   const handleChildSuccess = () => {
     if (initialItem && token) {
       setIsLoadingChildren(true);
@@ -87,7 +87,7 @@ type Props = {
         .finally(() => setIsLoadingChildren(false));
     }
   };
-  */
+  
 
   const handleMapPress = () => {
     // This functionality is deprecated for Folders
@@ -117,6 +117,8 @@ type Props = {
           isLoadingChildren={isLoadingChildren}
           setItem={setItem}
           onItemUpdate={(updated) => setItem({ ...item, ...updated })}
+          projectTitle={projects.find(p => p.id === item.project_id)?.title || 'N/A'}
+          zoneTitle={zones.find(z => z.id === item.zone_id)?.title || 'N/A'}
         />
       );
   };
@@ -147,12 +149,14 @@ type Props = {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <AppHeader user={user || undefined} onNavigate={onClose} />
         {isChildModalVisible ? (
-          // <CreateChildQualiPhotoForm
-          //   parentItem={initialItem!}
-          //   onSuccess={handleChildSuccess}
-          //   onClose={() => setChildModalVisible(false)}
-          // />
-          null
+          <CreateChildQualiPhotoForm
+            parentItem={initialItem!}
+            onSuccess={handleChildSuccess}
+            onClose={() => setChildModalVisible(false)}
+            projectTitle={projects.find(p => p.id === initialItem?.project_id)?.title || 'N/A'}
+            zoneTitle={zones.find(z => z.id === initialItem?.zone_id)?.title || 'N/A'}
+          />
+          
         ) : (
           renderDetailView()
         )}
