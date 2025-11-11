@@ -1,11 +1,13 @@
 import AppHeader from '@/components/AppHeader';
 import { useAuth } from '@/contexts/AuthContext';
-import { Folder, Project, qualiphotoService, Zone } from '@/services/qualiphotoService';
+import { Ged, getGedsBySource } from '@/services/gedService';
+import { Folder, Project, Zone } from '@/services/qualiphotoService';
 import { Audio } from 'expo-av';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Linking, Modal, Platform, StyleSheet, UIManager, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Modal, Platform, StyleSheet, UIManager, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CreateChildQualiPhotoForm } from './CreateChildQualiPhotoModal';
+import { ChildQualiPhotoView } from './ChildQualiPhotoView';
+import CreateChildQualiPhotoModal from './CreateChildQualiPhotoModal';
 import { ParentQualiPhotoView } from './ParentQualiPhotoView';
 
 
@@ -19,38 +21,46 @@ type Props = {
   item?: Folder | null;
   projects: Project[];
   zones: Zone[];
+  onUpdate?: (item: Partial<Folder>) => void;
 };
 
- export default function QualiPhotoDetail({ visible, onClose, item: initialItem, projects, zones }: Props) {
+export default function QualiPhotoDetail({ visible, onClose, item: initialItem, projects, zones, onUpdate }: Props) {
   const { token, user } = useAuth();
   const insets = useSafeAreaInsets();
   const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isChildModalVisible, setChildModalVisible] = useState(false);
-  const [children, setChildren] = useState<Folder[]>([]);
-  const [isLoadingChildren, setIsLoadingChildren] = useState(false);
   const [item, setItem] = useState<Folder | null>(initialItem || null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [layoutMode, setLayoutMode] = useState<'grid' | 'list'>('list');
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  
+  const [isGeneratingPdf] = useState(false);
+  const [selectedGed, setSelectedGed] = useState<Ged | null>(null);
+  const [childGeds, setChildGeds] = useState<Ged[]>([]);
+  const [isLoadingChildren, setIsLoadingChildren] = useState(false);
+
+  const fetchChildren = useCallback(async () => {
+    if (token && item) {
+      setIsLoadingChildren(true);
+      try {
+        const geds = await getGedsBySource(token, item.id, 'photoavant', sortOrder);
+        setChildGeds(geds);
+      } catch (error) {
+        console.error("Failed to fetch child GEDs:", error);
+        setChildGeds([]);
+      } finally {
+        setIsLoadingChildren(false);
+      }
+    }
+  }, [token, item, sortOrder]);
+
+  useEffect(() => {
+    fetchChildren();
+  }, [fetchChildren]);
+
   useEffect(() => {
     setItem(initialItem || null);
     setSortOrder('desc'); // Reset sort order when item changes
     setLayoutMode('list');
   }, [initialItem]);
-
-  useEffect(() => {
-    if (item && item.id && token) {
-        setIsLoadingChildren(true);
-        qualiphotoService.getChildren(item.id, token, sortOrder)
-          .then(setChildren)
-          .catch(() => setChildren([]))
-          .finally(() => setIsLoadingChildren(false));
-    } else {
-      setChildren([]);
-    }
-  }, [item, token, sortOrder]);
 
   const subtitle = useMemo(() => {
     if (!item) return '';
@@ -58,10 +68,6 @@ type Props = {
     const zoneTitle = zones.find(z => z.id === item.zone_id)?.title || '—';
     return `${projectTitle} • ${zoneTitle}`;
   }, [item, projects, zones]);
-
-  async function playSound() {
-    // This functionality is deprecated for Folders
-  }
 
   useEffect(() => {
     return () => {
@@ -73,94 +79,78 @@ type Props = {
     if (!visible) {
       sound?.unloadAsync();
       setSound(null);
-      setIsPlaying(false);
+      setSelectedGed(null); // Deselect GED when modal closes
     }
   }, [visible, sound]);
 
-  
-  const handleChildSuccess = () => {
-    if (initialItem && token) {
-      setIsLoadingChildren(true);
-      qualiphotoService.getChildren(initialItem.id, token, sortOrder)
-        .then(setChildren)
-        .catch(() => setChildren([]))
-        .finally(() => setIsLoadingChildren(false));
+  const handleItemUpdate = (updatedItem: Partial<Folder>) => {
+    if (item) {
+      const newItem = { ...item, ...updatedItem };
+      setItem(newItem);
+      if (onUpdate) {
+        onUpdate(newItem);
+      }
     }
   };
-  
 
-  const handleMapPress = () => {
-    // This functionality is deprecated for Folders
+  const handleChildCreationSuccess = (createdGed: Ged) => {
+    console.log('Successfully created GED:', createdGed);
+    fetchChildren(); // Refetch children after a new one is created
+    setChildModalVisible(false); // Close the creation modal on success
   };
 
-   const renderDetailView = () => {
-    if (!item) return null;
-    
-    // The logic to differentiate between parent and child will be handled later.
-    // For now, we only display the parent view.
+  if (!item) return <ActivityIndicator style={{ flex: 1 }} />;
+
+  const projectTitle = projects.find(p => p.id === item.project_id)?.title || 'N/A';
+  const zoneTitle = zones.find(z => z.id === item.zone_id)?.title || 'N/A';
+  
+  if (selectedGed) {
     return (
+        <ChildQualiPhotoView
+          item={selectedGed}
+          parentFolder={item}
+          onClose={() => setSelectedGed(null)}
+          subtitle={subtitle}
+        />
+    );
+  }
+
+  return (
+    <Modal visible={visible} onRequestClose={onClose} animationType="slide" presentationStyle="fullScreen">
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <AppHeader user={user || undefined} onNavigate={onClose} />
         <ParentQualiPhotoView
           item={item}
           onClose={onClose}
           subtitle={subtitle}
-          handleGeneratePdf={handleGeneratePdf}
+          handleGeneratePdf={() => {}}
           isGeneratingPdf={isGeneratingPdf}
-          childFolders={children}
-          playSound={playSound}
-          isPlaying={isPlaying}
-          handleMapPress={handleMapPress}
+          childGeds={childGeds} // Pass GEDs instead of folders
+          onChildPress={setSelectedGed} // Pass handler to select a GED
+          playSound={() => {}}
+          isPlaying={false}
+          handleMapPress={() => {}}
           layoutMode={layoutMode}
           setLayoutMode={setLayoutMode}
           setChildModalVisible={setChildModalVisible}
           sortOrder={sortOrder}
           setSortOrder={setSortOrder}
           isLoadingChildren={isLoadingChildren}
-          setItem={setItem}
-          onItemUpdate={(updated) => setItem({ ...item, ...updated })}
-          projectTitle={projects.find(p => p.id === item.project_id)?.title || 'N/A'}
-          zoneTitle={zones.find(z => z.id === item.zone_id)?.title || 'N/A'}
+          setItem={handleItemUpdate}
+          onItemUpdate={handleItemUpdate}
+          projectTitle={projectTitle}
+          zoneTitle={zoneTitle}
         />
-      );
-  };
-
-   const handleGeneratePdf = async () => {
-    if (!item || !token) return;
-    setIsGeneratingPdf(true);
-    try {
-        const { fileUrl } = await qualiphotoService.generatePdf(item.id, token);
-        const absoluteUrl = `https://api.qualitravaux.net${fileUrl}`; // Assuming this is the base URL
-        
-        const supported = await Linking.canOpenURL(absoluteUrl);
-        if (supported) {
-            await Linking.openURL(absoluteUrl);
-        } else {
-            Alert.alert('Erreur', `Impossible d'ouvrir l'URL: ${absoluteUrl}`);
-        }
-        } catch (err) {
-        console.error("PDF Generation Error", err);
-        Alert.alert('Erreur', 'Échec de la génération du PDF.');
-    } finally {
-        setIsGeneratingPdf(false);
-    }
-   };
-
-   return (
-    <Modal visible={visible} onRequestClose={onClose} animationType="slide" presentationStyle="fullScreen">
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <AppHeader user={user || undefined} onNavigate={onClose} />
-        {isChildModalVisible ? (
-          <CreateChildQualiPhotoForm
-            parentItem={initialItem!}
-            onSuccess={handleChildSuccess}
-            onClose={() => setChildModalVisible(false)}
-            projectTitle={projects.find(p => p.id === initialItem?.project_id)?.title || 'N/A'}
-            zoneTitle={zones.find(z => z.id === initialItem?.zone_id)?.title || 'N/A'}
-          />
-          
-        ) : (
-          renderDetailView()
-        )}
       </View>
+
+      <CreateChildQualiPhotoModal
+        visible={isChildModalVisible}
+        onClose={() => setChildModalVisible(false)}
+        onSuccess={handleChildCreationSuccess}
+        parentItem={item}
+        projectTitle={projectTitle}
+        zoneTitle={zoneTitle}
+      />
     </Modal>
   );
 }

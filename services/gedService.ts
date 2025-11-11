@@ -1,4 +1,5 @@
 import API_CONFIG from '@/app/config/api';
+import api from './api';
 
 export type CreateGedInput = {
   idsource: string;
@@ -100,4 +101,14 @@ export async function describeImage(token: string, file: { uri: string; type: st
   }
   return data.description || '';
 }
+
+export async function getGedsBySource(token: string, idsource: string, kind: string, sortOrder: 'asc' | 'desc' = 'desc'): Promise<Ged[]> {
+  const response = await api.get(`/api/geds?idsource=${idsource}&kind=${kind}&sort=${sortOrder}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.data;
+}
+
 

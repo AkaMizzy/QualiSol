@@ -78,19 +78,6 @@ async function getAllZones(token: string): Promise<Zone[]> {
   return response.data;
 }
 
-async function getChildren(parentId: string, token: string, sortOrder: 'asc' | 'desc' = 'desc'): Promise<Folder[]> {
-  const response = await api.get(`api/qualiphotos/${parentId}/children?sort=${sortOrder}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return response.data;
-}
-
-async function generatePdf(id: string, token: string): Promise<{ fileUrl: string }> {
-    const response = await api.post(`api/qualiphotos/${id}/generate-pdf`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
-}
 
 const folderService = {
   getAllFolders,
@@ -100,12 +87,8 @@ const folderService = {
   getAllZones,
 };
 
-const qualiphotoService = {
-    getChildren,
-    generatePdf,
-};
 
-export { qualiphotoService };
+
 
 export default folderService;
 

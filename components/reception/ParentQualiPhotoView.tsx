@@ -14,7 +14,9 @@ import {
   View,
 } from 'react-native';
 
+import API_CONFIG from '@/app/config/api';
 import { ICONS } from '@/constants/Icons';
+import { Ged } from '@/services/gedService';
 import { Folder } from '@/services/qualiphotoService';
 import { PhotoActions } from './PhotoActions';
 import QualiPhotoEditModal from './QualiPhotoEditModal';
@@ -42,7 +44,8 @@ type ParentQualiPhotoViewProps = {
     subtitle: string;
     handleGeneratePdf: () => void;
     isGeneratingPdf: boolean;
-    childFolders: Folder[];
+    childGeds: Ged[];
+    onChildPress: (ged: Ged) => void;
     playSound: () => void;
     isPlaying: boolean;
     handleMapPress: () => void;
@@ -65,7 +68,8 @@ type ParentQualiPhotoViewProps = {
     subtitle,
     handleGeneratePdf,
     isGeneratingPdf,
-    childFolders,
+    childGeds,
+    onChildPress,
     playSound,
     isPlaying,
     handleMapPress,
@@ -182,8 +186,8 @@ type ParentQualiPhotoViewProps = {
               <>
                 <View style={styles.sectionSeparator} />
                 <View style={styles.childPicturesContainer}>
-                <View style={[styles.childListHeader, childFolders.length === 0 && { justifyContent: 'center' }]}>
-                  {childFolders.length > 0 && (
+                <View style={[styles.childListHeader, childGeds.length === 0 && { justifyContent: 'center' }]}>
+                  {childGeds.length > 0 && (
                     <View style={styles.layoutToggleContainer}>
                       <TouchableOpacity
                           style={[styles.layoutToggleButton, layoutMode === 'list' && styles.layoutToggleButtonActive]}
@@ -207,7 +211,7 @@ type ParentQualiPhotoViewProps = {
                    <Image source={require('@/assets/icons/camera.gif')} style={styles.cameraCTAIcon} />
                    <Text style={styles.cameraCTALabel}>Prendre la situation avant</Text>
                  </TouchableOpacity>
-                 {childFolders.length > 0 && (
+                 {childGeds.length > 0 && (
                    <TouchableOpacity
                      style={styles.sortButton}
                      onPress={() => setSortOrder(current => current === 'asc' ? 'desc' : 'asc')}
@@ -218,19 +222,22 @@ type ParentQualiPhotoViewProps = {
                  )}
                </View>
                 {isLoadingChildren && <Text>Chargement...</Text>}
-                {!isLoadingChildren && childFolders.length === 0 && (
+                {!isLoadingChildren && childGeds.length === 0 && (
                   <Text style={styles.noChildrenText}>Aucune photo suivie n&apos;a encore été ajoutée.</Text>
                 )}
                 <View style={layoutMode === 'grid' ? styles.childGridContainer : styles.childListContainer}>
-                  {childFolders.map((child) => {
+                  {childGeds.map((ged) => {
                     return (
-                      <View key={child.id} style={layoutMode === 'grid' ? styles.childGridItem : styles.childListItem}>
-                        {/* Replace PhotoCard with a Folder-specific card */}
-                        <TouchableOpacity onPress={() => setItem(child)} style={styles.childFolderCard}>
-                          <Ionicons name="folder-outline" size={32} color="#f87b1b" />
-                          <Text style={styles.childFolderTitle} numberOfLines={2}>{child.title}</Text>
-                        </TouchableOpacity>
-                      </View>
+                      <TouchableOpacity key={ged.id} style={layoutMode === 'grid' ? styles.childGridItem : styles.childListItem} onPress={() => onChildPress(ged)}>
+                        {ged.url ? (
+                          <Image source={{ uri: `${API_CONFIG.BASE_URL}${ged.url}` }} style={styles.childThumbnail} />
+                        ) : (
+                          <View style={[styles.childThumbnail, { backgroundColor: '#e5e7eb' }]} />
+                        )}
+                        <View style={styles.childGridOverlay}>
+                          <Text style={styles.childGridTitle} numberOfLines={2}>{ged.title}</Text>
+                        </View>
+                      </TouchableOpacity>
                     );
                   })}
                 </View>
