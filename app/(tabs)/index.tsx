@@ -246,7 +246,7 @@ export default function DashboardScreen() {
               style={[styles.gridButton, item.disabled && styles.gridButtonDisabled]}
               onPress={() => {
                 if (item.title === 'Réception') {
-                  //router.push('/(tabs)/qualiphoto');
+                  router.push('/qualiphoto');
                 } else if (item.title === 'Planning') {
                   //router.push('/planning');
                 } else if (item.title === 'Calendrier') {
