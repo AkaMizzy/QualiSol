@@ -18,6 +18,17 @@ export interface Folder {
   updatedAt: string;
 }
 
+export interface Project {
+  id: string;
+  title: string;
+}
+
+export interface Zone {
+  id: string;
+  title: string;
+  project_id: string;
+}
+
 export type CreateFolderPayload = Pick<
   Folder,
   | 'code'
@@ -46,9 +57,25 @@ async function createFolder(payload: CreateFolderPayload, token: string): Promis
   return response.data;
 }
 
+async function getAllProjects(token: string): Promise<Project[]> {
+  const response = await api.get('api/projets', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+}
+
+async function getZonesByProjectId(projectId: string, token: string): Promise<Zone[]> {
+  const response = await api.get(`api/zones/project/${projectId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+}
+
 const folderService = {
   getAllFolders,
   createFolder,
+  getAllProjects,
+  getZonesByProjectId,
 };
 
 export default folderService;

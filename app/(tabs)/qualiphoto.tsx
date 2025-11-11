@@ -3,10 +3,10 @@ import CreateQualiPhotoModal from '@/components/reception/CreateQualiPhotoModal'
 // import QualiPhotoDetail from '@/components/reception/QualiPhotoDetail';
 import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
-import folderService, { Folder } from '@/services/qualiphotoService';
+import folderService, { Folder, Project, Zone } from '@/services/qualiphotoService';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 
@@ -34,6 +34,16 @@ export default function QualiPhotoGalleryScreen() {
   const [detailVisible, setDetailVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Folder | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Filter states
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [selectedProject, setSelectedProject] = useState<string | undefined>(undefined);
+  const [selectedZone, setSelectedZone] = useState<string | undefined>(undefined);
+  const [projectOpen, setProjectOpen] = useState(false);
+  const [zoneOpen, setZoneOpen] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [loadingZones, setLoadingZones] = useState(false);
 
   // Guards to prevent re-entrant and out-of-order updates
   const fetchingRef = useRef(false);
@@ -87,6 +97,46 @@ export default function QualiPhotoGalleryScreen() {
     }
   }, [token, fetchFolders]);
 
+  // Load projects on mount
+  useEffect(() => {
+    async function fetchProjects() {
+      if (!token) return;
+      setLoadingProjects(true);
+      try {
+        const fetchedProjects = await folderService.getAllProjects(token);
+        setProjects(fetchedProjects);
+      } catch (error) {
+        console.error('Failed to load projects', error);
+        // Handle error appropriately in UI
+      } finally {
+        setLoadingProjects(false);
+      }
+    }
+    fetchProjects();
+  }, [token]);
+
+  // Load zones when project changes
+  useEffect(() => {
+    async function fetchZones() {
+      if (!token || !selectedProject) {
+        setZones([]);
+        setSelectedZone(undefined);
+        return;
+      }
+      setLoadingZones(true);
+      try {
+        const fetchedZones = await folderService.getZonesByProjectId(selectedProject, token);
+        setZones(fetchedZones);
+      } catch (error) {
+        console.error('Failed to load zones', error);
+        setZones([]);
+      } finally {
+        setLoadingZones(false);
+      }
+    }
+    fetchZones();
+  }, [selectedProject, token]);
+
   const renderItem = useCallback(({ item }: { item: Folder }) => (
     <Pressable
         style={({ pressed }) => [styles.card, pressed && styles.pressed]}
@@ -125,6 +175,109 @@ export default function QualiPhotoGalleryScreen() {
         
         <View style={styles.filterContainer}>
           <View style={styles.filtersRow}>
+            <View style={styles.dropdownsContainer}>
+              {/* Project dropdown */}
+              <View style={styles.dropdownWrap}>
+                <Pressable 
+                  accessibilityRole="button" 
+                  accessibilityLabel="Projet" 
+                  onPress={() => { setProjectOpen(v => !v); setZoneOpen(false); }} 
+                  style={styles.selectBtn}
+                >
+                  <Text style={[styles.selectText, !selectedProject && styles.selectPlaceholder]} numberOfLines={1}>
+                    {selectedProject ? (projects.find(p => p.id === selectedProject)?.title || 'Projet') : 'Projet'}
+                  </Text>
+                </Pressable>
+                {projectOpen && (
+                  <View style={styles.selectMenu}>
+                    <ScrollView>
+                      <Pressable 
+                        style={styles.selectItem} 
+                        onPress={() => { 
+                          setSelectedProject(undefined); 
+                          setSelectedZone(undefined); 
+                          setProjectOpen(false); 
+                        }}
+                      >
+                        <Text style={styles.selectItemText}>Tous les projets</Text>
+                      </Pressable>
+                      {loadingProjects ? (
+                        <View style={styles.selectItem}><ActivityIndicator /></View>
+                      ) : (
+                        projects.map(p => (
+                          <Pressable 
+                            key={p.id} 
+                            style={styles.selectItem} 
+                            onPress={() => { 
+                              setSelectedProject(p.id); 
+                              setSelectedZone(undefined); 
+                              setProjectOpen(false); 
+                            }}
+                          >
+                            <Text numberOfLines={1} style={styles.selectItemText}>{p.title}</Text>
+                          </Pressable>
+                        ))
+                      )}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+
+              {/* Zone dropdown */}
+              <View style={[styles.dropdownWrap, !selectedProject && styles.dropdownDisabled]}>
+                <Pressable 
+                  accessibilityRole="button" 
+                  accessibilityLabel="Zone" 
+                  disabled={!selectedProject} 
+                  onPress={() => { 
+                    if (!selectedProject) return; 
+                    setZoneOpen(v => !v); 
+                    setProjectOpen(false); 
+                  }} 
+                  style={[styles.selectBtn, !selectedProject && styles.selectBtnDisabled]}
+                >
+                  <Text style={[styles.selectText, !selectedZone && styles.selectPlaceholder]} numberOfLines={1}>
+                    {selectedZone ? (zones.find(z => z.id === selectedZone)?.title || 'Zone') : (selectedProject ? 'Zone' : 'Zone')}
+                  </Text>
+                </Pressable>
+                {selectedProject && zoneOpen && (
+                  <View style={styles.selectMenu}>
+                    <ScrollView>
+                      <Pressable 
+                        style={styles.selectItem} 
+                        onPress={() => { 
+                          setSelectedZone(undefined); 
+                          setZoneOpen(false); 
+                        }}
+                      >
+                        <Text style={styles.selectItemText}>Toutes les zones</Text>
+                      </Pressable>
+                      {loadingZones ? (
+                        <View style={styles.selectItem}><ActivityIndicator /></View>
+                      ) : (
+                        zones.map(z => (
+                          <Pressable 
+                            key={z.id} 
+                            style={styles.selectItem} 
+                            onPress={() => { 
+                              setSelectedZone(z.id); 
+                              setZoneOpen(false); 
+                            }}
+                          >
+                            <Text numberOfLines={1} style={styles.selectItemText}>{z.title}</Text>
+                          </Pressable>
+                        ))
+                      )}
+                      {zones.length === 0 && !loadingZones && (
+                        <View style={styles.selectItem}>
+                          <Text style={styles.selectItemText}>Aucune zone</Text>
+                        </View>
+                      )}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+            </View>
             <View style={styles.actionsWrapper}>
               <Pressable
                   accessibilityRole="button"
@@ -174,6 +327,8 @@ export default function QualiPhotoGalleryScreen() {
       <CreateQualiPhotoModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
+        projectId={selectedProject}
+        zoneId={selectedZone}
         onSuccess={(created) => {
           setModalVisible(false);
           if (created) {

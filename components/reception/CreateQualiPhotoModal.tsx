@@ -11,9 +11,11 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   onSuccess?: (created: Partial<Folder>) => void;
+  projectId?: string;
+  zoneId?: string;
 };
 
-export default function CreateQualiPhotoModal({ visible, onClose, onSuccess }: Props) {
+export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, projectId, zoneId }: Props) {
   const { token } = useAuth();
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
@@ -73,6 +75,8 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess }: P
         owner_id: ownerId || undefined,
         control_id: controlId || undefined,
         technicien_id: technicienId || undefined,
+        project_id: projectId,
+        zone_id: zoneId,
       };
       const created = await folderService.createFolder(payload, token);
       onSuccess && onSuccess(created);
