@@ -1,6 +1,6 @@
 import AppHeader from '@/components/AppHeader';
-import CreateQualiPhotoModal from '@/components/reception/CreateQualiPhotoModal';
-// import QualiPhotoDetail from '@/components/reception/QualiPhotoDetail';
+// import CreateQualiPhotoModal from '@/components/reception/CreateQualiPhotoModal';
+import QualiPhotoDetail from '@/components/reception/QualiPhotoDetail';
 import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
 import folderService, { Folder, Project, Zone } from '@/services/qualiphotoService';
@@ -30,7 +30,6 @@ export default function QualiPhotoGalleryScreen() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
   const [detailVisible, setDetailVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Folder | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -306,7 +305,7 @@ export default function QualiPhotoGalleryScreen() {
               <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Nouveau dossier"
-                  onPress={() => setModalVisible(true)}
+                  onPress={() => {}}
                   style={styles.addFolderButton}
                 >
                 <Image source={ICONS.folder} style={{ width: 32, height: 32 }} />
@@ -348,7 +347,7 @@ export default function QualiPhotoGalleryScreen() {
         />
       </View>
 
-      <CreateQualiPhotoModal
+      {/* <CreateQualiPhotoModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         projectId={selectedProject}
@@ -362,13 +361,15 @@ export default function QualiPhotoGalleryScreen() {
           // Refresh list in background to include the new item
           fetchFolders();
         }}
-      />
+      /> */}
 
-      {/* <QualiPhotoDetail
+      <QualiPhotoDetail
         visible={detailVisible}
         item={selectedItem}
         onClose={() => { setDetailVisible(false); setSelectedItem(null); }}
-      /> */}
+        projects={projects}
+        zones={allZones}
+      />
 
       
     </SafeAreaView>

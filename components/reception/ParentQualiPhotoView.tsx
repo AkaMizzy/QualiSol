@@ -1,0 +1,605 @@
+import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  LayoutAnimation,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  UIManager,
+  View,
+} from 'react-native';
+
+import { ICONS } from '@/constants/Icons';
+import { Folder } from '@/services/qualiphotoService';
+import { PhotoActions } from './PhotoActions';
+import QualiPhotoEditModal from './QualiPhotoEditModal';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+function formatDate(dateStr: string) {
+  const replaced = dateStr.replace(' ', 'T');
+  const date = new Date(replaced);
+  if (isNaN(date.getTime())) return dateStr;
+  return new Intl.DateTimeFormat('fr-FR', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+type ParentQualiPhotoViewProps = {
+    item: Folder;
+    onClose: () => void;
+    subtitle: string;
+    handleGeneratePdf: () => void;
+    isGeneratingPdf: boolean;
+    childFolders: Folder[];
+    playSound: () => void;
+    isPlaying: boolean;
+    handleMapPress: () => void;
+    layoutMode: 'grid' | 'list';
+    setLayoutMode: (mode: 'grid' | 'list') => void;
+    setChildModalVisible: (visible: boolean) => void;
+    sortOrder: 'asc' | 'desc';
+    setSortOrder: React.Dispatch<React.SetStateAction<'asc' | 'desc'>>;
+    isLoadingChildren: boolean;
+    setItem: (item: Folder) => void;
+    onItemUpdate: (item: Partial<Folder>) => void;
+  };
+  
+
+  export const ParentQualiPhotoView: React.FC<ParentQualiPhotoViewProps> = ({
+    item,
+    onClose,
+    subtitle,
+    handleGeneratePdf,
+    isGeneratingPdf,
+    childFolders,
+    playSound,
+    isPlaying,
+    handleMapPress,
+    layoutMode,
+    setLayoutMode,
+    setChildModalVisible,
+    sortOrder,
+    setSortOrder,
+    isLoadingChildren,
+    setItem,
+    onItemUpdate,
+  }) => {
+    const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
+    const [isEditModalVisible, setIsEditModalVisible] = React.useState(false);
+
+    const toggleDescription = () => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setIsDescriptionExpanded((prev) => !prev);
+    };
+    
+    const header = (
+        <View style={styles.header}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Fermer les détails"
+              onPress={onClose}
+              style={styles.closeBtn}
+            >
+              <Ionicons name="arrow-back" size={28} color="#f87b1b" />
+            </Pressable>
+          <View style={styles.headerTitles}>
+          {!!item?.title && <Text style={styles.title}>{item.title}</Text>}
+          {!!item && <Text numberOfLines={1} style={styles.subtitle}>{subtitle}</Text>}
+          {!!item?.createdAt && <Text style={styles.subtitle}>{formatDate(item.createdAt)}</Text>}
+          </View>
+          <View style={styles.headerActionsContainer}>
+                <TouchableOpacity style={styles.headerAction} onPress={handleGeneratePdf} disabled={isGeneratingPdf} accessibilityLabel="Générer le PDF">
+                    {isGeneratingPdf ? (
+                        <ActivityIndicator color="#f87b1b" />
+                    ) : (
+                        <Image source={ICONS.pdf} style={styles.headerActionIcon} />
+                    )}
+                </TouchableOpacity>
+              <TouchableOpacity style={styles.headerAction} onPress={() => {}} accessibilityLabel="Signatures">
+                <Image source={ICONS.signature} style={styles.headerActionIcon} />
+              </TouchableOpacity>
+          </View>
+        </View>
+      );
+    return (
+        <>
+        {header}
+        <View style={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 12 }}>
+          <View style={styles.folderCard}>
+            <View style={styles.folderHeader}>
+              <View style={styles.folderIconContainer}>
+                <Ionicons name="folder-outline" size={24} color="#f87b1b" />
+              </View>
+              <View style={styles.folderTitleContainer}>
+                <Text style={styles.folderTitle} numberOfLines={1}>{item.title}</Text>
+                <Text style={styles.folderSubtitle} numberOfLines={1}>{subtitle}</Text>
+              </View>
+            </View>
+            <View style={styles.folderMeta}>
+              <Text style={styles.folderMetaText} numberOfLines={1}>
+                {/* User name will be handled later */}
+              </Text>
+              <Text style={styles.folderMetaText}>{item.createdAt ? formatDate(item.createdAt) : ''}</Text>
+            </View>
+
+            <View style={styles.folderContentContainer}>
+              <PhotoActions
+                item={item}
+                isPlaying={isPlaying}
+                onPlaySound={playSound}
+                onMapPress={handleMapPress}
+                onEdit={() => setIsEditModalVisible(true)}
+              />
+              
+              {(typeof (item.description) === 'string' && (item.description)!.trim().length > 0) && (() => {
+                const comment = (item.description)!.trim();
+                const MAX_LENGTH = 100;
+                const isLongText = comment.length > MAX_LENGTH;
+
+                let displayedText = comment;
+                if (isLongText && !isDescriptionExpanded) {
+                  const truncated = comment.substring(0, MAX_LENGTH);
+                  const lastSpaceIndex = truncated.lastIndexOf(' ');
+                  const cutoff = lastSpaceIndex > 0 ? lastSpaceIndex : MAX_LENGTH;
+                  displayedText = `${comment.substring(0, cutoff)}...`;
+                }
+
+                return (
+                  <View>
+                    <Text style={styles.metaLabel}>Description</Text>
+                    <Text style={styles.metaValue}>{displayedText}</Text>
+                    {isLongText && (
+                      <TouchableOpacity onPress={toggleDescription} style={{ alignSelf: 'flex-start' }}>
+                        <Text style={styles.readMoreText}>
+                          {isDescriptionExpanded ? 'Voir moins' : 'Lire la suite'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })()}
+            </View>
+          </View>
+        </View>
+        <ScrollView bounces>
+          <View style={[styles.content, { paddingTop: 0 }]}>
+              <>
+                <View style={styles.sectionSeparator} />
+                <View style={styles.childPicturesContainer}>
+                <View style={[styles.childListHeader, childFolders.length === 0 && { justifyContent: 'center' }]}>
+                  {childFolders.length > 0 && (
+                    <View style={styles.layoutToggleContainer}>
+                      <TouchableOpacity
+                          style={[styles.layoutToggleButton, layoutMode === 'list' && styles.layoutToggleButtonActive]}
+                          onPress={() => setLayoutMode('list')}
+                      >
+                          <Ionicons name="list" size={20} color={layoutMode === 'list' ? '#FFFFFF' : '#11224e'} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                          style={[styles.layoutToggleButton, layoutMode === 'grid' && styles.layoutToggleButtonActive]}
+                          onPress={() => setLayoutMode('grid')}
+                      >
+                          <Ionicons name="grid" size={20} color={layoutMode === 'grid' ? '#FFFFFF' : '#11224e'} />
+                      </TouchableOpacity>
+                   </View>
+                 )}
+                 <TouchableOpacity
+                   onPress={() => setChildModalVisible(true)}
+                   accessibilityLabel="Ajouter une photo avant"
+                   style={styles.cameraCTA}
+                 >
+                   <Image source={require('@/assets/icons/camera.gif')} style={styles.cameraCTAIcon} />
+                   <Text style={styles.cameraCTALabel}>Prendre la situation avant</Text>
+                 </TouchableOpacity>
+                 {childFolders.length > 0 && (
+                   <TouchableOpacity
+                     style={styles.sortButton}
+                     onPress={() => setSortOrder(current => current === 'asc' ? 'desc' : 'asc')}
+                     accessibilityLabel={sortOrder === 'desc' ? 'Trier par ordre croissant' : 'Trier par ordre décroissant'}
+                   >
+                     <Ionicons name={sortOrder === 'desc' ? 'arrow-down' : 'arrow-up'} size={24} color="#f87b1b" />
+                   </TouchableOpacity>
+                 )}
+               </View>
+                {isLoadingChildren && <Text>Chargement...</Text>}
+                {!isLoadingChildren && childFolders.length === 0 && (
+                  <Text style={styles.noChildrenText}>Aucune photo suivie n&apos;a encore été ajoutée.</Text>
+                )}
+                <View style={layoutMode === 'grid' ? styles.childGridContainer : styles.childListContainer}>
+                  {childFolders.map((child) => {
+                    return (
+                      <View key={child.id} style={layoutMode === 'grid' ? styles.childGridItem : styles.childListItem}>
+                        {/* Replace PhotoCard with a Folder-specific card */}
+                        <TouchableOpacity onPress={() => setItem(child)} style={styles.childFolderCard}>
+                          <Ionicons name="folder-outline" size={32} color="#f87b1b" />
+                          <Text style={styles.childFolderTitle} numberOfLines={2}>{child.title}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+              </>
+          </View>
+        </ScrollView>
+        <QualiPhotoEditModal
+            visible={isEditModalVisible}
+            onClose={() => setIsEditModalVisible(false)}
+            item={item}
+            onSuccess={(updatedItem) => {
+                onItemUpdate(updatedItem);
+                setIsEditModalVisible(false);
+            }}
+        />
+      </>
+    )
+  }
+
+const styles = StyleSheet.create({
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E5EA',
+        backgroundColor: '#FFFFFF',
+      },
+      closeBtn: {
+        width: 40,
+        height: 40,
+        backgroundColor: '#F2F2F7',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#f87b1b',
+      },
+      headerTitles: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      headerAction: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      headerActionsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+      },
+      headerActionIcon: {
+        width: 40,
+        height: 40,
+      },
+      headerPlanIcon: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        borderWidth: 1,
+        borderColor: '#f87b1b',
+      },
+      folderCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E5E5EA',
+        padding: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+        elevation: 2,
+      },
+      folderHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+      },
+      folderIconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#F2F2F7',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+        borderWidth: 1,
+        borderColor: '#f87b1b',
+      },
+      folderTitleContainer: {
+        flex: 1,
+      },
+      folderTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#11224e',
+      },
+      folderSubtitle: {
+        fontSize: 12,
+        color: '#8E8E93',
+      },
+      folderMeta: {
+        borderTopWidth: 1,
+        borderTopColor: '#E5E5EA',
+        paddingTop: 12,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+      },
+      folderMetaText: {
+        fontSize: 12,
+        color: '#6b7280',
+        flexShrink: 1,
+      },
+      folderContentContainer: {
+        paddingTop: 12,
+        marginTop: 12,
+        gap: 12,
+      },
+      title: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#11224e',
+      },
+      subtitle: {
+        marginTop: 2,
+        fontSize: 12,
+        color: '#8E8E93',
+      },
+      content: {
+        paddingHorizontal: 12,
+        paddingTop: 12,
+        paddingBottom: 24,
+        gap: 12,
+      },
+      imageWrap: {
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#f87b1b',
+        overflow: 'hidden',
+      },
+      toggleActionsButton: {
+        position: 'absolute',
+        top: 12,
+        right: 12,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1,
+      },
+      inlineActionsButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: '#f1f5f9',
+        borderWidth: 1,
+        borderColor: '#f87b1b',
+        justifyContent: 'center',
+        alignItems: 'center',
+      },
+      image: {
+        width: '100%',
+        aspectRatio: 16/9,
+        backgroundColor: '#f3f4f6'
+      },
+      metaCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#f87b1b',
+        padding: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+        elevation: 2,
+      },
+      metaRow: {
+        marginBottom: 10,
+        borderTopWidth: 1,
+        borderColor: '#f87b1b',
+        paddingTop: 10,
+      },
+      metaLabel: {
+        color: '#94a3b8',
+        fontSize: 12,
+        marginBottom: 2,
+        fontWeight: '600',
+      },
+      metaValue: {
+        color: '#0f172a',
+        fontSize: 14,
+        fontWeight: '600',
+      },
+      metaMultiline: {
+        lineHeight: 20,
+      },
+      sectionTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#f87b1b',
+        marginBottom: 8,
+      },
+      childThumbnail: {
+        width: '100%',
+        aspectRatio: 16/9,
+        backgroundColor: '#f3f4f6',
+      },
+      childGridItem: {
+        width: '49%',
+        marginBottom: 8,
+        borderRadius: 12,
+        overflow: 'hidden',
+        position: 'relative',
+      },
+      childListItem: {
+        width: '100%',
+        marginBottom: 8,
+        borderRadius: 12,
+        overflow: 'hidden',
+        position: 'relative',
+      },
+      childGridOverlay: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        padding: 8,
+        gap: 2,
+      },
+      childGridTitle: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: 'bold',
+      },
+      childGridDate: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: '600',
+      },
+      noChildrenText: {
+        textAlign: 'center',
+        color: '#6b7280',
+        paddingVertical: 16,
+        fontSize: 13,
+      },
+      actionsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        paddingVertical: 8,
+        backgroundColor: '#f1f5f9',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#f87b1b',
+      },
+      actionButton: {
+        padding: 8,
+      },
+      actionIcon: {
+        width: 32,
+        height: 32,
+      },
+      childListHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+        paddingHorizontal: 4,
+      },
+      cameraCTALabel: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#11224e',
+        marginLeft: 8,
+      },
+      cameraCTA: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#ffffff',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 25,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+        marginHorizontal: 12,
+      },
+      cameraCTAIcon: {
+        width: 30,
+        height: 30,
+        resizeMode: 'contain',
+      },
+      sortButton: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+      },
+      layoutToggleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F2F2F7',
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#f87b1b',
+        overflow: 'hidden',
+        width: 80,
+        height: 40,
+      },
+      layoutToggleButton: {
+        flex: 1,
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+      },
+      layoutToggleButtonActive: {
+        backgroundColor: '#f87b1b',
+      },
+      childGridContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        marginTop: 8,
+      },
+      childListContainer: {
+        marginTop: 8,
+      },
+      childPicturesContainer: {
+        backgroundColor: '#FFFFFF',
+        paddingTop: 8,
+        paddingBottom: 8,
+      },
+      sectionSeparator: {
+        height: 1,
+        backgroundColor: '#f87b1b',
+        marginVertical: 16,
+        marginHorizontal: 12,
+      },
+      readMoreText: {
+        color: '#f87b1b',
+        fontSize: 12,
+        marginTop: 4,
+        textDecorationLine: 'underline',
+      },
+      childFolderCard: {
+        padding: 12,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#f87b1b',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+       },
+       childFolderTitle: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#11224e',
+        textAlign: 'center',
+       },
+});
