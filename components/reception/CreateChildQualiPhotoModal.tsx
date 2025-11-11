@@ -8,6 +8,7 @@ import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import API_CONFIG from '@/app/config/api';
 
 type FormProps = {
   onClose: () => void;
@@ -28,6 +29,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
   const [longitude, setLongitude] = useState<number | null>(null);
   const [, setLocationStatus] = useState<'idle' | 'fetching' | 'success' | 'error'>('idle');
   const [creationCount, setCreationCount] = useState(0);
+  const [authorName, setAuthorName] = useState('');
 
   const [isAnnotatorVisible, setAnnotatorVisible] = useState(false);
   const [annotatorBaseUri, setAnnotatorBaseUri] = useState<string | null>(null);
@@ -35,6 +37,52 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
   const scrollViewRef = useRef<ScrollView>(null);
 
   const canSave = useMemo(() => !!photo && !submitting, [photo, submitting]);
+
+  useEffect(() => {
+    async function loadAuthorName() {
+      if (!token || !user) {
+        setAuthorName('Utilisateur inconnu');
+        return;
+      }
+
+      // Set a fallback name immediately from context if available
+      if (user.firstname) {
+        setAuthorName(`${user.firstname} ${user.lastname || ''}`.trim());
+      } else {
+        setAuthorName('Chargement...');
+      }
+
+      try {
+        const baseUrl = API_CONFIG.BASE_URL?.replace(/\/$/, '') || '';
+        const url = `${baseUrl}/api/users`;
+        
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        if (res.ok) {
+          const users = await res.json();
+          if (Array.isArray(users)) {
+            const currentUser = users.find(u => u.id === user.id);
+            if (currentUser && currentUser.firstname) {
+              setAuthorName(`${currentUser.firstname} ${currentUser.lastname || ''}`.trim());
+              return; // Found user, exit
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch user list for author name", e);
+      }
+
+      // If fetch fails or user not found, stick with context or default
+      if (user.firstname) {
+        setAuthorName(`${user.firstname} ${user.lastname || ''}`.trim());
+      } else {
+         setAuthorName(user.email || 'Utilisateur inconnu');
+      }
+    }
+    loadAuthorName();
+  }, [token, user]);
 
   const resetForm = () => {
     setTitle('');
@@ -81,7 +129,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
         title: title || 'Situation Avant',
         kind: 'photoavant',
         description: comment,
-        author: `${user.firstname} ${user.lastname}`,
+        author: authorName,
         latitude: latitude?.toString(),
         longitude: longitude?.toString(),
         file: photo,
