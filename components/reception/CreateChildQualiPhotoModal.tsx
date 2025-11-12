@@ -9,6 +9,7 @@ import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import VoiceNoteRecorder from '../VoiceNoteRecorder';
 
 type FormProps = {
   onClose: () => void;
@@ -31,13 +32,15 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
   const [, setLocationStatus] = useState<'idle' | 'fetching' | 'success' | 'error'>('idle');
   const [creationCount, setCreationCount] = useState(0);
   const [authorName, setAuthorName] = useState('');
+  const [audioUri, setAudioUri] = useState<string | null>(null);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
 
   const [isAnnotatorVisible, setAnnotatorVisible] = useState(false);
   const [annotatorBaseUri, setAnnotatorBaseUri] = useState<string | null>(null);
 
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const canSave = useMemo(() => !!photo && !submitting && !isGeneratingDescription, [photo, submitting, isGeneratingDescription]);
+  const canSave = useMemo(() => !!photo && !submitting && !isGeneratingDescription && !isUploadingAudio, [photo, submitting, isGeneratingDescription, isUploadingAudio]);
 
   useEffect(() => {
     async function loadAuthorName() {
@@ -107,6 +110,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
     setPhoto(null);
     setLatitude(null);
     setLongitude(null);
+    setAudioUri(null);
     setLocationStatus('idle');
     setError(null);
     scrollViewRef.current?.scrollTo({ y: 0, animated: true }); // Scroll to top
@@ -163,6 +167,28 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
       };
 
       const result = await createGed(token, payload);
+
+      if (audioUri) {
+        setIsUploadingAudio(true);
+        try {
+          const audioPayload: CreateGedInput = {
+            idsource: result.data.id,
+            title: `Note vocale pour ${title || 'Situation Avant'}`,
+            kind: 'audio',
+            author: authorName,
+            file: {
+              uri: audioUri,
+              name: `note_${Date.now()}.m4a`,
+              type: 'audio/m4a',
+            },
+          };
+          await createGed(token, audioPayload);
+        } catch (audioErr: any) {
+          Alert.alert('Erreur Audio', `La photo a été enregistrée, mais l'envoi de la note vocale a échoué : ${audioErr.message}`);
+        } finally {
+          setIsUploadingAudio(false);
+        }
+      }
 
       onSuccess(result.data);
       setCreationCount(prev => prev + 1);
@@ -307,6 +333,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
                   </View>
                 )}
               </View>
+              <VoiceNoteRecorder onRecordingComplete={setAudioUri} />
             </View>
           </View>
         </ScrollView>
@@ -326,6 +353,11 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
                 <ActivityIndicator size="small" color="#FFFFFF" />
                 <Text style={styles.submitButtonText}>Génération IA...</Text>
               </>
+            ) : isUploadingAudio ? (
+                <>
+                  <Ionicons name="mic-outline" size={16} color="#FFFFFF" />
+                  <Text style={styles.submitButtonText}>Note vocale...</Text>
+                </>
             ) : (
               <>
                 <Ionicons name="save" size={16} color="#FFFFFF" />

@@ -28,6 +28,7 @@ const GRID_ITEMS: {
   image?: any;
   disabled?: boolean;
 }[] = [
+  { title: 'Galerie', image: require('../../assets/icons/camera_p.png')},
   { title: 'Réception', image: require('../../assets/icons/folder.png') },
   { title: 'Suivi', image: require('../../assets/icons/manifolder.png') },
   { title: 'Déclarations', image: require('../../assets/icons/declaration_anomalie.png') },
@@ -36,7 +37,6 @@ const GRID_ITEMS: {
   { title: 'Planning', image: require('../../assets/icons/planning.png'), disabled: true },
   { title: 'Audit', image: require('../../assets/icons/audit_zone.png'), disabled: true },
   { title: 'Echantillon', image: require('../../assets/icons/prelevement_echantillon.png'), disabled: true },
-  { title: 'Test', image: require('../../assets/icons/reception.png'), disabled: true },
   { title: 'Projets', image: require('../../assets/icons/project.png') },
   { title: 'Utilisateurs', image: require('../../assets/icons/users.png') },
   { title: 'Organisme',  image: require('../../assets/icons/company.png') },
@@ -256,6 +256,8 @@ export default function DashboardScreen() {
                   //router.push('/manifolder');
                 } else if (item.title === 'Déclarations') {
                   //router.push('/declaration');
+                } else if (item.title === 'Galerie') {
+                  router.push('/galerie');
                 } else if (item.title === 'Audit') {
                   //router.push('/audit');
                 } else if (item.title === 'Echantillon') {

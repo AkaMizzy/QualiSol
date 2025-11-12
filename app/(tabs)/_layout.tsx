@@ -57,6 +57,12 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="galerie"
+        options={{
+          title: 'Galerie',
+        }}
+      />
+      <Tabs.Screen
         name="parametre"
         options={{
           title: 'Parametre',
