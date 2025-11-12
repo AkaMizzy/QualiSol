@@ -103,7 +103,7 @@ export async function describeImage(token: string, file: { uri: string; type: st
 }
 
 export async function getGedsBySource(token: string, idsource: string, kind: string, sortOrder: 'asc' | 'desc' = 'desc'): Promise<Ged[]> {
-  const response = await api.get(`/api/geds?idsource=${idsource}&kind=${kind}&sort=${sortOrder}`, {
+  const response = await api.get(`/api/geds/filter?idsource=${idsource}&kind=${kind}&sort=${sortOrder}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
