@@ -87,7 +87,7 @@ function useQualiPhotoDetail({ visible, item: initialItem, projects, zones, onUp
     fetchChildren();
   }, [fetchChildren]);
 
-  // Refresh children when view becomes visible to update "after" photo status
+  
   useEffect(() => {
     if (visible && !selectedGed) {
       fetchChildren();
