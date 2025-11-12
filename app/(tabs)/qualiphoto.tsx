@@ -1,5 +1,5 @@
 import AppHeader from '@/components/AppHeader';
-// import CreateQualiPhotoModal from '@/components/reception/CreateQualiPhotoModal';
+import CreateQualiPhotoModal from '@/components/reception/CreateQualiPhotoModal';
 import QualiPhotoDetail from '@/components/reception/QualiPhotoDetail';
 import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,6 +33,11 @@ export default function QualiPhotoGalleryScreen() {
   const [detailVisible, setDetailVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Folder | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [detailProjectTitle, setDetailProjectTitle] = useState<string | undefined>(undefined);
+  const [detailZoneTitle, setDetailZoneTitle] = useState<string | undefined>(undefined);
+  const [detailFolderTitle, setDetailFolderTitle] = useState<string | undefined>(undefined);
+
 
   // Filter states
   const [projects, setProjects] = useState<Project[]>([]);
@@ -162,7 +167,13 @@ export default function QualiPhotoGalleryScreen() {
     return (
       <Pressable
           style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-          onPress={() => { setSelectedItem(item); setDetailVisible(true); }}
+          onPress={() => { 
+            setSelectedItem(item); 
+            setDetailProjectTitle(projectTitle || undefined);
+            setDetailZoneTitle(zoneTitle || undefined);
+            setDetailFolderTitle(item.title);
+            setDetailVisible(true); 
+          }}
       >
           <View style={styles.cardHeader}>
               <Image source={ICONS.folder} style={{ width: 48, height: 48, marginRight: 12 }} />
@@ -305,8 +316,9 @@ export default function QualiPhotoGalleryScreen() {
               <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Nouveau dossier"
-                  onPress={() => {}}
-                  style={styles.addFolderButton}
+                  onPress={() => setModalVisible(true)}
+                  disabled={!selectedProject || !selectedZone}
+                  style={[styles.addFolderButton, (!selectedProject || !selectedZone) && styles.addFolderButtonDisabled]}
                 >
                 <Image source={ICONS.folder} style={{ width: 32, height: 32 }} />
               </Pressable>
@@ -349,7 +361,7 @@ export default function QualiPhotoGalleryScreen() {
         )}
       </View>
 
-      {/* <CreateQualiPhotoModal
+      <CreateQualiPhotoModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         projectId={selectedProject}
@@ -357,13 +369,18 @@ export default function QualiPhotoGalleryScreen() {
         onSuccess={(created) => {
           setModalVisible(false);
           if (created) {
+            const projectTitle = projects.find(p => p.id === selectedProject)?.title;
+            const zoneTitle = allZones.find(z => z.id === selectedZone)?.title;
+            setDetailProjectTitle(projectTitle);
+            setDetailZoneTitle(zoneTitle);
+            setDetailFolderTitle(created.title);
             setSelectedItem(created as Folder);
             setDetailVisible(true);
           }
           // Refresh list in background to include the new item
           fetchFolders();
         }}
-      /> */}
+      />
 
       <QualiPhotoDetail
         visible={detailVisible}
@@ -371,6 +388,9 @@ export default function QualiPhotoGalleryScreen() {
         onClose={() => { setDetailVisible(false); setSelectedItem(null); }}
         projects={projects}
         zones={allZones}
+        projectTitle={detailProjectTitle}
+        zoneTitle={detailZoneTitle}
+        folderTitle={detailFolderTitle}
       />
 
       

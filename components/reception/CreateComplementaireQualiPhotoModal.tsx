@@ -1,42 +1,39 @@
-import PictureAnnotator from '@/components/PictureAnnotator';
+// import PictureAnnotator from '@/components/PictureAnnotator';
 import { useAuth } from '@/contexts/AuthContext';
-import qualiphotoService, { QualiPhotoItem } from '@/services/qualiphotoService';
+import * as gedService from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+export type QualiPhotoItem = {
+  id: string;
+  project_title?: string | null;
+  id_qualiphoto_parent?: string | null;
+  zone_title?: string | null;
+  date_taken?: string | null;
+  photo?: string | null;
+};
 
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onSuccess: (created: Partial<QualiPhotoItem>) => void;
-  childItem: QualiPhotoItem; 
+  onSuccess: (created: gedService.Ged) => void;
+  childItem: QualiPhotoItem;
   parentTitle?: string | null;
 };
 
 export default function CreateComplementaireQualiPhotoModal({ visible, onClose, onSuccess, childItem, parentTitle }: Props) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [photo, setPhoto] = useState<{ uri: string; name: string; type: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [voiceNote, setVoiceNote] = useState<{ uri: string; name: string; type: string } | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const [isTranscribing, setIsTranscribing] = useState(false);
   const [comment, setComment] = useState('');
-  const [isTranscribed, setIsTranscribed] = useState(false);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
-  const [locationStatus, setLocationStatus] = useState<'idle' | 'fetching' | 'success' | 'error'>('idle');
-  const [isEnhancing, setIsEnhancing] = useState(false);
-  const durationIntervalRef = useRef<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const [isAnnotatorVisible, setAnnotatorVisible] = useState(false);
@@ -44,16 +41,43 @@ export default function CreateComplementaireQualiPhotoModal({ visible, onClose, 
 
   const canSave = useMemo(() => !!photo && !submitting && !isGeneratingDescription, [photo, submitting, isGeneratingDescription]);
 
+  const handleGenerateDescription = useCallback(async (photoToDescribe: { uri: string; name: string; type: string }) => {
+    if (!photoToDescribe || !token) {
+      return;
+    }
+    setIsGeneratingDescription(true);
+    setError(null);
+    try {
+      const description = await gedService.describeImage(token, photoToDescribe);
+      setComment(prev => prev ? `${prev}\n${description}` : description);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to generate description');
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  }, [token]);
+
   const handlePickPhoto = useCallback(async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') return;
+
     const result = await ImagePicker.launchCameraAsync({ allowsEditing: false, quality: 0.9 });
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
-      setAnnotatorBaseUri(asset.uri);
-      setAnnotatorVisible(true);
+      const uri = asset.uri;
+      const fileName = uri.split('/').pop() || 'photo.jpg';
+      const fileType = fileName.split('.').pop() || 'jpeg';
+
+      const newPhoto = {
+        uri,
+        name: fileName,
+        type: `image/${fileType}`,
+      };
+
+      setPhoto(newPhoto);
+      handleGenerateDescription(newPhoto);
     }
-  }, []);
+  }, [handleGenerateDescription]);
 
   const openAnnotatorForExisting = () => {
     if (!photo) return;
@@ -62,130 +86,26 @@ export default function CreateComplementaireQualiPhotoModal({ visible, onClose, 
   };
 
   const handleSubmit = async () => {
-    if (!token || !photo) return;
+    if (!token || !photo || !user) return;
     setSubmitting(true);
     setError(null);
     try {
-      const created = await qualiphotoService.createComplementaire({
-        id_qualiphoto_parent: childItem.id,
-        photo,
-        voice_note: voiceNote || undefined,
-        commentaire: comment || undefined,
-        latitude: latitude || undefined,
-        longitude: longitude || undefined,
-      }, token);
-      onSuccess(created);
+      const result = await gedService.createGed(token, {
+        idsource: childItem.id,
+        title: `Photo Après - ${parentTitle || childItem.project_title || ''}`,
+        kind: 'photoapres',
+        author: `${user.firstname} ${user.lastname}`,
+        description: comment || undefined,
+        latitude: latitude ? String(latitude) : undefined,
+        longitude: longitude ? String(longitude) : undefined,
+        file: photo,
+      });
+      onSuccess(result.data);
       onClose();
     } catch (e: any) {
       setError(e?.message || 'Échec de l\'enregistrement');
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  async function startRecording() {
-    try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') return;
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-      setRecording(recording);
-      setIsRecording(true);
-      setRecordingDuration(0);
-      durationIntervalRef.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
-      }, 1000);
-    } catch {}
-  }
-
-  async function stopRecording() {
-    if (!recording) return;
-    setIsRecording(false);
-    if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
-    await recording.stopAndUnloadAsync();
-    const uri = recording.getURI();
-    if (uri) {
-        const newVoiceNote = { uri, name: `voicenote-${Date.now()}.m4a`, type: 'audio/m4a' };
-        setVoiceNote(newVoiceNote);
-        setIsTranscribed(false);
-        // Automatically transcribe the voice note
-        transcribeVoiceNote(newVoiceNote);
-    }
-    setRecording(null);
-  }
-
-  async function playSound() {
-    if (!voiceNote) return;
-    if (isPlaying && sound) { await sound.pauseAsync(); setIsPlaying(false); return; }
-    if (sound) { await sound.playAsync(); setIsPlaying(true); return; }
-    const { sound: newSound } = await Audio.Sound.createAsync({ uri: voiceNote.uri });
-    setSound(newSound);
-    setIsPlaying(true);
-    newSound.setOnPlaybackStatusUpdate((status) => {
-      if (status.isLoaded && status.didJustFinish) { setIsPlaying(false); newSound.setPositionAsync(0); }
-    });
-    await newSound.playAsync();
-  }
-
-  function formatDuration(seconds: number) {
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const s = (seconds % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
-  }
-
-  const transcribeVoiceNote = async (voiceNoteToTranscribe: { uri: string; name: string; type: string }) => {
-    if (!voiceNoteToTranscribe || !token) {
-      return;
-    }
-    setIsTranscribing(true);
-    setError(null);
-    try {
-      const result = await qualiphotoService.transcribeVoiceNote(voiceNoteToTranscribe, token);
-      setComment(prev => prev ? `${prev}\n${result.transcription}` : result.transcription);
-      setIsTranscribed(true);
-    } catch (e: any) {
-      setError(e?.message || 'Échec de la transcription');
-    } finally {
-      setIsTranscribing(false);
-    }
-  };
-
-  const handleTranscribe = async () => {
-    if (!voiceNote || !token) return;
-    await transcribeVoiceNote(voiceNote);
-  };
-
-  const handleGenerateDescription = async (photoToDescribe: { uri: string; name: string; type: string }) => {
-    if (!photoToDescribe || !token) {
-      return;
-    }
-    setIsGeneratingDescription(true);
-    setError(null);
-    try {
-      const result = await qualiphotoService.describeImage(photoToDescribe, token);
-      setComment(prev => prev ? `${prev}\n${result.description}` : result.description);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to generate description');
-    } finally {
-      setIsGeneratingDescription(false);
-    }
-  };
-
-  const handleEnhanceDescription = async () => {
-    if (!comment || !token) {
-      Alert.alert('Erreur', 'Aucune description à améliorer.');
-      return;
-    }
-    setIsEnhancing(true);
-    setError(null);
-    try {
-      const result = await qualiphotoService.enhanceDescription(comment, token);
-      setComment(result.enhancedDescription);
-    } catch (e: any) {
-      setError(e?.message || 'Échec de l\'amélioration');
-      Alert.alert('Erreur d\'amélioration', e?.message || 'Une erreur est survenue lors de l\'amélioration de la description.');
-    } finally {
-      setIsEnhancing(false);
     }
   };
 
@@ -198,21 +118,17 @@ export default function CreateComplementaireQualiPhotoModal({ visible, onClose, 
 
   useEffect(() => {
     const fetchLocation = async () => {
-      setLocationStatus('fetching');
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           console.log('Location permission denied.');
-          setLocationStatus('error');
           return;
         }
         const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
         setLatitude(location.coords.latitude);
         setLongitude(location.coords.longitude);
-        setLocationStatus('success');
       } catch (error) {
         console.warn('Could not fetch location automatically.', error);
-        setLocationStatus('error');
       }
     };
     fetchLocation();
@@ -283,55 +199,7 @@ export default function CreateComplementaireQualiPhotoModal({ visible, onClose, 
 
             {/* Voice note and transcription */}
             <View style={{ marginTop: 16 }}>
-              {isRecording ? (
-                <View style={styles.recordingWrap}>
-                  <Text style={styles.recordingText}>Enregistrement... {formatDuration(recordingDuration)}</Text>
-                  <TouchableOpacity style={styles.stopButton} onPress={stopRecording}>
-                    <Ionicons name="stop-circle" size={24} color="#dc2626" />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.voiceActionsContainer}>
-                  {voiceNote ? (
-                    <View style={styles.audioPlayerWrap}>
-                      <TouchableOpacity style={styles.playButton} onPress={playSound}>
-                        <Ionicons name={isPlaying ? 'pause-circle' : 'play-circle'} size={28} color="#11224e" />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.deleteButton, isTranscribed && styles.buttonDisabled]}
-                        onPress={() => {
-                          setVoiceNote(null);
-                          setSound(null);
-                          setIsPlaying(false);
-                          setIsTranscribed(false);
-                        }}
-                        disabled={isTranscribed}
-                      >
-                        <Ionicons name="trash-outline" size={20} color={isTranscribed ? '#9ca3af' : '#dc2626'} />
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <TouchableOpacity style={styles.voiceRecordButton} onPress={startRecording}>
-                      <View style={styles.buttonContentWrapper}>
-                        <Ionicons name="mic-outline" size={24} color="#11224e" />
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    style={[styles.voiceRecordButton, styles.transcribeButton, (!voiceNote || isTranscribing) && styles.buttonDisabled]}
-                    onPress={handleTranscribe}
-                    disabled={!voiceNote || isTranscribing}
-                  >
-                    {isTranscribing ? (
-                      <ActivityIndicator size="small" color="#11224e" />
-                    ) : (
-                      <View style={styles.buttonContentWrapper}>
-                        <Ionicons name="volume-high-outline" size={25} color="#11224e" />
-                        <Ionicons name="arrow-forward-circle-outline" size={20} color="#11224e" />
-                        <Ionicons name="document-text-outline" size={20} color="#11224e" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
+              <View style={styles.voiceActionsContainer}>
                   <TouchableOpacity
                     style={[styles.voiceRecordButton, styles.transcribeButton, (!photo || isGeneratingDescription) && styles.buttonDisabled]}
                     onPress={() => photo && handleGenerateDescription(photo)}
@@ -343,8 +211,7 @@ export default function CreateComplementaireQualiPhotoModal({ visible, onClose, 
                       <Image source={require('@/assets/icons/chatgpt.png')} style={{ width: 24, height: 24 }} />
                     )}
                   </TouchableOpacity>
-                </View>
-              )}
+              </View>
               <View style={{ marginTop: 12 }}>
                 <View style={[styles.inputWrap, { alignItems: 'flex-start' }]}>
                   <Ionicons name="chatbubble-ellipses-outline" size={16} color="#6b7280" style={{ marginTop: 4 }} />
@@ -353,7 +220,7 @@ export default function CreateComplementaireQualiPhotoModal({ visible, onClose, 
                     placeholderTextColor="#9ca3af"
                     value={comment}
                     onChangeText={setComment}
-                    style={[styles.input, { height: 150, paddingRight: 40 }]}
+                    style={[styles.input, { height: 150 }]}
                     multiline
                     returnKeyType="done"
                     blurOnSubmit
@@ -363,18 +230,14 @@ export default function CreateComplementaireQualiPhotoModal({ visible, onClose, 
                         scrollViewRef.current?.scrollToEnd({ animated: true });
                       }, 300);
                     }}
+                    editable={!isGeneratingDescription}
                   />
-                  <TouchableOpacity
-                      style={styles.enhanceButton}
-                      onPress={handleEnhanceDescription}
-                      disabled={isEnhancing || !comment}
-                  >
-                      {isEnhancing ? (
-                          <ActivityIndicator size="small" color="#f87b1b" />
-                      ) : (
-                          <Ionicons name="sparkles-outline" size={20} color={!comment ? '#d1d5db' : '#f87b1b'} />
-                      )}
-                  </TouchableOpacity>
+                  {isGeneratingDescription && (
+                    <View style={styles.descriptionLoadingOverlay}>
+                      <ActivityIndicator size="small" color="#11224e" />
+                      <Text style={styles.descriptionLoadingText}>Analyse en cours...</Text>
+                    </View>
+                  )}
                 </View>
               </View>
             </View>
@@ -415,16 +278,16 @@ export default function CreateComplementaireQualiPhotoModal({ visible, onClose, 
           visible={isAnnotatorVisible}
           onRequestClose={() => setAnnotatorVisible(false)}
         >
-          <PictureAnnotator
+          {/* <PictureAnnotator
             baseImageUri={annotatorBaseUri}
             onClose={() => setAnnotatorVisible(false)}
-            onSaved={(image) => {
+            onSaved={(image: { uri: string; name: string; type: string }) => {
               setPhoto(image);
               setAnnotatorVisible(false);
               handleGenerateDescription(image);
             }}
             title="Annoter la photo complémentaire"
-          />
+          /> */}
         </Modal>
       )}
     </Modal>
@@ -455,27 +318,32 @@ const styles = StyleSheet.create({
   submitButton: { backgroundColor: '#f87b1b', borderRadius: 12, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, height: 48, alignSelf: 'center', width: '92%' },
   submitButtonDisabled: { backgroundColor: '#d1d5db' },
   submitButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
-  voiceActionsContainer: { flexDirection: 'row', gap: 8 },
-  voiceRecordButton: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 50, backgroundColor: '#f1f5f9', borderRadius: 10, borderWidth: 1, borderColor: '#f87b1b' },
+  voiceActionsContainer: { flexDirection: 'row', gap: 8, justifyContent: 'flex-end' },
+  voiceRecordButton: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 50, backgroundColor: '#f1f5f9', borderRadius: 10, borderWidth: 1, borderColor: '#f87b1b', maxWidth: 100 },
   transcribeButton: {},
   buttonDisabled: { opacity: 0.5, backgroundColor: '#e5e7eb' },
   buttonContentWrapper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, flex: 1 },
   inputWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#f87b1b', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, position: 'relative' },
   input: { flex: 1, color: '#111827' },
+  descriptionLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
+    gap: 8,
+  },
+  descriptionLoadingText: {
+    color: '#11224e',
+    fontWeight: '600',
+    fontSize: 12,
+  },
   recordingWrap: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fef2f2', padding: 12, borderRadius: 10 },
   recordingText: { color: '#dc2626', fontWeight: '600' },
   stopButton: { padding: 4 },
   audioPlayerWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f1f5f9', paddingHorizontal: 12, height: 50, borderRadius: 10, flex: 1, borderWidth: 1, borderColor: '#f87b1b' },
   playButton: {},
   deleteButton: {},
-  enhanceButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    padding: 4,
-    borderRadius: 8,
-    backgroundColor: '#fff'
-  },
 });
 
 

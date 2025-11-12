@@ -151,33 +151,22 @@ type ParentQualiPhotoViewProps = {
                 onEdit={() => setIsEditModalVisible(true)}
               />
               
-              {(typeof (item.description) === 'string' && (item.description)!.trim().length > 0) && (() => {
-                const comment = (item.description)!.trim();
-                const MAX_LENGTH = 100;
-                const isLongText = comment.length > MAX_LENGTH;
-
-                let displayedText = comment;
-                if (isLongText && !isDescriptionExpanded) {
-                  const truncated = comment.substring(0, MAX_LENGTH);
-                  const lastSpaceIndex = truncated.lastIndexOf(' ');
-                  const cutoff = lastSpaceIndex > 0 ? lastSpaceIndex : MAX_LENGTH;
-                  displayedText = `${comment.substring(0, cutoff)}...`;
-                }
-
-                return (
-                  <View>
+              {item.description && (
+                <View>
+                  <View style={styles.metaHeader}>
                     <Text style={styles.metaLabel}>Description</Text>
-                    <Text style={styles.metaValue}>{displayedText}</Text>
-                    {isLongText && (
-                      <TouchableOpacity onPress={toggleDescription} style={{ alignSelf: 'flex-start' }}>
-                        <Text style={styles.readMoreText}>
-                          {isDescriptionExpanded ? 'Voir moins' : 'Lire la suite'}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
+                    <TouchableOpacity onPress={toggleDescription}>
+                      <Ionicons name={isDescriptionExpanded ? "chevron-up" : "ellipsis-horizontal"} size={20} color="#6b7280" />
+                    </TouchableOpacity>
                   </View>
-                );
-              })()}
+                  <Text 
+                    style={styles.metaValue}
+                    numberOfLines={isDescriptionExpanded ? undefined : 1}
+                  >
+                    {item.description}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -596,6 +585,12 @@ const styles = StyleSheet.create({
         fontSize: 12,
         marginTop: 4,
         textDecorationLine: 'underline',
+      },
+      metaHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
       },
       childFolderCard: {
         padding: 12,

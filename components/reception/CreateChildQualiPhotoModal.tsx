@@ -1,14 +1,14 @@
 // import PictureAnnotator from '@/components/PictureAnnotator';
+import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { CreateGedInput, createGed, Ged } from '@/services/gedService';
+import { CreateGedInput, Ged, createGed, describeImage } from '@/services/gedService';
 import { Folder } from '@/services/qualiphotoService';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import API_CONFIG from '@/app/config/api';
 
 type FormProps = {
   onClose: () => void;
@@ -27,6 +27,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
   const [error, setError] = useState<string | null>(null);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [, setLocationStatus] = useState<'idle' | 'fetching' | 'success' | 'error'>('idle');
   const [creationCount, setCreationCount] = useState(0);
   const [authorName, setAuthorName] = useState('');
@@ -36,7 +37,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
 
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const canSave = useMemo(() => !!photo && !submitting, [photo, submitting]);
+  const canSave = useMemo(() => !!photo && !submitting && !isGeneratingDescription, [photo, submitting, isGeneratingDescription]);
 
   useEffect(() => {
     async function loadAuthorName() {
@@ -84,6 +85,22 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
     loadAuthorName();
   }, [token, user]);
 
+  const handleGenerateDescription = useCallback(async (photoToDescribe: { uri: string; name: string; type: string }) => {
+    if (!photoToDescribe || !token) {
+      return;
+    }
+    setIsGeneratingDescription(true);
+    setError(null);
+    try {
+      const description = await describeImage(token, photoToDescribe);
+      setComment(prev => prev ? `${prev}\n${description}` : description);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to generate description');
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  }, [token]);
+
   const resetForm = () => {
     setTitle('');
     setComment('');
@@ -104,10 +121,20 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
     const result = await ImagePicker.launchCameraAsync({ allowsEditing: false, quality: 0.9 });
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
-      const newPhoto = { uri: asset.uri, name: `photo-${Date.now()}.jpg`, type: 'image/jpeg' };
+      const uri = asset.uri;
+      const fileName = uri.split('/').pop() || 'photo.jpg';
+      const fileType = fileName.split('.').pop() || 'jpeg';
+
+      const newPhoto = {
+        uri,
+        name: fileName,
+        type: `image/${fileType}`,
+      };
+
       setPhoto(newPhoto);
+      handleGenerateDescription(newPhoto);
     }
-  }, []);
+  }, [handleGenerateDescription]);
 
   const openAnnotatorForExisting = () => {
     if (!photo) return;
@@ -250,7 +277,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
               <View style={[styles.inputWrap]}>
                 <Ionicons name="text-outline" size={16} color="#6b7280" />
                 <TextInput
-                  placeholder="Titre (optionnel)"
+                  placeholder="Titre "
                   placeholderTextColor="#9ca3af"
                   value={title}
                   onChangeText={setTitle}
@@ -260,7 +287,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
               <View style={[styles.inputWrap, { alignItems: 'flex-start' }]}>
                 <Ionicons name="chatbubble-ellipses-outline" size={16} color="#6b7280" style={{ marginTop: 4 }} />
                 <TextInput
-                  placeholder="Description (optionnel)"
+                  placeholder="Description "
                   placeholderTextColor="#9ca3af"
                   value={comment}
                   onChangeText={setComment}
@@ -271,7 +298,14 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
                       scrollViewRef.current?.scrollToEnd({ animated: true });
                     }, 100);
                   }}
+                  editable={!isGeneratingDescription}
                 />
+                {isGeneratingDescription && (
+                  <View style={styles.descriptionLoadingOverlay}>
+                    <ActivityIndicator size="small" color="#11224e" />
+                    <Text style={styles.descriptionLoadingText}>Analyse en cours...</Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>
@@ -286,6 +320,11 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
               <>
                 <Ionicons name="hourglass" size={16} color="#FFFFFF" />
                 <Text style={styles.submitButtonText}>Enregistrement...</Text>
+              </>
+            ) : isGeneratingDescription ? (
+              <>
+                <ActivityIndicator size="small" color="#FFFFFF" />
+                <Text style={styles.submitButtonText}>Génération IA...</Text>
               </>
             ) : (
               <>
@@ -435,6 +474,18 @@ const styles = StyleSheet.create({
   imagePreviewContainer: {
     position: 'relative',
   },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    marginTop: 8,
+    fontWeight: '600',
+  },
   imagePreview: {
     width: '100%',
     aspectRatio: 2 / 1,
@@ -462,6 +513,20 @@ const styles = StyleSheet.create({
 
   inputWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#f87b1b', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, position: 'relative' },
   input: { flex: 1, color: '#111827', fontSize: 16 },
+
+  descriptionLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
+    gap: 8,
+  },
+  descriptionLoadingText: {
+    color: '#11224e',
+    fontWeight: '600',
+    fontSize: 12,
+  },
 
   stopButton: {
     backgroundColor: '#fff',

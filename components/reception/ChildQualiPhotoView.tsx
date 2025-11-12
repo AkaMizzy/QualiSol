@@ -11,11 +11,12 @@ import {
   View,
 } from 'react-native';
 
+import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Ged, getGedsBySource } from '@/services/gedService';
 import { Folder } from '@/services/qualiphotoService';
 
-import CreateAfterQualiPhotoModal from './CreateAfterQualiPhotoModal';
+import CreateComplementaireQualiPhotoModal from './CreateComplementaireQualiPhotoModal';
 import { PhotoCard } from './PhotoCard';
 
 const cameraIcon = require('@/assets/icons/camera.gif');
@@ -38,31 +39,28 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   zoneTitle,
 }) => {
   const { token } = useAuth();
-  const [afterPhoto, setAfterPhoto] = useState<Ged | null>(null);
+  const [afterPhotos, setAfterPhotos] = useState<Ged[]>([]);
   const [isLoadingAfter, setIsLoadingAfter] = useState(false);
   const [isCreateAfterModalVisible, setCreateAfterModalVisible] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   useEffect(() => {
-    async function fetchAfterPhoto() {
+    async function fetchAfterPhotos() {
       if (!token || !item?.id) return;
 
       setIsLoadingAfter(true);
       try {
-        const afterPhotos = await getGedsBySource(token, item.id, 'photoapres');
-        if (afterPhotos.length > 0) {
-          setAfterPhoto(afterPhotos[0]);
-        } else {
-          setAfterPhoto(null);
-        }
+        const photos = await getGedsBySource(token, item.id, 'photoapres');
+        setAfterPhotos(photos);
       } catch (error) {
-        console.error('Failed to fetch after photo:', error);
-        setAfterPhoto(null);
+        console.error('Failed to fetch after photos:', error);
+        setAfterPhotos([]);
       } finally {
         setIsLoadingAfter(false);
       }
     }
 
-    fetchAfterPhoto();
+    fetchAfterPhotos();
   }, [item?.id, token]);
 
   const handleAddAfterPhoto = () => {
@@ -70,8 +68,13 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   };
 
   const handleAfterPhotoSuccess = (createdGed: Ged) => {
-    setAfterPhoto(createdGed);
+    setAfterPhotos(prev => [...prev, createdGed]);
     setCreateAfterModalVisible(false);
+  };
+
+  const getFullImageUrl = (relativeUrl: string | null | undefined): string | null => {
+    if (!relativeUrl) return null;
+    return `${API_CONFIG.BASE_URL}${relativeUrl}`;
   };
 
   const header = (
@@ -97,7 +100,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
             <Text style={styles.sectionTitle}>Situation avant</Text>
             {item.url ? (
               <PhotoCard
-                uri={item.url}
+                uri={getFullImageUrl(item.url)}
                 title={item.title}
                 userName={item.author}
                 // date={item.createdAt}
@@ -107,8 +110,18 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
             ) : null}
             {item.description && (
               <View style={styles.metaCard}>
-                <Text style={styles.metaLabel}>Description</Text>
-                <Text style={[styles.metaValue, styles.metaMultiline]}>{item.description}</Text>
+                <View style={styles.metaHeader}>
+                  <Text style={styles.metaLabel}>Description</Text>
+                  <TouchableOpacity onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}>
+                    <Ionicons name={isDescriptionExpanded ? "chevron-up" : "ellipsis-horizontal"} size={20} color="#6b7280" />
+                  </TouchableOpacity>
+                </View>
+                <Text 
+                  style={[styles.metaValue, styles.metaMultiline]} 
+                  numberOfLines={isDescriptionExpanded ? undefined : 1}
+                >
+                  {item.description}
+                </Text>
               </View>
             )}
           </View>
@@ -117,15 +130,17 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
             <Text style={styles.sectionTitle}>Situation après</Text>
             {isLoadingAfter ? (
               <ActivityIndicator style={{ marginVertical: 12 }} />
-            ) : afterPhoto?.url ? (
-              <PhotoCard
-                uri={afterPhoto.url}
-                title={afterPhoto.title}
-                userName={afterPhoto.author}
-                // date={afterPhoto.createdAt}
-                onPress={() => {}}
-                isActionsVisible={false}
-              />
+            ) : afterPhotos.length > 0 ? (
+              afterPhotos.map(photo => (
+                <PhotoCard
+                  key={photo.id}
+                  uri={getFullImageUrl(photo.url)}
+                  title={photo.title}
+                  userName={photo.author}
+                  onPress={() => {}}
+                  isActionsVisible={false}
+                />
+              ))
             ) : (
               <View style={{ alignItems: 'center', marginVertical: 16 }}>
                 <TouchableOpacity
@@ -141,13 +156,17 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
           </View>
         </View>
       </ScrollView>
-      <CreateAfterQualiPhotoModal
+      <CreateComplementaireQualiPhotoModal
         visible={isCreateAfterModalVisible}
         onClose={() => setCreateAfterModalVisible(false)}
         onSuccess={handleAfterPhotoSuccess}
-        parentItem={item}
-        projectTitle={projectTitle}
-        zoneTitle={zoneTitle}
+        childItem={{
+          id: item.id,
+          project_title: projectTitle,
+          zone_title: zoneTitle,
+          // You might need to pass other properties if the modal requires them
+        }}
+        parentTitle={item.title}
       />
     </>
   );
@@ -210,6 +229,12 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.06,
         shadowRadius: 12,
         elevation: 2,
+      },
+      metaHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
       },
       metaLabel: {
         color: '#94a3b8',

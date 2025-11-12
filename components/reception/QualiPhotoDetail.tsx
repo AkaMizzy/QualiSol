@@ -22,10 +22,13 @@ type Props = {
   projects: Project[];
   zones: Zone[];
   onUpdate?: (item: Partial<Folder>) => void;
+  projectTitle?: string;
+  zoneTitle?: string;
+  folderTitle?: string;
 };
 
 // Step 1: Create the custom hook for all logic
-function useQualiPhotoDetail({ visible, item: initialItem, projects, zones, onUpdate }: Props) {
+function useQualiPhotoDetail({ visible, item: initialItem, projects, zones, onUpdate, projectTitle: propProjectTitle, zoneTitle: propZoneTitle, folderTitle: propFolderTitle }: Props) {
   const { token, user } = useAuth();
   const insets = useSafeAreaInsets();
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -37,6 +40,14 @@ function useQualiPhotoDetail({ visible, item: initialItem, projects, zones, onUp
   const [selectedGed, setSelectedGed] = useState<Ged | null>(null);
   const [childGeds, setChildGeds] = useState<Ged[]>([]);
   const [isLoadingChildren, setIsLoadingChildren] = useState(false);
+
+  useEffect(() => {
+    if (initialItem && propFolderTitle && !initialItem.title) {
+      setItem({ ...initialItem, title: propFolderTitle });
+    } else {
+      setItem(initialItem || null);
+    }
+  }, [initialItem, propFolderTitle]);
 
   const fetchChildren = useCallback(async () => {
     if (token && item) {
@@ -68,10 +79,11 @@ function useQualiPhotoDetail({ visible, item: initialItem, projects, zones, onUp
 
   const subtitle = useMemo(() => {
     if (!item) return '';
+    if (propProjectTitle && propZoneTitle) return `${propProjectTitle} • ${propZoneTitle}`;
     const projectTitle = projects.find(p => p.id === item.project_id)?.title || '—';
     const zoneTitle = zones.find(z => z.id === item.zone_id)?.title || '—';
     return `${projectTitle} • ${zoneTitle}`;
-  }, [item, projects, zones]);
+  }, [item, projects, zones, propProjectTitle, propZoneTitle]);
 
   useEffect(() => {
     return () => {
@@ -98,13 +110,11 @@ function useQualiPhotoDetail({ visible, item: initialItem, projects, zones, onUp
   };
 
   const handleChildCreationSuccess = (createdGed: Ged) => {
-    console.log('Successfully created GED:', createdGed);
     fetchChildren();
-    setChildModalVisible(false);
   };
   
-  const projectTitle = useMemo(() => item ? projects.find(p => p.id === item.project_id)?.title || 'N/A' : 'N/A', [item, projects]);
-  const zoneTitle = useMemo(() => item ? zones.find(z => z.id === item.zone_id)?.title || 'N/A' : 'N/A', [item, zones]);
+  const projectTitle = useMemo(() => propProjectTitle || (item ? projects.find(p => p.id === item.project_id)?.title || 'N/A' : 'N/A'), [item, projects, propProjectTitle]);
+  const zoneTitle = useMemo(() => propZoneTitle || (item ? zones.find(z => z.id === item.zone_id)?.title || 'N/A' : 'N/A'), [item, zones, propZoneTitle]);
 
 
   return {
