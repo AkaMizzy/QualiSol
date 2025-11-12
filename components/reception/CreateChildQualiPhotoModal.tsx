@@ -270,7 +270,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
             ) : (
               <TouchableOpacity style={styles.photoPickerButton} onPress={handlePickPhoto}>
                 <Ionicons name="camera-outline" size={24} color="#475569" />
-                <Text style={styles.photoPickerText}>{`Ajouter une Photo "Avant"`}</Text>
+                <Text style={styles.photoPickerText}>Ajouter une Situation avant</Text>
               </TouchableOpacity>
             )}
             <View style={{ marginTop: 16, gap: 12 }}>

@@ -40,6 +40,7 @@ function useQualiPhotoDetail({ visible, item: initialItem, projects, zones, onUp
   const [selectedGed, setSelectedGed] = useState<Ged | null>(null);
   const [childGeds, setChildGeds] = useState<Ged[]>([]);
   const [isLoadingChildren, setIsLoadingChildren] = useState(false);
+  const [childrenWithAfterPhotos, setChildrenWithAfterPhotos] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (initialItem && propFolderTitle && !initialItem.title) {
@@ -55,9 +56,27 @@ function useQualiPhotoDetail({ visible, item: initialItem, projects, zones, onUp
       try {
         const geds = await getGedsBySource(token, item.id, 'photoavant', sortOrder);
         setChildGeds(geds);
+        
+        // Check for each child if it has "after" photos
+        const afterPhotosMap = new Set<string>();
+        await Promise.all(
+          geds.map(async (ged) => {
+            try {
+              const afterPhotos = await getGedsBySource(token, ged.id, 'photoapres', 'desc');
+              if (afterPhotos && afterPhotos.length > 0) {
+                afterPhotosMap.add(ged.id);
+              }
+            } catch (error) {
+              // Silently fail if we can't check for after photos
+              console.warn(`Failed to check after photos for child ${ged.id}:`, error);
+            }
+          })
+        );
+        setChildrenWithAfterPhotos(afterPhotosMap);
       } catch (error) {
         console.error("Failed to fetch child GEDs:", error);
         setChildGeds([]);
+        setChildrenWithAfterPhotos(new Set());
       } finally {
         setIsLoadingChildren(false);
       }
@@ -67,6 +86,13 @@ function useQualiPhotoDetail({ visible, item: initialItem, projects, zones, onUp
   useEffect(() => {
     fetchChildren();
   }, [fetchChildren]);
+
+  // Refresh children when view becomes visible to update "after" photo status
+  useEffect(() => {
+    if (visible && !selectedGed) {
+      fetchChildren();
+    }
+  }, [visible, selectedGed, fetchChildren]);
 
   useEffect(() => {
     setItem(initialItem || null);
@@ -136,7 +162,8 @@ function useQualiPhotoDetail({ visible, item: initialItem, projects, zones, onUp
     handleItemUpdate,
     handleChildCreationSuccess,
     projectTitle,
-    zoneTitle
+    zoneTitle,
+    childrenWithAfterPhotos
   };
 }
 
@@ -169,7 +196,8 @@ function QualiPhotoDetailView({
     handleItemUpdate,
     handleChildCreationSuccess,
     projectTitle,
-    zoneTitle
+    zoneTitle,
+    childrenWithAfterPhotos
   } = props;
 
   if (!item) {
@@ -221,6 +249,7 @@ function QualiPhotoDetailView({
           onItemUpdate={handleItemUpdate}
           projectTitle={projectTitle}
           zoneTitle={zoneTitle}
+          childrenWithAfterPhotos={childrenWithAfterPhotos}
         />
       </View>
       <CreateChildQualiPhotoModal

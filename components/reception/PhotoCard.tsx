@@ -81,8 +81,6 @@ const styles = StyleSheet.create({
   imageWrap: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#f87b1b',
     overflow: 'hidden',
   },
   image: {

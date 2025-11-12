@@ -1,11 +1,25 @@
-// import PictureAnnotator from '@/components/PictureAnnotator';
+
 import { useAuth } from '@/contexts/AuthContext';
 import * as gedService from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export type QualiPhotoItem = {
@@ -17,16 +31,16 @@ export type QualiPhotoItem = {
   photo?: string | null;
 };
 
-type Props = {
-  visible: boolean;
+type FormProps = {
   onClose: () => void;
   onSuccess: (created: gedService.Ged) => void;
   childItem: QualiPhotoItem;
   parentTitle?: string | null;
 };
 
-export default function CreateComplementaireQualiPhotoModal({ visible, onClose, onSuccess, childItem, parentTitle }: Props) {
+function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, parentTitle }: FormProps) {
   const { token, user } = useAuth();
+  const [title, setTitle] = useState('');
   const [photo, setPhoto] = useState<{ uri: string; name: string; type: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +73,10 @@ export default function CreateComplementaireQualiPhotoModal({ visible, onClose, 
 
   const handlePickPhoto = useCallback(async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') return;
+    if (status !== 'granted') {
+        Alert.alert('Permission', 'L\'autorisation d\'accéder à la caméra est requise.');
+        return;
+    }
 
     const result = await ImagePicker.launchCameraAsync({ allowsEditing: false, quality: 0.9 });
     if (!result.canceled && result.assets[0]) {
@@ -92,7 +109,7 @@ export default function CreateComplementaireQualiPhotoModal({ visible, onClose, 
     try {
       const result = await gedService.createGed(token, {
         idsource: childItem.id,
-        title: `Photo Après - ${parentTitle || childItem.project_title || ''}`,
+        title: title || 'Situation Après',
         kind: 'photoapres',
         author: `${user.firstname} ${user.lastname}`,
         description: comment || undefined,
@@ -108,13 +125,6 @@ export default function CreateComplementaireQualiPhotoModal({ visible, onClose, 
       setSubmitting(false);
     }
   };
-
-  function formatDate(dateStr: string | null | undefined) {
-    if (!dateStr) return '';
-    const d = new Date(dateStr.replace(' ', 'T'));
-    if (isNaN(d.getTime())) return '';
-    return new Intl.DateTimeFormat('fr-FR', { year: 'numeric', month: 'short', day: '2-digit' }).format(d);
-  }
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -135,29 +145,36 @@ export default function CreateComplementaireQualiPhotoModal({ visible, onClose, 
   }, []);
 
   useEffect(() => {
-    if (visible) {
-      const timer = setTimeout(() => {
+    const timer = setTimeout(() => {
         handlePickPhoto();
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [visible, handlePickPhoto]);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [handlePickPhoto]);
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <SafeAreaView style={styles.container}>
           <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color="#6b7280" />
-            </TouchableOpacity>
+            <View style={{width: 50}} />
             <View style={styles.headerCenter}>
               <Text style={styles.headerTitle} numberOfLines={1}>
-                {parentTitle || childItem.project_title || String(childItem.id_qualiphoto_parent || childItem.id)}
+                {parentTitle}
               </Text>
             </View>
-            <View style={{ width: 40 }} />
+            <TouchableOpacity onPress={onClose} style={styles.headerStopButton}>
+                <Ionicons name="close" size={28} color="#11224e" />
+            </TouchableOpacity>
           </View>
+          
+          {error && (
+          <View style={styles.alertBanner}>
+            <Ionicons name="warning" size={16} color="#b45309" />
+            <Text style={styles.alertBannerText}>{error}</Text>
+            <TouchableOpacity onPress={() => setError(null)}>
+              <Ionicons name="close" size={16} color="#b45309" />
+            </TouchableOpacity>
+          </View>
+        )}
 
           <ScrollView
             ref={scrollViewRef}
@@ -166,88 +183,75 @@ export default function CreateComplementaireQualiPhotoModal({ visible, onClose, 
             keyboardShouldPersistTaps="handled"
             onScrollBeginDrag={Keyboard.dismiss}
           >
-            {/* Parent info (target child for this complementary) */}
-            <View style={styles.parentInfoCard}>
-              <Text style={styles.parentInfoTitle} numberOfLines={1}>
-                {(childItem.project_title || 'Projet') + ' • ' + (childItem.zone_title || 'Zone') + (childItem.date_taken ? ' • ' + formatDate(childItem.date_taken) : '')}
-              </Text>
-              <View style={styles.parentPhotoWrap}>
-                {childItem.photo && <Image source={{ uri: childItem.photo }} style={styles.parentPhoto} />}
-              </View>
-            </View>
-            {photo ? (
-              <View style={styles.imagePreviewContainer}>
-                <Image source={{ uri: photo.uri }} style={styles.imagePreview} />
-                <View style={styles.imageActions}>
-                  <TouchableOpacity style={[styles.iconButton, styles.iconButtonSecondary]} onPress={handlePickPhoto}>
-                    <Ionicons name="camera-reverse-outline" size={20} color="#11224e" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.iconButton, styles.iconButtonSecondary]} onPress={openAnnotatorForExisting}>
-                    <Ionicons name="create-outline" size={20} color="#11224e" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.iconButton, styles.iconButtonSecondary]} onPress={() => setPhoto(null)}>
-                    <Ionicons name="trash-outline" size={20} color="#dc2626" />
-                  </TouchableOpacity>
+            <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                <View style={styles.cardHeaderText}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>
+                    {`${childItem.project_title} • ${childItem.zone_title}`}
+                    </Text>
                 </View>
-              </View>
-            ) : (
-              <TouchableOpacity style={styles.photoPickerButton} onPress={handlePickPhoto}>
-                <Ionicons name="camera-outline" size={24} color="#475569" />
-                <Text style={styles.photoPickerText}>Ajouter une Photo &quot;après&quot;</Text>
-              </TouchableOpacity>
-            )}
+                </View>
+            
+                <View style={styles.separator} />
 
-            {/* Voice note and transcription */}
-            <View style={{ marginTop: 16 }}>
-              <View style={styles.voiceActionsContainer}>
-                  <TouchableOpacity
-                    style={[styles.voiceRecordButton, styles.transcribeButton, (!photo || isGeneratingDescription) && styles.buttonDisabled]}
-                    onPress={() => photo && handleGenerateDescription(photo)}
-                    disabled={!photo || isGeneratingDescription}
-                  >
-                    {isGeneratingDescription ? (
-                      <ActivityIndicator size="small" color="#11224e" />
-                    ) : (
-                      <Image source={require('@/assets/icons/chatgpt.png')} style={{ width: 24, height: 24 }} />
-                    )}
-                  </TouchableOpacity>
-              </View>
-              <View style={{ marginTop: 12 }}>
-                <View style={[styles.inputWrap, { alignItems: 'flex-start' }]}>
-                  <Ionicons name="chatbubble-ellipses-outline" size={16} color="#6b7280" style={{ marginTop: 4 }} />
-                  <TextInput
-                    placeholder="Introduction"
-                    placeholderTextColor="#9ca3af"
-                    value={comment}
-                    onChangeText={setComment}
-                    style={[styles.input, { height: 150 }]}
-                    multiline
-                    returnKeyType="done"
-                    blurOnSubmit
-                    onSubmitEditing={() => Keyboard.dismiss()}
-                    onFocus={() => {
-                      setTimeout(() => {
-                        scrollViewRef.current?.scrollToEnd({ animated: true });
-                      }, 300);
-                    }}
-                    editable={!isGeneratingDescription}
-                  />
-                  {isGeneratingDescription && (
-                    <View style={styles.descriptionLoadingOverlay}>
-                      <ActivityIndicator size="small" color="#11224e" />
-                      <Text style={styles.descriptionLoadingText}>Analyse en cours...</Text>
+                {photo ? (
+                <View style={styles.imagePreviewContainer}>
+                    <Image source={{ uri: photo.uri }} style={styles.imagePreview} />
+                    <View style={styles.imageActions}>
+                    <TouchableOpacity style={[styles.iconButton, styles.iconButtonSecondary]} onPress={handlePickPhoto}>
+                        <Ionicons name="camera-reverse-outline" size={20} color="#11224e" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.iconButton, styles.iconButtonSecondary]} onPress={openAnnotatorForExisting}>
+                        <Ionicons name="create-outline" size={20} color="#11224e" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.iconButton, styles.iconButtonSecondary]} onPress={() => setPhoto(null)}>
+                        <Ionicons name="trash-outline" size={20} color="#dc2626" />
+                    </TouchableOpacity>
                     </View>
-                  )}
                 </View>
-              </View>
-            </View>
+                ) : (
+                <TouchableOpacity style={styles.photoPickerButton} onPress={handlePickPhoto}>
+                    <Ionicons name="camera-outline" size={24} color="#475569" />
+                    <Text style={styles.photoPickerText}>Ajouter une Situation après</Text>
+                </TouchableOpacity>
+                )}
 
-            {error ? (
-              <View style={styles.errorBanner}>
-                <Ionicons name="warning" size={16} color="#b45309" />
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
+                <View style={{ marginTop: 16, gap: 12 }}>
+                    <View style={[styles.inputWrap]}>
+                        <Ionicons name="text-outline" size={16} color="#6b7280" />
+                        <TextInput
+                        placeholder="Titre (optionnel)"
+                        placeholderTextColor="#9ca3af"
+                        value={title}
+                        onChangeText={setTitle}
+                        style={styles.input}
+                        />
+                    </View>
+                    <View style={[styles.inputWrap, { alignItems: 'flex-start' }]}>
+                        <Ionicons name="chatbubble-ellipses-outline" size={16} color="#6b7280" style={{ marginTop: 4 }} />
+                        <TextInput
+                        placeholder="Description"
+                        placeholderTextColor="#9ca3af"
+                        value={comment}
+                        onChangeText={setComment}
+                        style={[styles.input, { height: 160 }]}
+                        multiline
+                        onFocus={() => {
+                            setTimeout(() => {
+                            scrollViewRef.current?.scrollToEnd({ animated: true });
+                            }, 100);
+                        }}
+                        editable={!isGeneratingDescription}
+                        />
+                        {isGeneratingDescription && (
+                        <View style={styles.descriptionLoadingOverlay}>
+                            <ActivityIndicator size="small" color="#11224e" />
+                            <Text style={styles.descriptionLoadingText}>Analyse en cours...</Text>
+                        </View>
+                        )}
+                    </View>
+                </View>
+            </View>
           </ScrollView>
 
           <View style={styles.footer}>
@@ -271,7 +275,6 @@ export default function CreateComplementaireQualiPhotoModal({ visible, onClose, 
             </TouchableOpacity>
           </View>
         </SafeAreaView>
-      </KeyboardAvoidingView>
       {isAnnotatorVisible && annotatorBaseUri && (
         <Modal
           animationType="fade"
@@ -290,60 +293,64 @@ export default function CreateComplementaireQualiPhotoModal({ visible, onClose, 
           /> */}
         </Modal>
       )}
-    </Modal>
+    </KeyboardAvoidingView>
   );
 }
 
+
+type ModalProps = {
+    visible: boolean;
+    onClose: () => void;
+    onSuccess: (created: gedService.Ged) => void;
+    childItem: QualiPhotoItem;
+    parentTitle?: string | null;
+};
+
+export default function CreateComplementaireQualiPhotoModal({ visible, onClose, onSuccess, childItem, parentTitle }: ModalProps) {
+    if (!visible) return null;
+    
+    return (
+      <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+        <CreateComplementaireQualiPhotoForm 
+          onClose={onClose}
+          onSuccess={onSuccess}
+          childItem={childItem}
+          parentTitle={parentTitle}
+        />
+      </Modal>
+    );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
-  content: { flex: 1, paddingHorizontal: 16 },
-  closeButton: { padding: 8 },
-  headerCenter: { alignItems: 'center', flex: 1 },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#11224e' },
-  parentInfoCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 12, marginTop: 12, borderWidth: 1, borderColor: '#f87b1b' },
-  parentInfoTitle: { fontSize: 12, color: '#11224e', fontWeight: '600', marginBottom: 8 },
-  parentPhotoWrap: { borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#f87b1b' },
-  parentPhoto: { width: '100%', aspectRatio: 16/10, backgroundColor: '#e5e7eb' },
-  photoPickerButton: { borderWidth: 2, borderColor: '#f87b1b', borderStyle: 'dashed', borderRadius: 12, paddingVertical: 32, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', gap: 8, marginTop: 16 },
-  photoPickerText: { color: '#475569', fontWeight: '600' },
-  imagePreviewContainer: { position: 'relative', marginTop: 16 },
-  imagePreview: { width: '100%', aspectRatio: 16/10, borderRadius: 12 },
-  imageActions: { position: 'absolute', top: 8, right: 8, flexDirection: 'row', gap: 8 },
-  iconButton: { padding: 10, backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: 99 },
-  iconButtonSecondary: { backgroundColor: '#f1f5f9', borderRadius: 99, padding: 8, borderWidth: 1, borderColor: '#e2e8f0' },
-  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fffbeb', borderColor: '#f59e0b', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, marginTop: 16, borderRadius: 10 },
-  errorText: { color: '#b45309', fontSize: 12, flex: 1 },
-  footer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#e5e7eb', gap: 8 },
-  submitButton: { backgroundColor: '#f87b1b', borderRadius: 12, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, height: 48, alignSelf: 'center', width: '92%' },
-  submitButtonDisabled: { backgroundColor: '#d1d5db' },
-  submitButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
-  voiceActionsContainer: { flexDirection: 'row', gap: 8, justifyContent: 'flex-end' },
-  voiceRecordButton: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 50, backgroundColor: '#f1f5f9', borderRadius: 10, borderWidth: 1, borderColor: '#f87b1b', maxWidth: 100 },
-  transcribeButton: {},
-  buttonDisabled: { opacity: 0.5, backgroundColor: '#e5e7eb' },
-  buttonContentWrapper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, flex: 1 },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#f87b1b', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, position: 'relative' },
-  input: { flex: 1, color: '#111827' },
-  descriptionLoadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 10,
-    gap: 8,
-  },
-  descriptionLoadingText: {
-    color: '#11224e',
-    fontWeight: '600',
-    fontSize: 12,
-  },
-  recordingWrap: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fef2f2', padding: 12, borderRadius: 10 },
-  recordingText: { color: '#dc2626', fontWeight: '600' },
-  stopButton: { padding: 4 },
-  audioPlayerWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f1f5f9', paddingHorizontal: 12, height: 50, borderRadius: 10, flex: 1, borderWidth: 1, borderColor: '#f87b1b' },
-  playButton: {},
-  deleteButton: {},
+    container: { flex: 1, backgroundColor: '#F8FAFC' },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
+    headerStopButton: { padding: 8, minWidth: 50, alignItems: 'flex-end' },
+    stopButtonText: { color: '#f87b1b', fontWeight: '600', fontSize: 16 },
+    headerCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
+    headerTitle: { fontSize: 18, fontWeight: '600', color: '#11224e' },
+    content: { flex: 1, paddingHorizontal: 16 },
+    alertBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fffbeb', borderColor: '#f59e0b', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, marginHorizontal: 16, marginTop: 8, borderRadius: 10 },
+    alertBannerText: { color: '#b45309', flex: 1, fontSize: 12 },
+    card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginTop: 16, marginHorizontal: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
+    cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+    cardHeaderText: { flex: 1, alignItems: 'center' },
+    cardTitle: { fontSize: 12, color: '#11224e', fontWeight: '500' },
+    separator: { height: 1, backgroundColor: '#e5e7eb', marginVertical: 16, },
+    photoPickerButton: { borderWidth: 2, borderColor: '#f87b1b', borderStyle: 'dashed', borderRadius: 12, paddingVertical: 20, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', gap: 8, },
+    photoPickerText: { color: '#475569', fontWeight: '600', },
+    imagePreviewContainer: { position: 'relative', },
+    imagePreview: { width: '100%', aspectRatio: 2 / 1, borderRadius: 12, },
+    imageActions: { position: 'absolute', top: 8, right: 8, flexDirection: 'row', gap: 8, },
+    iconButton: { padding: 10, backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: 99, },
+    iconButtonSecondary: { backgroundColor: '#f1f5f9', borderRadius: 99, padding: 8, borderWidth: 1, borderColor: '#e2e8f0' },
+    inputWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#f87b1b', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, position: 'relative' },
+    input: { flex: 1, color: '#111827', fontSize: 16 },
+    descriptionLoadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255, 255, 255, 0.8)', justifyContent: 'center', alignItems: 'center', borderRadius: 10, gap: 8, },
+    descriptionLoadingText: { color: '#11224e', fontWeight: '600', fontSize: 12, },
+    footer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#e5e7eb', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+    submitButton: { backgroundColor: '#f87b1b', borderRadius: 12, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, height: 48, flex: 1 },
+    submitButtonDisabled: { backgroundColor: '#d1d5db' },
+    submitButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
 });
 
 

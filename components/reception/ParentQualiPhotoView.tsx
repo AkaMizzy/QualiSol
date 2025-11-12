@@ -59,6 +59,7 @@ type ParentQualiPhotoViewProps = {
     onItemUpdate: (item: Partial<Folder>) => void;
     projectTitle: string;
     zoneTitle: string;
+    childrenWithAfterPhotos: Set<string>;
   };
   
 
@@ -83,6 +84,7 @@ type ParentQualiPhotoViewProps = {
     onItemUpdate,
     projectTitle,
     zoneTitle,
+    childrenWithAfterPhotos,
   }) => {
     const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
     const [isEditModalVisible, setIsEditModalVisible] = React.useState(false);
@@ -216,8 +218,17 @@ type ParentQualiPhotoViewProps = {
                 )}
                 <View style={layoutMode === 'grid' ? styles.childGridContainer : styles.childListContainer}>
                   {childGeds.map((ged) => {
+                    const hasAfterPhoto = childrenWithAfterPhotos.has(ged.id);
+                    const borderColor = hasAfterPhoto ? '#10b981' : '#f87b1b'; // Green if has "after", orange if not
                     return (
-                      <TouchableOpacity key={ged.id} style={layoutMode === 'grid' ? styles.childGridItem : styles.childListItem} onPress={() => onChildPress(ged)}>
+                      <TouchableOpacity 
+                        key={ged.id} 
+                        style={[
+                          layoutMode === 'grid' ? styles.childGridItem : styles.childListItem,
+                          { borderColor, borderWidth: 2 }
+                        ]} 
+                        onPress={() => onChildPress(ged)}
+                      >
                         {ged.url ? (
                           <Image source={{ uri: `${API_CONFIG.BASE_URL}${ged.url}` }} style={styles.childThumbnail} />
                         ) : (
