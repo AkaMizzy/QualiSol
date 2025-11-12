@@ -172,12 +172,17 @@ function QualiPhotoDetailView({
 
   if (selectedGed) {
     return (
-      <ChildQualiPhotoView
-        item={selectedGed}
-        parentFolder={item}
-        onClose={() => setSelectedGed(null)}
-        subtitle={subtitle}
-      />
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <AppHeader user={user || undefined} onNavigate={() => setSelectedGed(null)} />
+        <ChildQualiPhotoView
+          item={selectedGed}
+          parentFolder={item}
+          onClose={() => setSelectedGed(null)}
+          subtitle={subtitle}
+          projectTitle={projectTitle}
+          zoneTitle={zoneTitle}
+        />
+      </View>
     );
   }
 
@@ -216,6 +221,7 @@ function QualiPhotoDetailView({
         projectTitle={projectTitle}
         zoneTitle={zoneTitle}
       />
+      
     </>
   );
 }

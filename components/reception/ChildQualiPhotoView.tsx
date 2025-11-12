@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -10,30 +10,23 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ged } from '@/services/gedService';
+
+import { useAuth } from '@/contexts/AuthContext';
+import { Ged, getGedsBySource } from '@/services/gedService';
 import { Folder } from '@/services/qualiphotoService';
+
+import CreateAfterQualiPhotoModal from './CreateAfterQualiPhotoModal';
 import { PhotoCard } from './PhotoCard';
 
 const cameraIcon = require('@/assets/icons/camera.gif');
-
-function formatDate(dateStr: string) {
-  const replaced = dateStr.replace(' ', 'T');
-  const date = new Date(replaced);
-  if (isNaN(date.getTime())) return dateStr;
-  return new Intl.DateTimeFormat('fr-FR', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-}
 
 type ChildQualiPhotoViewProps = {
   item: Ged;
   parentFolder: Folder;
   onClose: () => void;
   subtitle: string;
+  projectTitle: string;
+  zoneTitle: string;
 };
 
 export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
@@ -41,13 +34,44 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   parentFolder,
   onClose,
   subtitle,
+  projectTitle,
+  zoneTitle,
 }) => {
-  const [afterPhoto, setAfterPhoto] = React.useState<Ged | null>(null);
-  const [isLoadingAfter, setIsLoadingAfter] = React.useState(false);
+  const { token } = useAuth();
+  const [afterPhoto, setAfterPhoto] = useState<Ged | null>(null);
+  const [isLoadingAfter, setIsLoadingAfter] = useState(false);
+  const [isCreateAfterModalVisible, setCreateAfterModalVisible] = useState(false);
 
-  // TODO: Implement fetching and creating the "after" photo
+  useEffect(() => {
+    async function fetchAfterPhoto() {
+      if (!token || !item?.id) return;
+
+      setIsLoadingAfter(true);
+      try {
+        const afterPhotos = await getGedsBySource(token, item.id, 'photoapres');
+        if (afterPhotos.length > 0) {
+          setAfterPhoto(afterPhotos[0]);
+        } else {
+          setAfterPhoto(null);
+        }
+      } catch (error) {
+        console.error('Failed to fetch after photo:', error);
+        setAfterPhoto(null);
+      } finally {
+        setIsLoadingAfter(false);
+      }
+    }
+
+    fetchAfterPhoto();
+  }, [item?.id, token]);
+
   const handleAddAfterPhoto = () => {
-    console.log('TODO: Implement adding after photo');
+    setCreateAfterModalVisible(true);
+  };
+
+  const handleAfterPhotoSuccess = (createdGed: Ged) => {
+    setAfterPhoto(createdGed);
+    setCreateAfterModalVisible(false);
   };
 
   const header = (
@@ -117,6 +141,14 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
           </View>
         </View>
       </ScrollView>
+      <CreateAfterQualiPhotoModal
+        visible={isCreateAfterModalVisible}
+        onClose={() => setCreateAfterModalVisible(false)}
+        onSuccess={handleAfterPhotoSuccess}
+        parentItem={item}
+        projectTitle={projectTitle}
+        zoneTitle={zoneTitle}
+      />
     </>
   );
 };
