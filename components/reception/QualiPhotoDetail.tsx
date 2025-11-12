@@ -24,7 +24,8 @@ type Props = {
   onUpdate?: (item: Partial<Folder>) => void;
 };
 
-export default function QualiPhotoDetail({ visible, onClose, item: initialItem, projects, zones, onUpdate }: Props) {
+// Step 1: Create the custom hook for all logic
+function useQualiPhotoDetail({ visible, item: initialItem, projects, zones, onUpdate }: Props) {
   const { token, user } = useAuth();
   const insets = useSafeAreaInsets();
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -58,8 +59,11 @@ export default function QualiPhotoDetail({ visible, onClose, item: initialItem, 
 
   useEffect(() => {
     setItem(initialItem || null);
-    setSortOrder('desc'); // Reset sort order when item changes
-    setLayoutMode('list');
+    if (initialItem) {
+        setSortOrder('desc');
+        setLayoutMode('list');
+        setSelectedGed(null);
+    }
   }, [initialItem]);
 
   const subtitle = useMemo(() => {
@@ -79,7 +83,7 @@ export default function QualiPhotoDetail({ visible, onClose, item: initialItem, 
     if (!visible) {
       sound?.unloadAsync();
       setSound(null);
-      setSelectedGed(null); // Deselect GED when modal closes
+      setSelectedGed(null);
     }
   }, [visible, sound]);
 
@@ -95,28 +99,90 @@ export default function QualiPhotoDetail({ visible, onClose, item: initialItem, 
 
   const handleChildCreationSuccess = (createdGed: Ged) => {
     console.log('Successfully created GED:', createdGed);
-    fetchChildren(); // Refetch children after a new one is created
-    setChildModalVisible(false); // Close the creation modal on success
+    fetchChildren();
+    setChildModalVisible(false);
   };
-
-  if (!item) return <ActivityIndicator style={{ flex: 1 }} />;
-
-  const projectTitle = projects.find(p => p.id === item.project_id)?.title || 'N/A';
-  const zoneTitle = zones.find(z => z.id === item.zone_id)?.title || 'N/A';
   
+  const projectTitle = useMemo(() => item ? projects.find(p => p.id === item.project_id)?.title || 'N/A' : 'N/A', [item, projects]);
+  const zoneTitle = useMemo(() => item ? zones.find(z => z.id === item.zone_id)?.title || 'N/A' : 'N/A', [item, zones]);
+
+
+  return {
+    user,
+    insets,
+    isChildModalVisible,
+    setChildModalVisible,
+    item,
+    sortOrder,
+    setSortOrder,
+    layoutMode,
+    setLayoutMode,
+    isGeneratingPdf,
+    selectedGed,
+    setSelectedGed,
+    childGeds,
+    isLoadingChildren,
+    subtitle,
+    handleItemUpdate,
+    handleChildCreationSuccess,
+    projectTitle,
+    zoneTitle
+  };
+}
+
+// Step 2: Create the pure presentational component
+function QualiPhotoDetailView({
+  visible,
+  onClose,
+  ...props
+}: {
+  visible: boolean;
+  onClose: () => void;
+  [key: string]: any;
+}) {
+  const {
+    user,
+    insets,
+    isChildModalVisible,
+    setChildModalVisible,
+    item,
+    sortOrder,
+    setSortOrder,
+    layoutMode,
+    setLayoutMode,
+    isGeneratingPdf,
+    selectedGed,
+    setSelectedGed,
+    childGeds,
+    isLoadingChildren,
+    subtitle,
+    handleItemUpdate,
+    handleChildCreationSuccess,
+    projectTitle,
+    zoneTitle
+  } = props;
+
+  if (!item) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#11224e" />
+      </View>
+    );
+  }
+
   if (selectedGed) {
     return (
-        <ChildQualiPhotoView
-          item={selectedGed}
-          parentFolder={item}
-          onClose={() => setSelectedGed(null)}
-          subtitle={subtitle}
-        />
+      <ChildQualiPhotoView
+        item={selectedGed}
+        parentFolder={item}
+        onClose={() => setSelectedGed(null)}
+        subtitle={subtitle}
+      />
     );
   }
 
   return (
-    <Modal visible={visible} onRequestClose={onClose} animationType="slide" presentationStyle="fullScreen">
+    <>
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <AppHeader user={user || undefined} onNavigate={onClose} />
         <ParentQualiPhotoView
@@ -125,8 +191,8 @@ export default function QualiPhotoDetail({ visible, onClose, item: initialItem, 
           subtitle={subtitle}
           handleGeneratePdf={() => {}}
           isGeneratingPdf={isGeneratingPdf}
-          childGeds={childGeds} // Pass GEDs instead of folders
-          onChildPress={setSelectedGed} // Pass handler to select a GED
+          childGeds={childGeds}
+          onChildPress={setSelectedGed}
           playSound={() => {}}
           isPlaying={false}
           handleMapPress={() => {}}
@@ -142,7 +208,6 @@ export default function QualiPhotoDetail({ visible, onClose, item: initialItem, 
           zoneTitle={zoneTitle}
         />
       </View>
-
       <CreateChildQualiPhotoModal
         visible={isChildModalVisible}
         onClose={() => setChildModalVisible(false)}
@@ -151,6 +216,19 @@ export default function QualiPhotoDetail({ visible, onClose, item: initialItem, 
         projectTitle={projectTitle}
         zoneTitle={zoneTitle}
       />
+    </>
+  );
+}
+
+// Step 3: Update the main component to connect the hook and the view
+export default function QualiPhotoDetail(props: Props) {
+  const logic = useQualiPhotoDetail(props);
+
+  if (!props.visible) return null;
+
+  return (
+    <Modal visible={props.visible} onRequestClose={props.onClose} animationType="slide" presentationStyle="fullScreen">
+      <QualiPhotoDetailView {...props} {...logic} />
     </Modal>
   );
 }

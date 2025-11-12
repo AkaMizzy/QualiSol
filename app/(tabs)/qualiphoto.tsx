@@ -319,32 +319,34 @@ export default function QualiPhotoGalleryScreen() {
         <View style={styles.titleContainer}>
           <Text style={styles.titleText}>Mes Dossiers</Text>
         </View>
-        <FlatList
-          data={folders}
-          keyExtractor={keyExtractor}
-          numColumns={2}
-          columnWrapperStyle={styles.row}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-          refreshing={isRefreshing}
-          onRefresh={refresh}
-          ListEmptyComponent={
-            isLoading ? (
-              <View style={styles.emptyWrap}><ActivityIndicator color="#11224e" /></View>
-            ) : (
+        {isLoading && folders.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <ActivityIndicator color="#11224e" size="large" />
+          </View>
+        ) : (
+          <FlatList
+            data={folders}
+            keyExtractor={keyExtractor}
+            numColumns={2}
+            columnWrapperStyle={styles.row}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+            refreshing={isRefreshing}
+            onRefresh={refresh}
+            ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <Text style={styles.emptyTitle}>{errorMessage ? 'Impossible de charger les dossiers' : 'Aucun dossier pour le moment'}</Text>
                 {errorMessage ? <Text style={styles.emptySubtitle}>{errorMessage}</Text> : <Text style={styles.emptySubtitle}>Tirez pour actualiser ou créer un nouveau dossier.</Text>}
               </View>
-            )
-          }
-          ListFooterComponent={
-            <>
-              {/* Spacer for custom tab bar */}
-              <View style={{ height: 50 }} />
-            </>
-          }
-        />
+            }
+            ListFooterComponent={
+              <>
+                {/* Spacer for custom tab bar */}
+                <View style={{ height: 50 }} />
+              </>
+            }
+          />
+        )}
       </View>
 
       {/* <CreateQualiPhotoModal
