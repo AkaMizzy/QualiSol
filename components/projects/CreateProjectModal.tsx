@@ -141,7 +141,7 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
       setTitle(''); setDescription(''); setDd(''); setDf(''); setOwnerId(''); setControlId(''); setTechnicienId(''); setProjectTypeId(''); setError(null);
       if (onCreated) await onCreated();
       onClose();
-      Alert.alert('Succès', 'Projet créé avec succès');
+      Alert.alert('Succès', 'Chantier créé avec succès');
     } catch (e: any) {
       setError(e?.message || 'Création échouée');
     } finally {
@@ -168,7 +168,7 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
               <Ionicons name="close" size={24} color="#6b7280" />
             </TouchableOpacity>
             <View style={stylesFS.headerCenter}>
-              <Text style={stylesFS.headerTitle}>Créer un projet</Text>
+              <Text style={stylesFS.headerTitle}>Créer un chantier</Text>
             </View>
             <View style={stylesFS.placeholder} />
           </View>
@@ -215,7 +215,7 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
 
               {/* Project Type Select (optional) */}
               <View style={{ gap: 8 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Type de projet (optionnel)</Text>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Type de chantier</Text>
                 <TouchableOpacity style={[stylesFS.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setProjectTypeOpen(v => !v)}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                     <Ionicons name="albums-outline" size={16} color="#6b7280" />

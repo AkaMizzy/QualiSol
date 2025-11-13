@@ -9,6 +9,8 @@ export type CreateGedInput = {
   author: string;
   latitude?: string;
   longitude?: string;
+  level?: number;
+  type?: string;
   file?: {
     uri: string;
     type: string;
@@ -52,6 +54,14 @@ export async function createGed(token: string, input: CreateGedInput): Promise<{
   
   if (input.longitude) {
     formData.append('longitude', input.longitude);
+  }
+
+  if (input.level !== undefined) {
+    formData.append('level', input.level.toString());
+  }
+
+  if (input.type) {
+    formData.append('type', input.type);
   }
 
   // Append file if provided

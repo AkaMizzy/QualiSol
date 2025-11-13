@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Ged } from '@/services/gedService';
-import { COLORS, FONT, SIZES } from '@/constants/theme';
 import API_CONFIG from '@/app/config/api';
+import { COLORS, FONT, SIZES } from '@/constants/theme';
+import { Ged } from '@/services/gedService';
+import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface GalerieCardProps {
   item: Ged;
@@ -29,6 +29,11 @@ export default function GalerieCard({ item, onPress, hasVoiceNote }: GalerieCard
       <View style={styles.content}>
         <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
         <Text style={styles.date}>{formattedDate}</Text>
+        {item.author && (
+          <Text style={styles.author} numberOfLines={1}>
+          {item.author}
+          </Text>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -64,6 +69,12 @@ const styles = StyleSheet.create({
     fontFamily: FONT.regular,
     fontSize: SIZES.small,
     color: COLORS.gray,
+  },
+  author: {
+    fontFamily: FONT.regular,
+    fontSize: SIZES.small,
+    color: COLORS.gray,
+    marginTop: 4,
   },
   voiceNoteIcon: {
     position: 'absolute',

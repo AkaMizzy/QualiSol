@@ -8,6 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import VoiceNoteRecorder from '../VoiceNoteRecorder';
 
@@ -34,13 +35,16 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
   const [authorName, setAuthorName] = useState('');
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const [level, setLevel] = useState(5);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [severitySliderWidth, setSeveritySliderWidth] = useState(0);
 
   const [isAnnotatorVisible, setAnnotatorVisible] = useState(false);
   const [annotatorBaseUri, setAnnotatorBaseUri] = useState<string | null>(null);
 
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const canSave = useMemo(() => !!photo && !submitting && !isGeneratingDescription && !isUploadingAudio, [photo, submitting, isGeneratingDescription, isUploadingAudio]);
+  const canSave = useMemo(() => !!photo && !!selectedType && !submitting && !isGeneratingDescription && !isUploadingAudio, [photo, selectedType, submitting, isGeneratingDescription, isUploadingAudio]);
 
   useEffect(() => {
     async function loadAuthorName() {
@@ -113,6 +117,8 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
     setAudioUri(null);
     setLocationStatus('idle');
     setError(null);
+    setLevel(5);
+    setSelectedType(null);
     scrollViewRef.current?.scrollTo({ y: 0, animated: true }); // Scroll to top
   };
 
@@ -163,6 +169,8 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
         author: authorName,
         latitude: latitude?.toString(),
         longitude: longitude?.toString(),
+        level: level,
+        type: selectedType || undefined,
         file: photo,
       };
 
@@ -233,8 +241,41 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
     fetchLocation();
   }, []);
 
+  const onSeverityPan = useCallback((event: PanGestureHandlerGestureEvent) => {
+    if (severitySliderWidth <= 0) return;
+    const x = event.nativeEvent.x;
+    const newLevel = Math.max(0, Math.min(10, Math.round((x / severitySliderWidth) * 10)));
+    setLevel(prevLevel => {
+        if (newLevel !== prevLevel) {
+            return newLevel;
+        }
+        return prevLevel;
+    });
+  }, [severitySliderWidth]);
+
+  const getSeverityColor = (severity: number) => {
+    if (severity >= 7) return '#FF3B30'; // High - Red
+    if (severity >= 5) return '#FF9500'; // Medium - Orange
+    return '#34C759'; // Low - Green
+  };
+
+  const getSeverityText = (severity: number) => {
+    if (severity >= 7) return 'Haute';
+    if (severity >= 5) return 'Moyenne';
+    return 'Basse';
+  };
+
+  const ANOMALY_TYPES = [
+    { key: 'type1', label: 'Incendie', icon: 'flame-outline' },
+    { key: 'type2', label: 'Inondation', icon: 'water-outline' },
+    { key: 'type3', label: 'Structure', icon: 'business-outline' },
+    { key: 'type4', label: 'Électrique', icon: 'flash-outline' },
+    { key: 'type5', label: 'CVC', icon: 'snow-outline' },
+    { key: 'type6', label: 'Autre', icon: 'ellipsis-horizontal-outline' },
+  ] as const;
+
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -244,6 +285,9 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle} numberOfLines={1}>
               {parentItem.title || `Titre de la dossier`}
+            </Text>
+            <Text style={styles.headerSubtitle} numberOfLines={1}>
+              {`${projectTitle} • ${zoneTitle}`}
             </Text>
           </View>
           <View style={styles.counterContainer}>
@@ -263,21 +307,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
         )}
 
         <ScrollView ref={scrollViewRef} style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Parent Info Card */}
           <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.cardHeaderText}>
-                <Text style={styles.cardTitle} numberOfLines={1}>
-                  {`${projectTitle} • ${zoneTitle}`}
-                </Text>
-              </View>
-            </View>
-          
-            <View style={styles.separator} />
-
-            {/* New Photo Card */}
-          
-
             {photo ? (
               <View style={styles.imagePreviewContainer}>
                 <Image source={{ uri: photo.uri }} style={styles.imagePreview} />
@@ -299,6 +329,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
                 <Text style={styles.photoPickerText}>Ajouter une Situation avant</Text>
               </TouchableOpacity>
             )}
+
             <View style={{ marginTop: 16, gap: 12 }}>
               <View style={[styles.inputWrap]}>
                 <Ionicons name="text-outline" size={16} color="#6b7280" />
@@ -310,6 +341,72 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
                   style={styles.input}
                 />
               </View>
+              <VoiceNoteRecorder
+                onRecordingComplete={setAudioUri}
+                onTranscriptionComplete={(text) => {
+                  setComment(prev => (prev ? `${prev}\n${text}` : text));
+                }}
+              />
+            </View>
+
+            {/* Anomaly Type Selection */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Type d&apos;anomalie</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeScrollView}>
+                {ANOMALY_TYPES.map(type => (
+                  <TouchableOpacity
+                    key={type.key}
+                    style={[styles.typeButton, selectedType === type.key && styles.typeButtonSelected]}
+                    onPress={() => setSelectedType(type.key)}
+                  >
+                    <Ionicons
+                      name={type.icon as any}
+                      size={20}
+                      color={selectedType === type.key ? '#FFFFFF' : '#11224e'}
+                    />
+                    <Text style={[styles.typeButtonText, selectedType === type.key && styles.typeButtonTextSelected]}>
+                      {type.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Severity Slider */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Niveau de sévérité</Text>
+              <PanGestureHandler onGestureEvent={onSeverityPan}>
+                <View 
+                  style={styles.severityContainer}
+                  onLayout={(event) => setSeveritySliderWidth(event.nativeEvent.layout.width)}
+                >
+                  <View style={styles.severityHeader}>
+                    <Text style={[styles.severityValue, { color: getSeverityColor(level) }]}>
+                      {level}/10
+                    </Text>
+                    <View style={[styles.severityBadge, { backgroundColor: getSeverityColor(level) }]}>
+                      <Text style={styles.severityBadgeText}>{getSeverityText(level)}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.severitySlider}>
+                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(value => (
+                      <TouchableOpacity
+                        key={value}
+                        style={[
+                          styles.severityDot,
+                          level >= value && [styles.severityDotActive, { backgroundColor: getSeverityColor(level) }],
+                          level === value && [styles.severityDotSelected, { borderColor: getSeverityColor(level) }],
+                        ]}
+                        onPress={() => setLevel(value)}
+                        activeOpacity={0.7}
+                      />
+                    ))}
+                  </View>
+                </View>
+              </PanGestureHandler>
+            </View>
+
+            <View style={{ marginTop: 16, gap: 12 }}>
               <View style={[styles.inputWrap, { alignItems: 'flex-start' }]}>
                 <Ionicons name="chatbubble-ellipses-outline" size={16} color="#6b7280" style={{ marginTop: 4 }} />
                 <TextInput
@@ -333,12 +430,6 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
                   </View>
                 )}
               </View>
-              <VoiceNoteRecorder
-                onRecordingComplete={setAudioUri}
-                onTranscriptionComplete={(text) => {
-                  setComment(prev => (prev ? `${prev}\n${text}` : text));
-                }}
-              />
             </View>
           </View>
         </ScrollView>
@@ -390,7 +481,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
         /> */}
       </Modal>
     )}
-    </>
+    </GestureHandlerRootView>
   );
 }
 
@@ -426,6 +517,11 @@ const styles = StyleSheet.create({
   stopButtonText: { color: '#f87b1b', fontWeight: '600', fontSize: 16 },
   headerCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#11224e' },
+  headerSubtitle: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2,
+  },
   counterContainer: {
     minWidth: 50,
     flexDirection: 'row',
@@ -442,22 +538,7 @@ const styles = StyleSheet.create({
   alertBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fffbeb', borderColor: '#f59e0b', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, marginHorizontal: 16, marginTop: 8, borderRadius: 10 },
   alertBannerText: { color: '#b45309', flex: 1, fontSize: 12 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginTop: 16, marginHorizontal: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  cardIconWrap: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#eef2ff', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  cardHeaderText: { flex: 1, alignItems: 'center' },
-  cardTitle: { fontSize: 12, color: '#11224e', fontWeight: '500' },
-  cardSubtitle: {
-    fontSize: 12,
-    color: '#11224e',
-    marginTop: 2,
-  },
   
-  separator: {
-    height: 1,
-    backgroundColor: '#e5e7eb',
-    marginVertical: 16,
-  },
-
   parentPhotoContainer: {
     position: 'relative',
     borderRadius: 12,
@@ -563,6 +644,102 @@ const styles = StyleSheet.create({
     color: '#11224e',
     fontWeight: '600',
     fontSize: 12,
+  },
+
+  sectionContainer: {
+    marginTop: 20,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#334155',
+    marginBottom: 12,
+  },
+  typeScrollView: {
+    gap: 10,
+    paddingHorizontal: 2,
+  },
+  typeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 99,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  typeButtonSelected: {
+    backgroundColor: '#f87b1b',
+    borderColor: '#f87b1b',
+  },
+  typeButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#11224e',
+  },
+  typeButtonTextSelected: {
+    color: '#FFFFFF',
+  },
+  sliderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sliderValue: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+  },
+
+  severityContainer: {
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  severityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  severityValue: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  severityBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  severityBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  severitySlider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  severityDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#E5E5EA',
+    borderWidth: 2,
+    borderColor: '#E5E5EA',
+  },
+  severityDotActive: {
+    borderColor: '#E5E5EA',
+  },
+  severityDotSelected: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 3,
   },
 
   stopButton: {

@@ -159,7 +159,6 @@ export default function CompanyEditModal({
       const updatedCompany = await companyService.updateCompany(updateData, logoUri);
       onUpdated(updatedCompany);
       onClose();
-      Alert.alert('Succès', 'Les informations de l\'organisme ont été mises à jour');
     } catch (error) {
       Alert.alert('Erreur', error instanceof Error ? error.message : 'Erreur lors de la mise à jour');
     } finally {

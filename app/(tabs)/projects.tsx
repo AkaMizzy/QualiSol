@@ -45,8 +45,8 @@ export default function ProjectsScreen() {
         <View style={{ padding: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View>
-              <Text style={{ fontSize: 22, fontWeight: '700', color: '#11224e' }}>Projets</Text>
-              <Text style={{ marginTop: 4, color: '#6b7280' }}>Gérez et consultez vos projets en cours</Text>
+              <Text style={{ fontSize: 22, fontWeight: '700', color: '#11224e' }}>Chantiers</Text>
+              <Text style={{ marginTop: 4, color: '#6b7280' }}>Gérez et consultez vos chantiers en cours</Text>
             </View>
             <TouchableOpacity onPress={() => setCreateVisible(true)} style={[styles.button]}>
               <Ionicons name="add-circle" size={20} color="#f87b1b" />

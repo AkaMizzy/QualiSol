@@ -37,7 +37,7 @@ const GRID_ITEMS: {
   { title: 'Planning', image: require('../../assets/icons/planning.png'), disabled: true },
   { title: 'Audit', image: require('../../assets/icons/audit_zone.png'), disabled: true },
   { title: 'Echantillon', image: require('../../assets/icons/prelevement_echantillon.png'), disabled: true },
-  { title: 'Projets', image: require('../../assets/icons/project.png') },
+  { title: 'Chantiers', image: require('../../assets/icons/project.png') },
   { title: 'Utilisateurs', image: require('../../assets/icons/users.png') },
   { title: 'Organisme',  image: require('../../assets/icons/company.png') },
 ];
@@ -256,7 +256,7 @@ export default function DashboardScreen() {
                   //router.push('/manifolder');
                 } else if (item.title === 'Déclarations') {
                   //router.push('/declaration');
-                } else if (item.title === 'Galerie') {
+                } else if (item.title === 'QualiPhoto') {
                   router.push('/galerie');
                 } else if (item.title === 'Audit') {
                   //router.push('/audit');
@@ -264,7 +264,7 @@ export default function DashboardScreen() {
                   //router.push('/echantillon');
                 } else if (item.title === 'Inventaires') {
                   //router.push('/inventaire');
-                } else if (item.title === 'Projets') {
+                } else if (item.title === 'Chantiers') {
                   router.push('/projects');
                 } else if (item.title === 'Paramètres') {
                   //router.push('/parametre');

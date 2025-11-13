@@ -1,10 +1,12 @@
 import AppHeader from '@/components/AppHeader';
 import AddImageModal from '@/components/galerie/AddImageModal';
 import GalerieCard from '@/components/galerie/GalerieCard';
+import { ICONS } from '@/constants/Icons';
 import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { Ged, createGed, getAllGeds } from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -47,7 +49,7 @@ export default function GalerieScreen() {
     setRefreshing(false);
   }, [fetchGeds]);
 
-  const handleAddImage = async (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null }) => {
+  const handleAddImage = async (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; }) => {
     if (!token || !user || !data.image) return;
     const idsource = "00000000-0000-0000-0000-000000000000";
     
@@ -57,7 +59,7 @@ export default function GalerieScreen() {
         title: data.title,
         description: data.description,
         kind: 'image',
-        author: `${user.firstname} ${user.lastname}`,
+        author: data.author,
         file: {
           uri: data.image.uri,
           type: data.image.type || 'image/jpeg',
@@ -70,7 +72,7 @@ export default function GalerieScreen() {
           idsource,
           title: `${data.title} - Voice Note`,
           kind: 'voice_note',
-          author: `${user.firstname} ${user.lastname}`,
+          author: data.author,
           file: data.voiceNote,
         });
       }
@@ -194,7 +196,7 @@ export default function GalerieScreen() {
         />
       )}
       <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
-        <Ionicons name="add" size={32} color={COLORS.white} />
+        <Image source={ICONS.cameraPng} style={{ width: 32, height: 32 }} />
       </TouchableOpacity>
       <AddImageModal
         visible={modalVisible}

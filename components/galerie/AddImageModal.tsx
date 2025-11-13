@@ -1,17 +1,19 @@
 import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
 import { COLORS, FONT, SIZES } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
-import { Alert, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface AddImageModalProps {
   visible: boolean;
   onClose: () => void;
-  onAdd: (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null }) => void;
+  onAdd: (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; }) => void;
 }
 
 export default function AddImageModal({ visible, onClose, onAdd }: AddImageModalProps) {
+  const { token, user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
@@ -20,7 +22,7 @@ export default function AddImageModal({ visible, onClose, onAdd }: AddImageModal
   const handleChoosePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'Sorry, we need camera permissions to make this work!');
+      Alert.alert('Permission refusée', 'Désolé, nous avons besoin des autorisations de l\'appareil photo pour que cela fonctionne !');
       return;
     }
 
@@ -37,10 +39,45 @@ export default function AddImageModal({ visible, onClose, onAdd }: AddImageModal
 
   const handleAdd = () => {
     if (!title || !image) {
-      Alert.alert('Missing Information', 'Please provide a title and an image.');
+      Alert.alert('Informations manquantes', 'Veuillez fournir un titre et une image.');
       return;
     }
-    onAdd({ title, description, image, voiceNote });
+
+    let authorName = 'Unknown User';
+
+    if (token) {
+      try {
+        const payload = token.split('.')[1];
+        if (payload) {
+          let base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+          while (base64.length % 4) {
+            base64 += '=';
+          }
+          const decodedString = atob(base64);
+          const decodedPayload = JSON.parse(decodedString);
+          if (decodedPayload.username) {
+            authorName = decodedPayload.username;
+          } else if (decodedPayload.email) {
+            authorName = decodedPayload.email;
+          } else if (decodedPayload.identifier) {
+            authorName = decodedPayload.identifier;
+          }
+        }
+      } catch (err) {
+        console.error('Error decoding token:', err);
+      }
+    }
+
+    if (authorName === 'Unknown User' && user) {
+      const name = [user.firstname, user.lastname].filter(Boolean).join(' ').trim();
+      if (name) {
+        authorName = name;
+      } else if (user.email) {
+        authorName = user.email;
+      }
+    }
+
+    onAdd({ title, description, image, voiceNote, author: authorName });
     setTitle('');
     setDescription('');
     setImage(null);
@@ -53,80 +90,82 @@ export default function AddImageModal({ visible, onClose, onAdd }: AddImageModal
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardAvoidingView}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={styles.modalContainer}>
-            <TouchableOpacity style={styles.modalBackdrop} onPress={onClose} />
-            <View style={styles.modalContent}>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={styles.headerTitle}>Add New Image</Text>
-                
-                <View style={styles.imageContainer}>
-                  <TouchableOpacity style={styles.imagePicker} onPress={handleChoosePhoto}>
-                    {image ? (
-                      <Image source={{ uri: image.uri }} style={styles.imagePreview} />
-                    ) : (
-                      <View style={styles.imagePickerPlaceholder}>
-                        <Ionicons name="camera-outline" size={48} color={COLORS.gray} />
-                        <Text style={styles.imagePickerText}>Capture Image</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                  {image && (
-                    <TouchableOpacity style={styles.deleteButton} onPress={() => setImage(null)}>
-                      <Ionicons name="trash-outline" size={24} color={COLORS.deleteColor} />
-                    </TouchableOpacity>
+        <View style={styles.modalContainer}>
+          <TouchableOpacity style={styles.modalBackdrop} onPress={onClose} />
+          <View style={styles.modalContent}>
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              keyboardDismissMode="on-drag"
+              keyboardShouldPersistTaps="handled"
+            >
+              <Text style={styles.headerTitle}>Ajouter une nouvelle image</Text>
+              
+              <View style={styles.imageContainer}>
+                <TouchableOpacity style={styles.imagePicker} onPress={handleChoosePhoto}>
+                  {image ? (
+                    <Image source={{ uri: image.uri }} style={styles.imagePreview} />
+                  ) : (
+                    <View style={styles.imagePickerPlaceholder}>
+                      <Ionicons name="camera-outline" size={48} color={COLORS.gray} />
+                      <Text style={styles.imagePickerText}>Prendre une photo</Text>
+                    </View>
                   )}
-                </View>
-                
-                <View style={styles.form}>
-                  <Text style={styles.label}>Title</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g., 'Site Inspection Photo'"
-                    placeholderTextColor={COLORS.gray}
-                    value={title}
-                    onChangeText={setTitle}
-                  />
-                  
-                  <Text style={styles.label}>Description</Text>
-                  <TextInput
-                    style={[styles.input, styles.textArea]}
-                    placeholder="Add a short description (optional)"
-                    placeholderTextColor={COLORS.gray}
-                    value={description}
-                    onChangeText={setDescription}
-                    multiline
-                  />
-                </View>
-                
-                <VoiceNoteRecorder onRecordingComplete={(uri) => {
-                  if (uri) {
-                    setVoiceNote({
-                      uri,
-                      type: 'audio/mpeg',
-                      name: `voicenote-${Date.now()}.mp3`,
-                    });
-                  } else {
-                    setVoiceNote(null);
-                  }
-                }} 
-                onTranscriptionComplete={(text) => {
-                  setDescription(prev => prev ? `${prev}\n${text}` : text);
-                }}
+                </TouchableOpacity>
+                {image && (
+                  <TouchableOpacity style={styles.deleteButton} onPress={() => setImage(null)}>
+                    <Ionicons name="trash-outline" size={24} color={COLORS.deleteColor} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              
+              <View style={styles.form}>
+                <Text style={styles.label}>Titre</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="ex: 'Photo d'inspection du site'"
+                  placeholderTextColor={COLORS.gray}
+                  value={title}
+                  onChangeText={setTitle}
                 />
                 
-                <View style={styles.buttonContainer}>
-                  <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
-                    <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAdd}>
-                    <Text style={styles.buttonText}>Add Image</Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            </View>
+                <Text style={styles.label}>Description</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Ajoutez une courte description (facultatif)"
+                  placeholderTextColor={COLORS.gray}
+                  value={description}
+                  onChangeText={setDescription}
+                  multiline
+                />
+              </View>
+              
+              <VoiceNoteRecorder onRecordingComplete={(uri) => {
+                if (uri) {
+                  setVoiceNote({
+                    uri,
+                    type: 'audio/mpeg',
+                    name: `voicenote-${Date.now()}.mp3`,
+                  });
+                } else {
+                  setVoiceNote(null);
+                }
+              }} 
+              onTranscriptionComplete={(text) => {
+                setDescription(prev => prev ? `${prev}\n${text}` : text);
+              }}
+              />
+              
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
+                  <Text style={[styles.buttonText, styles.cancelButtonText]}>Annuler</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAdd}>
+                  <Text style={styles.buttonText}>Ajouter l&apos;image</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
-        </TouchableWithoutFeedback>
+        </View>
       </KeyboardAvoidingView>
     </Modal>
   );

@@ -159,7 +159,7 @@ export default function VoiceNoteRecorder({ onRecordingComplete, onTranscription
         ) : (
           !transcribedText && (
           <TouchableOpacity style={styles.transcribeButton} onPress={handleTranscribe}>
-            <Ionicons name="create-outline" size={24} color="#11224e" />
+            <Ionicons name="sparkles-outline" size={24} color="#11224e" />
           </TouchableOpacity>
           )
         )}
