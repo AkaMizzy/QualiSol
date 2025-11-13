@@ -1,15 +1,17 @@
 import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
 import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
+import { describeImage, transcribeAudio } from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import * as Location from 'expo-location';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface AddImageModalProps {
   visible: boolean;
   onClose: () => void;
-  onAdd: (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; }) => void;
+  onAdd: (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; latitude: number | null; longitude: number | null; }) => void;
 }
 
 export default function AddImageModal({ visible, onClose, onAdd }: AddImageModalProps) {
@@ -18,9 +20,69 @@ export default function AddImageModal({ visible, onClose, onAdd }: AddImageModal
   const [description, setDescription] = useState('');
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [voiceNote, setVoiceNote] = useState<{ uri: string; type: string; name: string; } | null>(null);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const prevVisibleRef = useRef(visible);
 
-  const handleChoosePhoto = async () => {
+  const handleGenerateDescription = useCallback(async (photoToDescribe: ImagePicker.ImagePickerAsset) => {
+    if (!photoToDescribe || !token) {
+      return;
+    }
+    setIsGeneratingDescription(true);
+    try {
+      const photoFile = {
+        uri: photoToDescribe.uri,
+        name: photoToDescribe.fileName || photoToDescribe.uri.split('/').pop() || 'photo.jpg',
+        type: photoToDescribe.type || 'image/jpeg',
+      };
+      const description = await describeImage(token, photoFile);
+      setDescription(prev => prev ? `${prev}\n${description}` : description);
+    } catch (e: any) {
+      console.error('Failed to generate description:', e);
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  }, [token]);
+
+  const handleTranscribeAudio = useCallback(async (audioUri: string, audioType: string) => {
+    if (!audioUri || !token) {
+      return;
+    }
+    setIsTranscribing(true);
+    try {
+      const fileName = audioUri.split('/').pop() || `voicenote-${Date.now()}.m4a`;
+      const audioFile = {
+        uri: audioUri,
+        type: audioType,
+        name: fileName,
+      };
+      const transcribedText = await transcribeAudio(token, audioFile);
+      setDescription(prev => prev ? `${prev}\n${transcribedText}` : transcribedText);
+    } catch (e: any) {
+      console.error('Failed to transcribe audio:', e);
+    } finally {
+      setIsTranscribing(false);
+    }
+  }, [token]);
+
+  const handleRecordingComplete = useCallback((uri: string | null) => {
+    if (uri) {
+      const voiceNoteData = {
+        uri,
+        type: 'audio/m4a',
+        name: `voicenote-${Date.now()}.m4a`,
+      };
+      setVoiceNote(voiceNoteData);
+      // Automatically transcribe the audio
+      handleTranscribeAudio(uri, 'audio/m4a');
+    } else {
+      setVoiceNote(null);
+    }
+  }, [handleTranscribeAudio]);
+
+  const handleChoosePhoto = useCallback(async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission refusée', 'Désolé, nous avons besoin des autorisations de l\'appareil photo pour que cela fonctionne !');
@@ -34,9 +96,11 @@ export default function AddImageModal({ visible, onClose, onAdd }: AddImageModal
     });
 
     if (!result.canceled) {
-      setImage(result.assets[0]);
+      const selectedImage = result.assets[0];
+      setImage(selectedImage);
+      handleGenerateDescription(selectedImage);
     }
-  };
+  }, [handleGenerateDescription]);
 
   useEffect(() => {
     const prevVisible = prevVisibleRef.current;
@@ -51,6 +115,30 @@ export default function AddImageModal({ visible, onClose, onAdd }: AddImageModal
       setDescription('');
       setImage(null);
       setVoiceNote(null);
+      setLatitude(null);
+      setLongitude(null);
+      setIsGeneratingDescription(false);
+      setIsTranscribing(false);
+    }
+  }, [visible, handleChoosePhoto]);
+
+  useEffect(() => {
+    const fetchLocation = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Location permission denied.');
+          return;
+        }
+        const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        setLatitude(location.coords.latitude);
+        setLongitude(location.coords.longitude);
+      } catch (error) {
+        console.warn('Could not fetch location automatically.', error);
+      }
+    };
+    if (visible) {
+      fetchLocation();
     }
   }, [visible]);
 
@@ -94,7 +182,7 @@ export default function AddImageModal({ visible, onClose, onAdd }: AddImageModal
       }
     }
 
-    onAdd({ title, description, image, voiceNote, author: authorName });
+    onAdd({ title, description, image, voiceNote, author: authorName, latitude, longitude });
     setTitle('');
     setDescription('');
     setImage(null);
@@ -146,30 +234,33 @@ export default function AddImageModal({ visible, onClose, onAdd }: AddImageModal
                 />
                 
                 <Text style={styles.label}>Description</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder="Ajoutez une courte description (facultatif)"
-                  placeholderTextColor={COLORS.gray}
-                  value={description}
-                  onChangeText={setDescription}
-                  multiline
-                />
+                <View style={{ position: 'relative' }}>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Ajoutez une courte description (facultatif)"
+                    placeholderTextColor={COLORS.gray}
+                    value={description}
+                    onChangeText={setDescription}
+                    multiline
+                    editable={!isGeneratingDescription && !isTranscribing}
+                  />
+                  {(isGeneratingDescription || isTranscribing) && (
+                    <View style={styles.descriptionLoadingOverlay}>
+                      <ActivityIndicator size="small" color={COLORS.primary} />
+                      <Text style={styles.descriptionLoadingText}>
+                        {isGeneratingDescription ? 'Analyse en cours...' : 'Transcription en cours...'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </View>
               
-              <VoiceNoteRecorder onRecordingComplete={(uri) => {
-                if (uri) {
-                  setVoiceNote({
-                    uri,
-                    type: 'audio/mpeg',
-                    name: `voicenote-${Date.now()}.mp3`,
-                  });
-                } else {
-                  setVoiceNote(null);
-                }
-              }} 
-              onTranscriptionComplete={(text) => {
-                setDescription(prev => prev ? `${prev}\n${text}` : text);
-              }}
+              <VoiceNoteRecorder 
+                onRecordingComplete={handleRecordingComplete}
+                onTranscriptionComplete={(text) => {
+                  // This is handled by automatic transcription, but keep for manual transcription if needed
+                  setDescription(prev => prev ? `${prev}\n${text}` : text);
+                }}
               />
               
               <View style={styles.buttonContainer}>
@@ -308,5 +399,18 @@ const styles = StyleSheet.create({
     },
     cancelButtonText: {
         color: COLORS.secondary,
+    },
+    descriptionLoadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: SIZES.small,
+        gap: 8,
+    },
+    descriptionLoadingText: {
+        color: COLORS.primary,
+        fontFamily: FONT.medium,
+        fontSize: SIZES.small,
     },
 });

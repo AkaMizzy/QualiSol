@@ -49,7 +49,7 @@ export default function GalerieScreen() {
     setRefreshing(false);
   }, [fetchGeds]);
 
-  const handleAddImage = async (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; }) => {
+  const handleAddImage = async (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; latitude: number | null; longitude: number | null; }) => {
     if (!token || !user || !data.image) return;
     const idsource = "00000000-0000-0000-0000-000000000000";
     
@@ -60,6 +60,8 @@ export default function GalerieScreen() {
         description: data.description,
         kind: 'qualiphoto',
         author: data.author,
+        latitude: data.latitude?.toString(),
+        longitude: data.longitude?.toString(),
         file: {
           uri: data.image.uri,
           type: data.image.type || 'image/jpeg',

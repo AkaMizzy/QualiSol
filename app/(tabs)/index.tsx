@@ -29,8 +29,8 @@ const GRID_ITEMS: {
   disabled?: boolean;
 }[] = [
   { title: 'QualiPhoto', image: require('../../assets/icons/camera_p.png')},
-  { title: 'Réception', image: require('../../assets/icons/folder.png') },
-  { title: 'Suivi', image: require('../../assets/icons/manifolder.png') },
+  { title: 'Suivi', image: require('../../assets/icons/folder.png') },
+  { title: 'Pv', image: require('../../assets/icons/manifolder.png') },
   { title: 'Déclarations', image: require('../../assets/icons/declaration_anomalie.png') },
   { title: 'Calendrier', image: require('../../assets/icons/calendar.png') },
   { title: 'Inventaires', image: require('../../assets/icons/inventaire_article.png') },
@@ -245,14 +245,14 @@ export default function DashboardScreen() {
               key={item.title}
               style={[styles.gridButton, item.disabled && styles.gridButtonDisabled]}
               onPress={() => {
-                if (item.title === 'Réception') {
+                if (item.title === 'Suivi') {
                   router.push('/qualiphoto');
                 } else if (item.title === 'Planning') {
                   //router.push('/planning');
                 } else if (item.title === 'Calendrier') {
                   LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                   setIsCalendarVisible(prevState => !prevState);
-                } else if (item.title === 'Suivi') {
+                } else if (item.title === 'Pv') {
                   //router.push('/manifolder');
                 } else if (item.title === 'Déclarations') {
                   //router.push('/declaration');
