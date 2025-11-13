@@ -60,16 +60,23 @@ export default function AddImageModal({ visible, onClose, onAdd }: AddImageModal
               <ScrollView showsVerticalScrollIndicator={false}>
                 <Text style={styles.headerTitle}>Add New Image</Text>
                 
-                <TouchableOpacity style={styles.imagePicker} onPress={handleChoosePhoto}>
-                  {image ? (
-                    <Image source={{ uri: image.uri }} style={styles.imagePreview} />
-                  ) : (
-                    <View style={styles.imagePickerPlaceholder}>
-                      <Ionicons name="camera-outline" size={48} color={COLORS.gray} />
-                      <Text style={styles.imagePickerText}>Capture Image</Text>
-                    </View>
+                <View style={styles.imageContainer}>
+                  <TouchableOpacity style={styles.imagePicker} onPress={handleChoosePhoto}>
+                    {image ? (
+                      <Image source={{ uri: image.uri }} style={styles.imagePreview} />
+                    ) : (
+                      <View style={styles.imagePickerPlaceholder}>
+                        <Ionicons name="camera-outline" size={48} color={COLORS.gray} />
+                        <Text style={styles.imagePickerText}>Capture Image</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  {image && (
+                    <TouchableOpacity style={styles.deleteButton} onPress={() => setImage(null)}>
+                      <Ionicons name="trash-outline" size={24} color={COLORS.deleteColor} />
+                    </TouchableOpacity>
                   )}
-                </TouchableOpacity>
+                </View>
                 
                 <View style={styles.form}>
                   <Text style={styles.label}>Title</Text>
@@ -102,7 +109,11 @@ export default function AddImageModal({ visible, onClose, onAdd }: AddImageModal
                   } else {
                     setVoiceNote(null);
                   }
-                }} />
+                }} 
+                onTranscriptionComplete={(text) => {
+                  setDescription(prev => prev ? `${prev}\n${text}` : text);
+                }}
+                />
                 
                 <View style={styles.buttonContainer}>
                   <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
@@ -147,6 +158,10 @@ const styles = StyleSheet.create({
         marginBottom: SIZES.large,
         color: COLORS.secondary,
     },
+    imageContainer: {
+        width: '100%',
+        marginBottom: SIZES.large,
+    },
     imagePicker: {
         width: '100%',
         height: 180,
@@ -154,7 +169,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: SIZES.medium,
-        marginBottom: SIZES.large,
         borderWidth: 2,
         borderColor: COLORS.gray2,
         borderStyle: 'dashed',
@@ -173,6 +187,14 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
         borderRadius: SIZES.medium,
+    },
+    deleteButton: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        padding: 8,
+        borderRadius: 20,
     },
     form: {
         width: '100%',

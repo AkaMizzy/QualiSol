@@ -103,6 +103,30 @@ export async function describeImage(token: string, file: { uri: string; type: st
   return data.description || '';
 }
 
+export async function transcribeAudio(token: string, file: { uri: string; type: string; name: string }): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', {
+    uri: file.uri,
+    type: file.type,
+    name: file.name,
+  } as any);
+
+  const res = await fetch(`${API_CONFIG.BASE_URL}/api/geds/transcribe`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      // Don't set Content-Type header - let the browser set it with boundary for FormData
+    },
+    body: formData,
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to transcribe audio');
+  }
+  return data.text || '';
+}
+
 export async function getGedsBySource(token: string, idsource: string, kind: string, sortOrder: 'asc' | 'desc' = 'desc'): Promise<Ged[]> {
   const response = await api.get(`/api/geds/filter?idsource=${idsource}&kind=${kind}&sort=${sortOrder}`, {
     headers: {

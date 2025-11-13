@@ -1,3 +1,5 @@
+import { useAuth } from '@/contexts/AuthContext';
+import { transcribeAudio } from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import React, { useEffect, useState } from 'react';
@@ -5,15 +7,20 @@ import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } fr
 
 type VoiceNoteRecorderProps = {
   onRecordingComplete: (uri: string | null) => void;
+  onTranscriptionComplete: (text: string) => void;
 };
 
-export default function VoiceNoteRecorder({ onRecordingComplete }: VoiceNoteRecorderProps) {
+export default function VoiceNoteRecorder({ onRecordingComplete, onTranscriptionComplete }: VoiceNoteRecorderProps) {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [recordingUri, setRecordingUri] = useState<string | null>(null);
   const [permissionResponse, requestPermission] = Audio.usePermissions();
   const [status, setStatus] = useState<'idle' | 'recording' | 'recorded' | 'playing'>('idle');
   const [duration, setDuration] = useState(0);
+  const { token } = useAuth();
+
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcribedText, setTranscribedText] = useState<string | null>(null);
 
   useEffect(() => {
     return sound
@@ -29,8 +36,8 @@ export default function VoiceNoteRecorder({ onRecordingComplete }: VoiceNoteReco
       interval = setInterval(() => {
         setDuration(prev => prev + 1);
       }, 1000);
-    } else {
-      setDuration(0);
+    } else if (status === 'idle') {
+        setDuration(0);
     }
     return () => clearInterval(interval);
   }, [status]);
@@ -93,12 +100,38 @@ export default function VoiceNoteRecorder({ onRecordingComplete }: VoiceNoteReco
     setStatus('idle');
     setDuration(0);
     onRecordingComplete(null);
+    setTranscribedText(null);
   }
 
   function formatDuration(seconds: number) {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+
+  async function handleTranscribe() {
+    if (!recordingUri || !token) return;
+
+    setIsTranscribing(true);
+    setTranscribedText(null);
+
+    try {
+      const fileName = recordingUri.split('/').pop() || 'voicememo.m4a';
+      const file = {
+        uri: recordingUri,
+        type: 'audio/m4a',
+        name: fileName,
+      };
+
+      const text = await transcribeAudio(token, file);
+      setTranscribedText(text);
+      onTranscriptionComplete(text);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Une erreur inconnue est survenue.';
+      Alert.alert('Erreur de Transcription', `La transcription a échoué: ${errorMessage}`);
+    } finally {
+      setIsTranscribing(false);
+    }
   }
 
 
@@ -120,7 +153,16 @@ export default function VoiceNoteRecorder({ onRecordingComplete }: VoiceNoteReco
         <TouchableOpacity style={styles.playButton} onPress={playSound} disabled={status === 'playing'}>
           <Ionicons name={status === 'playing' ? 'pause-circle' : 'play-circle'} size={24} color="#11224e" />
         </TouchableOpacity>
-        <Text style={styles.recordedText}>Note vocale</Text>
+        <Text style={styles.recordedText}>Note vocale ({formatDuration(duration)})</Text>
+        {isTranscribing ? (
+          <ActivityIndicator color="#11224e" />
+        ) : (
+          !transcribedText && (
+          <TouchableOpacity style={styles.transcribeButton} onPress={handleTranscribe}>
+            <Ionicons name="create-outline" size={24} color="#11224e" />
+          </TouchableOpacity>
+          )
+        )}
         <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
           <Ionicons name="trash-outline" size={20} color="#dc2626" />
         </TouchableOpacity>
@@ -184,4 +226,7 @@ const styles = StyleSheet.create({
     },
     playButton: {},
     deleteButton: {},
+    transcribeButton: {
+      marginLeft: 10,
+    },
   });
