@@ -3,7 +3,7 @@ import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
-import { Alert, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
 interface AddImageModalProps {
   visible: boolean;
@@ -50,136 +50,186 @@ export default function AddImageModal({ visible, onClose, onAdd }: AddImageModal
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <Text style={styles.title}>Add New Image</Text>
-          
-          <TouchableOpacity style={styles.imagePicker} onPress={handleChoosePhoto}>
-            {image ? (
-              <Image source={{ uri: image.uri }} style={styles.imagePreview} />
-            ) : (
-              <View style={styles.imagePickerPlaceholder}>
-                <Ionicons name="camera" size={40} color={COLORS.gray} />
-                <Text style={styles.imagePickerText}>Tap to add image</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          
-          <TextInput
-            style={styles.input}
-            placeholder="Title"
-            value={title}
-            onChangeText={setTitle}
-          />
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Description"
-            value={description}
-            onChangeText={setDescription}
-            multiline
-          />
-          
-          <VoiceNoteRecorder onRecordingComplete={(uri) => {
-            if (uri) {
-              setVoiceNote({
-                uri,
-                type: 'audio/mpeg',
-                name: `voicenote-${Date.now()}.mp3`,
-              });
-            } else {
-              setVoiceNote(null);
-            }
-          }} />
-          
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
-              <Text style={styles.buttonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAdd}>
-              <Text style={styles.buttonText}>Add</Text>
-            </TouchableOpacity>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardAvoidingView}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalContainer}>
+            <TouchableOpacity style={styles.modalBackdrop} onPress={onClose} />
+            <View style={styles.modalContent}>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.headerTitle}>Add New Image</Text>
+                
+                <TouchableOpacity style={styles.imagePicker} onPress={handleChoosePhoto}>
+                  {image ? (
+                    <Image source={{ uri: image.uri }} style={styles.imagePreview} />
+                  ) : (
+                    <View style={styles.imagePickerPlaceholder}>
+                      <Ionicons name="camera-outline" size={48} color={COLORS.gray} />
+                      <Text style={styles.imagePickerText}>Capture Image</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                
+                <View style={styles.form}>
+                  <Text style={styles.label}>Title</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., 'Site Inspection Photo'"
+                    placeholderTextColor={COLORS.gray}
+                    value={title}
+                    onChangeText={setTitle}
+                  />
+                  
+                  <Text style={styles.label}>Description</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Add a short description (optional)"
+                    placeholderTextColor={COLORS.gray}
+                    value={description}
+                    onChangeText={setDescription}
+                    multiline
+                  />
+                </View>
+                
+                <VoiceNoteRecorder onRecordingComplete={(uri) => {
+                  if (uri) {
+                    setVoiceNote({
+                      uri,
+                      type: 'audio/mpeg',
+                      name: `voicenote-${Date.now()}.mp3`,
+                    });
+                  } else {
+                    setVoiceNote(null);
+                  }
+                }} />
+                
+                <View style={styles.buttonContainer}>
+                  <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
+                    <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAdd}>
+                    <Text style={styles.buttonText}>Add Image</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
           </View>
-        </View>
-      </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    width: '90%',
-    backgroundColor: COLORS.white,
-    borderRadius: SIZES.medium,
-    padding: SIZES.large,
-    alignItems: 'center',
-  },
-  title: {
-    fontFamily: FONT.bold,
-    fontSize: SIZES.xLarge,
-    marginBottom: SIZES.medium,
-  },
-  imagePicker: {
-    width: '100%',
-    height: 200,
-    backgroundColor: COLORS.lightWhite,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: SIZES.small,
-    marginBottom: SIZES.medium,
-  },
-  imagePickerPlaceholder: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imagePickerText: {
-    fontFamily: FONT.regular,
-    color: COLORS.gray,
-    marginTop: SIZES.small,
-  },
-  imagePreview: {
-    width: '100%',
-    height: '100%',
-    borderRadius: SIZES.small,
-  },
-  input: {
-    width: '100%',
-    padding: SIZES.medium,
-    backgroundColor: COLORS.lightWhite,
-    borderRadius: SIZES.small,
-    marginBottom: SIZES.medium,
-    fontFamily: FONT.regular,
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  button: {
-    flex: 1,
-    padding: SIZES.medium,
-    borderRadius: SIZES.small,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: COLORS.gray2,
-    marginRight: SIZES.small,
-  },
-  addButton: {
-    backgroundColor: COLORS.primary,
-    marginLeft: SIZES.small,
-  },
-  buttonText: {
-    color: COLORS.white,
-    fontFamily: FONT.medium,
-  },
+    keyboardAvoidingView: {
+        flex: 1,
+    },
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0,0,0,0.6)',
+    },
+    modalBackdrop: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    modalContent: {
+        maxHeight: '90%',
+        backgroundColor: COLORS.white,
+        borderTopLeftRadius: SIZES.xLarge,
+        borderTopRightRadius: SIZES.xLarge,
+        padding: SIZES.large,
+    },
+    headerTitle: {
+        textAlign: 'center',
+        fontFamily: FONT.bold,
+        fontSize: SIZES.xLarge,
+        marginBottom: SIZES.large,
+        color: COLORS.secondary,
+    },
+    imagePicker: {
+        width: '100%',
+        height: 180,
+        backgroundColor: COLORS.lightWhite,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: SIZES.medium,
+        marginBottom: SIZES.large,
+        borderWidth: 2,
+        borderColor: COLORS.gray2,
+        borderStyle: 'dashed',
+    },
+    imagePickerPlaceholder: {
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    imagePickerText: {
+        fontFamily: FONT.medium,
+        color: COLORS.gray,
+        marginTop: SIZES.small,
+        fontSize: SIZES.medium,
+    },
+    imagePreview: {
+        width: '100%',
+        height: '100%',
+        borderRadius: SIZES.medium,
+    },
+    form: {
+        width: '100%',
+        marginBottom: SIZES.medium,
+    },
+    label: {
+        fontFamily: FONT.medium,
+        fontSize: SIZES.medium,
+        color: COLORS.secondary,
+        marginBottom: SIZES.small,
+        alignSelf: 'flex-start',
+    },
+    input: {
+        width: '100%',
+        padding: SIZES.medium,
+        backgroundColor: COLORS.lightWhite,
+        borderRadius: SIZES.small,
+        marginBottom: SIZES.medium,
+        fontFamily: FONT.regular,
+        fontSize: SIZES.medium,
+        borderWidth: 1,
+        borderColor: COLORS.gray2,
+    },
+    textArea: {
+        height: 100,
+        textAlignVertical: 'top',
+    },
+    buttonContainer: {
+        flexDirection: 'row',
+        marginTop: SIZES.large,
+        width: '100%',
+        paddingBottom: SIZES.medium,
+    },
+    button: {
+        flex: 1,
+        paddingVertical: SIZES.medium,
+        borderRadius: SIZES.medium,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    cancelButton: {
+        backgroundColor: COLORS.lightWhite,
+        marginRight: SIZES.small,
+        borderWidth: 1,
+        borderColor: COLORS.gray2,
+    },
+    addButton: {
+        backgroundColor: COLORS.primary,
+        marginLeft: SIZES.small,
+    },
+    buttonText: {
+        color: COLORS.white,
+        fontFamily: FONT.bold,
+        fontSize: SIZES.medium,
+    },
+    cancelButtonText: {
+        color: COLORS.secondary,
+    },
 });

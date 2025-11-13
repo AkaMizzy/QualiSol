@@ -30,6 +30,7 @@ export type Ged = {
   size: number | null;
   status_id: string;
   company_id: string;
+  created_at: string;
 };
 
 export async function createGed(token: string, input: CreateGedInput): Promise<{ message: string; data: Ged }> {

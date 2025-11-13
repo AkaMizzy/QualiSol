@@ -1,31 +1,35 @@
-import API_CONFIG from '@/app/config/api';
+import AppHeader from '@/components/AppHeader';
 import AddImageModal from '@/components/galerie/AddImageModal';
+import GalerieCard from '@/components/galerie/GalerieCard';
 import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { Ged, createGed, getAllGeds } from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-
+type FilterType = 'all' | 'today' | 'week' | 'month';
+const PAGE_SIZE = 10;
 
 export default function GalerieScreen() {
   const { token, user } = useAuth();
-  const [images, setImages] = useState<Ged[]>([]);
+  const [geds, setGeds] = useState<Ged[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [filter, setFilter] = useState<FilterType>('all');
+  const [displayedCount, setDisplayedCount] = useState(PAGE_SIZE);
 
-  const fetchImages = useCallback(async () => {
+  const fetchGeds = useCallback(async () => {
     if (token) {
       try {
         setLoading(true);
-        const geds = await getAllGeds(token);
-        const imageGeds = geds.filter(ged => ged.kind === 'image');
-        setImages(imageGeds);
+        const fetchedGeds = await getAllGeds(token);
+        setGeds(fetchedGeds);
       } catch (error) {
-        console.error('Failed to fetch images:', error);
+        console.error('Failed to fetch geds:', error);
       } finally {
         setLoading(false);
       }
@@ -33,22 +37,20 @@ export default function GalerieScreen() {
   }, [token]);
 
   useEffect(() => {
-    fetchImages();
-  }, [fetchImages]);
+    fetchGeds();
+  }, [fetchGeds]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchImages();
+    await fetchGeds();
     setRefreshing(false);
-  }, [fetchImages]);
+  }, [fetchGeds]);
 
   const handleAddImage = async (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null }) => {
     if (!token || !user || !data.image) return;
-
     const idsource = "00000000-0000-0000-0000-000000000000";
     
     try {
-      // Upload image
       await createGed(token, {
         idsource,
         title: data.title,
@@ -62,7 +64,6 @@ export default function GalerieScreen() {
         },
       });
 
-      // Upload voice note if it exists
       if (data.voiceNote) {
         await createGed(token, {
           idsource,
@@ -72,57 +73,126 @@ export default function GalerieScreen() {
           file: data.voiceNote,
         });
       }
-
-      Alert.alert('Success', 'Image and voice note uploaded successfully.');
-      fetchImages(); // Refresh the gallery
+      Alert.alert('Success', 'Image uploaded successfully.');
+      fetchGeds();
     } catch (error) {
       console.error('Failed to upload files:', error);
-      Alert.alert('Upload Failed', 'Failed to upload files. Please try again.');
+      Alert.alert('Upload Failed', 'Please try again.');
     } finally {
       setModalVisible(false);
     }
   };
 
-  if (loading && !refreshing) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
+  const allImages = useMemo(() => {
+    return geds
+      .filter(g => g.url && /\.(jpg|jpeg|png|gif)$/i.test(g.url))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [geds]);
+
+  const filteredImages = useMemo(() => {
+    if (filter === 'all') return allImages;
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    if (filter === 'today') {
+      return allImages.filter(img => new Date(img.created_at) >= today);
+    }
+    if (filter === 'week') {
+      const oneWeekAgo = new Date(today);
+      oneWeekAgo.setDate(today.getDate() - 7);
+      return allImages.filter(img => new Date(img.created_at) >= oneWeekAgo);
+    }
+    if (filter === 'month') {
+        const oneMonthAgo = new Date(today);
+        oneMonthAgo.setMonth(today.getMonth() - 1);
+        return allImages.filter(img => new Date(img.created_at) >= oneMonthAgo);
+    }
+    return allImages;
+  }, [allImages, filter]);
+
+  const displayedImages = useMemo(() => {
+    return filteredImages.slice(0, displayedCount);
+  }, [filteredImages, displayedCount]);
+
+  const voiceNotesBySource = useMemo(() => {
+    return geds.reduce((acc, curr) => {
+        if (curr.kind === 'voice_note') {
+            acc[curr.idsource] = true;
+        }
+        return acc;
+    }, {} as Record<string, boolean>);
+  }, [geds]);
+
+  const handleLoadMore = () => {
+    setDisplayedCount(prevCount => prevCount + PAGE_SIZE);
+  };
+
+  const renderFilterButton = (label: string, type: FilterType) => (
+    <TouchableOpacity
+      style={[styles.filterButton, filter === type && styles.activeFilter]}
+      onPress={() => {
+        setFilter(type);
+        setDisplayedCount(PAGE_SIZE); // Reset count on filter change
+      }}
+    >
+      <Text style={[styles.filterText, filter === type && styles.activeFilterText]}>{label}</Text>
+    </TouchableOpacity>
+  );
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={images}
-        keyExtractor={(item) => item.id}
-        numColumns={3}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.imageContainer}>
-            <Image 
-              source={{ uri: `${API_CONFIG.BASE_URL}${item.url}` }}
-              style={styles.image} 
+    <SafeAreaView style={styles.container}>
+      <AppHeader user={user || undefined} />
+      <View style={styles.filterContainer}>
+        {renderFilterButton('All', 'all')}
+        {renderFilterButton('Today', 'today')}
+        {renderFilterButton('Week', 'week')}
+        {renderFilterButton('Month', 'month')}
+      </View>
+      {loading && !refreshing ? (
+        <View style={styles.skeletonContainer}>
+          {[...Array(6)].map((_, index) => (
+            <View key={index} style={styles.skeletonCard} />
+          ))}
+        </View>
+      ) : (
+        <FlatList
+          data={displayedImages}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          renderItem={({ item }) => (
+            <GalerieCard
+              item={item}
+              onPress={() => {}}
+              hasVoiceNote={voiceNotesBySource[item.idsource]}
             />
-          </TouchableOpacity>
-        )}
-        ListEmptyComponent={
-          <View style={styles.centered}>
-            <Text style={styles.emptyText}>No images found.</Text>
-          </View>
-        }
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      />
+          )}
+          ListEmptyComponent={
+            <View style={styles.centered}>
+              <Text style={styles.emptyText}>No images found.</Text>
+            </View>
+          }
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ListFooterComponent={
+            filteredImages.length > displayedCount ? (
+              <TouchableOpacity style={styles.loadMoreButton} onPress={handleLoadMore}>
+                <Text style={styles.loadMoreButtonText}>Load More</Text>
+              </TouchableOpacity>
+            ) : null
+          }
+        />
+      )}
       <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
         <Ionicons name="add" size={32} color={COLORS.white} />
       </TouchableOpacity>
-      <AddImageModal 
+      <AddImageModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onAdd={handleAddImage}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -135,14 +205,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  imageContainer: {
-    flex: 1,
-    margin: 2,
-  },
-  image: {
-    width: '100%',
-    height: 120,
+    marginTop: 50,
   },
   addButton: {
     position: 'absolute',
@@ -160,5 +223,51 @@ const styles = StyleSheet.create({
     fontFamily: FONT.medium,
     fontSize: SIZES.medium,
     color: COLORS.gray,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: SIZES.medium,
+    backgroundColor: COLORS.white,
+  },
+  filterButton: {
+    paddingHorizontal: SIZES.medium,
+    paddingVertical: SIZES.small,
+    borderRadius: SIZES.large,
+  },
+  activeFilter: {
+    backgroundColor: COLORS.primary,
+  },
+  filterText: {
+    fontFamily: FONT.medium,
+    color: COLORS.secondary,
+  },
+  activeFilterText: {
+    color: COLORS.white,
+  },
+  skeletonContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+    paddingHorizontal: 8,
+  },
+  skeletonCard: {
+    width: '45%',
+    height: 200,
+    backgroundColor: '#E0E0E0',
+    borderRadius: SIZES.medium,
+    margin: 8,
+  },
+  loadMoreButton: {
+    backgroundColor: COLORS.primary,
+    padding: SIZES.medium,
+    borderRadius: SIZES.medium,
+    alignItems: 'center',
+    margin: SIZES.large,
+  },
+  loadMoreButtonText: {
+    color: COLORS.white,
+    fontFamily: FONT.bold,
+    fontSize: SIZES.medium,
   },
 });
