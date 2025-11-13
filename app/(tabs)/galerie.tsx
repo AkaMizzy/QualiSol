@@ -8,9 +8,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type FilterType = 'all' | 'today' | 'week' | 'month';
 const PAGE_SIZE = 10;
 
 export default function GalerieScreen() {
@@ -19,8 +19,9 @@ export default function GalerieScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [filter, setFilter] = useState<FilterType>('all');
   const [displayedCount, setDisplayedCount] = useState(PAGE_SIZE);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
 
   const fetchGeds = useCallback(async () => {
     if (token) {
@@ -90,26 +91,11 @@ export default function GalerieScreen() {
   }, [geds]);
 
   const filteredImages = useMemo(() => {
-    if (filter === 'all') return allImages;
+    if (!selectedDate) return allImages;
 
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    if (filter === 'today') {
-      return allImages.filter(img => new Date(img.created_at) >= today);
-    }
-    if (filter === 'week') {
-      const oneWeekAgo = new Date(today);
-      oneWeekAgo.setDate(today.getDate() - 7);
-      return allImages.filter(img => new Date(img.created_at) >= oneWeekAgo);
-    }
-    if (filter === 'month') {
-        const oneMonthAgo = new Date(today);
-        oneMonthAgo.setMonth(today.getMonth() - 1);
-        return allImages.filter(img => new Date(img.created_at) >= oneMonthAgo);
-    }
-    return allImages;
-  }, [allImages, filter]);
+    const selectedDay = selectedDate.toDateString();
+    return allImages.filter(img => new Date(img.created_at).toDateString() === selectedDay);
+  }, [allImages, selectedDate]);
 
   const displayedImages = useMemo(() => {
     return filteredImages.slice(0, displayedCount);
@@ -128,27 +114,45 @@ export default function GalerieScreen() {
     setDisplayedCount(prevCount => prevCount + PAGE_SIZE);
   };
 
-  const renderFilterButton = (label: string, type: FilterType) => (
-    <TouchableOpacity
-      style={[styles.filterButton, filter === type && styles.activeFilter]}
-      onPress={() => {
-        setFilter(type);
-        setDisplayedCount(PAGE_SIZE); // Reset count on filter change
-      }}
-    >
-      <Text style={[styles.filterText, filter === type && styles.activeFilterText]}>{label}</Text>
-    </TouchableOpacity>
-  );
+  const showDatePicker = () => setDatePickerVisibility(true);
+  const hideDatePicker = () => setDatePickerVisibility(false);
+
+  const handleConfirmDate = (date: Date) => {
+    setSelectedDate(date);
+    setDisplayedCount(PAGE_SIZE);
+    hideDatePicker();
+  };
+  
+  const handleShowAll = () => {
+    setSelectedDate(null);
+    setDisplayedCount(PAGE_SIZE);
+  };
+
+  const formattedDate = useMemo(() => {
+    if (!selectedDate) return "Filter by Date";
+    return selectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  }, [selectedDate]);
 
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader user={user || undefined} />
       <View style={styles.filterContainer}>
-        {renderFilterButton('All', 'all')}
-        {renderFilterButton('Today', 'today')}
-        {renderFilterButton('Week', 'week')}
-        {renderFilterButton('Month', 'month')}
+        <TouchableOpacity style={styles.datePickerButton} onPress={showDatePicker}>
+          <Ionicons name="calendar-outline" size={22} color={COLORS.primary} />
+          <Text style={styles.datePickerText}>{formattedDate}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.showAllButton} onPress={handleShowAll}>
+          <Text style={styles.showAllButtonText}>Show All</Text>
+        </TouchableOpacity>
       </View>
+
+      <DateTimePickerModal
+        isVisible={isDatePickerVisible}
+        mode="date"
+        onConfirm={handleConfirmDate}
+        onCancel={hideDatePicker}
+      />
+
       {loading && !refreshing ? (
         <View style={styles.skeletonContainer}>
           {[...Array(6)].map((_, index) => (
@@ -169,7 +173,7 @@ export default function GalerieScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.centered}>
-              <Text style={styles.emptyText}>No images found.</Text>
+              <Text style={styles.emptyText}>No images found for this date.</Text>
             </View>
           }
           refreshControl={
@@ -226,23 +230,37 @@ const styles = StyleSheet.create({
   },
   filterContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: SIZES.medium,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SIZES.small,
+    paddingHorizontal: SIZES.large,
     backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray2,
   },
-  filterButton: {
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.lightWhite,
     paddingHorizontal: SIZES.medium,
     paddingVertical: SIZES.small,
-    borderRadius: SIZES.large,
+    borderRadius: SIZES.small,
   },
-  activeFilter: {
-    backgroundColor: COLORS.primary,
-  },
-  filterText: {
-    fontFamily: FONT.medium,
+  datePickerText: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.medium,
     color: COLORS.secondary,
+    marginLeft: SIZES.small,
   },
-  activeFilterText: {
+  showAllButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SIZES.medium,
+    paddingVertical: SIZES.small,
+    borderRadius: SIZES.small,
+  },
+  showAllButtonText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.medium,
     color: COLORS.white,
   },
   skeletonContainer: {

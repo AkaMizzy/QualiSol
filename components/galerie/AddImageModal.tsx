@@ -25,9 +25,8 @@ export default function AddImageModal({ visible, onClose, onAdd }: AddImageModal
     }
 
     let result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
+      mediaTypes: ['images'],
+      allowsEditing: false,
       quality: 1,
     });
 
