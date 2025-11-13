@@ -58,12 +58,12 @@ export default function GalerieScreen() {
         idsource,
         title: data.title,
         description: data.description,
-        kind: 'image',
+        kind: 'qualiphoto',
         author: data.author,
         file: {
           uri: data.image.uri,
           type: data.image.type || 'image/jpeg',
-          name: data.image.fileName || 'photo.jpg',
+          name: data.image.fileName || data.image.uri.split('/').pop() || `qualiphoto_${Date.now()}.jpg`,
         },
       });
 
@@ -76,7 +76,6 @@ export default function GalerieScreen() {
           file: data.voiceNote,
         });
       }
-      Alert.alert('Success', 'Image uploaded successfully.');
       fetchGeds();
     } catch (error) {
       console.error('Failed to upload files:', error);
@@ -88,7 +87,7 @@ export default function GalerieScreen() {
 
   const allImages = useMemo(() => {
     return geds
-      .filter(g => g.url && /\.(jpg|jpeg|png|gif)$/i.test(g.url))
+      .filter(g => g.kind === 'qualiphoto')
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [geds]);
 
@@ -180,7 +179,7 @@ export default function GalerieScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.centered}>
-              <Text style={styles.emptyText}>No images found for this date.</Text>
+              <Text style={styles.emptyText}>Pas d&apos;images trouvées.</Text>
             </View>
           }
           refreshControl={
@@ -188,8 +187,9 @@ export default function GalerieScreen() {
           }
           ListFooterComponent={
             filteredImages.length > displayedCount ? (
-              <TouchableOpacity style={styles.loadMoreButton} onPress={handleLoadMore}>
-                <Text style={styles.loadMoreButtonText}>Load More</Text>
+              <TouchableOpacity style={styles.loadMoreContainer} onPress={handleLoadMore}>
+                <Text style={styles.loadMoreText}>Voir plus</Text>
+                <View style={styles.loadMoreLine} />
               </TouchableOpacity>
             ) : null
           }
@@ -288,16 +288,19 @@ const styles = StyleSheet.create({
     borderRadius: SIZES.medium,
     margin: 8,
   },
-  loadMoreButton: {
-    backgroundColor: COLORS.primary,
-    padding: SIZES.medium,
-    borderRadius: SIZES.medium,
+  loadMoreContainer: {
     alignItems: 'center',
-    margin: SIZES.large,
+    marginVertical: SIZES.large,
   },
-  loadMoreButtonText: {
-    color: COLORS.white,
+  loadMoreText: {
+    color: COLORS.primary,
     fontFamily: FONT.bold,
     fontSize: SIZES.medium,
+    marginBottom: SIZES.small,
+  },
+  loadMoreLine: {
+    height: 1,
+    width: '30%',
+    backgroundColor: COLORS.primary,
   },
 });

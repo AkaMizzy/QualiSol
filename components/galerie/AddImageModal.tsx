@@ -3,7 +3,7 @@ import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface AddImageModalProps {
@@ -18,6 +18,7 @@ export default function AddImageModal({ visible, onClose, onAdd }: AddImageModal
   const [description, setDescription] = useState('');
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [voiceNote, setVoiceNote] = useState<{ uri: string; type: string; name: string; } | null>(null);
+  const prevVisibleRef = useRef(visible);
 
   const handleChoosePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -36,6 +37,22 @@ export default function AddImageModal({ visible, onClose, onAdd }: AddImageModal
       setImage(result.assets[0]);
     }
   };
+
+  useEffect(() => {
+    const prevVisible = prevVisibleRef.current;
+    prevVisibleRef.current = visible;
+
+    if (visible && !prevVisible) {
+      // Modal just opened, trigger camera
+      handleChoosePhoto();
+    } else if (!visible && prevVisible) {
+      // Modal just closed, reset form
+      setTitle('');
+      setDescription('');
+      setImage(null);
+      setVoiceNote(null);
+    }
+  }, [visible]);
 
   const handleAdd = () => {
     if (!title || !image) {
