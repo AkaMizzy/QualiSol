@@ -75,6 +75,7 @@ export default function CompanyEditModal({
     city: '',
     pays: '',
     ice_number: '',
+    prompt1: '',
   });
 
   useEffect(() => {
@@ -88,6 +89,7 @@ export default function CompanyEditModal({
         city: company.city || '',
         pays: company.pays || '',
         ice_number: company.ice_number || '',
+        prompt1: company.prompt1 || "Critiquer et relever les anomalies dans cette image en 100 mots. Soyez critique.",
       });
     }
   }, [company]);
@@ -151,6 +153,7 @@ export default function CompanyEditModal({
         city: formData.city.trim() || null,
         pays: formData.pays.trim() || null,
         ice_number: formData.ice_number.trim() || null,
+        prompt1: formData.prompt1.trim() || null,
       };
 
       const updatedCompany = await companyService.updateCompany(updateData, logoUri);
@@ -277,6 +280,13 @@ export default function CompanyEditModal({
               value={formData.ice_number}
               onChangeText={(text) => handleInputChange('ice_number', text)}
               placeholder="001234567890123"
+            />
+             <InputField
+              label="Prompt 1"
+              value={formData.prompt1}
+              onChangeText={(text) => handleInputChange('prompt1', text)}
+              placeholder="Prompt pour la description d'image"
+              multiline
             />
           </View>
         </ScrollView>

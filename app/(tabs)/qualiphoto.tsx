@@ -226,7 +226,7 @@ export default function QualiPhotoGalleryScreen() {
                   style={styles.selectBtn}
                 >
                   <Text style={[styles.selectText, !selectedProject && styles.selectPlaceholder]} numberOfLines={1}>
-                    {selectedProject ? (projects.find(p => p.id === selectedProject)?.title || 'Projet') : 'Projet'}
+                    {selectedProject ? (projects.find(p => p.id === selectedProject)?.title || 'chantier') : 'chantier'}
                   </Text>
                 </Pressable>
                 {projectOpen && (
@@ -240,7 +240,7 @@ export default function QualiPhotoGalleryScreen() {
                           setProjectOpen(false); 
                         }}
                       >
-                        <Text style={styles.selectItemText}>Tous les projets</Text>
+                        <Text style={styles.selectItemText}>Tous les chantiers</Text>
                       </Pressable>
                       {loadingProjects ? (
                         <View style={styles.selectItem}><ActivityIndicator /></View>

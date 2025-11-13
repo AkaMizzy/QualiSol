@@ -19,4 +19,5 @@ export interface Company {
   logo?: string;
   nb_users?: number;
   status?: string;
+  prompt1?: string | null;
 }
