@@ -21,6 +21,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import VoiceNoteRecorder from '../VoiceNoteRecorder';
 
 export type QualiPhotoItem = {
   id: string;
@@ -52,6 +53,7 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
 
   const [isAnnotatorVisible, setAnnotatorVisible] = useState(false);
   const [annotatorBaseUri, setAnnotatorBaseUri] = useState<string | null>(null);
+  const [audioUri, setAudioUri] = useState<string | null>(null);
 
   const canSave = useMemo(() => !!photo && !submitting && !isGeneratingDescription, [photo, submitting, isGeneratingDescription]);
 
@@ -117,6 +119,26 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
         longitude: longitude ? String(longitude) : undefined,
         file: photo,
       });
+
+      if (audioUri) {
+        try {
+          const audioPayload: gedService.CreateGedInput = {
+            idsource: result.data.id,
+            title: `Note vocale pour ${title || 'Situation Après'}`,
+            kind: 'audio',
+            author: `${user.firstname} ${user.lastname}`,
+            file: {
+              uri: audioUri,
+              name: `note_${Date.now()}.m4a`,
+              type: 'audio/m4a',
+            },
+          };
+          await gedService.createGed(token, audioPayload);
+        } catch (audioErr: any) {
+          Alert.alert('Erreur Audio', `La photo a été enregistrée, mais l'envoi de la note vocale a échoué : ${audioErr.message}`);
+        }
+      }
+
       onSuccess(result.data);
       onClose();
     } catch (e: any) {
@@ -250,6 +272,12 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
                         </View>
                         )}
                     </View>
+                    <VoiceNoteRecorder
+                      onRecordingComplete={setAudioUri}
+                      onTranscriptionComplete={(text) => {
+                        setComment(prev => (prev ? `${prev}\n${text}` : text));
+                      }}
+                    />
                 </View>
             </View>
           </ScrollView>

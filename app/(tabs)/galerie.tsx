@@ -129,8 +129,8 @@ export default function GalerieScreen() {
   };
 
   const formattedDate = useMemo(() => {
-    if (!selectedDate) return "Filter by Date";
-    return selectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    if (!selectedDate) return "Filtrer par date";
+    return selectedDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
   }, [selectedDate]);
 
   return (
@@ -138,12 +138,17 @@ export default function GalerieScreen() {
       <AppHeader user={user || undefined} />
       <View style={styles.filterContainer}>
         <TouchableOpacity style={styles.datePickerButton} onPress={showDatePicker}>
-          <Ionicons name="calendar-outline" size={22} color={COLORS.primary} />
-          <Text style={styles.datePickerText}>{formattedDate}</Text>
+          <Ionicons name="calendar-outline" size={20} color={selectedDate ? COLORS.primary : COLORS.gray} />
+          <Text style={[styles.datePickerText, selectedDate && styles.datePickerTextActive]}>
+            {formattedDate}
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.showAllButton} onPress={handleShowAll}>
-          <Text style={styles.showAllButtonText}>Show All</Text>
-        </TouchableOpacity>
+        
+        {selectedDate && (
+          <TouchableOpacity style={styles.showAllButton} onPress={handleShowAll}>
+            <Text style={styles.showAllButtonText}>Afficher tout</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <DateTimePickerModal
@@ -230,36 +235,41 @@ const styles = StyleSheet.create({
   },
   filterContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingVertical: SIZES.small,
+    paddingVertical: SIZES.medium,
     paddingHorizontal: SIZES.large,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray2,
+    borderBottomColor: COLORS.lightWhite,
   },
   datePickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.lightWhite,
-    paddingHorizontal: SIZES.medium,
-    paddingVertical: SIZES.small,
-    borderRadius: SIZES.small,
+    paddingHorizontal: SIZES.large,
+    paddingVertical: SIZES.small + 2,
+    borderRadius: SIZES.large,
+    marginRight: SIZES.medium,
   },
   datePickerText: {
-    fontFamily: FONT.bold,
+    fontFamily: FONT.medium,
     fontSize: SIZES.medium,
-    color: COLORS.secondary,
+    color: COLORS.gray,
     marginLeft: SIZES.small,
   },
+  datePickerTextActive: {
+    color: COLORS.primary,
+    fontFamily: FONT.bold,
+  },
   showAllButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SIZES.medium,
-    paddingVertical: SIZES.small,
-    borderRadius: SIZES.small,
+    backgroundColor: COLORS.secondary,
+    paddingHorizontal: SIZES.large,
+    paddingVertical: SIZES.small + 2,
+    borderRadius: SIZES.large,
   },
   showAllButtonText: {
-    fontFamily: FONT.medium,
+    fontFamily: FONT.bold,
     fontSize: SIZES.medium,
     color: COLORS.white,
   },

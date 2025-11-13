@@ -28,7 +28,7 @@ const GRID_ITEMS: {
   image?: any;
   disabled?: boolean;
 }[] = [
-  { title: 'Galerie', image: require('../../assets/icons/camera_p.png')},
+  { title: 'QualiPhoto', image: require('../../assets/icons/camera_p.png')},
   { title: 'Réception', image: require('../../assets/icons/folder.png') },
   { title: 'Suivi', image: require('../../assets/icons/manifolder.png') },
   { title: 'Déclarations', image: require('../../assets/icons/declaration_anomalie.png') },

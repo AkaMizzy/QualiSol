@@ -333,7 +333,12 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
                   </View>
                 )}
               </View>
-              <VoiceNoteRecorder onRecordingComplete={setAudioUri} />
+              <VoiceNoteRecorder
+                onRecordingComplete={setAudioUri}
+                onTranscriptionComplete={(text) => {
+                  setComment(prev => (prev ? `${prev}\n${text}` : text));
+                }}
+              />
             </View>
           </View>
         </ScrollView>

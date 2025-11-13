@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import VoiceNoteRecorder from '../VoiceNoteRecorder';
 
 type Props = {
   visible: boolean;
@@ -155,6 +156,15 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
                   textAlignVertical="top"
                 />
               </View>
+
+              <VoiceNoteRecorder
+                onRecordingComplete={() => {
+                  // Not saving audio file here, just using for transcription
+                }}
+                onTranscriptionComplete={(text) => {
+                  setDescription(prev => (prev ? `${prev}\n${text}` : text));
+                }}
+              />
 
               {/* Owner (Admin) Select */}
               <View style={{ gap: 8, marginTop: 12 }}>
