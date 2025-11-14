@@ -131,9 +131,9 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
           )}
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            <View style={styles.card}>
-              <View style={[styles.inputWrap, { marginBottom: 16 }]}> 
-                <Ionicons name="text-outline" size={16} color="#6b7280" />
+            <View style={{paddingTop: 16}}>
+              <View style={[styles.inputWrap, { marginBottom: 16 }]}>
+                <Ionicons name="text-outline" size={16} color="#f87b1b" />
                 <TextInput
                   placeholder="Titre"
                   placeholderTextColor="#9ca3af"
@@ -143,40 +143,17 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
                 />
               </View>
 
-              <View style={[styles.inputWrap, { alignItems: 'flex-start' }]}> 
-                <Ionicons name="chatbubble-ellipses-outline" size={16} color="#6b7280" style={{ marginTop: 4 }} />
-                <TextInput
-                  placeholder="Description"
-                  placeholderTextColor="#9ca3af"
-                  value={description}
-                  onChangeText={setDescription}
-                  style={[styles.input, { height: 150 }]}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                />
-              </View>
-
-              <VoiceNoteRecorder
-                onRecordingComplete={() => {
-                  // Not saving audio file here, just using for transcription
-                }}
-                onTranscriptionComplete={(text) => {
-                  setDescription(prev => (prev ? `${prev}\n${text}` : text));
-                }}
-              />
-
               {/* Owner (Admin) Select */}
               <View style={{ gap: 8, marginTop: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Admin (optionnel)</Text>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Admin </Text>
                 <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setOwnerOpen(v => !v)}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="person-circle-outline" size={16} color="#6b7280" />
+                    <Ionicons name="person-circle-outline" size={16} color="#f87b1b" />
                     <Text style={[styles.input, { color: ownerId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {ownerId ? (companyUsers.find(u => String(u.id) === String(ownerId))?.firstname ? `${companyUsers.find(u => String(ownerId) === String(u.id))?.firstname} ${companyUsers.find(u => String(ownerId) === String(u.id))?.lastname || ''}` : ownerId) : 'Choisir un admin (optionnel)'}
+                      {ownerId ? (companyUsers.find(u => String(u.id) === String(ownerId))?.firstname ? `${companyUsers.find(u => String(ownerId) === String(u.id))?.firstname} ${companyUsers.find(u => String(ownerId) === String(u.id))?.lastname || ''}` : ownerId) : 'Choisir un admin'}
                     </Text>
                   </View>
-                  <Ionicons name={ownerOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
+                  <Ionicons name={ownerOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#f87b1b" />
                 </TouchableOpacity>
                 {ownerOpen && (
                   <View style={{ maxHeight: 200, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
@@ -200,15 +177,15 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
 
               {/* Control Select */}
               <View style={{ gap: 8, marginTop: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Contrôleur (optionnel)</Text>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Contrôleur</Text>
                 <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setControlOpen(v => !v)}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="shield-checkmark-outline" size={16} color="#6b7280" />
+                    <Ionicons name="shield-checkmark-outline" size={16} color="#f87b1b" />
                     <Text style={[styles.input, { color: controlId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {controlId ? (companyUsers.find(u => String(u.id) === String(controlId))?.firstname ? `${companyUsers.find(u => String(controlId) === String(u.id))?.firstname} ${companyUsers.find(u => String(controlId) === String(u.id))?.lastname || ''}` : controlId) : 'Choisir un contrôleur (optionnel)'}
+                      {controlId ? (companyUsers.find(u => String(u.id) === String(controlId))?.firstname ? `${companyUsers.find(u => String(controlId) === String(u.id))?.firstname} ${companyUsers.find(u => String(controlId) === String(u.id))?.lastname || ''}` : controlId) : 'Choisir un contrôleur'}
                     </Text>
                   </View>
-                  <Ionicons name={controlOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
+                  <Ionicons name={controlOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#f87b1b" />
                 </TouchableOpacity>
                 {controlOpen && (
                   <View style={{ maxHeight: 200, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
@@ -232,15 +209,15 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
 
               {/* Technicien Select */}
               <View style={{ gap: 8, marginTop: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Technicien (optionnel)</Text>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Technicien</Text>
                 <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setTechnicienOpen(v => !v)}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="construct-outline" size={16} color="#6b7280" />
+                    <Ionicons name="construct-outline" size={16} color="#f87b1b" />
                     <Text style={[styles.input, { color: technicienId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {technicienId ? (companyUsers.find(u => String(u.id) === String(technicienId))?.firstname ? `${companyUsers.find(u => String(technicienId) === String(u.id))?.firstname} ${companyUsers.find(u => String(technicienId) === String(u.id))?.lastname || ''}` : technicienId) : 'Choisir un technicien (optionnel)'}
+                      {technicienId ? (companyUsers.find(u => String(u.id) === String(technicienId))?.firstname ? `${companyUsers.find(u => String(technicienId) === String(u.id))?.firstname} ${companyUsers.find(u => String(technicienId) === String(u.id))?.lastname || ''}` : technicienId) : 'Choisir un technicien'}
                     </Text>
                   </View>
-                  <Ionicons name={technicienOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
+                  <Ionicons name={technicienOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#f87b1b" />
                 </TouchableOpacity>
                 {technicienOpen && (
                   <View style={{ maxHeight: 200, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
@@ -262,6 +239,30 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
                 )}
               </View>
 
+              <View style={{ marginBottom: 16 }}>
+                <VoiceNoteRecorder
+                  onRecordingComplete={() => {
+                    // Not saving audio file here, just using for transcription
+                  }}
+                  onTranscriptionComplete={(text) => {
+                    setDescription(prev => (prev ? `${prev}\n${text}` : text));
+                  }}
+                />
+              </View>
+
+              <View style={[styles.inputWrap, { alignItems: 'flex-start' }]}> 
+                <Ionicons name="chatbubble-ellipses-outline" size={16} color="#f87b1b" style={{ marginTop: 4 }} />
+                <TextInput
+                  placeholder="Description"
+                  placeholderTextColor="#9ca3af"
+                  value={description}
+                  onChangeText={setDescription}
+                  style={[styles.input, { height: 250 }]}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
             </View>
           </ScrollView>
 
@@ -281,12 +282,11 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
   closeButton: { padding: 8 },
   headerCenter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, flex: 1 },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#11224e' },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#f87b1b' },
   placeholder: { width: 40 },
   content: { flex: 1, paddingHorizontal: 16 },
   alertBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fffbeb', borderColor: '#f59e0b', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, marginHorizontal: 16, marginTop: 8, borderRadius: 10 },
   alertBannerText: { color: '#b45309', flex: 1, fontSize: 12 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginTop: 16, marginHorizontal: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: '#e5e7eb' },
   inputWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#f87b1b', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
   input: { flex: 1, color: '#111827' },
   footer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#e5e7eb' },

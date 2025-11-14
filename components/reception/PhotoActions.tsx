@@ -1,8 +1,8 @@
+import { ICONS } from '@/constants/Icons';
+import { Folder } from '@/services/qualiphotoService';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { ICONS } from '@/constants/Icons';
-import { Folder } from '@/services/qualiphotoService';
 
 type PhotoActionsProps = {
   item: Folder;
@@ -27,11 +27,6 @@ export const PhotoActions: React.FC<PhotoActionsProps> = ({
       <TouchableOpacity style={styles.actionButton} onPress={onMapPress}>
         <Image source={ICONS.map} style={styles.actionIcon} />
       </TouchableOpacity>
-      {onEdit && (
-        <TouchableOpacity style={styles.actionButton} onPress={onEdit} accessibilityLabel="Éditer">
-          <Image source={ICONS.edit} style={styles.actionIcon} />
-        </TouchableOpacity>
-      )}
     </View>
   );
 };

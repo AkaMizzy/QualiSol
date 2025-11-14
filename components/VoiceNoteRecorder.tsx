@@ -1,6 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { transcribeAudio } from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { Audio } from 'expo-av';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -65,15 +66,23 @@ export default function VoiceNoteRecorder({ onRecordingComplete, onTranscription
 
   async function stopRecording() {
     if (!recording) return;
-
-    setStatus('idle');
-    await recording.stopAndUnloadAsync();
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
-    const uri = recording.getURI();
-    setRecordingUri(uri);
-    setRecording(null);
-    setStatus('recorded');
-    onRecordingComplete(uri);
+    try {
+      const status = await recording.getStatusAsync();
+      await recording.stopAndUnloadAsync();
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+      const uri = recording.getURI();
+      setRecordingUri(uri);
+      setRecording(null);
+      if (status.isRecording && status.durationMillis) {
+        setDuration(Math.round(status.durationMillis / 1000));
+      }
+      setStatus('recorded');
+      onRecordingComplete(uri);
+    } catch (err) {
+      console.error('Failed to stop recording', err);
+      Alert.alert('Erreur', 'Impossible d\'arrêter l\'enregistrement.');
+      setStatus('idle');
+    }
   }
 
   async function playSound() {
@@ -149,22 +158,35 @@ export default function VoiceNoteRecorder({ onRecordingComplete, onTranscription
 
   if (status === 'recorded' || status === 'playing') {
     return (
-      <View style={[styles.container, styles.recordedContainer]}>
-        <TouchableOpacity style={styles.playButton} onPress={playSound} disabled={status === 'playing'}>
+      <View style={styles.actionsContainer}>
+        <TouchableOpacity
+          style={[styles.container, styles.recordedContainer, { marginTop: 0, paddingHorizontal: 50 }]}
+          onPress={playSound}
+          disabled={status === 'playing'}
+        >
           <Ionicons name={status === 'playing' ? 'pause-circle' : 'play-circle'} size={24} color="#11224e" />
+          <Text style={styles.recordedText}>{formatDuration(duration)}</Text>
         </TouchableOpacity>
-        <Text style={styles.recordedText}>Note vocale ({formatDuration(duration)})</Text>
+
         {isTranscribing ? (
-          <ActivityIndicator color="#11224e" />
+          <View style={[styles.container, { marginTop: 0, paddingHorizontal: 16, backgroundColor: '#fff' }]}>
+            <ActivityIndicator color="#11224e" />
+          </View>
         ) : (
           !transcribedText && (
-          <TouchableOpacity style={styles.transcribeButton} onPress={handleTranscribe}>
-            <Ionicons name="sparkles-outline" size={24} color="#11224e" />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.container, { marginTop: 0, paddingHorizontal: 50, backgroundColor: '#fff' }]}
+              onPress={handleTranscribe}
+            >
+              <FontAwesome5 name="file-audio" size={25} color="#f87b1b" />
+            </TouchableOpacity>
           )
         )}
-        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-          <Ionicons name="trash-outline" size={20} color="#dc2626" />
+        <TouchableOpacity
+          style={[styles.container, { marginTop: 0, paddingHorizontal: 16, backgroundColor: '#fff' }]}
+          onPress={handleDelete}
+        >
+          <Ionicons name="trash-outline" size={25} color="#dc2626" />
         </TouchableOpacity>
       </View>
     );
@@ -173,60 +195,64 @@ export default function VoiceNoteRecorder({ onRecordingComplete, onTranscription
 
   return (
     <TouchableOpacity style={styles.container} onPress={startRecording}>
-      <Ionicons name="mic-outline" size={24} color="#11224e" />
+      <Ionicons name="mic-outline" size={24} color="#f87b1b" />
       <Text style={styles.text}>Ajouter une note vocale</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-    container: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 12,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: '#e5e7eb',
-      backgroundColor: '#f8fafc',
-      gap: 8,
-      marginTop: 12,
-    },
-    text: {
-      color: '#11224e',
-      fontWeight: '600',
-    },
-    recordingContainer: {
-      justifyContent: 'space-between',
-      backgroundColor: '#fee2e2',
-      borderColor: '#fca5a5',
-    },
-    timerText: {
-      color: '#b91c1c',
-      fontWeight: '600',
-      fontSize: 16,
-    },
-    stopButton: {
-      backgroundColor: '#dc2626',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 99,
-    },
-    button: {},
-    recordedContainer: {
-      justifyContent: 'space-between',
-      backgroundColor: '#e0e7ff',
-      borderColor: '#a5b4fc',
-    },
-    recordedText: {
-      flex: 1,
-      textAlign: 'center',
-      color: '#3730a3',
-      fontWeight: '600',
-    },
-    playButton: {},
-    deleteButton: {},
-    transcribeButton: {
-      marginLeft: 10,
-    },
-  });
+  actionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#f87b1b',
+    backgroundColor: '#f8fafc',
+    gap: 8,
+    marginTop: 12,
+  },
+  text: {
+    color: '#11224e',
+    fontWeight: '600',
+  },
+  recordingContainer: {
+    justifyContent: 'space-between',
+    backgroundColor: '#fee2e2',
+    borderColor: '#fca5a5',
+  },
+  timerText: {
+    color: '#b91c1c',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  stopButton: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 99,
+  },
+  button: {},
+  recordedContainer: {
+    justifyContent: 'flex-start',
+    backgroundColor: '#e0e7ff',
+    borderColor: '#a5b4fc',
+  },
+  recordedText: {
+    color: '#3730a3',
+    fontWeight: '600',
+  },
+  playButton: {},
+  deleteButton: {},
+  transcribeButton: {
+    marginLeft: 10,
+  },
+});

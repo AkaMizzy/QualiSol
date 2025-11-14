@@ -24,6 +24,7 @@ export const ICONS = {
   cameraGif: require('@/assets/icons/camera.gif'),
   constructionGif: require('@/assets/icons/construction.gif'),
   wifiLostGif: require('@/assets/icons/wifiLost.gif'),
+
 } as const;
 
 export const ICONS_ASSETS = Object.values(ICONS);

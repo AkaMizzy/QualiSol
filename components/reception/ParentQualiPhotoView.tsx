@@ -3,7 +3,6 @@ import React from 'react';
 import {
   ActivityIndicator,
   Image,
-  LayoutAnimation,
   Platform,
   Pressable,
   ScrollView,
@@ -11,14 +10,13 @@ import {
   Text,
   TouchableOpacity,
   UIManager,
-  View,
+  View
 } from 'react-native';
 
 import API_CONFIG from '@/app/config/api';
 import { ICONS } from '@/constants/Icons';
 import { Ged } from '@/services/gedService';
 import { Folder } from '@/services/qualiphotoService';
-import { PhotoActions } from './PhotoActions';
 import QualiPhotoEditModal from './QualiPhotoEditModal';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -86,14 +84,8 @@ type ParentQualiPhotoViewProps = {
     zoneTitle,
     childrenWithAfterPhotos,
   }) => {
-    const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
     const [isEditModalVisible, setIsEditModalVisible] = React.useState(false);
 
-    const toggleDescription = () => {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setIsDescriptionExpanded((prev) => !prev);
-    };
-    
     const header = (
         <View style={styles.header}>
             <Pressable
@@ -120,62 +112,19 @@ type ParentQualiPhotoViewProps = {
               <TouchableOpacity style={styles.headerAction} onPress={() => {}} accessibilityLabel="Signatures">
                 <Image source={ICONS.signature} style={styles.headerActionIcon} />
               </TouchableOpacity>
+              <TouchableOpacity style={styles.headerAction} onPress={() => setIsEditModalVisible(true)} accessibilityLabel="Éditer">
+                    <Image source={ICONS.edit} style={styles.headerActionIcon} />
+                </TouchableOpacity>
           </View>
         </View>
       );
     return (
         <>
         {header}
-        <View style={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 12 }}>
-          <View style={styles.folderCard}>
-            <View style={styles.folderHeader}>
-              <View style={styles.folderIconContainer}>
-                <Ionicons name="folder-outline" size={24} color="#f87b1b" />
-              </View>
-              <View style={styles.folderTitleContainer}>
-                <Text style={styles.folderTitle} numberOfLines={1}>{item.title}</Text>
-                <Text style={styles.folderSubtitle} numberOfLines={1}>{subtitle}</Text>
-              </View>
-            </View>
-            <View style={styles.folderMeta}>
-              <Text style={styles.folderMetaText} numberOfLines={1}>
-                {/* User name will be handled later */}
-              </Text>
-              <Text style={styles.folderMetaText}>{item.createdAt ? formatDate(item.createdAt) : ''}</Text>
-            </View>
 
-            <View style={styles.folderContentContainer}>
-              <PhotoActions
-                item={item}
-                isPlaying={isPlaying}
-                onPlaySound={playSound}
-                onMapPress={handleMapPress}
-                onEdit={() => setIsEditModalVisible(true)}
-              />
-              
-              {item.description && (
-                <View>
-                  <View style={styles.metaHeader}>
-                    <Text style={styles.metaLabel}>Description</Text>
-                    <TouchableOpacity onPress={toggleDescription}>
-                      <Ionicons name={isDescriptionExpanded ? "chevron-up" : "ellipsis-horizontal"} size={20} color="#6b7280" />
-                    </TouchableOpacity>
-                  </View>
-                  <Text 
-                    style={styles.metaValue}
-                    numberOfLines={isDescriptionExpanded ? undefined : 1}
-                  >
-                    {item.description}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
         <ScrollView bounces>
-          <View style={[styles.content, { paddingTop: 0 }]}>
+          <View style={[styles.content, { paddingTop: 20 }]}>
               <>
-                <View style={styles.sectionSeparator} />
                 <View style={styles.childPicturesContainer}>
                 <View style={[styles.childListHeader, childGeds.length === 0 && { justifyContent: 'center' }]}>
                   {childGeds.length > 0 && (
@@ -200,7 +149,7 @@ type ParentQualiPhotoViewProps = {
                    style={styles.cameraCTA}
                  >
                    <Image source={require('@/assets/icons/camera.gif')} style={styles.cameraCTAIcon} />
-                   <Text style={styles.cameraCTALabel}>Prendre la situation avant</Text>
+                   <Text style={styles.cameraCTALabel}>Situation avant</Text>
                  </TouchableOpacity>
                  {childGeds.length > 0 && (
                    <TouchableOpacity
@@ -340,7 +289,7 @@ const styles = StyleSheet.create({
       folderTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#11224e',
+        color: '#f87b1b',
       },
       folderSubtitle: {
         fontSize: 12,
@@ -366,7 +315,7 @@ const styles = StyleSheet.create({
       title: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#11224e',
+        color: '#f87b1b',
       },
       subtitle: {
         marginTop: 2,
@@ -520,7 +469,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
       },
       cameraCTALabel: {
-        fontSize: 12,
+        fontSize: 15,
         fontWeight: 'bold',
         color: '#11224e',
         marginLeft: 8,
@@ -530,6 +479,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#ffffff',
+        borderWidth: 1,
+        borderColor: '#f87b1b',
         paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 25,
@@ -541,8 +492,8 @@ const styles = StyleSheet.create({
         marginHorizontal: 12,
       },
       cameraCTAIcon: {
-        width: 30,
-        height: 30,
+        width: 32,
+        height: 32,
         resizeMode: 'contain',
       },
       sortButton: {
