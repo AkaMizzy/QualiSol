@@ -101,9 +101,8 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
             {item.url ? (
               <PhotoCard
                 uri={getFullImageUrl(item.url)}
-                title={item.title}
                 userName={item.author}
-                // date={item.createdAt}
+                date={item.created_at}
                 onPress={() => {}}
                 isActionsVisible={false}
               />
@@ -113,7 +112,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                 <View style={styles.metaHeader}>
                   <Text style={styles.metaLabel}>Description</Text>
                   <TouchableOpacity onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}>
-                    <Ionicons name={isDescriptionExpanded ? "chevron-up" : "ellipsis-horizontal"} size={20} color="#6b7280" />
+                    <Ionicons name={isDescriptionExpanded ? "chevron-up" : "ellipsis-horizontal"} size={23} color="#f87b1b" />
                   </TouchableOpacity>
                 </View>
                 <Text 
@@ -137,6 +136,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                   uri={getFullImageUrl(photo.url)}
                   title={photo.title}
                   userName={photo.author}
+                  date={photo.created_at}
                   onPress={() => {}}
                   isActionsVisible={false}
                 />
@@ -149,7 +149,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                   style={styles.cameraCTA}
                 >
                   <Image source={cameraIcon} style={styles.cameraCTAIcon} />
-                  <Text style={styles.cameraCTALabel}>Prendre la situation après</Text>
+                  <Text style={styles.cameraCTALabel}>Situation après</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -202,13 +202,13 @@ const styles = StyleSheet.create({
         width: 40, // to balance the close button
       },
       title: {
-        fontSize: 16,
+        fontSize: 20,
         fontWeight: '700',
-        color: '#11224e',
+        color: '#f87b1b',
       },
       subtitle: {
         marginTop: 2,
-        fontSize: 12,
+        fontSize: 14,
         color: '#8E8E93',
       },
       content: {
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
       },
       metaLabel: {
-        color: '#94a3b8',
+        color: '#f87b1b',
         fontSize: 12,
         marginBottom: 2,
         fontWeight: '600',
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
       },
       cameraCTALabel: {
-        fontSize: 12,
+        fontSize: 15,
         fontWeight: 'bold',
         color: '#11224e',
         marginLeft: 8,
@@ -266,6 +266,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         backgroundColor: '#ffffff',
         paddingHorizontal: 16,
+        borderWidth: 1,
+        borderColor: '#f87b1b',
         paddingVertical: 10,
         borderRadius: 25,
         elevation: 3,
@@ -276,8 +278,8 @@ const styles = StyleSheet.create({
         marginHorizontal: 12,
       },
       cameraCTAIcon: {
-        width: 30,
-        height: 30,
+        width: 32,
+        height: 32,
         resizeMode: 'contain',
       },
 });

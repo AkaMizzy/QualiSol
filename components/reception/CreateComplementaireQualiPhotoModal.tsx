@@ -182,6 +182,11 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
               <Text style={styles.headerTitle} numberOfLines={1}>
                 {parentTitle}
               </Text>
+              {!!childItem.project_title && !!childItem.zone_title && (
+                <Text style={styles.headerSubtitle} numberOfLines={1}>
+                  {`${childItem.project_title} • ${childItem.zone_title}`}
+                </Text>
+              )}
             </View>
             <TouchableOpacity onPress={onClose} style={styles.headerStopButton}>
                 <Ionicons name="close" size={28} color="#11224e" />
@@ -206,16 +211,6 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
             onScrollBeginDrag={Keyboard.dismiss}
           >
             <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                <View style={styles.cardHeaderText}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>
-                    {`${childItem.project_title} • ${childItem.zone_title}`}
-                    </Text>
-                </View>
-                </View>
-            
-                <View style={styles.separator} />
-
                 {photo ? (
                 <View style={styles.imagePreviewContainer}>
                     <Image source={{ uri: photo.uri }} style={styles.imagePreview} />
@@ -249,6 +244,12 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
                         style={styles.input}
                         />
                     </View>
+                    <VoiceNoteRecorder
+                      onRecordingComplete={setAudioUri}
+                      onTranscriptionComplete={(text) => {
+                        setComment(prev => (prev ? `${prev}\n${text}` : text));
+                      }}
+                    />
                     <View style={[styles.inputWrap, { alignItems: 'flex-start' }]}>
                         <Ionicons name="chatbubble-ellipses-outline" size={16} color="#6b7280" style={{ marginTop: 4 }} />
                         <TextInput
@@ -272,12 +273,6 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
                         </View>
                         )}
                     </View>
-                    <VoiceNoteRecorder
-                      onRecordingComplete={setAudioUri}
-                      onTranscriptionComplete={(text) => {
-                        setComment(prev => (prev ? `${prev}\n${text}` : text));
-                      }}
-                    />
                 </View>
             </View>
           </ScrollView>
@@ -355,14 +350,15 @@ const styles = StyleSheet.create({
     headerStopButton: { padding: 8, minWidth: 50, alignItems: 'flex-end' },
     stopButtonText: { color: '#f87b1b', fontWeight: '600', fontSize: 16 },
     headerCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
-    headerTitle: { fontSize: 18, fontWeight: '600', color: '#11224e' },
+    headerTitle: { fontSize: 18, fontWeight: '600', color: '#f87b1b' },
+    headerSubtitle: { fontSize: 13, color: '#6b7280', marginTop: 2 },
     content: { flex: 1, paddingHorizontal: 16 },
     alertBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fffbeb', borderColor: '#f59e0b', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, marginHorizontal: 16, marginTop: 8, borderRadius: 10 },
     alertBannerText: { color: '#b45309', flex: 1, fontSize: 12 },
-    card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginTop: 16, marginHorizontal: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
-    cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-    cardHeaderText: { flex: 1, alignItems: 'center' },
-    cardTitle: { fontSize: 12, color: '#11224e', fontWeight: '500' },
+    card: { 
+      backgroundColor: '#F8FAFC',
+      paddingTop: 16,
+    },
     separator: { height: 1, backgroundColor: '#e5e7eb', marginVertical: 16, },
     photoPickerButton: { borderWidth: 2, borderColor: '#f87b1b', borderStyle: 'dashed', borderRadius: 12, paddingVertical: 20, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc', gap: 8, },
     photoPickerText: { color: '#475569', fontWeight: '600', },

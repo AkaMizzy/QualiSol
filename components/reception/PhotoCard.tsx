@@ -48,7 +48,6 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
         <View style={[styles.imageWrap, borderColor ? { borderColor } : {}]}>
           <Image source={{ uri }} style={styles.image} />
           <View style={[styles.overlay, { gap: 4 }]}>
-            {title && <Text style={styles.title} numberOfLines={1}>{title}</Text>}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flex: 1, marginRight: 8 }}>
                 {userName && (
@@ -102,8 +101,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   date: {
-    color: '#FFFFFF',
-    fontSize: 10,
+    color: '#f87b1b',
+    fontSize: 12,
     fontWeight: '600',
   },
   toggleActionsButton: {

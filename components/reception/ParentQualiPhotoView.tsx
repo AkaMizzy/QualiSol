@@ -97,7 +97,7 @@ type ParentQualiPhotoViewProps = {
               <Ionicons name="arrow-back" size={28} color="#f87b1b" />
             </Pressable>
           <View style={styles.headerTitles}>
-          {!!item?.title && <Text style={styles.title}>{item.title}</Text>}
+          {!!item?.title && <Text style={styles.title} numberOfLines={1}>{item.title}</Text>}
           {!!item && <Text numberOfLines={1} style={styles.subtitle}>{subtitle}</Text>}
           {!!item?.createdAt && <Text style={styles.subtitle}>{formatDate(item.createdAt)}</Text>}
           </View>
@@ -168,13 +168,13 @@ type ParentQualiPhotoViewProps = {
                 <View style={layoutMode === 'grid' ? styles.childGridContainer : styles.childListContainer}>
                   {childGeds.map((ged) => {
                     const hasAfterPhoto = childrenWithAfterPhotos.has(ged.id);
-                    const borderColor = hasAfterPhoto ? '#10b981' : '#f87b1b'; // Green if has "after", orange if not
+                    const borderColor = hasAfterPhoto ? '#10b981' : '#EE4B2B'; // Green if has "after", red if not
                     return (
                       <TouchableOpacity 
                         key={ged.id} 
                         style={[
                           layoutMode === 'grid' ? styles.childGridItem : styles.childListItem,
-                          { borderColor, borderWidth: 2 }
+                          { borderColor, borderWidth: 2.5 }
                         ]} 
                         onPress={() => onChildPress(ged)}
                       >
@@ -184,7 +184,8 @@ type ParentQualiPhotoViewProps = {
                           <View style={[styles.childThumbnail, { backgroundColor: '#e5e7eb' }]} />
                         )}
                         <View style={styles.childGridOverlay}>
-                          <Text style={styles.childGridTitle} numberOfLines={2}>{ged.title}</Text>
+                          <Text style={styles.childGridTitle} numberOfLines={1}>{ged.title}</Text>
+                          {ged.created_at && <Text style={styles.childGridDate}>{formatDate(ged.created_at)}</Text>}
                         </View>
                       </TouchableOpacity>
                     );
@@ -212,11 +213,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E5EA',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         backgroundColor: '#FFFFFF',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3.84,
       },
       closeBtn: {
         width: 40,
@@ -232,12 +236,16 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
+        paddingLeft: 50,
       },
       headerAction: {
         width: 40,
         height: 40,
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: '#F2F2F7',
+        borderRadius: 20,
+        marginLeft: 8,
       },
       headerActionsContainer: {
         flexDirection: 'row',
@@ -245,8 +253,8 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
       },
       headerActionIcon: {
-        width: 40,
-        height: 40,
+        width: 30,
+        height: 30,
       },
       headerPlanIcon: {
         width: 60,
@@ -313,18 +321,18 @@ const styles = StyleSheet.create({
         gap: 12,
       },
       title: {
-        fontSize: 16,
-        fontWeight: '700',
+        fontSize: 18,
+        fontWeight: 'bold',
         color: '#f87b1b',
       },
       subtitle: {
-        marginTop: 2,
-        fontSize: 12,
-        color: '#8E8E93',
+        marginTop: 4,
+        fontSize: 13,
+        color: '#6b7280',
       },
       content: {
         paddingHorizontal: 12,
-        paddingTop: 12,
+        paddingTop: 20,
         paddingBottom: 24,
         gap: 12,
       },
@@ -426,17 +434,22 @@ const styles = StyleSheet.create({
         right: 0,
         backgroundColor: 'rgba(0,0,0,0.5)',
         padding: 8,
-        gap: 2,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
       },
       childGridTitle: {
-        color: '#FFFFFF',
+        color: '#f87b1b',
         fontSize: 12,
         fontWeight: 'bold',
+        flex: 1,
+        marginRight: 4,
       },
       childGridDate: {
-        color: '#FFFFFF',
-        fontSize: 10,
-        fontWeight: '600',
+        color: '#f87b1b',
+        fontSize: 12,
+        fontWeight: 'bold',
+       
       },
       noChildrenText: {
         textAlign: 'center',
