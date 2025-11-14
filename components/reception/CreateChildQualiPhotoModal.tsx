@@ -37,6 +37,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
   const [level, setLevel] = useState(5);
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedCategorie, setSelectedCategorie] = useState<string | null>(null);
   const [severitySliderWidth, setSeveritySliderWidth] = useState(0);
 
   const [isAnnotatorVisible, setAnnotatorVisible] = useState(false);
@@ -44,7 +45,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
 
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const canSave = useMemo(() => !!photo && !!selectedType && !submitting && !isGeneratingDescription && !isUploadingAudio, [photo, selectedType, submitting, isGeneratingDescription, isUploadingAudio]);
+  const canSave = useMemo(() => !!photo && !!selectedType && !!selectedCategorie && !submitting && !isGeneratingDescription && !isUploadingAudio, [photo, selectedType, selectedCategorie, submitting, isGeneratingDescription, isUploadingAudio]);
 
   useEffect(() => {
     async function loadAuthorName() {
@@ -119,6 +120,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
     setError(null);
     setLevel(5);
     setSelectedType(null);
+    setSelectedCategorie(null);
     scrollViewRef.current?.scrollTo({ y: 0, animated: true }); // Scroll to top
   };
 
@@ -171,6 +173,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
         longitude: longitude?.toString(),
         level: level,
         type: selectedType || undefined,
+        categorie: selectedCategorie || undefined,
         file: photo,
       };
 
@@ -184,6 +187,9 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
             title: `Note vocale pour ${title || 'Situation Avant'}`,
             kind: 'audio',
             author: authorName,
+            level: level,
+            type: selectedType || undefined,
+            categorie: selectedCategorie || undefined,
             file: {
               uri: audioUri,
               name: `note_${Date.now()}.m4a`,
@@ -265,13 +271,20 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
     return 'Basse';
   };
 
+  const ANOMALY_CATEGORIES = [
+    { key: 'securite', label: 'Sécurité' },
+    { key: 'conformite', label: 'Conformité' },
+    { key: 'technique', label: 'Technique' },
+    { key: 'observation', label: 'Observation' },
+  ] as const;
+
   const ANOMALY_TYPES = [
-    { key: 'type1', label: 'Incendie', icon: 'flame-outline' },
-    { key: 'type2', label: 'Inondation', icon: 'water-outline' },
-    { key: 'type3', label: 'Structure', icon: 'business-outline' },
-    { key: 'type4', label: 'Électrique', icon: 'flash-outline' },
-    { key: 'type5', label: 'CVC', icon: 'snow-outline' },
-    { key: 'type6', label: 'Autre', icon: 'ellipsis-horizontal-outline' },
+    { key: 'Incendie', label: 'Incendie', icon: 'flame-outline' },
+    { key: 'Inondation', label: 'Inondation', icon: 'water-outline' },
+    { key: 'Structure', label: 'Structure', icon: 'business-outline' },
+    { key: 'Électrique', label: 'Électrique', icon: 'flash-outline' },
+    { key: 'CVC', label: 'CVC', icon: 'snow-outline' },
+    { key: 'Autre', label: 'Autre', icon: 'ellipsis-horizontal-outline' },
   ] as const;
 
   return (
@@ -372,9 +385,35 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
               </ScrollView>
             </View>
 
+            {/* Anomaly Category Selection */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Catégorie d&apos;anomalie</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScrollView}>
+                {ANOMALY_CATEGORIES.map(category => (
+                  <TouchableOpacity
+                    key={category.key}
+                    style={[
+                      styles.categoryButton,
+                      selectedCategorie === category.key && styles.categoryButtonSelected,
+                    ]}
+                    onPress={() => setSelectedCategorie(category.key)}
+                  >
+                    <Text
+                      style={[
+                        styles.categoryButtonText,
+                        selectedCategorie === category.key && styles.categoryButtonTextSelected,
+                      ]}
+                    >
+                      {category.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
             {/* Severity Slider */}
             <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Niveau de sévérité</Text>
+              <Text style={styles.severityTitle}>Niveau de sévérité</Text>
               <PanGestureHandler onGestureEvent={onSeverityPan}>
                 <View 
                   style={styles.severityContainer}
@@ -414,7 +453,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
                   placeholderTextColor="#9ca3af"
                   value={comment}
                   onChangeText={setComment}
-                  style={[styles.input, { height: 160 }]}
+                  style={[styles.input, { height:300 }]}
                   multiline
                   onFocus={() => {
                     setTimeout(() => {
@@ -537,7 +576,7 @@ const styles = StyleSheet.create({
   content: { flex: 1, paddingHorizontal: 16 },
   alertBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fffbeb', borderColor: '#f59e0b', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, marginHorizontal: 16, marginTop: 8, borderRadius: 10 },
   alertBannerText: { color: '#b45309', flex: 1, fontSize: 12 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginTop: 16, marginHorizontal: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginTop: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
   
   parentPhotoContainer: {
     position: 'relative',
@@ -652,6 +691,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
+    color: '#f87b1b',
+    marginBottom: 12,
+  },
+  severityTitle: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#334155',
     marginBottom: 12,
   },
@@ -668,7 +713,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#f87b1b',
   },
   typeButtonSelected: {
     backgroundColor: '#f87b1b',
@@ -682,6 +727,32 @@ const styles = StyleSheet.create({
   typeButtonTextSelected: {
     color: '#FFFFFF',
   },
+
+  categoryScrollView: {
+    gap: 10,
+    paddingHorizontal: 2,
+  },
+  categoryButton: {
+    backgroundColor: '#f1f5f9',
+    borderRadius: 99,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#f87b1b',
+  },
+  categoryButtonSelected: {
+    backgroundColor: '#f87b1b',
+    borderColor: '#f87b1b',
+  },
+  categoryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#11224e',
+  },
+  categoryButtonTextSelected: {
+    color: '#FFFFFF',
+  },
+
   sliderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

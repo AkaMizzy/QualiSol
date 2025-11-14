@@ -6,6 +6,7 @@ import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { Ged, createGed, getAllGeds } from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -21,6 +22,7 @@ export default function GalerieScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [displayedCount, setDisplayedCount] = useState(PAGE_SIZE);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
@@ -42,6 +44,15 @@ export default function GalerieScreen() {
   useEffect(() => {
     fetchGeds();
   }, [fetchGeds]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstLoad) {
+        setModalVisible(true);
+        setIsFirstLoad(false);
+      }
+    }, [isFirstLoad])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -204,6 +215,7 @@ export default function GalerieScreen() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onAdd={handleAddImage}
+        openCameraOnShow={true}
       />
     </SafeAreaView>
   );

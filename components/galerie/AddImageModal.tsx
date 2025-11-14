@@ -12,9 +12,10 @@ interface AddImageModalProps {
   visible: boolean;
   onClose: () => void;
   onAdd: (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; latitude: number | null; longitude: number | null; }) => void;
+  openCameraOnShow?: boolean;
 }
 
-export default function AddImageModal({ visible, onClose, onAdd }: AddImageModalProps) {
+export default function AddImageModal({ visible, onClose, onAdd, openCameraOnShow = false }: AddImageModalProps) {
   const { token, user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -106,9 +107,13 @@ export default function AddImageModal({ visible, onClose, onAdd }: AddImageModal
     const prevVisible = prevVisibleRef.current;
     prevVisibleRef.current = visible;
 
-    if (visible && !prevVisible) {
-      // Modal just opened, trigger camera
-      handleChoosePhoto();
+    if (visible && !prevVisible && openCameraOnShow) {
+      // Modal just opened, trigger camera with a delay
+      const timer = setTimeout(() => {
+        handleChoosePhoto();
+      }, 400);
+
+      return () => clearTimeout(timer);
     } else if (!visible && prevVisible) {
       // Modal just closed, reset form
       setTitle('');
@@ -120,7 +125,7 @@ export default function AddImageModal({ visible, onClose, onAdd }: AddImageModal
       setIsGeneratingDescription(false);
       setIsTranscribing(false);
     }
-  }, [visible, handleChoosePhoto]);
+  }, [visible, handleChoosePhoto, openCameraOnShow]);
 
   useEffect(() => {
     const fetchLocation = async () => {
