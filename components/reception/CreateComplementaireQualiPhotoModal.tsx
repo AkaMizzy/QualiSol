@@ -237,7 +237,7 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
                     <View style={[styles.inputWrap]}>
                         <Ionicons name="text-outline" size={16} color="#6b7280" />
                         <TextInput
-                        placeholder="Titre (optionnel)"
+                        placeholder="Titre"
                         placeholderTextColor="#9ca3af"
                         value={title}
                         onChangeText={setTitle}

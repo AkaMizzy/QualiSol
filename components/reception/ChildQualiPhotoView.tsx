@@ -68,7 +68,13 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   };
 
   const handleAfterPhotoSuccess = (createdGed: Ged) => {
-    setAfterPhotos(prev => [...prev, createdGed]);
+    // The createGed API response doesn't include created_at, leading to a crash.
+    // We'll add a fallback to the current date to ensure the PhotoCard can render.
+    const newGedWithDate = {
+      ...createdGed,
+      created_at: (createdGed as any).created_at || new Date().toISOString(),
+    };
+    setAfterPhotos(prev => [...prev, newGedWithDate]);
     setCreateAfterModalVisible(false);
   };
 
@@ -101,8 +107,8 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
             {item.url ? (
               <PhotoCard
                 uri={getFullImageUrl(item.url)}
+                title={item.title}
                 userName={item.author}
-                date={item.created_at}
                 onPress={() => {}}
                 isActionsVisible={false}
               />
@@ -136,7 +142,6 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                   uri={getFullImageUrl(photo.url)}
                   title={photo.title}
                   userName={photo.author}
-                  date={photo.created_at}
                   onPress={() => {}}
                   isActionsVisible={false}
                 />
