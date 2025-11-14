@@ -60,7 +60,7 @@ export default function GalerieScreen() {
     setRefreshing(false);
   }, [fetchGeds]);
 
-  const handleAddImage = async (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; latitude: number | null; longitude: number | null; }) => {
+  const handleAddImage = async (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; latitude: number | null; longitude: number | null; }, shouldClose: boolean) => {
     if (!token || !user || !data.image) return;
     const idsource = "00000000-0000-0000-0000-000000000000";
     
@@ -94,7 +94,9 @@ export default function GalerieScreen() {
       console.error('Failed to upload files:', error);
       Alert.alert('Upload Failed', 'Please try again.');
     } finally {
-      setModalVisible(false);
+      if (shouldClose) {
+        setModalVisible(false);
+      }
     }
   };
 

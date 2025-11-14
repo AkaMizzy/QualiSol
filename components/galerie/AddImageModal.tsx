@@ -1,7 +1,7 @@
 import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
 import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { describeImage, transcribeAudio } from '@/services/gedService';
+import { describeImage } from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -11,7 +11,7 @@ import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform,
 interface AddImageModalProps {
   visible: boolean;
   onClose: () => void;
-  onAdd: (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; latitude: number | null; longitude: number | null; }) => void;
+  onAdd: (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; latitude: number | null; longitude: number | null; }, shouldClose: boolean) => void;
   openCameraOnShow?: boolean;
 }
 
@@ -24,7 +24,6 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
   const prevVisibleRef = useRef(visible);
 
   const handleGenerateDescription = useCallback(async (photoToDescribe: ImagePicker.ImagePickerAsset) => {
@@ -47,27 +46,6 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
     }
   }, [token]);
 
-  const handleTranscribeAudio = useCallback(async (audioUri: string, audioType: string) => {
-    if (!audioUri || !token) {
-      return;
-    }
-    setIsTranscribing(true);
-    try {
-      const fileName = audioUri.split('/').pop() || `voicenote-${Date.now()}.m4a`;
-      const audioFile = {
-        uri: audioUri,
-        type: audioType,
-        name: fileName,
-      };
-      const transcribedText = await transcribeAudio(token, audioFile);
-      setDescription(prev => prev ? `${prev}\n${transcribedText}` : transcribedText);
-    } catch (e: any) {
-      console.error('Failed to transcribe audio:', e);
-    } finally {
-      setIsTranscribing(false);
-    }
-  }, [token]);
-
   const handleRecordingComplete = useCallback((uri: string | null) => {
     if (uri) {
       const voiceNoteData = {
@@ -77,11 +55,11 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
       };
       setVoiceNote(voiceNoteData);
       // Automatically transcribe the audio
-      handleTranscribeAudio(uri, 'audio/m4a');
+      // handleTranscribeAudio(uri, 'audio/m4a');
     } else {
       setVoiceNote(null);
     }
-  }, [handleTranscribeAudio]);
+  }, []);
 
   const handleChoosePhoto = useCallback(async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -123,7 +101,6 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
       setLatitude(null);
       setLongitude(null);
       setIsGeneratingDescription(false);
-      setIsTranscribing(false);
     }
   }, [visible, handleChoosePhoto, openCameraOnShow]);
 
@@ -147,7 +124,7 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
     }
   }, [visible]);
 
-  const handleAdd = () => {
+  const handleAdd = (shouldClose: boolean) => {
     if (!title || !image) {
       Alert.alert('Informations manquantes', 'Veuillez fournir un titre et une image.');
       return;
@@ -187,11 +164,15 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
       }
     }
 
-    onAdd({ title, description, image, voiceNote, author: authorName, latitude, longitude });
-    setTitle('');
-    setDescription('');
-    setImage(null);
-    setVoiceNote(null);
+    onAdd({ title, description, image, voiceNote, author: authorName, latitude, longitude }, shouldClose);
+    
+    if (!shouldClose) {
+        setTitle('');
+        setDescription('');
+        setImage(null);
+        setVoiceNote(null);
+        handleChoosePhoto();
+    }
   };
 
   return (
@@ -247,13 +228,13 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
                     value={description}
                     onChangeText={setDescription}
                     multiline
-                    editable={!isGeneratingDescription && !isTranscribing}
+                    editable={!isGeneratingDescription}
                   />
-                  {(isGeneratingDescription || isTranscribing) && (
+                  {(isGeneratingDescription) && (
                     <View style={styles.descriptionLoadingOverlay}>
                       <ActivityIndicator size="small" color={COLORS.primary} />
                       <Text style={styles.descriptionLoadingText}>
-                        {isGeneratingDescription ? 'Analyse en cours...' : 'Transcription en cours...'}
+                        Analyse en cours...
                       </Text>
                     </View>
                   )}
@@ -270,9 +251,9 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
               
               <View style={styles.buttonContainer}>
                 <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
-                  <Text style={[styles.buttonText, styles.cancelButtonText]}>Annuler</Text>
+                  <Text style={[styles.buttonText, styles.cancelButtonText]}>Arrêt</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAdd}>
+                <TouchableOpacity style={[styles.button, styles.addButton]} onPress={() => handleAdd(false)}>
                   <Text style={styles.buttonText}>Ajouter l&apos;image</Text>
                 </TouchableOpacity>
               </View>
@@ -309,6 +290,15 @@ const styles = StyleSheet.create({
         fontSize: SIZES.xLarge,
         marginBottom: SIZES.large,
         color: COLORS.secondary,
+    },
+    labelContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      width: '100%',
+    },
+    sparkleButton: {
+        padding: SIZES.small,
     },
     imageContainer: {
         width: '100%',
