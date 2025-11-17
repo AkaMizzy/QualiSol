@@ -99,7 +99,6 @@ type ParentQualiPhotoViewProps = {
           <View style={styles.headerTitles}>
           {!!item?.title && <Text style={styles.title} numberOfLines={1}>{item.title}</Text>}
           {!!item && <Text numberOfLines={1} style={styles.subtitle}>{subtitle}</Text>}
-          {!!item?.createdAt && <Text style={styles.subtitle}>{formatDate(item.createdAt)}</Text>}
           </View>
           <View style={styles.headerActionsContainer}>
                 <TouchableOpacity style={styles.headerAction} onPress={handleGeneratePdf} disabled={isGeneratingPdf} accessibilityLabel="Générer le PDF">

@@ -13,13 +13,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 function formatDateForGrid(dateStr?: string | null): string {
   if (!dateStr) return '';
   try {
+    // Ensure date string is in a format that new Date() can parse reliably
+    const compliantDateStr = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
     return new Intl.DateTimeFormat('fr-FR', {
       month: 'short',
       day: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    }).format(new Date(dateStr));
+    }).format(new Date(compliantDateStr));
   } catch {
     return '';
   }
@@ -71,8 +73,8 @@ export default function QualiPhotoGalleryScreen() {
 
       // Sort folders by creation date, latest first
       const sortedItems = items.sort((a, b) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
         return dateB - dateA;
       });
 
@@ -194,8 +196,9 @@ export default function QualiPhotoGalleryScreen() {
               <Ionicons name="location-outline" size={14} color="#f87b1b" />
               <Text style={styles.infoText} numberOfLines={1}>{zoneTitle || 'N/A'}</Text>
           </View>
-          <View style={styles.cardFooter}>
-                <Text style={styles.cardDate}>{formatDateForGrid(item.createdAt)}</Text>
+          <View style={styles.infoRow}>
+            <Ionicons name="calendar-outline" size={14} color="#f87b1b" />
+            <Text style={styles.infoText}>{formatDateForGrid(item.created_at)}</Text>
           </View>
         </View>
       </Pressable>
@@ -583,7 +586,7 @@ const styles = StyleSheet.create({
     flex: 1,
     maxWidth: '49%',
     marginHorizontal: 4,
-    marginVertical: 8,
+    
     backgroundColor: '#ffffff',
     borderRadius: 16,
     borderWidth: 1,
@@ -623,15 +626,6 @@ const styles = StyleSheet.create({
       fontSize: 12,
       color: '#4b5563',
       flex: 1,
-  },
-  cardFooter: {
-      marginTop: 8,
-      alignItems: 'flex-end',
-  },
-  cardDate: {
-      fontSize: 11,
-      color: '#9ca3af',
-      fontWeight: '500',
   },
   loadingMoreWrap: {
     paddingVertical: 20,

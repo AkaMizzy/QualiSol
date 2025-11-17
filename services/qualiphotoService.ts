@@ -14,8 +14,8 @@ export interface Folder {
   foldertype?: string;
   status_id: string;
   company_id: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Project {
