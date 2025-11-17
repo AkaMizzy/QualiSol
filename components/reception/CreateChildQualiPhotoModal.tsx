@@ -10,6 +10,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import CustomAlert from '../CustomAlert';
 import VoiceNoteRecorder from '../VoiceNoteRecorder';
 
 type FormProps = {
@@ -42,6 +43,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
 
   const [isAnnotatorVisible, setAnnotatorVisible] = useState(false);
   const [annotatorBaseUri, setAnnotatorBaseUri] = useState<string | null>(null);
+  const [alertInfo, setAlertInfo] = useState<{ visible: boolean; title: string; message: string; type: 'success' | 'error', buttons?: any[] }>({ visible: false, title: '', message: '', type: 'success' });
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -93,21 +95,21 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
     loadAuthorName();
   }, [token, user]);
 
-  const handleGenerateDescription = useCallback(async (photoToDescribe: { uri: string; name: string; type: string }) => {
-    if (!photoToDescribe || !token) {
+  const handleGenerateDescription = useCallback(async () => {
+    if (!photo || !token) {
       return;
     }
     setIsGeneratingDescription(true);
     setError(null);
     try {
-      const description = await describeImage(token, photoToDescribe);
+      const description = await describeImage(token, photo);
       setComment(prev => prev ? `${prev}\n${description}` : description);
     } catch (e: any) {
       setError(e?.message || 'Failed to generate description');
     } finally {
       setIsGeneratingDescription(false);
     }
-  }, [token]);
+  }, [token, photo]);
 
   const resetForm = () => {
     setTitle('');
@@ -144,9 +146,9 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
       };
 
       setPhoto(newPhoto);
-      handleGenerateDescription(newPhoto);
+      
     }
-  }, [handleGenerateDescription]);
+  }, []);
 
   const openAnnotatorForExisting = () => {
     if (!photo) return;
@@ -206,8 +208,28 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
 
       onSuccess(result.data);
       setCreationCount(prev => prev + 1);
-      resetForm();
-      handlePickPhoto(); // Re-open camera for next photo
+      
+      setAlertInfo({
+        visible: true,
+        title: "Enregistré",
+        message: "La photo a été enregistrée avec succès. Voulez-vous en ajouter une autre ?",
+        type: 'success',
+        buttons: [
+          {
+            text: "Arrêter",
+            onPress: onClose,
+            style: "destructive"
+          },
+          {
+            text: "Ajouter une autre",
+            onPress: () => {
+              resetForm();
+              handlePickPhoto();
+            },
+            style: "primary"
+          }
+        ]
+      });
     } catch (e: any) {
       setError(e?.message || 'Échec de l\'enregistrement de la photo "avant".');
       Alert.alert('Erreur', e?.message || 'Une erreur est survenue lors de l\'enregistrement.');
@@ -215,15 +237,6 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
       setSubmitting(false);
     }
   };
-
-  useEffect(() => {
-    // Auto-trigger camera when form is ready
-    const timer = setTimeout(() => {
-      handlePickPhoto();
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [handlePickPhoto]);
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -327,6 +340,13 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
                 <View style={styles.imageActions}>
                   <TouchableOpacity style={[styles.iconButton, styles.iconButtonSecondary]} onPress={handlePickPhoto}>
                     <Ionicons name="camera-reverse-outline" size={20} color="#11224e" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.iconButton, styles.iconButtonSecondary]} onPress={handleGenerateDescription} disabled={isGeneratingDescription}>
+                    {isGeneratingDescription ? (
+                      <ActivityIndicator size="small" color="#11224e" />
+                    ) : (
+                      <Ionicons name="sparkles-outline" size={20} color="#11224e" />
+                    )}
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.iconButton, styles.iconButtonSecondary]} onPress={openAnnotatorForExisting}>
                     <Ionicons name="create-outline" size={20} color="#11224e" />
@@ -520,6 +540,14 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
         /> */}
       </Modal>
     )}
+     <CustomAlert
+        visible={alertInfo.visible}
+        title={alertInfo.title}
+        message={alertInfo.message}
+        type={alertInfo.type}
+        onClose={() => setAlertInfo({ ...alertInfo, visible: false })}
+        buttons={alertInfo.buttons}
+      />
     </GestureHandlerRootView>
   );
 }

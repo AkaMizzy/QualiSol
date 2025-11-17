@@ -12,6 +12,12 @@ import {
 } from 'react-native';
 
 
+interface CustomAlertButton {
+  text: string;
+  onPress: () => void;
+  style?: 'primary' | 'destructive' | 'default';
+}
+
 interface CustomAlertProps {
   visible: boolean;
   type: 'success' | 'error';
@@ -19,6 +25,7 @@ interface CustomAlertProps {
   message: string;
   onClose: () => void;
   duration?: number; // Auto-close duration in milliseconds
+  buttons?: CustomAlertButton[];
 }
 
 export default function CustomAlert({
@@ -28,6 +35,7 @@ export default function CustomAlert({
   message,
   onClose,
   duration = 3000,
+  buttons,
 }: CustomAlertProps) {
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -49,8 +57,8 @@ export default function CustomAlert({
         }),
       ]).start();
 
-      // Auto-close after duration
-      if (duration > 0) {
+      // Auto-close after duration, only if there are no buttons
+      if (duration > 0 && (!buttons || buttons.length === 0)) {
         const timer = setTimeout(() => {
           handleClose();
         }, duration);
@@ -72,7 +80,7 @@ export default function CustomAlert({
         }),
       ]).start();
     }
-  }, [visible, duration]);
+  }, [visible, duration, buttons]);
 
   const handleClose = () => {
     Animated.parallel([
@@ -179,13 +187,47 @@ export default function CustomAlert({
                 <Text style={styles.message}>{message}</Text>
               </View>
 
+              {/* Buttons */}
+              {buttons && buttons.length > 0 && (
+                <View style={styles.buttonContainer}>
+                  {buttons.map((button, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.button,
+                        button.style === 'primary' && { backgroundColor: colors.primary },
+                        button.style === 'destructive' && { backgroundColor: '#F3F4F6' },
+                        buttons.length === 1 && { flex: 1 },
+                      ]}
+                      onPress={() => {
+                        handleClose();
+                        // A slight delay to allow the close animation to start before firing the action
+                        setTimeout(() => button.onPress(), 100);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.buttonText,
+                          button.style === 'primary' && { color: '#FFFFFF' },
+                          button.style === 'destructive' && { color: '#EF4444' },
+                        ]}
+                      >
+                        {button.text}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
               {/* Close Button */}
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={handleClose}
-              >
-                <Ionicons name="close" size={20} color="#6B7280" />
-              </TouchableOpacity>
+              {(!buttons || buttons.length === 0) && (
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={handleClose}
+                >
+                  <Ionicons name="close" size={20} color="#6B7280" />
+                </TouchableOpacity>
+              )}
             </TouchableOpacity>
           </Animated.View>
         </TouchableOpacity>
@@ -253,8 +295,8 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   image: {
-    width: 50,
-    height: 50,
+    width: 80,
+    height: 80,
   },
   content: {
     paddingHorizontal: 24,
@@ -283,5 +325,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    gap: 12,
+  },
+  button: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
