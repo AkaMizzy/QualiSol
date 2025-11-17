@@ -57,21 +57,21 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
 
   const canSave = useMemo(() => !!photo && !submitting && !isGeneratingDescription, [photo, submitting, isGeneratingDescription]);
 
-  const handleGenerateDescription = useCallback(async (photoToDescribe: { uri: string; name: string; type: string }) => {
-    if (!photoToDescribe || !token) {
+  const handleGenerateDescription = useCallback(async () => {
+    if (!photo || !token) {
       return;
     }
     setIsGeneratingDescription(true);
     setError(null);
     try {
-      const description = await gedService.describeImage(token, photoToDescribe);
+      const description = await gedService.describeImage(token, photo);
       setComment(prev => prev ? `${prev}\n${description}` : description);
     } catch (e: any) {
       setError(e?.message || 'Failed to generate description');
     } finally {
       setIsGeneratingDescription(false);
     }
-  }, [token]);
+  }, [token, photo]);
 
   const handlePickPhoto = useCallback(async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -94,9 +94,8 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
       };
 
       setPhoto(newPhoto);
-      handleGenerateDescription(newPhoto);
     }
-  }, [handleGenerateDescription]);
+  }, []);
 
   const openAnnotatorForExisting = () => {
     if (!photo) return;
@@ -218,6 +217,13 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
                     <TouchableOpacity style={[styles.iconButton, styles.iconButtonSecondary]} onPress={handlePickPhoto}>
                         <Ionicons name="camera-reverse-outline" size={20} color="#11224e" />
                     </TouchableOpacity>
+                    <TouchableOpacity style={[styles.iconButton, styles.iconButtonSecondary]} onPress={handleGenerateDescription} disabled={isGeneratingDescription}>
+                      {isGeneratingDescription ? (
+                        <ActivityIndicator size="small" color="#11224e" />
+                      ) : (
+                        <Ionicons name="sparkles-outline" size={20} color="#11224e" />
+                      )}
+                    </TouchableOpacity>
                     <TouchableOpacity style={[styles.iconButton, styles.iconButtonSecondary]} onPress={openAnnotatorForExisting}>
                         <Ionicons name="create-outline" size={20} color="#11224e" />
                     </TouchableOpacity>
@@ -272,6 +278,11 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
                             <Text style={styles.descriptionLoadingText}>Analyse en cours...</Text>
                         </View>
                         )}
+                        {comment ? (
+                          <TouchableOpacity style={styles.clearButton} onPress={() => setComment('')}>
+                            <Ionicons name="trash-outline" size={20} color="#EE4B2B" />
+                          </TouchableOpacity>
+                        ) : null}
                     </View>
                 </View>
             </View>
@@ -371,9 +382,15 @@ const styles = StyleSheet.create({
     input: { flex: 1, color: '#111827', fontSize: 16 },
     descriptionLoadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255, 255, 255, 0.8)', justifyContent: 'center', alignItems: 'center', borderRadius: 10, gap: 8, },
     descriptionLoadingText: { color: '#11224e', fontWeight: '600', fontSize: 12, },
-    footer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#e5e7eb', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-    submitButton: { backgroundColor: '#f87b1b', borderRadius: 12, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, height: 48, flex: 1 },
-    submitButtonDisabled: { backgroundColor: '#d1d5db' },
+    clearButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 1,
+  },
+   footer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#e5e7eb', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+   submitButton: { backgroundColor: '#f87b1b', borderRadius: 12, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, height: 48, flex: 1 },
+   submitButtonDisabled: { backgroundColor: '#d1d5db' },
     submitButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
 });
 

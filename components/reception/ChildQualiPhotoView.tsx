@@ -12,13 +12,12 @@ import {
 } from 'react-native';
 
 import API_CONFIG from '@/app/config/api';
+import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { Ged, getGedsBySource } from '@/services/gedService';
 import { Folder } from '@/services/qualiphotoService';
 
 import CreateComplementaireQualiPhotoModal from './CreateComplementaireQualiPhotoModal';
-
-const cameraIcon = require('@/assets/icons/camera.gif');
 
 function formatDate(dateStr: string) {
   if (!dateStr) return '';
@@ -98,15 +97,27 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
 
   const header = (
     <View style={styles.header}>
-      <Pressable onPress={onClose} style={styles.closeBtn}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Fermer les détails"
+        onPress={onClose}
+        style={styles.closeBtn}
+      >
         <Ionicons name="arrow-back" size={28} color="#f87b1b" />
       </Pressable>
       <View style={styles.headerTitles}>
         <Text style={styles.title}>{item.title}</Text>
         <Text numberOfLines={1} style={styles.subtitle}>{subtitle}</Text>
-        {/* <Text style={styles.subtitle}>{formatDate(item.createdAt)}</Text> */}
       </View>
-      <View style={styles.headerActionsContainer} />
+      <View style={styles.headerActionsContainer}>
+        <TouchableOpacity
+          style={styles.headerAction}
+          onPress={handleAddAfterPhoto}
+          accessibilityLabel="Ajouter une photo complémentaire"
+        >
+          <Image source={ICONS.cameraGif} style={styles.headerActionIcon} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -159,16 +170,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                 </TouchableOpacity>
               ))
             ) : (
-              <View style={{ alignItems: 'center', marginVertical: 16 }}>
-                <TouchableOpacity
-                  onPress={handleAddAfterPhoto}
-                  accessibilityLabel="Ajouter une photo complémentaire"
-                  style={styles.cameraCTA}
-                >
-                  <Image source={cameraIcon} style={styles.cameraCTAIcon} />
-                  <Text style={styles.cameraCTALabel}>Situation après</Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.noAfterPhotosText}>Aucune photo après n&apos;a encore été ajoutée.</Text>
             )}
           </View>
         </View>
@@ -194,11 +196,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E5EA',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         backgroundColor: '#FFFFFF',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3.84,
       },
       closeBtn: {
         width: 40,
@@ -214,19 +219,35 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
+        paddingLeft: 50,
       },
       headerActionsContainer: {
-        width: 40, // to balance the close button
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+      },
+      headerAction: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F2F2F7',
+        borderRadius: 20,
+        marginLeft: 8,
+      },
+      headerActionIcon: {
+        width: 35,
+        height: 35,
       },
       title: {
-        fontSize: 20,
-        fontWeight: '700',
+        fontSize: 18,
+        fontWeight: 'bold',
         color: '#f87b1b',
       },
       subtitle: {
-        marginTop: 2,
-        fontSize: 14,
-        color: '#8E8E93',
+        marginTop: 4,
+        fontSize: 13,
+        color: '#6b7280',
       },
       content: {
         paddingHorizontal: 12,
@@ -271,33 +292,11 @@ const styles = StyleSheet.create({
         color: '#f87b1b',
         marginBottom: 8,
       },
-      cameraCTALabel: {
-        fontSize: 15,
-        fontWeight: 'bold',
-        color: '#11224e',
-        marginLeft: 8,
-      },
-      cameraCTA: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#ffffff',
-        paddingHorizontal: 16,
-        borderWidth: 1,
-        borderColor: '#f87b1b',
-        paddingVertical: 10,
-        borderRadius: 25,
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 4,
-        marginHorizontal: 12,
-      },
-      cameraCTAIcon: {
-        width: 32,
-        height: 32,
-        resizeMode: 'contain',
+      noAfterPhotosText: {
+        textAlign: 'center',
+        color: '#6b7280',
+        paddingVertical: 16,
+        fontSize: 13,
       },
       photoContainer: {
         marginBottom: 8,
