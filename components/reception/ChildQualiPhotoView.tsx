@@ -19,20 +19,6 @@ import { Folder } from '@/services/qualiphotoService';
 
 import CreateComplementaireQualiPhotoModal from './CreateComplementaireQualiPhotoModal';
 
-function formatDate(dateStr: string) {
-  if (!dateStr) return '';
-  const replaced = dateStr.replace(' ', 'T');
-  const date = new Date(replaced);
-  if (isNaN(date.getTime())) return dateStr;
-  return new Intl.DateTimeFormat('fr-FR', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-}
-
 type ChildQualiPhotoViewProps = {
   item: Ged;
   parentFolder: Folder;
@@ -80,13 +66,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   };
 
   const handleAfterPhotoSuccess = (createdGed: Ged) => {
-    // The createGed API response doesn't include created_at, leading to a crash.
-    // We'll add a fallback to the current date to ensure the PhotoCard can render.
-    const newGedWithDate = {
-      ...createdGed,
-      created_at: (createdGed as any).created_at || new Date().toISOString(),
-    };
-    setAfterPhotos(prev => [...prev, newGedWithDate]);
+    setAfterPhotos(prev => [...prev, createdGed]);
     setCreateAfterModalVisible(false);
   };
 
@@ -133,7 +113,6 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                 <Image source={{ uri: getFullImageUrl(item.url) as string }} style={styles.childThumbnail} />
                 <View style={styles.childGridOverlay}>
                   <Text style={styles.childGridTitle} numberOfLines={1}>{item.title}</Text>
-                  {item.created_at && <Text style={styles.childGridDate}>{formatDate(item.created_at)}</Text>}
                 </View>
               </TouchableOpacity>
             ) : null}
@@ -165,7 +144,6 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                   <Image source={{ uri: getFullImageUrl(photo.url) as string }} style={styles.childThumbnail} />
                   <View style={styles.childGridOverlay}>
                     <Text style={styles.childGridTitle} numberOfLines={1}>{photo.title}</Text>
-                    {photo.created_at && <Text style={styles.childGridDate}>{formatDate(photo.created_at)}</Text>}
                   </View>
                 </TouchableOpacity>
               ))
@@ -325,11 +303,5 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: 'bold',
         flex: 1,
-        marginRight: 4,
-      },
-      childGridDate: {
-        color: '#f87b1b',
-        fontSize: 12,
-        fontWeight: '600',
       },
 });

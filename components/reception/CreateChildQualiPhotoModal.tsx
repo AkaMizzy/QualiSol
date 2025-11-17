@@ -150,6 +150,10 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
     }
   }, []);
 
+  useEffect(() => {
+    handlePickPhoto();
+  }, [handlePickPhoto]);
+
   const openAnnotatorForExisting = () => {
     if (!photo) return;
     setAnnotatorBaseUri(photo.uri);
