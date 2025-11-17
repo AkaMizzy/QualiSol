@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-  ActivityIndicator,
   Image,
   Platform,
   Pressable,
@@ -60,7 +59,7 @@ type ParentQualiPhotoViewProps = {
     childrenWithAfterPhotos: Set<string>;
   };
   
-
+ 
   export const ParentQualiPhotoView: React.FC<ParentQualiPhotoViewProps> = ({
     item,
     onClose,
@@ -101,16 +100,13 @@ type ParentQualiPhotoViewProps = {
           {!!item && <Text numberOfLines={1} style={styles.subtitle}>{subtitle}</Text>}
           </View>
           <View style={styles.headerActionsContainer}>
-                <TouchableOpacity style={styles.headerAction} onPress={handleGeneratePdf} disabled={isGeneratingPdf} accessibilityLabel="Générer le PDF">
-                    {isGeneratingPdf ? (
-                        <ActivityIndicator color="#f87b1b" />
-                    ) : (
-                        <Image source={ICONS.pdf} style={styles.headerActionIcon} />
-                    )}
-                </TouchableOpacity>
-              <TouchableOpacity style={styles.headerAction} onPress={() => {}} accessibilityLabel="Signatures">
-                <Image source={ICONS.signature} style={styles.headerActionIcon} />
-              </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.headerAction}
+            onPress={() => setChildModalVisible(true)} 
+            accessibilityLabel="Ajouter une photo avant"
+            >
+            <Image source={ICONS.cameraGif} style={styles.headerActionIcon} />
+            </TouchableOpacity>
               <TouchableOpacity style={styles.headerAction} onPress={() => setIsEditModalVisible(true)} accessibilityLabel="Éditer">
                     <Image source={ICONS.edit} style={styles.headerActionIcon} />
                 </TouchableOpacity>
@@ -142,14 +138,9 @@ type ParentQualiPhotoViewProps = {
                       </TouchableOpacity>
                    </View>
                  )}
-                 <TouchableOpacity
-                   onPress={() => setChildModalVisible(true)}
-                   accessibilityLabel="Ajouter une photo avant"
-                   style={styles.cameraCTA}
-                 >
-                   <Image source={require('@/assets/icons/camera.gif')} style={styles.cameraCTAIcon} />
-                   <Text style={styles.cameraCTALabel}>Situation avant</Text>
-                 </TouchableOpacity>
+                 {childGeds.length === 0 && (
+                   <View style={{ height: 40 }} />
+                 )}
                  {childGeds.length > 0 && (
                    <TouchableOpacity
                      style={styles.sortButton}
@@ -202,6 +193,8 @@ type ParentQualiPhotoViewProps = {
                 onItemUpdate(updatedItem);
                 setIsEditModalVisible(false);
             }}
+            handleGeneratePdf={handleGeneratePdf}
+            isGeneratingPdf={isGeneratingPdf}
         />
       </>
     )
@@ -252,8 +245,8 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
       },
       headerActionIcon: {
-        width: 30,
-        height: 30,
+        width: 32,
+        height: 32,
       },
       headerPlanIcon: {
         width: 60,
@@ -479,34 +472,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 8,
         paddingHorizontal: 4,
-      },
-      cameraCTALabel: {
-        fontSize: 15,
-        fontWeight: 'bold',
-        color: '#11224e',
-        marginLeft: 8,
-      },
-      cameraCTA: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#ffffff',
-        borderWidth: 1,
-        borderColor: '#f87b1b',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 25,
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 4,
-        marginHorizontal: 12,
-      },
-      cameraCTAIcon: {
-        width: 32,
-        height: 32,
-        resizeMode: 'contain',
       },
       sortButton: {
         width: 40,

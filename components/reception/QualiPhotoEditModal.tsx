@@ -19,15 +19,25 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import SignatureFieldQualiphoto from '../signature/SignatureFieldQualiphoto';
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   item: QualiPhotoItem | null;
   onSuccess?: (updated: Partial<QualiPhotoItem>) => void;
+  handleGeneratePdf: () => void;
+  isGeneratingPdf: boolean;
 };
 
-export default function QualiPhotoEditModal({ visible, onClose, item, onSuccess }: Props) {
+export default function QualiPhotoEditModal({
+  visible,
+  onClose,
+  item,
+  onSuccess,
+  handleGeneratePdf,
+  isGeneratingPdf,
+}: Props) {
   const { token } = useAuth();
   const [introduction, setIntroduction] = useState('');
   const [conclusion, setConclusion] = useState('');
@@ -375,16 +385,66 @@ export default function QualiPhotoEditModal({ visible, onClose, item, onSuccess 
                     </TouchableOpacity>
                  </View>
                </View>
-
-            </View>
-          </ScrollView>
-
+               <View style={{ marginTop: 16 }}>
+                <View style={styles.fieldLabelContainer}>
+                    <Ionicons name="pencil-outline" size={18} color="#11224e" />
+                    <Text style={styles.fieldLabel}>Signatures</Text>
+                </View>
+                <View style={styles.signaturesContainer}>
+                    <SignatureFieldQualiphoto
+                    role="technicien"
+                    roleLabel="Technicien"
+                    onSignatureComplete={() => {}}
+                    isCompleted={false}
+                    />
+                    <SignatureFieldQualiphoto
+                    role="control"
+                    roleLabel="Contrôle"
+                    onSignatureComplete={() => {}}
+                    isCompleted={false}
+                    />
+                    <SignatureFieldQualiphoto
+                    role="admin"
+                    roleLabel="Client"
+                    onSignatureComplete={() => {}}
+                    isCompleted={false}
+                    />
+                </View>
+                </View>
+ 
+             </View>
+           </ScrollView>
+ 
           <View style={styles.footer}>
-            <TouchableOpacity style={[styles.submitButton, submitting && styles.submitButtonDisabled]} disabled={submitting} onPress={handleSubmit}>
+            <View style={styles.footerActions}>
+              <TouchableOpacity
+                style={styles.footerActionButton}
+                onPress={handleGeneratePdf}
+                disabled={isGeneratingPdf}
+                accessibilityLabel="Générer le PDF"
+              >
+                {isGeneratingPdf ? (
+                  <ActivityIndicator color="#f87b1b" />
+                ) : (
+                  <Image source={ICONS.pdf} style={styles.footerActionIcon} />
+                )}
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+              disabled={submitting}
+              onPress={handleSubmit}
+            >
               {submitting ? (
-                <><ActivityIndicator size="small" color="#FFFFFF" /><Text style={styles.submitButtonText}>Enregistrement...</Text></>
+                <>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text style={styles.submitButtonText}>Enregistrement...</Text>
+                </>
               ) : (
-                <><Ionicons name="save" size={16} color="#FFFFFF" /><Text style={styles.submitButtonText}>Enregistrer</Text></>
+                <>
+                  <Ionicons name="save" size={16} color="#f87b1b" />
+                  <Text style={styles.submitButtonText}>Enregistrer</Text>
+                </>
               )}
             </TouchableOpacity>
           </View>
@@ -414,11 +474,51 @@ const styles = StyleSheet.create({
   readOnlyInput: { backgroundColor: '#f9fafb', color: '#6b7280' },
   fieldLabelContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   fieldLabel: { fontSize: 16, fontWeight: '700', color: '#11224e' },
-  footer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#e5e7eb' },
-  submitButton: { backgroundColor: '#f87b1b', borderRadius: 12, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, height: 48, alignSelf: 'center', width: '92%' },
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  submitButton: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#f87b1b',
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    height: 48,
+    flex: 1,
+  },
   submitButtonDisabled: { backgroundColor: '#d1d5db' },
-  submitButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  submitButtonText: { fontSize: 16, fontWeight: '600', color: '#f87b1b' },
   enhanceButton: { position: 'absolute', top: 10, right: 10, padding: 4, borderRadius: 8, backgroundColor: '#fff' },
+  footerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  footerActionButton: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F2F2F7',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#f87b1b',
+  },
+  footerActionIcon: {
+    width: 30,
+    height: 30,
+  },
   voiceNoteContainer: {
     marginTop: 12,
     marginBottom: 8,
@@ -453,4 +553,10 @@ const styles = StyleSheet.create({
   playButton: {},
   deleteButton: {},
   buttonDisabled: { opacity: 0.5, backgroundColor: '#e5e7eb' },
+  signaturesContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginTop: 8,
+  },
 });
