@@ -43,6 +43,10 @@ export type CreateFolderPayload = Pick<
   | 'foldertype'
 >;
 
+export type UpdateFolderPayload = Partial<
+  Pick<Folder, 'description' | 'conclusion'>
+>;
+
 async function getAllFolders(token: string): Promise<Folder[]> {
   const response = await api.get('api/folders', {
     headers: { Authorization: `Bearer ${token}` },
@@ -52,6 +56,24 @@ async function getAllFolders(token: string): Promise<Folder[]> {
 
 async function createFolder(payload: CreateFolderPayload, token: string): Promise<Folder> {
   const response = await api.post('api/folders', payload, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+}
+
+async function updateFolder(
+  id: string,
+  payload: UpdateFolderPayload,
+  token: string
+): Promise<Folder> {
+  const response = await api.put(`api/folders/${id}`, payload, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+}
+
+async function enhanceText(text: string, token: string): Promise<{ enhancedText: string }> {
+  const response = await api.post('api/folders/enhance-text', { text }, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return response.data;
@@ -82,6 +104,8 @@ async function getAllZones(token: string): Promise<Zone[]> {
 const folderService = {
   getAllFolders,
   createFolder,
+  updateFolder,
+  enhanceText,
   getAllProjects,
   getZonesByProjectId,
   getAllZones,

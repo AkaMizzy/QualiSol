@@ -253,7 +253,7 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
               <View style={[styles.inputWrap, { alignItems: 'flex-start' }]}> 
                 <Ionicons name="chatbubble-ellipses-outline" size={16} color="#f87b1b" style={{ marginTop: 4 }} />
                 <TextInput
-                  placeholder="Description"
+                  placeholder="Introduction"
                   placeholderTextColor="#9ca3af"
                   value={description}
                   onChangeText={setDescription}
