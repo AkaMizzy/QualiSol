@@ -40,7 +40,11 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   const [afterPhotos, setAfterPhotos] = useState<Ged[]>([]);
   const [isLoadingAfter, setIsLoadingAfter] = useState(false);
   const [isCreateAfterModalVisible, setCreateAfterModalVisible] = useState(false);
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
+
+  const toggleDescription = (id: string) => {
+    setExpandedDescriptions(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   useEffect(() => {
     async function fetchAfterPhotos() {
@@ -120,13 +124,13 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
               <View style={styles.metaCard}>
                 <View style={styles.metaHeader}>
                   <Text style={styles.metaLabel}>Description</Text>
-                  <TouchableOpacity onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}>
-                    <Ionicons name={isDescriptionExpanded ? "chevron-up" : "ellipsis-horizontal"} size={23} color="#f87b1b" />
+                  <TouchableOpacity onPress={() => toggleDescription(item.id)}>
+                    <Ionicons name={expandedDescriptions[item.id] ? "chevron-up" : "ellipsis-horizontal"} size={23} color="#f87b1b" />
                   </TouchableOpacity>
                 </View>
                 <Text 
                   style={[styles.metaValue, styles.metaMultiline]} 
-                  numberOfLines={isDescriptionExpanded ? undefined : 1}
+                  numberOfLines={expandedDescriptions[item.id] ? undefined : 1}
                 >
                   {item.description}
                 </Text>
@@ -140,12 +144,30 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
               <ActivityIndicator style={{ marginVertical: 12 }} />
             ) : afterPhotos.length > 0 ? (
               afterPhotos.map(photo => (
-                <TouchableOpacity key={photo.id} onPress={() => {}} style={styles.photoContainer}>
-                  <Image source={{ uri: getFullImageUrl(photo.url) as string }} style={styles.childThumbnail} />
-                  <View style={styles.childGridOverlay}>
-                    <Text style={styles.childGridTitle} numberOfLines={1}>{photo.title}</Text>
-                  </View>
-                </TouchableOpacity>
+                <React.Fragment key={photo.id}>
+                  <TouchableOpacity onPress={() => {}} style={styles.photoContainer}>
+                    <Image source={{ uri: getFullImageUrl(photo.url) as string }} style={styles.childThumbnail} />
+                    <View style={styles.childGridOverlay}>
+                      <Text style={styles.childGridTitle} numberOfLines={1}>{photo.title}</Text>
+                    </View>
+                  </TouchableOpacity>
+                  {photo.description && (
+                    <View style={[styles.metaCard, { marginBottom: 8 }]}>
+                      <View style={styles.metaHeader}>
+                        <Text style={styles.metaLabel}>Description</Text>
+                        <TouchableOpacity onPress={() => toggleDescription(photo.id)}>
+                          <Ionicons name={expandedDescriptions[photo.id] ? 'chevron-up' : 'ellipsis-horizontal'} size={23} color="#f87b1b" />
+                        </TouchableOpacity>
+                      </View>
+                      <Text
+                        style={[styles.metaValue, styles.metaMultiline]}
+                        numberOfLines={expandedDescriptions[photo.id] ? undefined : 1}
+                      >
+                        {photo.description}
+                      </Text>
+                    </View>
+                  )}
+                </React.Fragment>
               ))
             ) : (
               <Text style={styles.noAfterPhotosText}>Aucune photo après n&apos;a encore été ajoutée.</Text>
