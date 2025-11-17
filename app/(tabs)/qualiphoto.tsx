@@ -182,25 +182,22 @@ export default function QualiPhotoGalleryScreen() {
             setDetailVisible(true); 
           }}
       >
-          <View style={styles.cardHeader}>
-              <Image source={ICONS.folder} style={{ width: 48, height: 48, marginRight: 12 }} />
-              <Text style={styles.cardTitle} numberOfLines={2}>
-                  {item.title}
-              </Text>
+        <View style={styles.cardBody}>
+          <Text style={styles.cardTitle} numberOfLines={2}>
+              {item.title}
+          </Text>
+          <View style={styles.infoRow}>
+              <Image source={ICONS.chantierPng} style={{ width: 14, height: 14 }} />
+              <Text style={styles.infoText} numberOfLines={1}>{projectTitle || 'N/A'}</Text>
           </View>
-          <View style={styles.cardBody}>
-              <View style={styles.infoRow}>
-                  <Ionicons name="briefcase-outline" size={14} color="#6b7280" />
-                  <Text style={styles.infoText} numberOfLines={1}>{projectTitle || 'N/A'}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                  <Ionicons name="location-outline" size={14} color="#6b7280" />
-                  <Text style={styles.infoText} numberOfLines={1}>{zoneTitle || 'N/A'}</Text>
-              </View>
-              <View style={styles.cardFooter}>
-                   <Text style={styles.cardDate}>{formatDateForGrid(item.createdAt)}</Text>
-              </View>
+          <View style={styles.infoRow}>
+              <Ionicons name="location-outline" size={14} color="#f87b1b" />
+              <Text style={styles.infoText} numberOfLines={1}>{zoneTitle || 'N/A'}</Text>
           </View>
+          <View style={styles.cardFooter}>
+                <Text style={styles.cardDate}>{formatDateForGrid(item.createdAt)}</Text>
+          </View>
+        </View>
       </Pressable>
     );
   }, [projects, allZones]);
@@ -335,9 +332,7 @@ export default function QualiPhotoGalleryScreen() {
       </View>
 
       <View style={styles.content}>
-        <View style={styles.titleContainer}>
-          <Text style={styles.titleText}>Mes Dossiers</Text>
-        </View>
+       
         {isLoading && folders.length === 0 ? (
           <View style={styles.emptyWrap}>
             <ActivityIndicator color="#11224e" size="large" />
@@ -604,22 +599,16 @@ const styles = StyleSheet.create({
       transform: [{ scale: 0.98 }],
       backgroundColor: '#f9fafb'
   },
-  cardHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 12,
-  },
   cardBody: {
       flex: 1,
-      gap: 6,
+      gap: 8,
   },
   cardTitle: {
-      flex: 1,
       fontSize: 16,
       fontWeight: '700',
-      color: '#11224e',
-      marginRight: 8,
+      color: '#f87b1b',
+      marginBottom: 8,
+      textAlign: 'center',
   },
   infoRow: {
       flexDirection: 'row',
@@ -637,7 +626,7 @@ const styles = StyleSheet.create({
   },
   cardFooter: {
       marginTop: 8,
-      alignItems: 'center',
+      alignItems: 'flex-end',
   },
   cardDate: {
       fontSize: 11,
