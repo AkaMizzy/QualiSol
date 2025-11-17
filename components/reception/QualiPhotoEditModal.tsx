@@ -1,9 +1,11 @@
 import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
+import { createGed, getGedsBySource } from '@/services/gedService';
 import qualiphotoService, { QualiPhotoItem } from '@/services/qualiphotoService';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { Image } from 'expo-image';
+import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -38,13 +40,23 @@ export default function QualiPhotoEditModal({
   handleGeneratePdf,
   isGeneratingPdf,
 }: Props) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [introduction, setIntroduction] = useState('');
   const [conclusion, setConclusion] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEnhancingIntro, setIsEnhancingIntro] = useState(false);
   const [isEnhancingConclusion, setIsEnhancingConclusion] = useState(false);
+  const [authorName, setAuthorName] = useState('');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [signatures, setSignatures] = useState({
+    technicien: { completed: false, signerName: '' },
+    control: { completed: false, signerName: '' },
+    admin: { completed: false, signerName: '' },
+    });
+    const [isSigning, setIsSigning] = useState(false);
+    const [signatureError, setSignatureError] = useState<string | null>(null);
 
   const [conclusionVoiceNote, setConclusionVoiceNote] = useState<{ uri: string; name: string; type: string } | null>(null);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
@@ -62,7 +74,71 @@ export default function QualiPhotoEditModal({
       setIntroduction(item.commentaire || '');
       setConclusion(item.conclusion || '');
     }
-  }, [item]);
+
+    if (visible) {
+       getCurrentLocation();
+       let authorName = 'Unknown User';
+     
+       if (token) {
+         try {
+           const payload = token.split('.')[1];
+           if (payload) {
+             let base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+             while (base64.length % 4) {
+               base64 += '=';
+             }
+             const decodedString = atob(base64);
+             const decodedPayload = JSON.parse(decodedString);
+             if (decodedPayload.username) {
+               authorName = decodedPayload.username;
+             } else if (decodedPayload.email) {
+               authorName = decodedPayload.email;
+             } else if (decodedPayload.identifier) {
+               authorName = decodedPayload.identifier;
+             }
+           }
+         } catch (err) {
+           console.error('Error decoding token:', err);
+         }
+       }
+       
+       if (authorName === 'Unknown User' && user) {
+         const name = [user.firstname, user.lastname].filter(Boolean).join(' ').trim();
+         if (name) {
+           authorName = name;
+         } else if (user.email) {
+           authorName = user.email;
+         }
+       }
+       setAuthorName(authorName);
+    }
+
+    if (visible && item && token) {
+        const fetchSignatures = async () => {
+          try {
+            const existingSignatures = await getGedsBySource(token, item.id, 'signature');
+            const newSignaturesState = {
+                technicien: { completed: false, signerName: '' },
+                control: { completed: false, signerName: '' },
+                admin: { completed: false, signerName: '' },
+            };
+            existingSignatures.forEach(sig => {
+                if (sig.title.includes('technicien')) {
+                    newSignaturesState.technicien = { completed: true, signerName: sig.author };
+                } else if (sig.title.includes('control')) {
+                    newSignaturesState.control = { completed: true, signerName: sig.author };
+                } else if (sig.title.includes('admin')) {
+                    newSignaturesState.admin = { completed: true, signerName: sig.author };
+                }
+            });
+            setSignatures(newSignaturesState);
+          } catch (error) {
+            console.error("Failed to fetch existing signatures", error);
+          }
+        };
+        fetchSignatures();
+      }
+  }, [item, visible, token, user]);
 
   const handleClose = () => {
     setError(null);
@@ -130,6 +206,60 @@ export default function QualiPhotoEditModal({
       Alert.alert("Erreur d'amélioration", e?.message || "Une erreur est survenue.");
     } finally {
       setEnhancing(false);
+    }
+  };
+
+  const getCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.warn('Location permission denied');
+        return;
+      }
+      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setLatitude(location.coords.latitude);
+      setLongitude(location.coords.longitude);
+    } catch (err) {
+      console.error('Error getting location:', err);
+    }
+  };
+
+  const handleSignatureComplete = async (role: 'technicien' | 'control' | 'admin', signature: string) => {
+    if (!token || !item || !user) return;
+  
+    setIsSigning(true);
+    setSignatureError(null);
+  
+    try {
+      // The signature from the component is a data URI (data:image/png;base64,...)
+      const res = await fetch(signature);
+      const blob = await res.blob();
+      
+      // Correctly create the file object for React Native
+      const file = {
+        uri: signature, // The base64 data URI
+        type: 'image/png',
+        name: `${role}_signature.png`,
+      };
+  
+      await createGed(token, {
+        idsource: item.id,
+        title: `Signature ${role} - ${item.title}`,
+        kind: 'signature',
+        author: authorName,
+        latitude: latitude?.toString(),
+        longitude: longitude?.toString(),
+        file: file,
+      });
+  
+      setSignatures(prev => ({
+        ...prev,
+        [role]: { completed: true, signerName: `${user.firstname} ${user.lastname}` },
+      }));
+    } catch (error: any) {
+      setSignatureError(error.message || 'Failed to save signature.');
+    } finally {
+      setIsSigning(false);
     }
   };
 
@@ -394,20 +524,23 @@ export default function QualiPhotoEditModal({
                     <SignatureFieldQualiphoto
                     role="technicien"
                     roleLabel="Technicien"
-                    onSignatureComplete={() => {}}
-                    isCompleted={false}
+                    onSignatureComplete={(role, sig) => handleSignatureComplete('technicien', sig)}
+                    isCompleted={signatures.technicien.completed}
+                    signerName={signatures.technicien.signerName}
                     />
                     <SignatureFieldQualiphoto
                     role="control"
                     roleLabel="Contrôle"
-                    onSignatureComplete={() => {}}
-                    isCompleted={false}
+                    onSignatureComplete={(role, sig) => handleSignatureComplete('control', sig)}
+                    isCompleted={signatures.control.completed}
+                    signerName={signatures.control.signerName}
                     />
                     <SignatureFieldQualiphoto
                     role="admin"
                     roleLabel="Client"
-                    onSignatureComplete={() => {}}
-                    isCompleted={false}
+                    onSignatureComplete={(role, sig) => handleSignatureComplete('admin', sig)}
+                    isCompleted={signatures.admin.completed}
+                    signerName={signatures.admin.signerName}
                     />
                 </View>
                 </View>
