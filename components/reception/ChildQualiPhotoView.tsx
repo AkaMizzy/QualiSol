@@ -329,6 +329,24 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                 </View>
               </TouchableOpacity>
             ) : null}
+            {(item.type || item.categorie) && (
+              <View style={[styles.infoCard, { marginTop: 12 }]}>
+                <View style={styles.tagsContainer}>
+                  {item.type ? (
+                    <View style={styles.tagWrapper}>
+                      <Text style={styles.infoLabel}>Type</Text>
+                      <Text style={styles.tag}>{item.type}</Text>
+                    </View>
+                  ) : null}
+                  {item.categorie ? (
+                    <View style={styles.tagWrapper}>
+                      <Text style={styles.infoLabel}>Catégorie</Text>
+                      <Text style={styles.tag}>{item.categorie}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+            )}
           </View>
 
           <View>
@@ -586,6 +604,25 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.06,
         shadowRadius: 12,
         elevation: 2,
+      },
+      tagsContainer: {
+        flexDirection: 'row',
+        gap: 16,
+      },
+      tagWrapper: {
+        flex: 1,
+      },
+      tag: {
+        backgroundColor: '#f9fafb',
+        borderColor: '#e5e7eb',
+        borderWidth: 1,
+        color: '#11224e',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        fontSize: 13,
+        marginTop: 4,
+        overflow: 'hidden',
       },
       infoLabel: {
         color: '#f87b1b',

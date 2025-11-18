@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   LayoutAnimation,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -437,6 +438,12 @@ export default function DashboardScreen() {
         {/* Spacer for custom tab bar */}
         <View style={{ height: 100 }} />
       </ScrollView>
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>© 2025 Qualisol. Tous droits réservés.</Text>
+        <Pressable onPress={() => Linking.openURL('https://www.muntadaa.com/qualisol/help')}>
+          <Ionicons name="help-circle-outline" size={24} color="#f87b1b" />
+        </Pressable>
+      </View>
       <CreateCalendarEventModal
         visible={eventModalVisible}
         onClose={() => setEventModalVisible(false)}
@@ -829,5 +836,19 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     textAlign: 'center',
     fontWeight: '500',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+  },
+  footerText: {
+    color: '#f87b1b',
+    fontSize: 12,
   },
 });
