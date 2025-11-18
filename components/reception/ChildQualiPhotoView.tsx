@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 import * as Linking from 'expo-linking';
 import React, { useEffect, useState } from 'react';
 import {
@@ -34,7 +35,6 @@ type ChildQualiPhotoViewProps = {
 
 export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   item,
-  parentFolder,
   onClose,
   subtitle,
   projectTitle,
@@ -44,6 +44,17 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   const [afterPhotos, setAfterPhotos] = useState<Ged[]>([]);
   const [isLoadingAfter, setIsLoadingAfter] = useState(false);
   const [isCreateAfterModalVisible, setCreateAfterModalVisible] = useState(false);
+  
+  // Voice notes state
+  const [voiceNotesAvant, setVoiceNotesAvant] = useState<Ged[]>([]);
+  const [voiceNotesApres, setVoiceNotesApres] = useState<Ged[]>([]);
+  const [isLoadingVoiceNotesAvant, setIsLoadingVoiceNotesAvant] = useState(false);
+  const [isLoadingVoiceNotesApres, setIsLoadingVoiceNotesApres] = useState(false);
+  
+  // Audio playback state
+  const [playingSound, setPlayingSound] = useState<Audio.Sound | null>(null);
+  const [playingVoiceNoteId, setPlayingVoiceNoteId] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     async function fetchAfterPhotos() {
@@ -63,6 +74,47 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
 
     fetchAfterPhotos();
   }, [item?.id, token]);
+
+  // Fetch voice notes for "Situation avant"
+  useEffect(() => {
+    async function fetchVoiceNotesAvant() {
+      if (!token || !item?.id) return;
+
+      setIsLoadingVoiceNotesAvant(true);
+      try {
+        const voiceNotes = await getGedsBySource(token, item.id, 'audio');
+        setVoiceNotesAvant(voiceNotes);
+      } catch (error) {
+        console.error('Failed to fetch voice notes avant:', error);
+        setVoiceNotesAvant([]);
+      } finally {
+        setIsLoadingVoiceNotesAvant(false);
+      }
+    }
+
+    fetchVoiceNotesAvant();
+  }, [item?.id, token]);
+
+  // Fetch voice notes for "Situation après"
+  const firstAfterPhotoId = afterPhotos[0]?.id;
+  useEffect(() => {
+    async function fetchVoiceNotesApres() {
+      if (!token || !firstAfterPhotoId) return;
+
+      setIsLoadingVoiceNotesApres(true);
+      try {
+        const voiceNotes = await getGedsBySource(token, firstAfterPhotoId, 'audio');
+        setVoiceNotesApres(voiceNotes);
+      } catch (error) {
+        console.error('Failed to fetch voice notes apres:', error);
+        setVoiceNotesApres([]);
+      } finally {
+        setIsLoadingVoiceNotesApres(false);
+      }
+    }
+
+    fetchVoiceNotesApres();
+  }, [firstAfterPhotoId, token]);
 
   const handleAddAfterPhoto = () => {
     setCreateAfterModalVisible(true);
@@ -112,6 +164,128 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
       console.error('Error opening map:', error);
       Alert.alert('Erreur', 'Impossible d\'ouvrir l\'application de cartes.');
     }
+  };
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (playingSound) {
+        playingSound.unloadAsync().catch(console.error);
+      }
+    };
+  }, [playingSound]);
+
+  const handlePlayPauseVoiceNote = async (voiceNote: Ged) => {
+    try {
+      // If clicking the same note that's playing, pause/resume it
+      if (playingVoiceNoteId === voiceNote.id && playingSound) {
+        const status = await playingSound.getStatusAsync();
+        if (status.isLoaded) {
+          if (status.isPlaying) {
+            await playingSound.pauseAsync();
+            setIsPlaying(false);
+          } else {
+            // Resume if paused
+            await playingSound.playAsync();
+            setIsPlaying(true);
+          }
+        }
+        return;
+      }
+
+      // If another note is playing, stop it first
+      if (playingSound) {
+        await playingSound.unloadAsync();
+        setPlayingSound(null);
+        setPlayingVoiceNoteId(null);
+        setIsPlaying(false);
+      }
+
+      // If no URL, show error
+      if (!voiceNote.url) {
+        Alert.alert('Erreur', 'Fichier audio non disponible.');
+        return;
+      }
+
+      // Build full URL
+      const audioUrl = getFullImageUrl(voiceNote.url);
+      if (!audioUrl) {
+        Alert.alert('Erreur', 'URL audio invalide.');
+        return;
+      }
+
+      // Create and play new sound
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: audioUrl },
+        { shouldPlay: true }
+      );
+
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded) {
+          setIsPlaying(status.isPlaying);
+          if (status.didJustFinish) {
+            setPlayingSound(null);
+            setPlayingVoiceNoteId(null);
+            setIsPlaying(false);
+            sound.unloadAsync().catch(console.error);
+          }
+        }
+      });
+
+      setPlayingSound(sound);
+      setPlayingVoiceNoteId(voiceNote.id);
+      setIsPlaying(true);
+    } catch (error) {
+      console.error('Error playing voice note:', error);
+      Alert.alert('Erreur', 'Impossible de lire la note vocale.');
+      setPlayingSound(null);
+      setPlayingVoiceNoteId(null);
+      setIsPlaying(false);
+    }
+  };
+
+  const renderVoiceNotesList = (voiceNotes: Ged[], isLoading: boolean) => {
+    if (isLoading) {
+      return (
+        <View style={styles.voiceNotesContainer}>
+          <ActivityIndicator size="small" color="#f87b1b" />
+        </View>
+      );
+    }
+
+    if (voiceNotes.length === 0) {
+      return (
+        <View style={styles.voiceNotesPlaceholder}>
+          <Ionicons name="mic-outline" size={20} color="#9ca3af" />
+          <Text style={styles.placeholderText}>Aucune note vocale</Text>
+        </View>
+      );
+    }
+
+      return (
+        <View style={styles.voiceNotesList}>
+          {voiceNotes.map((voiceNote) => {
+            const isCurrentNote = playingVoiceNoteId === voiceNote.id;
+            const showPause = isCurrentNote && isPlaying;
+            return (
+              <TouchableOpacity
+                key={voiceNote.id}
+                style={[styles.voiceNoteItem, isCurrentNote && styles.voiceNoteItemPlaying]}
+                onPress={() => handlePlayPauseVoiceNote(voiceNote)}
+              >
+                <Ionicons
+                  name={showPause ? 'pause-circle' : 'play-circle'}
+                  size={24}
+                  color={isCurrentNote ? '#f87b1b' : '#11224e'}
+                />
+                <Text style={styles.voiceNoteTitle} numberOfLines={1}>
+                  {voiceNote.title || 'Note vocale'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      );
   };
 
   const header = (
@@ -206,10 +380,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                   </View>
                   <View style={styles.infoCard}>
                     <Text style={styles.infoLabel}>Notes vocales</Text>
-                    <View style={styles.voiceNotesPlaceholder}>
-                      <Ionicons name="mic-outline" size={20} color="#9ca3af" />
-                      <Text style={styles.placeholderText}>Bientôt disponible</Text>
-                    </View>
+                    {renderVoiceNotesList(voiceNotesAvant, isLoadingVoiceNotesAvant)}
                   </View>
                 </View>
 
@@ -242,10 +413,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                   </View>
                   <View style={styles.infoCard}>
                     <Text style={styles.infoLabel}>Notes vocales</Text>
-                    <View style={styles.voiceNotesPlaceholder}>
-                      <Ionicons name="mic-outline" size={20} color="#9ca3af" />
-                      <Text style={styles.placeholderText}>Bientôt disponible</Text>
-                    </View>
+                    {renderVoiceNotesList(voiceNotesApres, isLoadingVoiceNotesApres)}
                   </View>
                 </View>
               </View>
@@ -442,6 +610,11 @@ const styles = StyleSheet.create({
         fontSize: 14,
         textAlignVertical: 'top',
       },
+      voiceNotesContainer: {
+        paddingVertical: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
       voiceNotesPlaceholder: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -458,5 +631,29 @@ const styles = StyleSheet.create({
         color: '#9ca3af',
         fontSize: 13,
         fontStyle: 'italic',
+      },
+      voiceNotesList: {
+        gap: 8,
+      },
+      voiceNoteItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        backgroundColor: '#f9fafb',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+      },
+      voiceNoteItemPlaying: {
+        backgroundColor: '#fef3e7',
+        borderColor: '#f87b1b',
+      },
+      voiceNoteTitle: {
+        flex: 1,
+        color: '#11224e',
+        fontSize: 13,
+        fontWeight: '500',
       },
 });
