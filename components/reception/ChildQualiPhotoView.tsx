@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -40,11 +41,6 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   const [afterPhotos, setAfterPhotos] = useState<Ged[]>([]);
   const [isLoadingAfter, setIsLoadingAfter] = useState(false);
   const [isCreateAfterModalVisible, setCreateAfterModalVisible] = useState(false);
-  const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
-
-  const toggleDescription = (id: string) => {
-    setExpandedDescriptions(prev => ({ ...prev, [id]: !prev[id] }));
-  };
 
   useEffect(() => {
     async function fetchAfterPhotos() {
@@ -120,22 +116,6 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                 </View>
               </TouchableOpacity>
             ) : null}
-            {item.description && (
-              <View style={styles.metaCard}>
-                <View style={styles.metaHeader}>
-                  <Text style={styles.metaLabel}>Description</Text>
-                  <TouchableOpacity onPress={() => toggleDescription(item.id)}>
-                    <Ionicons name={expandedDescriptions[item.id] ? "chevron-up" : "ellipsis-horizontal"} size={23} color="#f87b1b" />
-                  </TouchableOpacity>
-                </View>
-                <Text 
-                  style={[styles.metaValue, styles.metaMultiline]} 
-                  numberOfLines={expandedDescriptions[item.id] ? undefined : 1}
-                >
-                  {item.description}
-                </Text>
-              </View>
-            )}
           </View>
 
           <View>
@@ -144,35 +124,72 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
               <ActivityIndicator style={{ marginVertical: 12 }} />
             ) : afterPhotos.length > 0 ? (
               afterPhotos.map(photo => (
-                <React.Fragment key={photo.id}>
-                  <TouchableOpacity onPress={() => {}} style={styles.photoContainer}>
-                    <Image source={{ uri: getFullImageUrl(photo.url) as string }} style={styles.childThumbnail} />
-                    <View style={styles.childGridOverlay}>
-                      <Text style={styles.childGridTitle} numberOfLines={1}>{photo.title}</Text>
-                    </View>
-                  </TouchableOpacity>
-                  {photo.description && (
-                    <View style={[styles.metaCard, { marginBottom: 8 }]}>
-                      <View style={styles.metaHeader}>
-                        <Text style={styles.metaLabel}>Description</Text>
-                        <TouchableOpacity onPress={() => toggleDescription(photo.id)}>
-                          <Ionicons name={expandedDescriptions[photo.id] ? 'chevron-up' : 'ellipsis-horizontal'} size={23} color="#f87b1b" />
-                        </TouchableOpacity>
-                      </View>
-                      <Text
-                        style={[styles.metaValue, styles.metaMultiline]}
-                        numberOfLines={expandedDescriptions[photo.id] ? undefined : 1}
-                      >
-                        {photo.description}
-                      </Text>
-                    </View>
-                  )}
-                </React.Fragment>
+                <TouchableOpacity key={photo.id} onPress={() => {}} style={styles.photoContainer}>
+                  <Image source={{ uri: getFullImageUrl(photo.url) as string }} style={styles.childThumbnail} />
+                  <View style={styles.childGridOverlay}>
+                    <Text style={styles.childGridTitle} numberOfLines={1}>{photo.title}</Text>
+                  </View>
+                </TouchableOpacity>
               ))
             ) : (
               <Text style={styles.noAfterPhotosText}>Aucune photo après n&apos;a encore été ajoutée.</Text>
             )}
           </View>
+          {afterPhotos.length > 0 && (
+            <View style={styles.comparisonContainer}>
+              <View style={styles.comparisonGrid}>
+                {/* "Avant" Column */}
+                <View style={styles.comparisonColumn}>
+                  <Text style={styles.columnHeader}>Situation avant</Text>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Description</Text>
+                    <View style={styles.inputWrap}>
+                      <TextInput
+                        placeholder="Description"
+                        value={item.description || ''}
+                        style={[styles.input, { minHeight: 80 }]}
+                        multiline
+                        editable={false}
+                        placeholderTextColor="#9ca3af"
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Notes vocales</Text>
+                    <View style={styles.voiceNotesPlaceholder}>
+                      <Ionicons name="mic-outline" size={20} color="#9ca3af" />
+                      <Text style={styles.placeholderText}>Bientôt disponible</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* "Après" Column */}
+                <View style={styles.comparisonColumn}>
+                  <Text style={styles.columnHeader}>Situation après</Text>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Description</Text>
+                    <View style={styles.inputWrap}>
+                      <TextInput
+                        placeholder="Description"
+                        value={afterPhotos[0]?.description || ''}
+                        style={[styles.input, { minHeight: 80 }]}
+                        multiline
+                        editable={false}
+                        placeholderTextColor="#9ca3af"
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Notes vocales</Text>
+                    <View style={styles.voiceNotesPlaceholder}>
+                      <Ionicons name="mic-outline" size={20} color="#9ca3af" />
+                      <Text style={styles.placeholderText}>Bientôt disponible</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
       <CreateComplementaireQualiPhotoModal
@@ -255,37 +272,6 @@ const styles = StyleSheet.create({
         paddingBottom: 24,
         gap: 24,
       },
-      metaCard: {
-        marginTop: 8,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        elevation: 2,
-      },
-      metaHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 4,
-      },
-      metaLabel: {
-        color: '#f87b1b',
-        fontSize: 12,
-        marginBottom: 2,
-        fontWeight: '600',
-      },
-      metaValue: {
-        color: '#0f172a',
-        fontSize: 14,
-        fontWeight: '600',
-      },
-      metaMultiline: {
-        lineHeight: 20,
-      },
       sectionTitle: {
         fontSize: 16,
         fontWeight: 'bold',
@@ -325,5 +311,83 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: 'bold',
         flex: 1,
+      },
+      comparisonContainer: {
+        marginTop: 24,
+        paddingTop: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#e5e7eb',
+      },
+      comparisonTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#11224e',
+        marginBottom: 16,
+        textAlign: 'center',
+      },
+      comparisonGrid: {
+        flexDirection: 'row',
+        gap: 12,
+      },
+      comparisonColumn: {
+        flex: 1,
+        gap: 12,
+      },
+      columnHeader: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#f87b1b',
+        marginBottom: 8,
+        textAlign: 'center',
+      },
+      infoCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+        elevation: 2,
+      },
+      infoLabel: {
+        color: '#f87b1b',
+        fontSize: 12,
+        marginBottom: 8,
+        fontWeight: '600',
+      },
+      inputWrap: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        minHeight: 80,
+      },
+      input: {
+        flex: 1,
+        color: '#111827',
+        fontSize: 14,
+        textAlignVertical: 'top',
+      },
+      voiceNotesPlaceholder: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 16,
+        backgroundColor: '#f9fafb',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+        borderStyle: 'dashed',
+      },
+      placeholderText: {
+        color: '#9ca3af',
+        fontSize: 13,
+        fontStyle: 'italic',
       },
 });

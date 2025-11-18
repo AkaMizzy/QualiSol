@@ -1,5 +1,26 @@
 import api from './api';
 
+export interface Ged {
+  id: string;
+  idsource: string;
+  title: string;
+  kind: string;
+  description?: string;
+  author?: string;
+  position?: number;
+  latitude?: string;
+  longitude?: string;
+  url?: string;
+  size?: number;
+  status_id: string;
+  company_id: string;
+  level?: number;
+  type?: string;
+  categorie?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Folder {
   id: string;
   code: string;
@@ -46,6 +67,13 @@ export type CreateFolderPayload = Pick<
 export type UpdateFolderPayload = Partial<
   Pick<Folder, 'description' | 'conclusion'>
 >;
+
+async function generateGedParallelePdf(folderId: string, token: string): Promise<Ged> {
+  const response = await api.get(`api/gedparallele/generate-pdf/${folderId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data.data;
+}
 
 async function getAllFolders(token: string): Promise<Folder[]> {
   const response = await api.get('api/folders', {
@@ -109,6 +137,7 @@ const folderService = {
   getAllProjects,
   getZonesByProjectId,
   getAllZones,
+  generateGedParallelePdf,
 };
 
 

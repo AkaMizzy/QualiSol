@@ -220,12 +220,12 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
         type: 'success',
         buttons: [
           {
-            text: "Arrêter",
+            text: "Non, Arrêter",
             onPress: onClose,
             style: "destructive"
           },
           {
-            text: "Ajouter une autre",
+            text: "Oui",
             onPress: () => {
               resetForm();
               handlePickPhoto();

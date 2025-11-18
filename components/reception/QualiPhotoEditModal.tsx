@@ -4,10 +4,12 @@ import { createGed, getGedsBySource } from '@/services/gedService';
 import folderService, { Folder } from '@/services/qualiphotoService';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import * as Linking from 'expo-linking';
 import * as Location from 'expo-location';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -27,8 +29,6 @@ type Props = {
   onClose: () => void;
   item: (Folder & { project_title?: string; zone_title?: string; [key: string]: any; }) | null;
   onSuccess?: (updated: Partial<Folder>) => void;
-  handleGeneratePdf: () => void;
-  isGeneratingPdf: boolean;
 };
 
 export default function QualiPhotoEditModal({
@@ -36,13 +36,12 @@ export default function QualiPhotoEditModal({
   onClose,
   item,
   onSuccess,
-  handleGeneratePdf,
-  isGeneratingPdf,
 }: Props) {
   const { token, user } = useAuth();
   const [description, setDescription] = useState('');
   const [conclusion, setConclusion] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [authorName, setAuthorName] = useState('');
@@ -183,6 +182,28 @@ export default function QualiPhotoEditModal({
       setLongitude(location.coords.longitude);
     } catch (err) {
       console.error('Error getting location:', err);
+    }
+  };
+
+  const handleGeneratePdf = async () => {
+    if (!item || !token) return;
+    setIsGeneratingPdf(true);
+    setError(null);
+    try {
+      const newPdfGed = await folderService.generateGedParallelePdf(item.id, token);
+      const pdfUrl = `${process.env.EXPO_PUBLIC_BASE_URL}${newPdfGed.url}`;
+      
+      const supported = await Linking.canOpenURL(pdfUrl);
+      if (supported) {
+        await Linking.openURL(pdfUrl);
+      } else {
+        Alert.alert('Erreur', `Impossible d'ouvrir le PDF. URL: ${pdfUrl}`);
+      }
+    } catch (err: any) {
+      console.error('Failed to generate PDF', err);
+      setError(err?.response?.data?.error || err.message || 'Erreur lors de la génération du PDF.');
+    } finally {
+      setIsGeneratingPdf(false);
     }
   };
 
