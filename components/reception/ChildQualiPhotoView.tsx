@@ -1,8 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -75,6 +78,42 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     return `${API_CONFIG.BASE_URL}${relativeUrl}`;
   };
 
+  const openMap = async (latitude: string | null, longitude: string | null) => {
+    if (!latitude || !longitude) {
+      Alert.alert('Information', 'Aucune coordonnée de localisation disponible.');
+      return;
+    }
+
+    const lat = parseFloat(latitude);
+    const lon = parseFloat(longitude);
+
+    if (isNaN(lat) || isNaN(lon)) {
+      Alert.alert('Erreur', 'Coordonnées de localisation invalides.');
+      return;
+    }
+
+    let url: string;
+    if (Platform.OS === 'ios') {
+      url = `maps://?q=${lat},${lon}`;
+    } else {
+      url = `geo:${lat},${lon}?q=${lat},${lon}`;
+    }
+
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        // Fallback to Google Maps web
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+        await Linking.openURL(googleMapsUrl);
+      }
+    } catch (error) {
+      console.error('Error opening map:', error);
+      Alert.alert('Erreur', 'Impossible d\'ouvrir l\'application de cartes.');
+    }
+  };
+
   const header = (
     <View style={styles.header}>
       <Pressable
@@ -140,7 +179,18 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
               <View style={styles.comparisonGrid}>
                 {/* "Avant" Column */}
                 <View style={styles.comparisonColumn}>
-                  <Text style={styles.columnHeader}>Situation avant</Text>
+                  <View style={styles.columnHeaderContainer}>
+                    <Text style={styles.columnHeader}>Situation avant</Text>
+                    {item.latitude && item.longitude && (
+                      <TouchableOpacity
+                        onPress={() => openMap(item.latitude, item.longitude)}
+                        style={styles.locationIconButton}
+                        accessibilityLabel="Ouvrir la localisation sur la carte"
+                      >
+                        <Ionicons name="location" size={20} color="#f87b1b" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                   <View style={styles.infoCard}>
                     <Text style={styles.infoLabel}>Description</Text>
                     <View style={styles.inputWrap}>
@@ -165,7 +215,18 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
 
                 {/* "Après" Column */}
                 <View style={styles.comparisonColumn}>
-                  <Text style={styles.columnHeader}>Situation après</Text>
+                  <View style={styles.columnHeaderContainer}>
+                    <Text style={styles.columnHeader}>Situation après</Text>
+                    {afterPhotos[0]?.latitude && afterPhotos[0]?.longitude && (
+                      <TouchableOpacity
+                        onPress={() => openMap(afterPhotos[0].latitude, afterPhotos[0].longitude)}
+                        style={styles.locationIconButton}
+                        accessibilityLabel="Ouvrir la localisation sur la carte"
+                      >
+                        <Ionicons name="location" size={20} color="#f87b1b" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                   <View style={styles.infoCard}>
                     <Text style={styles.infoLabel}>Description</Text>
                     <View style={styles.inputWrap}>
@@ -333,12 +394,20 @@ const styles = StyleSheet.create({
         flex: 1,
         gap: 12,
       },
+      columnHeaderContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 8,
+        gap: 8,
+      },
       columnHeader: {
         fontSize: 14,
         fontWeight: '600',
         color: '#f87b1b',
-        marginBottom: 8,
-        textAlign: 'center',
+      },
+      locationIconButton: {
+        padding: 4,
       },
       infoCard: {
         backgroundColor: '#FFFFFF',
