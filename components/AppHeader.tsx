@@ -87,7 +87,7 @@ export default function AppHeader({
           accessibilityLabel="Navigate to home"
         >
           <Image
-            source={ICONS.icon}
+            source={ICONS.newIcon}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -176,8 +176,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   logo: {
-    width: 50,
-    height: 50,
+    width: 100,
+    height: 100,
   },
   iconButton: {
     width: 50,

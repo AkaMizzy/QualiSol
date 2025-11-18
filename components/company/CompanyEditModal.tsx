@@ -76,6 +76,7 @@ export default function CompanyEditModal({
     pays: '',
     ice_number: '',
     prompt1: '',
+    prompt2: '',
   });
 
   useEffect(() => {
@@ -90,6 +91,7 @@ export default function CompanyEditModal({
         pays: company.pays || '',
         ice_number: company.ice_number || '',
         prompt1: company.prompt1 || "Critiquer et relever les anomalies dans cette image en 100 mots. Soyez critique.",
+        prompt2: company.prompt2 || '',
       });
     }
   }, [company]);
@@ -154,6 +156,7 @@ export default function CompanyEditModal({
         pays: formData.pays.trim() || null,
         ice_number: formData.ice_number.trim() || null,
         prompt1: formData.prompt1.trim() || null,
+        prompt2: formData.prompt2.trim() || null,
       };
 
       const updatedCompany = await companyService.updateCompany(updateData, logoUri);
@@ -284,6 +287,13 @@ export default function CompanyEditModal({
               label="Prompt 1"
               value={formData.prompt1}
               onChangeText={(text) => handleInputChange('prompt1', text)}
+              placeholder="Prompt pour la description d'image"
+              multiline
+            />
+             <InputField
+              label="Prompt 2"
+              value={formData.prompt2}
+              onChangeText={(text) => handleInputChange('prompt2', text)}
               placeholder="Prompt pour la description d'image"
               multiline
             />

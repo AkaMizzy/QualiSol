@@ -20,11 +20,12 @@ export const ICONS = {
   folder: require('@/assets/icons/folder.png'),
   edit: require('@/assets/icons/edit.png'),
   google: require('@/assets/icons/google.png'),
+  chantierPng: require('@/assets/icons/chantier.png'),
   // GIF icons
   cameraGif: require('@/assets/icons/camera.gif'),
   constructionGif: require('@/assets/icons/construction.gif'),
   wifiLostGif: require('@/assets/icons/wifiLost.gif'),
-  chantierPng: require('@/assets/icons/chantier.png'),
+ 
 
 } as const;
 
