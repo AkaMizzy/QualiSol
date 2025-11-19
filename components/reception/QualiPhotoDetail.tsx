@@ -135,6 +135,13 @@ function useQualiPhotoDetail({ visible, item: initialItem, projects, zones, onUp
     }
   };
 
+  const handleAvantPhotoUpdate = (updatedPhoto: Ged) => {
+    // The child component's "avant" photo has been updated.
+    // To see the change, we need to update the selectedGed state and refetch.
+    setSelectedGed(updatedPhoto);
+    fetchChildren();
+  };
+
   const handleChildCreationSuccess = (createdGed: Ged) => {
     fetchChildren();
   };
@@ -160,6 +167,7 @@ function useQualiPhotoDetail({ visible, item: initialItem, projects, zones, onUp
     isLoadingChildren,
     subtitle,
     handleItemUpdate,
+    handleAvantPhotoUpdate,
     handleChildCreationSuccess,
     projectTitle,
     zoneTitle,
@@ -197,7 +205,8 @@ function QualiPhotoDetailView({
     handleChildCreationSuccess,
     projectTitle,
     zoneTitle,
-    childrenWithAfterPhotos
+    childrenWithAfterPhotos,
+    handleAvantPhotoUpdate,
   } = props;
 
   if (!item) {
@@ -219,6 +228,7 @@ function QualiPhotoDetailView({
           subtitle={subtitle}
           projectTitle={projectTitle}
           zoneTitle={zoneTitle}
+          onAvantPhotoUpdate={handleAvantPhotoUpdate}
         />
       </View>
     );

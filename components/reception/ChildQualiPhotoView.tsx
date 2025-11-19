@@ -34,7 +34,7 @@ type ChildQualiPhotoViewProps = {
   subtitle: string;
   projectTitle: string;
   zoneTitle: string;
-  
+  onAvantPhotoUpdate: (updatedPhoto: Ged) => void;
 };
 
 export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
@@ -43,6 +43,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   subtitle,
   projectTitle,
   zoneTitle,
+  onAvantPhotoUpdate,
 }) => {
   const { token } = useAuth();
   const [afterPhotos, setAfterPhotos] = useState<Ged[]>([]);
@@ -245,8 +246,8 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
 
       // After successful upload, update the relevant state to refresh UI
       if (item.id === updatedGed.id) {
-        // This is the "avant" photo. It is passed as a prop and cannot be mutated directly.
-        // For the change to be visible, the parent component would need to refetch the data.
+        // This is the "avant" photo. Call the callback to notify the parent.
+        onAvantPhotoUpdate(updatedGed);
       } else if (afterPhotos.some(p => p.id === updatedGed.id)) {
         // This is an "après" photo. We can update the local state to show the new image.
         setAfterPhotos(prev =>
@@ -254,7 +255,6 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
         );
       }
       
-      Alert.alert('Succès', 'La photo annotée a été enregistrée.');
       handleCloseAnnotator();
     } catch (error) {
       console.error('Failed to save annotation:', error);
