@@ -11,9 +11,8 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
 import API_CONFIG from '@/app/config/api';
@@ -449,55 +448,33 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
               <View style={styles.comparisonGrid}>
                 <View style={styles.comparisonColumn}>
                   <View style={styles.infoCard}>
-                    <View style={styles.infoLabelContainer}>
-                      <Text style={styles.infoLabel}>Description</Text>
-                      <TouchableOpacity
-                        onPress={() => handleOpenDescriptionEdit('avant')}
-                        style={styles.editButton}
-                        accessibilityLabel="Modifier la description"
-                      >
-                        <Ionicons name="create-outline" size={18} color="#f87b1b" />
-                      </TouchableOpacity>
-                    </View>
-                    <View style={styles.inputWrap}>
-                      <TextInput
-                        placeholder="Description"
-                        value={avantDescription}
-                        style={[styles.input, { minHeight: 80 }]}
-                        multiline
-                        editable={false}
-                        placeholderTextColor="#9ca3af"
-                      />
-                    </View>
+                    <TouchableOpacity onPress={() => handleOpenDescriptionEdit('avant')}>
+                      <View style={styles.infoLabelContainer}>
+                        <Text style={styles.infoLabel}>Description</Text>
+                      </View>
+                      <View style={[styles.inputWrap, { minHeight: 80 }]}>
+                        <Text style={styles.descriptionText} numberOfLines={4}>
+                          {avantDescription || 'Aucune description.'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
                   </View>
                 </View>
                 <View style={styles.comparisonColumn}>
                   <View style={styles.infoCard}>
-                    <View style={styles.infoLabelContainer}>
-                      <Text style={styles.infoLabel}>Description</Text>
-                      <TouchableOpacity
-                        onPress={() => handleOpenDescriptionEdit('apres')}
-                        style={styles.editButton}
-                        accessibilityLabel="Modifier la description"
-                        disabled={!afterPhotos[0]}
-                      >
-                        <Ionicons
-                          name="create-outline"
-                          size={18}
-                          color={afterPhotos[0] ? '#f87b1b' : '#9ca3af'}
-                        />
-                      </TouchableOpacity>
-                    </View>
-                    <View style={styles.inputWrap}>
-                      <TextInput
-                        placeholder="Description"
-                        value={afterPhotos[0]?.description || ''}
-                        style={[styles.input, { minHeight: 80 }]}
-                        multiline
-                        editable={false}
-                        placeholderTextColor="#9ca3af"
-                      />
-                    </View>
+                    <TouchableOpacity
+                      onPress={() => handleOpenDescriptionEdit('apres')}
+                      disabled={!afterPhotos[0]}
+                    >
+                      <View style={styles.infoLabelContainer}>
+                        <Text style={styles.infoLabel}>Description</Text>
+                      </View>
+                      <View style={[styles.inputWrap, { minHeight: 80 }]}>
+                        <Text style={styles.descriptionText} numberOfLines={4}>
+                          {afterPhotos[0]?.description || 'Aucune description.'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
@@ -724,21 +701,18 @@ const styles = StyleSheet.create({
       infoLabelContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start',
         marginBottom: 8,
-      },
-      editButton: {
-        padding: 4,
       },
       inputWrap: {
         flexDirection: 'row',
         alignItems: 'flex-start',
       },
-      input: {
+      descriptionText: {
         flex: 1,
         color: '#111827',
         fontSize: 14,
-        textAlignVertical: 'top',
+        lineHeight: 20,
       },
       voiceNotesContainer: {
         paddingVertical: 12,
