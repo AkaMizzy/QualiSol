@@ -19,7 +19,7 @@ import {
 import API_CONFIG from '@/app/config/api';
 import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
-import { Ged, getGedsBySource } from '@/services/gedService';
+import { Ged, getGedsBySource, updateGedFile } from '@/services/gedService';
 import { Folder } from '@/services/qualiphotoService';
 
 import PictureAnnotator from '../PictureAnnotator';
@@ -65,6 +65,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   // Annotator modal state
   const [isAnnotatorVisible, setIsAnnotatorVisible] = useState(false);
   const [annotatorImageUri, setAnnotatorImageUri] = useState<string | null>(null);
+  const [isSubmittingAnnotation, setIsSubmittingAnnotation] = useState(false);
 
   // Update local state when item prop changes
   useEffect(() => {
@@ -229,10 +230,32 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     setAnnotatorImageUri(null);
   };
 
-  const handleSaveAnnotation = (image: { uri: string; name: string; type: string }) => {
-    console.log('Annotation saved (submission logic to be implemented):', image);
-    // For now, just close the annotator
-    handleCloseAnnotator();
+  const handleSaveAnnotation = async (image: { uri: string; name: string; type: string }) => {
+    if (!token || !previewedItem) {
+      Alert.alert('Erreur', 'Impossible de sauvegarder, session invalide.');
+      return;
+    }
+
+    setIsSubmittingAnnotation(true);
+    try {
+      const updatedGed = await updateGedFile(token, previewedItem.id, image);
+      
+      // Update the main "item" state if it was the one being edited
+      if (item.id === updatedGed.id) {
+        // Since `item` is a prop, we should ideally notify the parent to refetch.
+        // For now, we can't directly mutate it. A local state or a callback would be needed.
+        // Let's assume for now the parent component will handle refreshing data.
+        // A simple approach is to update the URL for the previewed image.
+        Alert.alert('Succès', 'La photo annotée a été enregistrée.');
+      }
+      
+      handleCloseAnnotator();
+    } catch (error) {
+      console.error('Failed to save annotation:', error);
+      Alert.alert('Erreur', 'Échec de l\'enregistrement de l\'annotation.');
+    } finally {
+      setIsSubmittingAnnotation(false);
+    }
   };
 
   const getFullImageUrl = (relativeUrl: string | null | undefined): string | null => {

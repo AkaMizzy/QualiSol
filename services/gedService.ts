@@ -162,6 +162,44 @@ export async function updateGed(
   return response.data;
 }
 
+export async function updateGedFile(
+  token: string,
+  gedId: string,
+  file: { uri: string; name: string; type: string },
+  data?: Partial<Ged>
+): Promise<Ged> {
+  const formData = new FormData();
+
+  // Append file
+  formData.append('file', {
+    uri: file.uri,
+    name: file.name,
+    type: file.type,
+  } as any);
+
+  // Append other data if provided
+  if (data) {
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, value.toString());
+      }
+    });
+  }
+
+  try {
+    const response = await api.put(`/ged/${gedId}`, formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data.data;
+  } catch (error) {
+    console.error(`Failed to update GED file with id ${gedId}:`, error);
+    throw error;
+  }
+}
+
 export async function getGedsBySource(token: string, idsource: string, kind: string, sortOrder: 'asc' | 'desc' = 'desc'): Promise<Ged[]> {
   const response = await api.get(`/api/geds/filter?idsource=${idsource}&kind=${kind}&sort=${sortOrder}`, {
     headers: {
