@@ -221,13 +221,16 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     if (previewMedia?.url) {
       setAnnotatorImageUri(previewMedia.url);
       setIsAnnotatorVisible(true);
-      handleClosePreview(); // Close the preview modal
+      setIsPreviewModalVisible(false); // Just hide the preview modal, don't clear state
     }
   };
 
   const handleCloseAnnotator = () => {
     setIsAnnotatorVisible(false);
     setAnnotatorImageUri(null);
+    // Clean up preview state now that annotation is done
+    setPreviewMedia(null);
+    setPreviewedItem(null);
   };
 
   const handleSaveAnnotation = async (image: { uri: string; name: string; type: string }) => {

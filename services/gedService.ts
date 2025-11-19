@@ -187,7 +187,7 @@ export async function updateGedFile(
   }
 
   try {
-    const response = await api.put(`/ged/${gedId}`, formData, {
+    const response = await api.put(`api/geds/${gedId}`, formData, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'multipart/form-data',
