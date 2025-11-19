@@ -7,11 +7,12 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 
 interface AddImageModalProps {
   visible: boolean;
   onClose: () => void;
-  onAdd: (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; latitude: number | null; longitude: number | null; }, shouldClose: boolean) => void;
+  onAdd: (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; latitude: number | null; longitude: number | null; level: number; type: string | null; categorie: string | null; }, shouldClose: boolean) => void;
   openCameraOnShow?: boolean;
 }
 
@@ -24,8 +25,27 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [level, setLevel] = useState(5);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedCategorie, setSelectedCategorie] = useState<string | null>(null);
+  const [severitySliderWidth, setSeveritySliderWidth] = useState(0);
   const prevVisibleRef = useRef(visible);
 
+  const ANOMALY_CATEGORIES = [
+    { key: 'securite', label: 'Sécurité' },
+    { key: 'conformite', label: 'Conformité' },
+    { key: 'technique', label: 'Technique' },
+    { key: 'observation', label: 'Observation' },
+  ] as const;
+
+  const ANOMALY_TYPES = [
+    { key: 'Incendie', label: 'Incendie', icon: 'flame-outline' },
+    { key: 'Inondation', label: 'Inondation', icon: 'water-outline' },
+    { key: 'Structure', label: 'Structure', icon: 'business-outline' },
+    { key: 'Électrique', label: 'Électrique', icon: 'flash-outline' },
+    { key: 'CVC', label: 'CVC', icon: 'snow-outline' },
+    { key: 'Autre', label: 'Autre', icon: 'ellipsis-horizontal-outline' },
+  ] as const;
   const handleGenerateDescription = useCallback(async (photoToDescribe: ImagePicker.ImagePickerAsset) => {
     if (!photoToDescribe || !token) {
       return;
@@ -77,7 +97,7 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
     if (!result.canceled) {
       const selectedImage = result.assets[0];
       setImage(selectedImage);
-      handleGenerateDescription(selectedImage);
+      // handleGenerateDescription(selectedImage);
     }
   }, [handleGenerateDescription]);
 
@@ -101,6 +121,9 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
       setLatitude(null);
       setLongitude(null);
       setIsGeneratingDescription(false);
+      setLevel(5);
+      setSelectedType(null);
+      setSelectedCategorie(null);
     }
   }, [visible, handleChoosePhoto, openCameraOnShow]);
 
@@ -123,6 +146,30 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
       fetchLocation();
     }
   }, [visible]);
+
+  const onSeverityPan = useCallback((event: PanGestureHandlerGestureEvent) => {
+    if (severitySliderWidth <= 0) return;
+    const x = event.nativeEvent.x;
+    const newLevel = Math.max(0, Math.min(10, Math.round((x / severitySliderWidth) * 10)));
+    setLevel(prevLevel => {
+        if (newLevel !== prevLevel) {
+            return newLevel;
+        }
+        return prevLevel;
+    });
+  }, [severitySliderWidth]);
+
+  const getSeverityColor = (severity: number) => {
+    if (severity >= 7) return '#FF3B30'; // High - Red
+    if (severity >= 5) return '#FF9500'; // Medium - Orange
+    return '#34C759'; // Low - Green
+  };
+
+  const getSeverityText = (severity: number) => {
+    if (severity >= 7) return 'Haute';
+    if (severity >= 5) return 'Moyenne';
+    return 'Basse';
+  };
 
   const handleAdd = (shouldClose: boolean) => {
     if (!title || !image) {
@@ -164,13 +211,16 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
       }
     }
 
-    onAdd({ title, description, image, voiceNote, author: authorName, latitude, longitude }, shouldClose);
+    onAdd({ title, description, image, voiceNote, author: authorName, latitude, longitude, level, type: selectedType, categorie: selectedCategorie }, shouldClose);
     
     if (!shouldClose) {
         setTitle('');
         setDescription('');
         setImage(null);
         setVoiceNote(null);
+        setLevel(5);
+        setSelectedType(null);
+        setSelectedCategorie(null);
         handleChoosePhoto();
     }
   };
@@ -219,6 +269,99 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
                   onChangeText={setTitle}
                 />
                 
+                <VoiceNoteRecorder 
+                  onRecordingComplete={handleRecordingComplete}
+                  onTranscriptionComplete={(text) => {
+                    // This is handled by automatic transcription, but keep for manual transcription if needed
+                    setDescription(prev => prev ? `${prev}\n${text}` : text);
+                  }}
+                />
+              </View>
+              
+              {/* Anomaly Type Selection */}
+              <View style={styles.sectionContainer}>
+                <Text style={styles.sectionTitle}>Type d&apos;anomalie</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeScrollView}>
+                  {ANOMALY_TYPES.map(type => (
+                    <TouchableOpacity
+                      key={type.key}
+                      style={[styles.typeButton, selectedType === type.key && styles.typeButtonSelected]}
+                      onPress={() => setSelectedType(type.key)}
+                    >
+                      <Ionicons
+                        name={type.icon as any}
+                        size={20}
+                        color={selectedType === type.key ? '#FFFFFF' : '#11224e'}
+                      />
+                      <Text style={[styles.typeButtonText, selectedType === type.key && styles.typeButtonTextSelected]}>
+                        {type.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Anomaly Category Selection */}
+              <View style={styles.sectionContainer}>
+                <Text style={styles.sectionTitle}>Catégorie d&apos;anomalie</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScrollView}>
+                  {ANOMALY_CATEGORIES.map(category => (
+                    <TouchableOpacity
+                      key={category.key}
+                      style={[
+                        styles.categoryButton,
+                        selectedCategorie === category.key && styles.categoryButtonSelected,
+                      ]}
+                      onPress={() => setSelectedCategorie(category.key)}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryButtonText,
+                          selectedCategorie === category.key && styles.categoryButtonTextSelected,
+                        ]}
+                      >
+                        {category.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Severity Slider */}
+              <View style={styles.sectionContainer}>
+                <Text style={styles.severityTitle}>Niveau de sévérité</Text>
+                <PanGestureHandler onGestureEvent={onSeverityPan}>
+                  <View 
+                    style={styles.severityContainer}
+                    onLayout={(event) => setSeveritySliderWidth(event.nativeEvent.layout.width)}
+                  >
+                    <View style={styles.severityHeader}>
+                      <Text style={[styles.severityValue, { color: getSeverityColor(level) }]}>
+                        {level}/10
+                      </Text>
+                      <View style={[styles.severityBadge, { backgroundColor: getSeverityColor(level) }]}>
+                        <Text style={styles.severityBadgeText}>{getSeverityText(level)}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.severitySlider}>
+                      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(value => (
+                        <TouchableOpacity
+                          key={value}
+                          style={[
+                            styles.severityDot,
+                            level >= value && [styles.severityDotActive, { backgroundColor: getSeverityColor(level) }],
+                            level === value && [styles.severityDotSelected, { borderColor: getSeverityColor(level) }],
+                          ]}
+                          onPress={() => setLevel(value)}
+                          activeOpacity={0.7}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                </PanGestureHandler>
+              </View>
+
+              <View style={[styles.form, { marginTop: 20 }]}>
                 <Text style={styles.label}>Description</Text>
                 <View style={{ position: 'relative' }}>
                   <TextInput
@@ -240,15 +383,7 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
                   )}
                 </View>
               </View>
-              
-              <VoiceNoteRecorder 
-                onRecordingComplete={handleRecordingComplete}
-                onTranscriptionComplete={(text) => {
-                  // This is handled by automatic transcription, but keep for manual transcription if needed
-                  setDescription(prev => prev ? `${prev}\n${text}` : text);
-                }}
-              />
-              
+
               <View style={styles.buttonContainer}>
                 <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
                   <Text style={[styles.buttonText, styles.cancelButtonText]}>Arrêt</Text>
@@ -340,7 +475,9 @@ const styles = StyleSheet.create({
     },
     form: {
         width: '100%',
-        marginBottom: SIZES.medium,
+    },
+    voiceNoteContainer: {
+      marginBottom: SIZES.medium,
     },
     label: {
         fontFamily: FONT.medium,
@@ -407,5 +544,116 @@ const styles = StyleSheet.create({
         color: COLORS.primary,
         fontFamily: FONT.medium,
         fontSize: SIZES.small,
+    },
+    sectionContainer: {
+      marginTop: 20,
+    },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: COLORS.primary,
+      marginBottom: 12,
+    },
+    severityTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#334155',
+      marginBottom: 12,
+    },
+    typeScrollView: {
+      gap: 10,
+      paddingHorizontal: 2,
+    },
+    typeButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#f1f5f9',
+      borderRadius: 99,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      gap: 8,
+      borderWidth: 1,
+      borderColor: COLORS.gray2,
+    },
+    typeButtonSelected: {
+      backgroundColor: COLORS.primary,
+      borderColor: COLORS.primary,
+    },
+    typeButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: COLORS.secondary,
+    },
+    typeButtonTextSelected: {
+      color: '#FFFFFF',
+    },
+    categoryScrollView: {
+      gap: 10,
+      paddingHorizontal: 2,
+    },
+    categoryButton: {
+      backgroundColor: '#f1f5f9',
+      borderRadius: 99,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderWidth: 1,
+      borderColor: COLORS.gray2,
+    },
+    categoryButtonSelected: {
+      backgroundColor: COLORS.primary,
+      borderColor: COLORS.primary,
+    },
+    categoryButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: COLORS.secondary,
+    },
+    categoryButtonTextSelected: {
+      color: '#FFFFFF',
+    },
+    severityContainer: {
+      alignItems: 'center',
+      marginTop: 8,
+    },
+    severityHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 16,
+    },
+    severityValue: {
+      fontSize: 18,
+      fontWeight: '600',
+    },
+    severityBadge: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+    },
+    severityBadgeText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#FFFFFF',
+    },
+    severitySlider: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      width: '100%',
+    },
+    severityDot: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: '#E5E5EA',
+      borderWidth: 2,
+      borderColor: '#E5E5EA',
+    },
+    severityDotActive: {
+      borderColor: '#E5E5EA',
+    },
+    severityDotSelected: {
+      backgroundColor: '#FFFFFF',
+      borderWidth: 3,
     },
 });

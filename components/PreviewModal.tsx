@@ -265,37 +265,39 @@ export default function PreviewModal({
             )}
           </View>
 
-          {/* Edit Button for Images */}
-          {mediaType === 'image' && onEdit && (
-            <Pressable
-              style={styles.editButton}
-              onPress={onEdit}
-              accessibilityRole="button"
-              accessibilityLabel="Edit photo"
-            >
-              <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-            </Pressable>
-          )}
+          <View style={styles.headerActions}>
+            {/* Edit Button for Images */}
+            {mediaType === 'image' && onEdit && (
+              <Pressable
+                style={styles.actionButton}
+                onPress={onEdit}
+                accessibilityRole="button"
+                accessibilityLabel="Edit photo"
+              >
+                <Ionicons name="create-outline" size={24} color="#FFFFFF" />
+              </Pressable>
+            )}
 
-          {mediaType === 'image' && onAnnotate && (
-            <Pressable
-              style={styles.editButton}
-              onPress={onAnnotate}
-              accessibilityRole="button"
-              accessibilityLabel="Annoter"
-            >
-              <Ionicons name="brush-outline" size={28} color="#f87b1b" />
-            </Pressable>
-          )}
+            {mediaType === 'image' && onAnnotate && (
+              <Pressable
+                style={styles.actionButton}
+                onPress={onAnnotate}
+                accessibilityRole="button"
+                accessibilityLabel="Annoter"
+              >
+                <Ionicons name="brush-outline" size={24} color="#f87b1b" />
+              </Pressable>
+            )}
 
-          <Pressable
-            style={styles.closeButton}
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="Close preview"
-          >
-            <Ionicons name="close" size={28} color="#f87b1b" />
-          </Pressable>
+            <Pressable
+              style={styles.actionButton}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close preview"
+            >
+              <Ionicons name="close" size={28} color="#f87b1b" />
+            </Pressable>
+          </View>
         </View>
 
         {/* Media Content */}
@@ -335,27 +337,23 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 20,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   title: {
     fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  closeButton: {
+  actionButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  editButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
+    marginLeft: 10,
   },
   mediaContainer: {
     flex: 1,

@@ -1,16 +1,19 @@
+import API_CONFIG from '@/app/config/api';
 import AppHeader from '@/components/AppHeader';
 import AddImageModal from '@/components/galerie/AddImageModal';
 import GalerieCard from '@/components/galerie/GalerieCard';
+import PictureAnnotator from '@/components/PictureAnnotator';
+import PreviewModal from '@/components/PreviewModal';
 import { ICONS } from '@/constants/Icons';
 import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { Ged, createGed, getAllGeds } from '@/services/gedService';
+import { Ged, createGed, getAllGeds, updateGedFile } from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Modal, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -26,6 +29,9 @@ export default function GalerieScreen() {
   const [displayedCount, setDisplayedCount] = useState(PAGE_SIZE);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Ged | null>(null);
+  const [isAnnotatorVisible, setIsAnnotatorVisible] = useState(false);
+  const [annotatorImageUri, setAnnotatorImageUri] = useState<string | null>(null);
 
   const fetchGeds = useCallback(async () => {
     if (token) {
@@ -60,7 +66,7 @@ export default function GalerieScreen() {
     setRefreshing(false);
   }, [fetchGeds]);
 
-  const handleAddImage = async (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; latitude: number | null; longitude: number | null; }, shouldClose: boolean) => {
+  const handleAddImage = async (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; latitude: number | null; longitude: number | null; level: number; type: string | null; categorie: string | null; }, shouldClose: boolean) => {
     if (!token || !user || !data.image) return;
     const idsource = "00000000-0000-0000-0000-000000000000";
     
@@ -73,6 +79,9 @@ export default function GalerieScreen() {
         author: data.author,
         latitude: data.latitude?.toString(),
         longitude: data.longitude?.toString(),
+        level: data.level,
+        type: data.type || undefined,
+        categorie: data.categorie || undefined,
         file: {
           uri: data.image.uri,
           type: data.image.type || 'image/jpeg',
@@ -97,6 +106,45 @@ export default function GalerieScreen() {
       if (shouldClose) {
         setModalVisible(false);
       }
+    }
+  };
+
+  const handleCardPress = (item: Ged) => {
+    setSelectedItem(item);
+  };
+
+  const closePreview = () => {
+    setSelectedItem(null);
+  };
+
+  const handleOpenAnnotator = () => {
+    if (selectedItem?.url) {
+      const fullUrl = `${API_CONFIG.BASE_URL}${selectedItem.url}`;
+      setAnnotatorImageUri(fullUrl);
+      setIsAnnotatorVisible(true);
+    }
+  };
+
+  const handleCloseAnnotator = () => {
+    setIsAnnotatorVisible(false);
+    setAnnotatorImageUri(null);
+    setSelectedItem(null);
+  };
+
+  const handleSaveAnnotation = async (image: { uri: string; name: string; type: string }) => {
+    if (!token || !selectedItem) {
+      Alert.alert('Erreur', 'Impossible de sauvegarder, session invalide.');
+      return;
+    }
+    try {
+      const updatedGed = await updateGedFile(token, selectedItem.id, image);
+      setGeds(prevGeds =>
+        prevGeds.map(ged => (ged.id === updatedGed.id ? updatedGed : ged))
+      );
+      handleCloseAnnotator();
+    } catch (error) {
+      console.error('Failed to save annotation:', error);
+      Alert.alert('Erreur', 'Échec de l\'enregistrement de l\'annotation.');
     }
   };
 
@@ -184,11 +232,11 @@ export default function GalerieScreen() {
         <FlatList
           data={displayedImages}
           keyExtractor={(item) => item.id}
-          numColumns={2}
+          numColumns={1}
           renderItem={({ item }) => (
             <GalerieCard
               item={item}
-              onPress={() => {}}
+              onPress={() => handleCardPress(item)}
               hasVoiceNote={voiceNotesBySource[item.idsource]}
             />
           )}
@@ -219,6 +267,26 @@ export default function GalerieScreen() {
         onAdd={handleAddImage}
         openCameraOnShow={true}
       />
+      {selectedItem && (
+        <PreviewModal
+          visible={!!selectedItem && !isAnnotatorVisible}
+          onClose={closePreview}
+          mediaUrl={`${API_CONFIG.BASE_URL}${selectedItem.url}`}
+          mediaType={selectedItem.kind === 'qualiphoto' ? 'image' : 'file'}
+          title={selectedItem.title}
+          onAnnotate={handleOpenAnnotator}
+        />
+      )}
+      <Modal visible={isAnnotatorVisible} animationType="slide">
+        {annotatorImageUri && (
+          <PictureAnnotator
+            baseImageUri={annotatorImageUri}
+            onClose={handleCloseAnnotator}
+            onSaved={handleSaveAnnotation}
+            title={`Annoter: ${selectedItem?.title || 'Photo'}`}
+          />
+        )}
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -292,17 +360,14 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   skeletonContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-around',
     paddingHorizontal: 8,
   },
   skeletonCard: {
-    width: '45%',
+    width: '100%',
     height: 200,
     backgroundColor: '#E0E0E0',
     borderRadius: SIZES.medium,
-    margin: 8,
+    marginBottom: 16,
   },
   loadMoreContainer: {
     alignItems: 'center',
