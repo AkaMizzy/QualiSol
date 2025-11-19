@@ -494,6 +494,9 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
       );
   };
 
+  const isValidated = currentStatus?.status === 'Active';
+  const canValidate = afterPhotos.length > 0;
+
   const header = (
     <View style={styles.header}>
       <Pressable
@@ -520,13 +523,17 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
         <TouchableOpacity
           style={[
             styles.headerAction,
-            (isUpdatingStatus || afterPhotos.length === 0 || currentStatus?.status === 'Active') && styles.disabledHeaderAction
+            (isUpdatingStatus || !canValidate) && !isValidated && styles.disabledHeaderAction,
           ]}
           onPress={handleValidate}
-          disabled={isUpdatingStatus || afterPhotos.length === 0 || currentStatus?.status === 'Active'}
+          disabled={isUpdatingStatus || !canValidate || isValidated}
           accessibilityLabel="Valider le statut"
         >
-          <Ionicons name="checkmark-circle-outline" size={28} color="#4ade80" />
+          <Ionicons
+            name={isValidated ? 'checkmark-circle' : 'checkmark-circle-outline'}
+            size={28}
+            color={isValidated ? '#4ade80' : canValidate ? '#f87b1b' : '#a1a1aa'}
+          />
         </TouchableOpacity>
       </View>
     </View>
