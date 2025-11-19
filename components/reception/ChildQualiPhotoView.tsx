@@ -520,21 +520,6 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
         >
           <Image source={ICONS.cameraGif} style={styles.headerActionIcon} />
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.headerAction,
-            (isUpdatingStatus || !canValidate) && !isValidated && styles.disabledHeaderAction,
-          ]}
-          onPress={handleValidate}
-          disabled={isUpdatingStatus || !canValidate || isValidated}
-          accessibilityLabel="Valider le statut"
-        >
-          <Ionicons
-            name={isValidated ? 'checkmark-circle' : 'checkmark-circle-outline'}
-            size={28}
-            color={isValidated ? '#4ade80' : canValidate ? '#f87b1b' : '#a1a1aa'}
-          />
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -671,6 +656,28 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
               </View>
             </View>
           )}
+
+          <TouchableOpacity
+            style={[
+              styles.validateButton,
+              isValidated
+                ? styles.validatedButton
+                : !canValidate || isUpdatingStatus
+                  ? styles.disabledValidateButton
+                  : {},
+            ]}
+            onPress={handleValidate}
+            disabled={isUpdatingStatus || !canValidate || isValidated}
+            accessibilityLabel="Valider le dossier"
+          >
+            {isUpdatingStatus ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.validateButtonText}>
+                {isValidated ? 'Dossier Validé' : 'Valider le Dossier'}
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
       </ScrollView>
       <CreateComplementaireQualiPhotoModal
@@ -881,6 +888,26 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 12,
         fontWeight: '600',
+      },
+      validateButton: {
+        backgroundColor: '#f87b1b',
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        marginTop: 24,
+        marginBottom: 16,
+      },
+      validatedButton: {
+        backgroundColor: '#4ade80',
+      },
+      disabledValidateButton: {
+        backgroundColor: '#a1a1aa',
+      },
+      validateButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: 'bold',
       },
       infoCard: {
         backgroundColor: '#FFFFFF',

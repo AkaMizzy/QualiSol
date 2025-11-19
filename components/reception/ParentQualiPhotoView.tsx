@@ -9,7 +9,8 @@ import {
   Text,
   TouchableOpacity,
   UIManager,
-  View
+  View,
+  ActivityIndicator
 } from 'react-native';
 
 import API_CONFIG from '@/app/config/api';
@@ -167,21 +168,6 @@ type ParentQualiPhotoViewProps = {
               <TouchableOpacity style={styles.headerAction} onPress={() => setIsEditModalVisible(true)} accessibilityLabel="Éditer">
                     <Image source={ICONS.edit} style={styles.headerActionIcon} />
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.headerAction,
-                    (isUpdatingStatus || !canValidate) && !isValidated && styles.disabledHeaderAction,
-                  ]}
-                  onPress={handleValidate}
-                  disabled={isUpdatingStatus || !canValidate || isValidated}
-                  accessibilityLabel="Valider le statut"
-                >
-                  <Ionicons
-                    name={isValidated ? 'checkmark-circle' : 'checkmark-circle-outline'}
-                    size={28}
-                    color={isValidated ? '#4ade80' : canValidate ? '#f87b1b' : '#a1a1aa'}
-                  />
-                </TouchableOpacity>
           </View>
         </View>
       );
@@ -255,6 +241,27 @@ type ParentQualiPhotoViewProps = {
                 </View>
               </View>
               </>
+              <TouchableOpacity
+                style={[
+                  styles.validateButton,
+                  isValidated
+                    ? styles.validatedButton
+                    : !canValidate || isUpdatingStatus
+                      ? styles.disabledValidateButton
+                      : {},
+                ]}
+                onPress={handleValidate}
+                disabled={isUpdatingStatus || !canValidate || isValidated}
+                accessibilityLabel="Valider le dossier"
+              >
+                {isUpdatingStatus ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.validateButtonText}>
+                    {isValidated ? 'Dossier Validé' : 'Valider le Dossier'}
+                  </Text>
+                )}
+              </TouchableOpacity>
           </View>
         </ScrollView>
         <QualiPhotoEditModal
@@ -627,4 +634,24 @@ const styles = StyleSheet.create({
         color: '#11224e',
         textAlign: 'center',
        },
+       validateButton: {
+        backgroundColor: '#f87b1b',
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        marginTop: 24,
+        marginBottom: 16,
+      },
+      validatedButton: {
+        backgroundColor: '#4ade80',
+      },
+      disabledValidateButton: {
+        backgroundColor: '#a1a1aa',
+      },
+      validateButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: 'bold',
+      },
 });
