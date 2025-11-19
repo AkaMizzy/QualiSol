@@ -43,7 +43,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
 }) => {
   const { token } = useAuth();
   const [afterPhotos, setAfterPhotos] = useState<Ged[]>([]);
-  const [isLoadingAfter, setIsLoadingAfter] = useState(false);
+  const [isLoadingAfter, setIsLoadingAfter] = useState(true);
   const [isCreateAfterModalVisible, setCreateAfterModalVisible] = useState(false);
   
   // Local state for "avant" description to allow immediate UI updates
@@ -72,7 +72,10 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
 
   useEffect(() => {
     async function fetchAfterPhotos() {
-      if (!token || !item?.id) return;
+      if (!token || !item?.id) {
+        setIsLoadingAfter(false);
+        return;
+      }
 
       setIsLoadingAfter(true);
       try {
@@ -352,8 +355,9 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
       </View>
       <View style={styles.headerActionsContainer}>
         <TouchableOpacity
-          style={styles.headerAction}
+          style={[styles.headerAction, (isLoadingAfter || afterPhotos.length > 0) && styles.disabledHeaderAction]}
           onPress={handleAddAfterPhoto}
+          disabled={isLoadingAfter || afterPhotos.length > 0}
           accessibilityLabel="Ajouter une photo complémentaire"
         >
           <Image source={ICONS.cameraGif} style={styles.headerActionIcon} />
@@ -569,6 +573,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#F2F2F7',
         borderRadius: 20,
         marginLeft: 8,
+      },
+      disabledHeaderAction: {
+        opacity: 0.5,
       },
       headerActionIcon: {
         width: 35,
