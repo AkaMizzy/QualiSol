@@ -242,16 +242,19 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     setIsSubmittingAnnotation(true);
     try {
       const updatedGed = await updateGedFile(token, previewedItem.id, image);
-      
-      // Update the main "item" state if it was the one being edited
+
+      // After successful upload, update the relevant state to refresh UI
       if (item.id === updatedGed.id) {
-        // Since `item` is a prop, we should ideally notify the parent to refetch.
-        // For now, we can't directly mutate it. A local state or a callback would be needed.
-        // Let's assume for now the parent component will handle refreshing data.
-        // A simple approach is to update the URL for the previewed image.
-        Alert.alert('Succès', 'La photo annotée a été enregistrée.');
+        // This is the "avant" photo. It is passed as a prop and cannot be mutated directly.
+        // For the change to be visible, the parent component would need to refetch the data.
+      } else if (afterPhotos.some(p => p.id === updatedGed.id)) {
+        // This is an "après" photo. We can update the local state to show the new image.
+        setAfterPhotos(prev =>
+          prev.map(photo => (photo.id === updatedGed.id ? updatedGed : photo))
+        );
       }
       
+      Alert.alert('Succès', 'La photo annotée a été enregistrée.');
       handleCloseAnnotator();
     } catch (error) {
       console.error('Failed to save annotation:', error);
@@ -618,7 +621,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
           mediaUrl={previewMedia.url}
           mediaType={previewMedia.type}
           title={previewedItem?.title || 'Aperçu'}
-          onAnnotate={previewedItem?.id === item.id ? handleOpenAnnotator : undefined}
+          onAnnotate={previewedItem ? handleOpenAnnotator : undefined}
         />
       )}
       <Modal visible={isAnnotatorVisible} animationType="slide">
@@ -627,7 +630,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
             baseImageUri={annotatorImageUri}
             onClose={handleCloseAnnotator}
             onSaved={handleSaveAnnotation}
-            title="Annoter la photo Avant"
+            title={`Annoter: ${previewedItem?.title || 'Photo'}`}
           />
         )}
       </Modal>
