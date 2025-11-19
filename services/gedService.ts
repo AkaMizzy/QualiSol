@@ -19,7 +19,7 @@ export type CreateGedInput = {
   };
 };
 
-export type Ged = {
+export interface Ged {
   id: string;
   idsource: string;
   title: string;
@@ -36,7 +36,7 @@ export type Ged = {
   type?: string;
   categorie?: string;
   created_at: string;
-};
+}
 
 export async function createGed(token: string, input: CreateGedInput): Promise<{ message: string; data: Ged }> {
   const formData = new FormData();
@@ -151,16 +151,20 @@ export async function enhanceText(text: string, token: string): Promise<{ enhanc
   return response.data;
 }
 
-export async function updateGed(
-  token: string,
-  id: string,
-  updates: Partial<Pick<Ged, 'description' | 'title' | 'type' | 'categorie'>>
-): Promise<{ message: string; data: Ged }> {
-  const response = await api.put(`/api/geds/${id}`, updates, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return response.data;
-}
+export const updateGed = async (token: string, gedId: string, data: Partial<Ged>): Promise<Ged> => {
+  try {
+    const response = await api.put(`/api/geds/${gedId}`, data, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data.data;
+  } catch (error) {
+    console.error('Failed to update GED:', error);
+    throw error;
+  }
+};
 
 export async function updateGedFile(
   token: string,

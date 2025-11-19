@@ -19,8 +19,9 @@ import {
 import API_CONFIG from '@/app/config/api';
 import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
-import { Ged, getGedsBySource, updateGedFile } from '@/services/gedService';
+import { Ged, getGedsBySource, updateGed, updateGedFile } from '@/services/gedService';
 import { Folder } from '@/services/qualiphotoService';
+import { getAllStatuses, Status } from '@/services/statusService';
 
 import PictureAnnotator from '../PictureAnnotator';
 import PreviewModal from '../PreviewModal';
@@ -68,6 +69,11 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   const [annotatorImageUri, setAnnotatorImageUri] = useState<string | null>(null);
   const [isSubmittingAnnotation, setIsSubmittingAnnotation] = useState(false);
 
+  // Status state
+  const [statuses, setStatuses] = useState<Status[]>([]);
+  const [currentStatus, setCurrentStatus] = useState<Status | null>(null);
+  const [isStatusSelectorVisible, setStatusSelectorVisible] = useState(false);
+
   // Update local state when item prop changes
   useEffect(() => {
     setAvantDescription(item.description || '');
@@ -83,6 +89,22 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   const [playingSound, setPlayingSound] = useState<Audio.Sound | null>(null);
   const [playingVoiceNoteId, setPlayingVoiceNoteId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    async function fetchStatuses() {
+      if (!token) return;
+      try {
+        const fetchedStatuses = await getAllStatuses(token);
+        setStatuses(fetchedStatuses);
+        const initialStatus = fetchedStatuses.find(s => s.id === item.status_id);
+        setCurrentStatus(initialStatus || null);
+      } catch (error) {
+        console.error('Failed to fetch statuses:', error);
+      }
+    }
+
+    fetchStatuses();
+  }, [token, item.status_id]);
 
   useEffect(() => {
     async function fetchAfterPhotos() {
@@ -427,6 +449,22 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
       );
   };
 
+  const handleStatusChange = async (newStatus: Status) => {
+    if (!token || !item?.id) {
+      Alert.alert('Erreur', 'Impossible de changer le statut, session invalide.');
+      return;
+    }
+
+    try {
+      const updatedGed = await updateGed(token, item.id, { status_id: newStatus.id });
+      setCurrentStatus(newStatus);
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      Alert.alert('Erreur', 'Échec du changement de statut.');
+    }
+    setStatusSelectorVisible(false);
+  };
+
   const header = (
     <View style={styles.header}>
       <Pressable
@@ -519,6 +557,14 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                         <Ionicons name="location" size={20} color="#f87b1b" />
                       </TouchableOpacity>
                     )}
+                    <TouchableOpacity
+                      onPress={() => setStatusSelectorVisible(true)}
+                      style={styles.statusButton}
+                    >
+                      <Text style={styles.statusButtonText}>
+                        {currentStatus ? currentStatus.status : 'Statut'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
 
@@ -633,6 +679,27 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
             title={`Annoter: ${previewedItem?.title || 'Photo'}`}
           />
         )}
+      </Modal>
+      <Modal
+        visible={isStatusSelectorVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setStatusSelectorVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setStatusSelectorVisible(false)}>
+          <View style={styles.statusModalContainer}>
+            <Text style={styles.modalTitle}>Changer le statut</Text>
+            {statuses.map(status => (
+              <TouchableOpacity
+                key={status.id}
+                style={styles.statusOption}
+                onPress={() => handleStatusChange(status)}
+              >
+                <Text style={styles.statusOptionText}>{status.status}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Pressable>
       </Modal>
     </>
   );
@@ -778,6 +845,18 @@ const styles = StyleSheet.create({
       locationIconButton: {
         padding: 4,
       },
+      statusButton: {
+        backgroundColor: '#f87b1b',
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        alignSelf: 'center',
+      },
+      statusButtonText: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: '600',
+      },
       infoCard: {
         backgroundColor: '#FFFFFF',
         borderRadius: 12,
@@ -867,6 +946,36 @@ const styles = StyleSheet.create({
         flex: 1,
         color: '#11224e',
         fontSize: 13,
+        fontWeight: '500',
+      },
+      modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+      },
+      statusModalContainer: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 20,
+        width: '80%',
+        alignItems: 'center',
+      },
+      modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#f87b1b',
+        marginBottom: 20,
+      },
+      statusOption: {
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        width: '100%',
+        alignItems: 'center',
+      },
+      statusOptionText: {
+        fontSize: 16,
+        color: '#11224e',
         fontWeight: '500',
       },
 });
