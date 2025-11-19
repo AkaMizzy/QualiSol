@@ -19,7 +19,7 @@ import {
 import API_CONFIG from '@/app/config/api';
 import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
-import { Ged, getGedsBySource, updateGed, updateGedFile } from '@/services/gedService';
+import { Ged, describeImage, getGedsBySource, updateGed, updateGedFile } from '@/services/gedService';
 import { Folder } from '@/services/qualiphotoService';
 import { getAllStatuses, Status } from '@/services/statusService';
 
@@ -73,6 +73,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [currentStatus, setCurrentStatus] = useState<Status | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isDescribing, setIsDescribing] = useState(false);
   const [alertInfo, setAlertInfo] = useState<{
     visible: boolean;
     type: 'success' | 'error';
@@ -328,6 +329,62 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     } catch (error) {
       console.error('Failed to save annotation:', error);
       Alert.alert('Erreur', 'Échec de l\'enregistrement de l\'annotation.');
+    }
+  };
+
+  const handleAutoDescribe = async () => {
+    if (!token || !previewedItem || !previewedItem.url) {
+      Alert.alert("Erreur", "Impossible de décrire l'image, informations manquantes.");
+      return;
+    }
+
+    setIsDescribing(true);
+    try {
+      const imageUrl = getFullImageUrl(previewedItem.url);
+      if (!imageUrl) {
+        throw new Error('Invalid image URL');
+      }
+
+      const file = {
+        uri: imageUrl,
+        type: 'image/jpeg', // Assuming jpeg, could be improved
+        name: previewedItem.url.split('/').pop() || 'image.jpg',
+      };
+
+      const aiDescription = await describeImage(token, file);
+
+      const currentDescription = previewedItem.description || '';
+      const newDescription = currentDescription
+        ? `${currentDescription}\n\n${aiDescription}`
+        : aiDescription;
+
+      const updatedGed = await updateGed(token, previewedItem.id, { description: newDescription });
+
+      // Update state
+      if (item.id === updatedGed.id) {
+        setAvantDescription(updatedGed.description || '');
+        // Also update the item itself in case it's used elsewhere
+        onAvantPhotoUpdate(updatedGed);
+      } else if (afterPhotos.some(p => p.id === updatedGed.id)) {
+        setAfterPhotos(prev =>
+          prev.map(photo => (photo.id === updatedGed.id ? updatedGed : photo))
+        );
+      }
+
+      // Update the description in the previewedItem as well so the modal can reflect it if it stays open
+      setPreviewedItem(updatedGed);
+
+      setAlertInfo({
+        visible: true,
+        type: 'success',
+        title: 'Succès',
+        message: 'La description a été ajoutée avec succès.',
+      });
+    } catch (error) {
+      console.error('Failed to describe image:', error);
+      Alert.alert('Erreur', 'Échec de la génération de la description.');
+    } finally {
+      setIsDescribing(false);
     }
   };
 
@@ -714,6 +771,8 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
           mediaType={previewMedia.type}
           title={previewedItem?.title || 'Aperçu'}
           onAnnotate={previewedItem ? handleOpenAnnotator : undefined}
+          onAutoDescribe={previewedItem ? handleAutoDescribe : undefined}
+          isDescribing={isDescribing}
         />
       )}
       <Modal visible={isAnnotatorVisible} animationType="slide">

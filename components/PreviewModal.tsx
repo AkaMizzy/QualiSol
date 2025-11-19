@@ -3,6 +3,7 @@ import { Audio, ResizeMode, Video } from 'expo-av';
 import { Image } from 'expo-image';
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
   Linking,
@@ -21,6 +22,8 @@ interface PreviewModalProps {
   title?: string;
   onEdit?: () => void; // Add this line
   onAnnotate?: () => void;
+  onAutoDescribe?: () => Promise<void>;
+  isDescribing?: boolean;
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -33,6 +36,8 @@ export default function PreviewModal({
   title,
   onEdit, // Add this line
   onAnnotate,
+  onAutoDescribe,
+  isDescribing,
 }: PreviewModalProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -266,6 +271,21 @@ export default function PreviewModal({
           </View>
 
           <View style={styles.headerActions}>
+            {mediaType === 'image' && onAutoDescribe && (
+              <Pressable
+                style={styles.actionButton}
+                onPress={onAutoDescribe}
+                disabled={isDescribing}
+                accessibilityRole="button"
+                accessibilityLabel="Generate AI description"
+              >
+                {isDescribing ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="sparkles-outline" size={24} color="#FFFFFF" />
+                )}
+              </Pressable>
+            )}
             {/* Edit Button for Images */}
             {mediaType === 'image' && onEdit && (
               <Pressable
