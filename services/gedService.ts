@@ -33,6 +33,8 @@ export type Ged = {
   size: number | null;
   status_id: string;
   company_id: string;
+  type?: string;
+  categorie?: string;
   created_at: string;
 };
 

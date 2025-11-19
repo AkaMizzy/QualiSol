@@ -31,6 +31,7 @@ type ChildQualiPhotoViewProps = {
   subtitle: string;
   projectTitle: string;
   zoneTitle: string;
+  
 };
 
 export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
@@ -320,7 +321,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
       <ScrollView bounces>
         <View style={styles.content}>
           <View>
-            <Text style={styles.sectionTitle}>Situation avant</Text>
+            <Text style={styles.sectionTitle}>Avant</Text>
             {item.url ? (
               <TouchableOpacity onPress={() => {}} style={styles.photoContainer}>
                 <Image source={{ uri: getFullImageUrl(item.url) as string }} style={styles.childThumbnail} />
@@ -330,27 +331,25 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
               </TouchableOpacity>
             ) : null}
             {(item.type || item.categorie) && (
-              <View style={[styles.infoCard, { marginTop: 12 }]}>
-                <View style={styles.tagsContainer}>
-                  {item.type ? (
-                    <View style={styles.tagWrapper}>
-                      <Text style={styles.infoLabel}>Type</Text>
-                      <Text style={styles.tag}>{item.type}</Text>
-                    </View>
-                  ) : null}
-                  {item.categorie ? (
-                    <View style={styles.tagWrapper}>
-                      <Text style={styles.infoLabel}>Catégorie</Text>
-                      <Text style={styles.tag}>{item.categorie}</Text>
-                    </View>
-                  ) : null}
-                </View>
+              <View style={styles.metaContainer}>
+                {item.type ? (
+                  <Text style={styles.metaText}>
+                    <Text style={styles.metaLabel}>Type: </Text>
+                    {item.type}
+                  </Text>
+                ) : null}
+                {item.categorie ? (
+                  <Text style={styles.metaText}>
+                    <Text style={styles.metaLabel}>Catégorie: </Text>
+                    {item.categorie}
+                  </Text>
+                ) : null}
               </View>
             )}
           </View>
 
           <View>
-            <Text style={styles.sectionTitle}>Situation après</Text>
+            <Text style={styles.sectionTitle}>Après</Text>
             {isLoadingAfter ? (
               <ActivityIndicator style={{ marginVertical: 12 }} />
             ) : afterPhotos.length > 0 ? (
@@ -372,17 +371,35 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                 {/* "Avant" Column */}
                 <View style={styles.comparisonColumn}>
                   <View style={styles.columnHeaderContainer}>
-                    <Text style={styles.columnHeader}>Situation avant</Text>
+                    <Text style={styles.columnHeader}>Avant</Text>
                     {item.latitude && item.longitude && (
                       <TouchableOpacity
                         onPress={() => openMap(item.latitude, item.longitude)}
                         style={styles.locationIconButton}
-                        accessibilityLabel="Ouvrir la localisation sur la carte"
-                      >
+                        accessibilityLabel="Ouvrir la localisation sur la carte">
                         <Ionicons name="location" size={20} color="#f87b1b" />
                       </TouchableOpacity>
                     )}
                   </View>
+                </View>
+
+                {/* "Après" Column */}
+                <View style={styles.comparisonColumn}>
+                  <View style={styles.columnHeaderContainer}>
+                    <Text style={styles.columnHeader}>Après</Text>
+                    {afterPhotos[0]?.latitude && afterPhotos[0]?.longitude && (
+                      <TouchableOpacity
+                        onPress={() => openMap(afterPhotos[0].latitude, afterPhotos[0].longitude)}
+                        style={styles.locationIconButton}
+                        accessibilityLabel="Ouvrir la localisation sur la carte">
+                        <Ionicons name="location" size={20} color="#f87b1b" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              </View>
+              <View style={styles.comparisonGrid}>
+                <View style={styles.comparisonColumn}>
                   <View style={styles.infoCard}>
                     <Text style={styles.infoLabel}>Description</Text>
                     <View style={styles.inputWrap}>
@@ -396,26 +413,8 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                       />
                     </View>
                   </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Notes vocales</Text>
-                    {renderVoiceNotesList(voiceNotesAvant, isLoadingVoiceNotesAvant)}
-                  </View>
                 </View>
-
-                {/* "Après" Column */}
                 <View style={styles.comparisonColumn}>
-                  <View style={styles.columnHeaderContainer}>
-                    <Text style={styles.columnHeader}>Situation après</Text>
-                    {afterPhotos[0]?.latitude && afterPhotos[0]?.longitude && (
-                      <TouchableOpacity
-                        onPress={() => openMap(afterPhotos[0].latitude, afterPhotos[0].longitude)}
-                        style={styles.locationIconButton}
-                        accessibilityLabel="Ouvrir la localisation sur la carte"
-                      >
-                        <Ionicons name="location" size={20} color="#f87b1b" />
-                      </TouchableOpacity>
-                    )}
-                  </View>
                   <View style={styles.infoCard}>
                     <Text style={styles.infoLabel}>Description</Text>
                     <View style={styles.inputWrap}>
@@ -429,6 +428,16 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                       />
                     </View>
                   </View>
+                </View>
+              </View>
+              <View style={styles.comparisonGrid}>
+                <View style={styles.comparisonColumn}>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Notes vocales</Text>
+                    {renderVoiceNotesList(voiceNotesAvant, isLoadingVoiceNotesAvant)}
+                  </View>
+                </View>
+                <View style={styles.comparisonColumn}>
                   <View style={styles.infoCard}>
                     <Text style={styles.infoLabel}>Notes vocales</Text>
                     {renderVoiceNotesList(voiceNotesApres, isLoadingVoiceNotesApres)}
@@ -560,10 +569,8 @@ const styles = StyleSheet.create({
         flex: 1,
       },
       comparisonContainer: {
-        marginTop: 24,
-        paddingTop: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#e5e7eb',
+        marginTop: 12,
+        gap: 12,
       },
       comparisonTitle: {
         fontSize: 18,
@@ -578,7 +585,6 @@ const styles = StyleSheet.create({
       },
       comparisonColumn: {
         flex: 1,
-        gap: 12,
       },
       columnHeaderContainer: {
         flexDirection: 'row',
@@ -605,24 +611,24 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
         elevation: 2,
       },
-      tagsContainer: {
+      metaContainer: {
         flexDirection: 'row',
-        gap: 16,
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 12,
       },
-      tagWrapper: {
-        flex: 1,
-      },
-      tag: {
-        backgroundColor: '#f9fafb',
-        borderColor: '#e5e7eb',
-        borderWidth: 1,
+      metaText: {
+        fontSize: 13,
         color: '#11224e',
+        backgroundColor: '#f9fafb',
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 8,
-        fontSize: 13,
-        marginTop: 4,
         overflow: 'hidden',
+      },
+      metaLabel: {
+        fontWeight: '600',
+        color: '#f87b1b',
       },
       infoLabel: {
         color: '#f87b1b',
@@ -633,13 +639,6 @@ const styles = StyleSheet.create({
       inputWrap: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        backgroundColor: '#fff',
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        minHeight: 80,
       },
       input: {
         flex: 1,
@@ -660,9 +659,6 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         backgroundColor: '#f9fafb',
         borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-        borderStyle: 'dashed',
       },
       placeholderText: {
         color: '#9ca3af',
@@ -680,12 +676,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         backgroundColor: '#f9fafb',
         borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
       },
       voiceNoteItemPlaying: {
         backgroundColor: '#fef3e7',
-        borderColor: '#f87b1b',
       },
       voiceNoteTitle: {
         flex: 1,
