@@ -14,8 +14,11 @@ import {
 
 import API_CONFIG from '@/app/config/api';
 import { ICONS } from '@/constants/Icons';
+import { useAuth } from '@/contexts/AuthContext';
 import { Ged } from '@/services/gedService';
-import { Folder } from '@/services/qualiphotoService';
+import folderService, { Folder } from '@/services/qualiphotoService';
+import { getAllStatuses, Status } from '@/services/statusService';
+import CustomAlert from '../CustomAlert';
 import QualiPhotoEditModal from './QualiPhotoEditModal';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -83,7 +86,61 @@ type ParentQualiPhotoViewProps = {
     zoneTitle,
     childrenWithAfterPhotos,
   }) => {
+    const { token } = useAuth();
     const [isEditModalVisible, setIsEditModalVisible] = React.useState(false);
+    const [statuses, setStatuses] = React.useState<Status[]>([]);
+    const [currentStatus, setCurrentStatus] = React.useState<Status | null>(null);
+    const [isUpdatingStatus, setIsUpdatingStatus] = React.useState(false);
+    const [alertInfo, setAlertInfo] = React.useState<{
+      visible: boolean;
+      type: 'success' | 'error';
+      title: string;
+      message: string;
+    }>({ visible: false, type: 'success', title: '', message: '' });
+
+    React.useEffect(() => {
+      async function fetchStatuses() {
+        if (!token) return;
+        try {
+          const fetchedStatuses = await getAllStatuses(token);
+          setStatuses(fetchedStatuses);
+          const initialStatus = fetchedStatuses.find(s => s.id === item.status_id);
+          setCurrentStatus(initialStatus || null);
+        } catch (error) {
+          console.error('Failed to fetch statuses:', error);
+        }
+      }
+
+      fetchStatuses();
+    }, [token, item.status_id]);
+
+    const handleValidate = async () => {
+      const activeStatus = statuses.find(s => s.status === 'Active');
+      if (!token || !item?.id || !activeStatus) {
+        setAlertInfo({ visible: true, type: 'error', title: 'Erreur', message: 'Impossible de valider, statut "Active" non trouvé ou session invalide.' });
+        return;
+      }
+
+      if (childGeds.length !== childrenWithAfterPhotos.size) {
+        setAlertInfo({ visible: true, type: 'error', title: 'Validation impossible', message: 'Toutes les photos "avant" doivent avoir une photo "après" correspondante pour valider.' });
+        return;
+      }
+
+      setIsUpdatingStatus(true);
+      try {
+        await folderService.updateFolder(item.id, { status_id: activeStatus.id }, token);
+        setCurrentStatus(activeStatus);
+        setAlertInfo({ visible: true, type: 'success', title: 'Succès', message: 'Le dossier a été validé.' });
+      } catch (error) {
+        console.error('Failed to validate folder status:', error);
+        setAlertInfo({ visible: true, type: 'error', title: 'Erreur', message: 'Échec de la validation du dossier.' });
+      } finally {
+        setIsUpdatingStatus(false);
+      }
+    };
+
+    const isValidated = currentStatus?.status === 'Active';
+    const canValidate = childGeds.length > 0 && childGeds.length === childrenWithAfterPhotos.size;
 
     const header = (
         <View style={styles.header}>
@@ -109,6 +166,21 @@ type ParentQualiPhotoViewProps = {
             </TouchableOpacity>
               <TouchableOpacity style={styles.headerAction} onPress={() => setIsEditModalVisible(true)} accessibilityLabel="Éditer">
                     <Image source={ICONS.edit} style={styles.headerActionIcon} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.headerAction,
+                    (isUpdatingStatus || !canValidate) && !isValidated && styles.disabledHeaderAction,
+                  ]}
+                  onPress={handleValidate}
+                  disabled={isUpdatingStatus || !canValidate || isValidated}
+                  accessibilityLabel="Valider le statut"
+                >
+                  <Ionicons
+                    name={isValidated ? 'checkmark-circle' : 'checkmark-circle-outline'}
+                    size={28}
+                    color={isValidated ? '#4ade80' : canValidate ? '#f87b1b' : '#a1a1aa'}
+                  />
                 </TouchableOpacity>
           </View>
         </View>
@@ -193,8 +265,13 @@ type ParentQualiPhotoViewProps = {
                 onItemUpdate(updatedItem);
                 setIsEditModalVisible(false);
             }}
-            handleGeneratePdf={handleGeneratePdf}
-            isGeneratingPdf={isGeneratingPdf}
+        />
+        <CustomAlert
+          visible={alertInfo.visible}
+          type={alertInfo.type}
+          title={alertInfo.title}
+          message={alertInfo.message}
+          onClose={() => setAlertInfo(prev => ({ ...prev, visible: false }))}
         />
       </>
     )
@@ -238,6 +315,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#F2F2F7',
         borderRadius: 20,
         marginLeft: 8,
+      },
+      disabledHeaderAction: {
+        opacity: 0.5,
       },
       headerActionsContainer: {
         flexDirection: 'row',

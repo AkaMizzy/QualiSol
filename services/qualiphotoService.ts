@@ -64,9 +64,7 @@ export type CreateFolderPayload = Pick<
   | 'foldertype'
 >;
 
-export type UpdateFolderPayload = Partial<
-  Pick<Folder, 'description' | 'conclusion'>
->;
+export type UpdateFolderPayload = Partial<Folder>;
 
 async function generateGedParallelePdf(folderId: string, token: string): Promise<Ged> {
   const response = await api.get(`api/gedparallele/generate-pdf/${folderId}`, {
