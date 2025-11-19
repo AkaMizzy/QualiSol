@@ -23,6 +23,7 @@ import { Ged, getGedsBySource, updateGed, updateGedFile } from '@/services/gedSe
 import { Folder } from '@/services/qualiphotoService';
 import { getAllStatuses, Status } from '@/services/statusService';
 
+import CustomAlert from '../CustomAlert';
 import PictureAnnotator from '../PictureAnnotator';
 import PreviewModal from '../PreviewModal';
 import CreateComplementaireQualiPhotoModal from './CreateComplementaireQualiPhotoModal';
@@ -67,12 +68,17 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   // Annotator modal state
   const [isAnnotatorVisible, setIsAnnotatorVisible] = useState(false);
   const [annotatorImageUri, setAnnotatorImageUri] = useState<string | null>(null);
-  const [isSubmittingAnnotation, setIsSubmittingAnnotation] = useState(false);
 
   // Status state
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [currentStatus, setCurrentStatus] = useState<Status | null>(null);
-  const [isStatusSelectorVisible, setStatusSelectorVisible] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [alertInfo, setAlertInfo] = useState<{
+    visible: boolean;
+    type: 'success' | 'error';
+    title: string;
+    message: string;
+  }>({ visible: false, type: 'success', title: '', message: '' });
 
   // Update local state when item prop changes
   useEffect(() => {
@@ -169,6 +175,48 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     fetchVoiceNotesApres();
   }, [firstAfterPhotoId, token]);
 
+  const handleValidate = async () => {
+    const activeStatus = statuses.find(s => s.status === 'Active');
+    if (!token || !item?.id || !activeStatus) {
+      Alert.alert('Erreur', 'Impossible de valider, statut "Active" non trouvé ou session invalide.');
+      return;
+    }
+
+    if (afterPhotos.length === 0) {
+      Alert.alert('Information', 'Veuillez ajouter une photo "après" avant de valider.');
+      return;
+    }
+
+    setIsUpdatingStatus(true);
+    try {
+      // Update "avant" photo
+      await updateGed(token, item.id, { status_id: activeStatus.id });
+
+      // Update "après" photo
+      if (afterPhotos.length > 0 && afterPhotos[0].id) {
+        await updateGed(token, afterPhotos[0].id, { status_id: activeStatus.id });
+      }
+
+      setCurrentStatus(activeStatus);
+      setAlertInfo({
+        visible: true,
+        type: 'success',
+        title: 'Succès',
+        message: 'Le dossier a été validé.',
+      });
+    } catch (error) {
+      console.error('Failed to validate status:', error);
+      setAlertInfo({
+        visible: true,
+        type: 'error',
+        title: 'Erreur',
+        message: 'Échec de la mise à jour du statut.',
+      });
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   const handleAddAfterPhoto = () => {
     setCreateAfterModalVisible(true);
   };
@@ -262,18 +310,17 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
       return;
     }
 
-    setIsSubmittingAnnotation(true);
     try {
-      const updatedGed = await updateGedFile(token, previewedItem.id, image);
+      const updatedGedResponse = await updateGedFile(token, previewedItem.id, image);
 
       // After successful upload, update the relevant state to refresh UI
-      if (item.id === updatedGed.id) {
+      if (item.id === updatedGedResponse.id) {
         // This is the "avant" photo. Call the callback to notify the parent.
-        onAvantPhotoUpdate(updatedGed);
-      } else if (afterPhotos.some(p => p.id === updatedGed.id)) {
+        onAvantPhotoUpdate(updatedGedResponse);
+      } else if (afterPhotos.some(p => p.id === updatedGedResponse.id)) {
         // This is an "après" photo. We can update the local state to show the new image.
         setAfterPhotos(prev =>
-          prev.map(photo => (photo.id === updatedGed.id ? updatedGed : photo))
+          prev.map(photo => (photo.id === updatedGedResponse.id ? updatedGedResponse : photo))
         );
       }
       
@@ -281,8 +328,6 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     } catch (error) {
       console.error('Failed to save annotation:', error);
       Alert.alert('Erreur', 'Échec de l\'enregistrement de l\'annotation.');
-    } finally {
-      setIsSubmittingAnnotation(false);
     }
   };
 
@@ -449,22 +494,6 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
       );
   };
 
-  const handleStatusChange = async (newStatus: Status) => {
-    if (!token || !item?.id) {
-      Alert.alert('Erreur', 'Impossible de changer le statut, session invalide.');
-      return;
-    }
-
-    try {
-      const updatedGed = await updateGed(token, item.id, { status_id: newStatus.id });
-      setCurrentStatus(newStatus);
-    } catch (error) {
-      console.error('Failed to update status:', error);
-      Alert.alert('Erreur', 'Échec du changement de statut.');
-    }
-    setStatusSelectorVisible(false);
-  };
-
   const header = (
     <View style={styles.header}>
       <Pressable
@@ -487,6 +516,17 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
           accessibilityLabel="Ajouter une photo complémentaire"
         >
           <Image source={ICONS.cameraGif} style={styles.headerActionIcon} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.headerAction,
+            (isUpdatingStatus || afterPhotos.length === 0 || currentStatus?.status === 'Active') && styles.disabledHeaderAction
+          ]}
+          onPress={handleValidate}
+          disabled={isUpdatingStatus || afterPhotos.length === 0 || currentStatus?.status === 'Active'}
+          accessibilityLabel="Valider le statut"
+        >
+          <Ionicons name="checkmark-circle-outline" size={28} color="#4ade80" />
         </TouchableOpacity>
       </View>
     </View>
@@ -557,14 +597,6 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                         <Ionicons name="location" size={20} color="#f87b1b" />
                       </TouchableOpacity>
                     )}
-                    <TouchableOpacity
-                      onPress={() => setStatusSelectorVisible(true)}
-                      style={styles.statusButton}
-                    >
-                      <Text style={styles.statusButtonText}>
-                        {currentStatus ? currentStatus.status : 'Statut'}
-                      </Text>
-                    </TouchableOpacity>
                   </View>
                 </View>
 
@@ -680,27 +712,13 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
           />
         )}
       </Modal>
-      <Modal
-        visible={isStatusSelectorVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setStatusSelectorVisible(false)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setStatusSelectorVisible(false)}>
-          <View style={styles.statusModalContainer}>
-            <Text style={styles.modalTitle}>Changer le statut</Text>
-            {statuses.map(status => (
-              <TouchableOpacity
-                key={status.id}
-                style={styles.statusOption}
-                onPress={() => handleStatusChange(status)}
-              >
-                <Text style={styles.statusOptionText}>{status.status}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Pressable>
-      </Modal>
+      <CustomAlert
+        visible={alertInfo.visible}
+        type={alertInfo.type}
+        title={alertInfo.title}
+        message={alertInfo.message}
+        onClose={() => setAlertInfo(prev => ({ ...prev, visible: false }))}
+      />
     </>
   );
 };
