@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -21,6 +22,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Ged, getGedsBySource } from '@/services/gedService';
 import { Folder } from '@/services/qualiphotoService';
 
+import PictureAnnotator from '../PictureAnnotator';
+import PreviewModal from '../PreviewModal';
 import CreateComplementaireQualiPhotoModal from './CreateComplementaireQualiPhotoModal';
 import DescriptionEditModal from './DescriptionEditModal';
 
@@ -53,6 +56,15 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   const [isDescriptionModalVisible, setIsDescriptionModalVisible] = useState(false);
   const [editingDescriptionType, setEditingDescriptionType] = useState<'avant' | 'apres' | null>(null);
   const [currentItem, setCurrentItem] = useState<Ged | null>(null);
+
+  // Preview modal state
+  const [isPreviewModalVisible, setIsPreviewModalVisible] = useState(false);
+  const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' | 'video' | 'file' | 'voice' } | null>(null);
+  const [previewedItem, setPreviewedItem] = useState<Ged | null>(null);
+
+  // Annotator modal state
+  const [isAnnotatorVisible, setIsAnnotatorVisible] = useState(false);
+  const [annotatorImageUri, setAnnotatorImageUri] = useState<string | null>(null);
 
   // Update local state when item prop changes
   useEffect(() => {
@@ -174,6 +186,53 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     setIsDescriptionModalVisible(false);
     setEditingDescriptionType(null);
     setCurrentItem(null);
+  };
+
+  const handleOpenPreview = (gedItem: Ged) => {
+    const fullUrl = getFullImageUrl(gedItem.url);
+    if (fullUrl) {
+      // Basic check for media type based on extension.
+      // This could be improved if the API provides a mime type.
+      const isVideo = ['.mp4', '.mov', '.avi'].some(ext => gedItem.url?.toLowerCase().endsWith(ext));
+      const isVoice = ['.mp3', '.wav', '.m4a', '.aac'].some(ext => gedItem.url?.toLowerCase().endsWith(ext));
+      
+      let type: 'image' | 'video' | 'file' | 'voice' = 'image';
+      if (isVideo) type = 'video';
+      else if (isVoice) type = 'voice';
+      // For now, we assume everything else is an image or needs to be handled as a generic file if not image.
+      // Since QualiPhoto is about photos, 'image' is a safe default.
+
+      setPreviewMedia({ url: fullUrl, type });
+      setPreviewedItem(gedItem);
+      setIsPreviewModalVisible(true);
+    } else {
+      Alert.alert('Erreur', 'Média non disponible.');
+    }
+  };
+
+  const handleClosePreview = () => {
+    setIsPreviewModalVisible(false);
+    setPreviewMedia(null);
+    setPreviewedItem(null);
+  };
+
+  const handleOpenAnnotator = () => {
+    if (previewMedia?.url) {
+      setAnnotatorImageUri(previewMedia.url);
+      setIsAnnotatorVisible(true);
+      handleClosePreview(); // Close the preview modal
+    }
+  };
+
+  const handleCloseAnnotator = () => {
+    setIsAnnotatorVisible(false);
+    setAnnotatorImageUri(null);
+  };
+
+  const handleSaveAnnotation = (image: { uri: string; name: string; type: string }) => {
+    console.log('Annotation saved (submission logic to be implemented):', image);
+    // For now, just close the annotator
+    handleCloseAnnotator();
   };
 
   const getFullImageUrl = (relativeUrl: string | null | undefined): string | null => {
@@ -374,7 +433,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
           <View>
             <Text style={styles.sectionTitle}>Avant</Text>
             {item.url ? (
-              <TouchableOpacity onPress={() => {}} style={styles.photoContainer}>
+              <TouchableOpacity onPress={() => handleOpenPreview(item)} style={styles.photoContainer}>
                 <Image source={{ uri: getFullImageUrl(item.url) as string }} style={styles.childThumbnail} />
                 <View style={styles.childGridOverlay}>
                   <Text style={styles.childGridTitle} numberOfLines={1}>{item.title}</Text>
@@ -405,7 +464,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
               <ActivityIndicator style={{ marginVertical: 12 }} />
             ) : afterPhotos.length > 0 ? (
               afterPhotos.map(photo => (
-                <TouchableOpacity key={photo.id} onPress={() => {}} style={styles.photoContainer}>
+                <TouchableOpacity key={photo.id} onPress={() => handleOpenPreview(photo)} style={styles.photoContainer}>
                   <Image source={{ uri: getFullImageUrl(photo.url) as string }} style={styles.childThumbnail} />
                   <View style={styles.childGridOverlay}>
                     <Text style={styles.childGridTitle} numberOfLines={1}>{photo.title}</Text>
@@ -526,6 +585,26 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
           title={editingDescriptionType === 'avant' ? 'Situation Avant' : 'Situation Après'}
         />
       )}
+      {previewMedia && (
+        <PreviewModal
+          visible={isPreviewModalVisible}
+          onClose={handleClosePreview}
+          mediaUrl={previewMedia.url}
+          mediaType={previewMedia.type}
+          title={previewedItem?.title || 'Aperçu'}
+          onAnnotate={previewedItem?.id === item.id ? handleOpenAnnotator : undefined}
+        />
+      )}
+      <Modal visible={isAnnotatorVisible} animationType="slide">
+        {annotatorImageUri && (
+          <PictureAnnotator
+            baseImageUri={annotatorImageUri}
+            onClose={handleCloseAnnotator}
+            onSaved={handleSaveAnnotation}
+            title="Annoter la photo Avant"
+          />
+        )}
+      </Modal>
     </>
   );
 };

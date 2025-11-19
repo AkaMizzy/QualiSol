@@ -3,14 +3,14 @@ import { Audio, ResizeMode, Video } from 'expo-av';
 import { Image } from 'expo-image';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Dimensions,
-    Linking,
-    Modal,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  Alert,
+  Dimensions,
+  Linking,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 interface PreviewModalProps {
@@ -20,6 +20,7 @@ interface PreviewModalProps {
   mediaType?: 'image' | 'video' | 'file' | 'voice';
   title?: string;
   onEdit?: () => void; // Add this line
+  onAnnotate?: () => void;
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -31,6 +32,7 @@ export default function PreviewModal({
   mediaType,
   title,
   onEdit, // Add this line
+  onAnnotate,
 }: PreviewModalProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -275,13 +277,24 @@ export default function PreviewModal({
             </Pressable>
           )}
 
+          {mediaType === 'image' && onAnnotate && (
+            <Pressable
+              style={styles.editButton}
+              onPress={onAnnotate}
+              accessibilityRole="button"
+              accessibilityLabel="Annoter"
+            >
+              <Ionicons name="brush-outline" size={28} color="#f87b1b" />
+            </Pressable>
+          )}
+
           <Pressable
             style={styles.closeButton}
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel="Close preview"
           >
-            <Ionicons name="close" size={24} color="#FFFFFF" />
+            <Ionicons name="close" size={28} color="#f87b1b" />
           </Pressable>
         </View>
 
