@@ -144,6 +144,24 @@ export async function transcribeAudio(token: string, file: { uri: string; type: 
   return data.text || '';
 }
 
+export async function enhanceText(text: string, token: string): Promise<{ enhancedText: string }> {
+  const response = await api.post('api/geds/enhance-text', { text }, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+}
+
+export async function updateGed(
+  token: string,
+  id: string,
+  updates: Partial<Pick<Ged, 'description' | 'title' | 'type' | 'categorie'>>
+): Promise<{ message: string; data: Ged }> {
+  const response = await api.put(`/api/geds/${id}`, updates, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+}
+
 export async function getGedsBySource(token: string, idsource: string, kind: string, sortOrder: 'asc' | 'desc' = 'desc'): Promise<Ged[]> {
   const response = await api.get(`/api/geds/filter?idsource=${idsource}&kind=${kind}&sort=${sortOrder}`, {
     headers: {

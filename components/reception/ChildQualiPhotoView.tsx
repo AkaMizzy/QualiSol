@@ -23,6 +23,7 @@ import { Ged, getGedsBySource } from '@/services/gedService';
 import { Folder } from '@/services/qualiphotoService';
 
 import CreateComplementaireQualiPhotoModal from './CreateComplementaireQualiPhotoModal';
+import DescriptionEditModal from './DescriptionEditModal';
 
 type ChildQualiPhotoViewProps = {
   item: Ged;
@@ -45,6 +46,19 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   const [afterPhotos, setAfterPhotos] = useState<Ged[]>([]);
   const [isLoadingAfter, setIsLoadingAfter] = useState(false);
   const [isCreateAfterModalVisible, setCreateAfterModalVisible] = useState(false);
+  
+  // Local state for "avant" description to allow immediate UI updates
+  const [avantDescription, setAvantDescription] = useState(item.description || '');
+  
+  // Description edit modal state
+  const [isDescriptionModalVisible, setIsDescriptionModalVisible] = useState(false);
+  const [editingDescriptionType, setEditingDescriptionType] = useState<'avant' | 'apres' | null>(null);
+  const [currentItem, setCurrentItem] = useState<Ged | null>(null);
+
+  // Update local state when item prop changes
+  useEffect(() => {
+    setAvantDescription(item.description || '');
+  }, [item.description]);
   
   // Voice notes state
   const [voiceNotesAvant, setVoiceNotesAvant] = useState<Ged[]>([]);
@@ -124,6 +138,40 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   const handleAfterPhotoSuccess = (createdGed: Ged) => {
     setAfterPhotos(prev => [...prev, createdGed]);
     setCreateAfterModalVisible(false);
+  };
+
+  const handleOpenDescriptionEdit = (type: 'avant' | 'apres') => {
+    if (type === 'avant') {
+      setCurrentItem(item);
+      setEditingDescriptionType('avant');
+    } else {
+      if (afterPhotos[0]) {
+        setCurrentItem(afterPhotos[0]);
+        setEditingDescriptionType('apres');
+      } else {
+        Alert.alert('Information', 'Aucune photo "après" disponible.');
+        return;
+      }
+    }
+    setIsDescriptionModalVisible(true);
+  };
+
+  const handleDescriptionSave = (updatedDescription: string) => {
+    if (editingDescriptionType === 'avant' && currentItem) {
+      // Update local state for immediate UI feedback
+      // The API call is already done in the modal
+      setAvantDescription(updatedDescription);
+    } else if (editingDescriptionType === 'apres' && currentItem) {
+      // Update the after photo description
+      setAfterPhotos(prev =>
+        prev.map(photo =>
+          photo.id === currentItem.id ? { ...photo, description: updatedDescription } : photo
+        )
+      );
+    }
+    setIsDescriptionModalVisible(false);
+    setEditingDescriptionType(null);
+    setCurrentItem(null);
   };
 
   const getFullImageUrl = (relativeUrl: string | null | undefined): string | null => {
@@ -401,11 +449,20 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
               <View style={styles.comparisonGrid}>
                 <View style={styles.comparisonColumn}>
                   <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Description</Text>
+                    <View style={styles.infoLabelContainer}>
+                      <Text style={styles.infoLabel}>Description</Text>
+                      <TouchableOpacity
+                        onPress={() => handleOpenDescriptionEdit('avant')}
+                        style={styles.editButton}
+                        accessibilityLabel="Modifier la description"
+                      >
+                        <Ionicons name="create-outline" size={18} color="#f87b1b" />
+                      </TouchableOpacity>
+                    </View>
                     <View style={styles.inputWrap}>
                       <TextInput
                         placeholder="Description"
-                        value={item.description || ''}
+                        value={avantDescription}
                         style={[styles.input, { minHeight: 80 }]}
                         multiline
                         editable={false}
@@ -416,7 +473,21 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                 </View>
                 <View style={styles.comparisonColumn}>
                   <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Description</Text>
+                    <View style={styles.infoLabelContainer}>
+                      <Text style={styles.infoLabel}>Description</Text>
+                      <TouchableOpacity
+                        onPress={() => handleOpenDescriptionEdit('apres')}
+                        style={styles.editButton}
+                        accessibilityLabel="Modifier la description"
+                        disabled={!afterPhotos[0]}
+                      >
+                        <Ionicons
+                          name="create-outline"
+                          size={18}
+                          color={afterPhotos[0] ? '#f87b1b' : '#9ca3af'}
+                        />
+                      </TouchableOpacity>
+                    </View>
                     <View style={styles.inputWrap}>
                       <TextInput
                         placeholder="Description"
@@ -460,6 +531,20 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
         }}
         parentTitle={item.title}
       />
+      {currentItem && (
+        <DescriptionEditModal
+          visible={isDescriptionModalVisible}
+          onClose={() => {
+            setIsDescriptionModalVisible(false);
+            setEditingDescriptionType(null);
+            setCurrentItem(null);
+          }}
+          onSave={handleDescriptionSave}
+          initialDescription={currentItem.description || ''}
+          gedItem={currentItem}
+          title={editingDescriptionType === 'avant' ? 'Situation Avant' : 'Situation Après'}
+        />
+      )}
     </>
   );
 };
@@ -635,6 +720,15 @@ const styles = StyleSheet.create({
         fontSize: 12,
         marginBottom: 8,
         fontWeight: '600',
+      },
+      infoLabelContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+      },
+      editButton: {
+        padding: 4,
       },
       inputWrap: {
         flexDirection: 'row',
