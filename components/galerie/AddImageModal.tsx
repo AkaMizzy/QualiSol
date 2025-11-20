@@ -1,7 +1,7 @@
 import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
 import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { describeImage } from '@/services/gedService';
+// import { describeImage } from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -46,7 +46,7 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
     { key: 'CVC', label: 'CVC', icon: 'snow-outline' },
     { key: 'Autre', label: 'Autre', icon: 'ellipsis-horizontal-outline' },
   ] as const;
-  const handleGenerateDescription = useCallback(async (photoToDescribe: ImagePicker.ImagePickerAsset) => {
+  /* const handleGenerateDescription = useCallback(async (photoToDescribe: ImagePicker.ImagePickerAsset) => {
     if (!photoToDescribe || !token) {
       return;
     }
@@ -64,7 +64,7 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
     } finally {
       setIsGeneratingDescription(false);
     }
-  }, [token]);
+  }, [token]); */
 
   const handleRecordingComplete = useCallback((uri: string | null) => {
     if (uri) {
@@ -81,7 +81,7 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
     }
   }, []);
 
-  const handleChoosePhoto = useCallback(async () => {
+  const handleTakePhoto = useCallback(async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission refusée', 'Désolé, nous avons besoin des autorisations de l\'appareil photo pour que cela fonctionne !');
@@ -89,7 +89,7 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
     }
 
     let result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false,
       quality: 1,
     });
@@ -99,7 +99,47 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
       setImage(selectedImage);
       // handleGenerateDescription(selectedImage);
     }
-  }, [handleGenerateDescription]);
+  }, []);
+
+  const handlePickFromGallery = useCallback(async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission refusée', 'Désolé, nous avons besoin des autorisations de la galerie pour que cela fonctionne !');
+      return;
+    }
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 1,
+    });
+
+    if (!result.canceled) {
+        const selectedImage = result.assets[0];
+        setImage(selectedImage);
+    }
+  }, []);
+
+  const showImagePickerOptions = useCallback(() => {
+    Alert.alert(
+        "Choisir une image",
+        "Voulez-vous prendre une nouvelle photo ou en choisir une depuis votre galerie ?",
+        [
+            {
+                text: "Prendre une photo",
+                onPress: handleTakePhoto,
+            },
+            {
+                text: "Choisir depuis la galerie",
+                onPress: handlePickFromGallery,
+            },
+            {
+                text: "Annuler",
+                style: "cancel",
+            },
+        ]
+    );
+  }, [handleTakePhoto, handlePickFromGallery]);
 
   useEffect(() => {
     const prevVisible = prevVisibleRef.current;
@@ -108,7 +148,7 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
     if (visible && !prevVisible && openCameraOnShow) {
       // Modal just opened, trigger camera with a delay
       const timer = setTimeout(() => {
-        handleChoosePhoto();
+        showImagePickerOptions();
       }, 400);
 
       return () => clearTimeout(timer);
@@ -125,7 +165,7 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
       setSelectedType(null);
       setSelectedCategorie(null);
     }
-  }, [visible, handleChoosePhoto, openCameraOnShow]);
+  }, [visible, showImagePickerOptions, openCameraOnShow]);
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -221,7 +261,7 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
         setLevel(5);
         setSelectedType(null);
         setSelectedCategorie(null);
-        handleChoosePhoto();
+        showImagePickerOptions();
     }
   };
 
@@ -242,7 +282,7 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
               <Text style={styles.headerTitle}>Ajouter une nouvelle image</Text>
               
               <View style={styles.imageContainer}>
-                <TouchableOpacity style={styles.imagePicker} onPress={handleChoosePhoto}>
+                <TouchableOpacity style={styles.imagePicker} onPress={showImagePickerOptions}>
                   {image ? (
                     <Image source={{ uri: image.uri }} style={styles.imagePreview} />
                   ) : (

@@ -17,24 +17,28 @@ export default function GalerieCard({ item, onPress, hasVoiceNote }: GalerieCard
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
-      <Image 
-        source={{ uri: `${GofG}${item.url}` }}
-        style={styles.image}
-      />
-      {hasVoiceNote && (
-        <View style={styles.voiceNoteIcon}>
-          <Ionicons name="mic" size={18} color={COLORS.white} />
+      <View style={styles.imageContainer}>
+        <Image 
+          source={{ uri: `${GofG}${item.url}` }}
+          style={styles.image}
+        />
+        {hasVoiceNote && (
+          <View style={styles.voiceNoteIcon}>
+            <Ionicons name="mic" size={18} color={COLORS.white} />
+          </View>
+        )}
+        <View style={styles.overlay}>
+          <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.date}>{formattedDate}</Text>
+        </View>
+      </View>
+      {item.author && (
+        <View style={styles.content}>
+            <Text style={styles.author} numberOfLines={1}>
+            {item.author}
+            </Text>
         </View>
       )}
-      <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
-        <Text style={styles.date}>{formattedDate}</Text>
-        {item.author && (
-          <Text style={styles.author} numberOfLines={1}>
-          {item.author}
-          </Text>
-        )}
-      </View>
     </TouchableOpacity>
   );
 }
@@ -51,11 +55,26 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  imageContainer: {
+    borderTopLeftRadius: SIZES.medium,
+    borderTopRightRadius: SIZES.medium,
+    overflow: 'hidden',
+  },
   image: {
     width: '100%',
     height: 150,
-    borderTopLeftRadius: SIZES.medium,
-    borderTopRightRadius: SIZES.medium,
+  },
+  overlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: SIZES.medium,
+    paddingVertical: SIZES.small,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   content: {
     padding: SIZES.medium,
@@ -63,12 +82,14 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: FONT.bold,
     fontSize: SIZES.medium,
-    marginBottom: 4,
+    color: COLORS.primary,
+    flex: 1,
+    marginRight: SIZES.small,
   },
   date: {
-    fontFamily: FONT.regular,
+    fontWeight: '600',
     fontSize: SIZES.small,
-    color: COLORS.gray,
+    color: '#f87b1b',
   },
   author: {
     fontFamily: FONT.regular,
