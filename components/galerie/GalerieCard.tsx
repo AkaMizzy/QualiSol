@@ -34,9 +34,11 @@ export default function GalerieCard({ item, onPress, hasVoiceNote }: GalerieCard
       </View>
       {item.author && (
         <View style={styles.content}>
-            <Text style={styles.author} numberOfLines={1}>
-            {item.author}
-            </Text>
+            <View style={styles.detailsContainer}>
+              {item.author && <Text style={styles.author} numberOfLines={1}>{item.author}</Text>}
+              {item.type && <Text style={styles.detailText} numberOfLines={1}>{item.type}</Text>}
+              {item.categorie && <Text style={styles.detailText} numberOfLines={1}>{item.categorie}</Text>}
+            </View>
         </View>
       )}
     </TouchableOpacity>
@@ -79,6 +81,11 @@ const styles = StyleSheet.create({
   content: {
     padding: SIZES.medium,
   },
+  detailsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
   title: {
     fontFamily: FONT.bold,
     fontSize: SIZES.medium,
@@ -95,7 +102,17 @@ const styles = StyleSheet.create({
     fontFamily: FONT.regular,
     fontSize: SIZES.small,
     color: COLORS.gray,
-    marginTop: 4,
+    marginRight: SIZES.small,
+  },
+  detailText: {
+    fontFamily: FONT.regular,
+    fontSize: SIZES.small,
+    color: COLORS.primary,
+    marginRight: SIZES.small,
+    backgroundColor: COLORS.lightWhite,
+    paddingHorizontal: SIZES.small / 2,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   voiceNoteIcon: {
     position: 'absolute',
