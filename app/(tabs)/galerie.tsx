@@ -71,6 +71,10 @@ export default function GalerieScreen() {
     const idsource = "00000000-0000-0000-0000-000000000000";
     
     try {
+      const { uri } = data.image;
+      const fileName = uri.split('/').pop() || `qualiphoto_${Date.now()}.jpg`;
+      const fileType = fileName.split('.').pop() || 'jpeg';
+
       await createGed(token, {
         idsource,
         title: data.title,
@@ -83,9 +87,9 @@ export default function GalerieScreen() {
         type: data.type || undefined,
         categorie: data.categorie || undefined,
         file: {
-          uri: data.image.uri,
-          type: data.image.type || 'image/jpeg',
-          name: data.image.fileName || data.image.uri.split('/').pop() || `qualiphoto_${Date.now()}.jpg`,
+          uri: uri,
+          type: `image/${fileType}`,
+          name: fileName,
         },
       });
 
