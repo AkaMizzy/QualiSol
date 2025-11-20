@@ -21,6 +21,7 @@ export const ICONS = {
   edit: require('@/assets/icons/edit.png'),
   google: require('@/assets/icons/google.png'),
   chantierPng: require('@/assets/icons/chantier.png'),
+  cvPNG: require('@/assets/icons/cv.png'),
   // GIF icons
   cameraGif: require('@/assets/icons/camera.gif'),
   constructionGif: require('@/assets/icons/construction.gif'),

@@ -20,6 +20,7 @@ import AppHeader from '../../components/AppHeader';
 import CalendarComp from '../../components/calander/CalendarComp';
 import CreateCalendarEventModal from '../../components/calander/CreateCalendarEventModal';
 import DayEventsModal from '../../components/calander/DayEventsModal';
+import CreateProspectModal from '../../components/prospects/CreateProspectModal';
 
 import API_CONFIG from '../config/api';
 
@@ -34,13 +35,14 @@ const GRID_ITEMS: {
   { title: 'Pv', image: require('../../assets/icons/manifolder.png') },
   { title: 'Déclarations', image: require('../../assets/icons/declaration_anomalie.png') },
   { title: 'Calendrier', image: require('../../assets/icons/calendar.png') },
-  { title: 'Inventaires', image: require('../../assets/icons/inventaire_article.png') },
+  { title: 'Prospects', image: require('../../assets/icons/cv.png') },
   { title: 'Planning', image: require('../../assets/icons/planning.png'), disabled: true },
   { title: 'Audit', image: require('../../assets/icons/audit_zone.png'), disabled: true },
   { title: 'Echantillon', image: require('../../assets/icons/prelevement_echantillon.png'), disabled: true },
   { title: 'Chantiers', image: require('../../assets/icons/project.png') },
   { title: 'Utilisateurs', image: require('../../assets/icons/users.png') },
   { title: 'Organisme',  image: require('../../assets/icons/company.png') },
+  // { title: 'Prospects', image: require('../../assets/icons/users.png') },
 ];
 
 // const GRID_ITEMS: { title: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -71,6 +73,7 @@ export default function DashboardScreen() {
   const [overdueActivities, setOverdueActivities] = useState<any[]>([]);
   const [upcomingActivities, setUpcomingActivities] = useState<any[]>([]);
   const [expandedSection, setExpandedSection] = useState<string | null>('overdue');
+  const [prospectModalVisible, setProspectModalVisible] = useState(false);
 
   useEffect(() => {
     async function loadAuthData() {
@@ -273,6 +276,8 @@ export default function DashboardScreen() {
                   router.push('/users');
                 } else if (item.title === 'Organisme') {
                   router.push('/company');
+                } else if (item.title === 'Prospects') {
+                  router.push('/prospects');
                 } else {
                   Alert.alert('Bientôt disponible', `La fonctionnalité ${item.title} est en cours de développement.`);
                 }
@@ -440,9 +445,14 @@ export default function DashboardScreen() {
       </ScrollView>
       <View style={styles.footer}>
         <Text style={styles.footerText}>© 2025 Qualisol. Tous droits réservés.</Text>
-        <Pressable onPress={() => Linking.openURL('https://www.muntadaa.com/qualisol/help')}>
-          <Ionicons name="help-circle-outline" size={24} color="#f87b1b" />
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Pressable style={{ marginRight: 16 }} onPress={() => setProspectModalVisible(true)}>
+            <Ionicons name="person-add-outline" size={22} color="#f87b1b" />
+          </Pressable>
+          <Pressable onPress={() => Linking.openURL('https://www.muntadaa.com/qualisol/help')}>
+            <Ionicons name="help-circle-outline" size={24} color="#f87b1b" />
+          </Pressable>
+        </View>
       </View>
       <CreateCalendarEventModal
         visible={eventModalVisible}
@@ -479,6 +489,10 @@ export default function DashboardScreen() {
         date={selectedDate}
         events={dayEvents}
         onClose={() => setDayModalVisible(false)}
+      />
+      <CreateProspectModal
+        visible={prospectModalVisible}
+        onClose={() => setProspectModalVisible(false)}
       />
     </SafeAreaView>
   );

@@ -222,4 +222,13 @@ export async function getAllGeds(token: string): Promise<Ged[]> {
   return response.data;
 }
 
+export async function getGedsByIds(token: string, ids: string[]): Promise<Ged[]> {
+  const response = await api.post('/api/geds/batch', { ids }, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.data;
+}
+
 
