@@ -1,5 +1,6 @@
 import AppHeader from '@/components/AppHeader';
 import CreateProjectModal from '@/components/projects/CreateProjectModal';
+import FolderTypeManagerModal from '@/components/projects/FolderTypeManagerModal';
 import ProjectDetailModal from '@/components/projects/ProjectDetailModal';
 import ProjectTypeManagerModal from '@/components/projects/ProjectTypeManagerModal';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +20,7 @@ export default function ProjectsScreen() {
   const [detailVisible, setDetailVisible] = useState<boolean>(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [projectTypeManagerVisible, setProjectTypeManagerVisible] = useState<boolean>(false);
+  const [folderTypeManagerVisible, setFolderTypeManagerVisible] = useState<boolean>(false);
 
   const refreshProjects = useCallback(async () => {
     if (!token) return;
@@ -51,7 +53,10 @@ export default function ProjectsScreen() {
           </View>
           <View style={styles.actionsContainer}>
             <TouchableOpacity onPress={() => setProjectTypeManagerVisible(true)} style={styles.iconButton}>
-              <Ionicons name="settings-outline" size={24} color="#4b5563" />
+              <Ionicons name="albums-outline" size={24} color="#f87b1b" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setFolderTypeManagerVisible(true)} style={styles.iconButton}>
+              <Ionicons name="folder-outline" size={24} color="#f87b1b" />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setCreateVisible(true)} style={[styles.button]}>
               <Ionicons name="add-circle" size={20} color="#f87b1b" />
@@ -106,6 +111,10 @@ export default function ProjectsScreen() {
       <ProjectTypeManagerModal
         visible={projectTypeManagerVisible}
         onClose={() => setProjectTypeManagerVisible(false)}
+      />
+      <FolderTypeManagerModal
+        visible={folderTypeManagerVisible}
+        onClose={() => setFolderTypeManagerVisible(false)}
       />
     </>
   );

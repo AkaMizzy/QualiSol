@@ -5,16 +5,16 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
 } from 'react-native';
 
 interface CreateProspectModalProps {
@@ -33,21 +33,57 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
   const [isLoading, setIsLoading] = useState(false);
 
   const handleImagePick = async (type: 'recto' | 'verso') => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission refusée', 'La permission d\'accès à la galerie est requise pour ajouter des images.');
-      return;
-    }
+    Alert.alert(
+      'Choisir une image',
+      'Souhaitez-vous prendre une photo ou en choisir une dans votre galerie ?',
+      [
+        {
+          text: 'Prendre une photo',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Permission refusée', 'La permission d\'accès à la caméra est requise pour prendre des photos.');
+              return;
+            }
+            launchPicker('camera', type);
+          },
+        },
+        {
+          text: 'Choisir de la galerie',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Permission refusée', 'La permission d\'accès à la galerie est requise pour ajouter des images.');
+              return;
+            }
+            launchPicker('library', type);
+          },
+        },
+        {
+          text: 'Annuler',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
 
-    const result = await ImagePicker.launchImageLibraryAsync({
+  const launchPicker = async (pickerType: 'camera' | 'library', imageType: 'recto' | 'verso') => {
+    let result;
+    const options = {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [4, 3],
+      aspect: [4, 3] as [number, number],
       quality: 1,
-    });
+    };
+
+    if (pickerType === 'camera') {
+      result = await ImagePicker.launchCameraAsync(options);
+    } else {
+      result = await ImagePicker.launchImageLibraryAsync(options);
+    }
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      if (type === 'recto') {
+      if (imageType === 'recto') {
         setRectoImage(result.assets[0]);
       } else {
         setVersoImage(result.assets[0]);
@@ -69,6 +105,12 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
   const handleSubmit = async () => {
     if (!firstName || !lastName || !email) {
       Alert.alert('Champs obligatoires', 'Veuillez remplir le prénom, le nom et l\'email.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Email non valide', 'Veuillez saisir une adresse e-mail valide.');
       return;
     }
 
@@ -137,8 +179,6 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
       }
 
       await Promise.all(uploadPromises);
-
-      Alert.alert('Succès', 'Le prospect a été créé avec succès.');
       handleReset();
     } catch (error) {
       console.error('Failed to create prospect:', error);
@@ -164,31 +204,31 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
               <TextInput
                 style={styles.input}
                 placeholder="Société"
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor="#f87b1b"
                 value={prospectCompany}
                 onChangeText={setProspectCompany}
                 autoCapitalize="words"
               />
               <TextInput
                 style={styles.input}
-                placeholder="Prénom"
-                placeholderTextColor="#8E8E93"
-                value={firstName}
-                onChangeText={setFirstName}
-                autoCapitalize="words"
-              />
-              <TextInput
-                style={styles.input}
                 placeholder="Nom"
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor="#f87b1b"
                 value={lastName}
                 onChangeText={setLastName}
                 autoCapitalize="words"
               />
               <TextInput
                 style={styles.input}
+                placeholder="Prénom"
+                placeholderTextColor="#f87b1b"
+                value={firstName}
+                onChangeText={setFirstName}
+                autoCapitalize="words"
+              />
+              <TextInput
+                style={styles.input}
                 placeholder="Email"
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor="#f87b1b"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -197,13 +237,25 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
               <TextInput
                 style={styles.input}
                 placeholder="Téléphone"
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor="#f87b1b"
                 value={phone1}
                 onChangeText={setPhone1}
                 keyboardType="phone-pad"
               />
 
               <View style={styles.imagePickerContainer}>
+                
+                 {/* Verso Image Picker */}
+                 <Pressable style={styles.imagePicker} onPress={() => handleImagePick('verso')}>
+                  {versoImage ? (
+                    <Image source={{ uri: versoImage.uri }} style={styles.previewImage} />
+                  ) : (
+                    <>
+                      <Ionicons name="camera-outline" size={32} color="#f87b1b" />
+                      <Text style={styles.imagePickerText}>Carte de visite (Verso)</Text>
+                    </>
+                  )}
+                </Pressable>
                 {/* Recto Image Picker */}
                 <Pressable style={styles.imagePicker} onPress={() => handleImagePick('recto')}>
                   {rectoImage ? (
@@ -215,18 +267,7 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
                     </>
                   )}
                 </Pressable>
-
-                {/* Verso Image Picker */}
-                <Pressable style={styles.imagePicker} onPress={() => handleImagePick('verso')}>
-                  {versoImage ? (
-                    <Image source={{ uri: versoImage.uri }} style={styles.previewImage} />
-                  ) : (
-                    <>
-                      <Ionicons name="camera-outline" size={32} color="#f87b1b" />
-                      <Text style={styles.imagePickerText}>Carte de visite (Verso)</Text>
-                    </>
-                  )}
-                </Pressable>
+               
               </View>
             </View>
 
@@ -295,7 +336,7 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 50,
-    borderColor: '#E5E5EA',
+    borderColor: '#f87b1b',
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 15,
