@@ -1,6 +1,7 @@
 import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { createProject } from '@/services/projectService';
+import { getAllProjectTypes } from '@/services/projectTypeService';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -96,25 +97,19 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
 
   useEffect(() => {
     async function loadProjectTypes() {
+      if (!token) return;
       setLoadingTypes(true);
       try {
-        const res = await fetch(`${API_CONFIG.BASE_URL}/api/projettype`, {
-          headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : undefined as any },
-        });
-        const data = await res.json();
-        if (res.ok && Array.isArray(data)) {
-          setProjectTypes(data.map((t: any) => ({ id: String(t.id), title: t.title })));
-        } else {
-          setProjectTypes([]);
-        }
+        const data = await getAllProjectTypes(token);
+        setProjectTypes(data.map((t: any) => ({ id: String(t.id), title: t.title })));
       } catch {
         setProjectTypes([]);
       } finally {
         setLoadingTypes(false);
       }
     }
-    if (token) loadProjectTypes();
-  }, [token]);
+    if (visible && token) loadProjectTypes();
+  }, [visible, token]);
 
   function generateProjectCode() {
     const ts = Date.now().toString(36).toUpperCase();

@@ -1,6 +1,7 @@
 import AppHeader from '@/components/AppHeader';
 import CreateProjectModal from '@/components/projects/CreateProjectModal';
 import ProjectDetailModal from '@/components/projects/ProjectDetailModal';
+import ProjectTypeManagerModal from '@/components/projects/ProjectTypeManagerModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllProjects, Project } from '@/services/projectService';
 import { formatDisplayDate } from '@/utils/dateFormat';
@@ -17,6 +18,7 @@ export default function ProjectsScreen() {
   const [createVisible, setCreateVisible] = useState<boolean>(false);
   const [detailVisible, setDetailVisible] = useState<boolean>(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [projectTypeManagerVisible, setProjectTypeManagerVisible] = useState<boolean>(false);
 
   const refreshProjects = useCallback(async () => {
     if (!token) return;
@@ -42,12 +44,15 @@ export default function ProjectsScreen() {
     <>
       <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
         <AppHeader user={user || undefined} />
-        <View style={{ padding: 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View>
-              <Text style={{ fontSize: 22, fontWeight: '700', color: '#11224e' }}>Chantiers</Text>
-              <Text style={{ marginTop: 4, color: '#6b7280' }}>Gérez et consultez vos chantiers en cours</Text>
-            </View>
+        <View style={styles.pageHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 22, fontWeight: '700', color: '#11224e' }}>Chantiers</Text>
+            <Text style={{ marginTop: 4, color: '#6b7280' }}>Gérez et consultez vos chantiers en cours</Text>
+          </View>
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity onPress={() => setProjectTypeManagerVisible(true)} style={styles.iconButton}>
+              <Ionicons name="settings-outline" size={24} color="#4b5563" />
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => setCreateVisible(true)} style={[styles.button]}>
               <Ionicons name="add-circle" size={20} color="#f87b1b" />
               <Text style={styles.ButtonText}>Ajouter</Text>
@@ -98,11 +103,32 @@ export default function ProjectsScreen() {
         project={selectedProject}
         onUpdated={refreshProjects}
       />
+      <ProjectTypeManagerModal
+        visible={projectTypeManagerVisible}
+        onClose={() => setProjectTypeManagerVisible(false)}
+      />
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  pageHeader: {
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+  },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
