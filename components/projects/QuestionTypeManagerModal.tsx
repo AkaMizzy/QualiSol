@@ -7,7 +7,6 @@ import {
     updateQuestionType,
 } from '@/services/questionTypeService';
 import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -54,80 +53,104 @@ const FormComponent = ({
   onPriceChange,
   onSubmit,
   onCancel,
-}: FormComponentProps) => (
-  <View style={styles.formContainer}>
-    <Text style={styles.formTitle}>{isEditing ? 'Modifier la question' : 'Nouvelle question'}</Text>
+}: FormComponentProps) => {
+  const [isPickerVisible, setPickerVisible] = useState(false);
+  const typeOptions = [
+    { label: 'Texte', value: 'text' },
+    { label: 'Nombre', value: 'number' },
+    { label: 'Date', value: 'date' },
+    { label: 'Booléen', value: 'boolean' },
+    { label: 'Fichier', value: 'file' },
+  ];
 
-    <View style={styles.inputContainer}>
-      <Ionicons name="text-outline" size={22} color="#8E8E93" />
-      <TextInput
-        placeholder="Titre de la question"
-        placeholderTextColor="#8E8E93"
-        value={title}
-        onChangeText={onTitleChange}
-        style={styles.input}
-      />
-    </View>
+  const selectedLabel = type ? typeOptions.find((opt) => opt.value === type)?.label : 'Type de question';
 
-    <View style={styles.inputContainer}>
-      <Ionicons name="options-outline" size={22} color="#8E8E93" />
-      <Picker
-        selectedValue={type}
-        onValueChange={(itemValue) => onTypeChange(itemValue)}
-        style={styles.picker}
-        dropdownIconColor="#11224e"
-      >
-        <Picker.Item label="Type de question..." value={null} enabled={false} style={{ color: '#8E8E93' }} />
-        <Picker.Item label="Texte" value="text" />
-        <Picker.Item label="Nombre" value="number" />
-        <Picker.Item label="Date" value="date" />
-        <Picker.Item label="Booléen" value="boolean" />
-        <Picker.Item label="Fichier" value="file" />
-      </Picker>
-    </View>
+  return (
+    <View style={styles.formContainer}>
+      <Text style={styles.formTitle}>{isEditing ? 'Modifier la question' : 'Nouvelle question'}</Text>
 
-    <View style={styles.switchRow}>
-      <View style={styles.switchTextContainer}>
-        <Ionicons name="server-outline" size={22} color="#8E8E93" />
-        <Text style={styles.switchLabel}>Activer la quantité</Text>
+      <View style={styles.inputContainer}>
+        <Ionicons name="text-outline" size={20} color="#f87b1b" />
+        <TextInput
+          placeholder="Titre de la question"
+          placeholderTextColor="#11224e"
+          value={title}
+          onChangeText={onTitleChange}
+          style={styles.input}
+        />
       </View>
-      <Switch
-        trackColor={{ false: '#767577', true: '#f87b1b' }}
-        thumbColor={quantity ? '#ffffff' : '#f4f3f4'}
-        ios_backgroundColor="#3e3e3e"
-        value={quantity}
-        onValueChange={onQuantityChange}
-      />
-    </View>
 
-    <View style={styles.switchRow}>
-      <View style={styles.switchTextContainer}>
-        <Ionicons name="cash-outline" size={22} color="#8E8E93" />
-        <Text style={styles.switchLabel}>Activer le prix</Text>
+      <TouchableOpacity style={styles.inputContainer} onPress={() => setPickerVisible(true)}>
+        <Ionicons name="options-outline" size={20} color="#f87b1b" />
+        <Text style={[styles.input, !type && { color: '#11224e' }]}>{selectedLabel}</Text>
+        <Ionicons name="chevron-down-outline" size={20} color="#f87b1b" />
+      </TouchableOpacity>
+
+      <View style={styles.switchRow}>
+        <View style={styles.switchTextContainer}>
+          <Ionicons name="server-outline" size={20} color="#f87b1b" />
+          <Text style={styles.switchLabel}>Activer la quantité</Text>
+        </View>
+        <Switch
+          trackColor={{ false: '#767577', true: '#f87b1b' }}
+          thumbColor={quantity ? '#ffffff' : '#f4f3f4'}
+          ios_backgroundColor="#3e3e3e"
+          value={quantity}
+          onValueChange={onQuantityChange}
+        />
       </View>
-      <Switch
-        trackColor={{ false: '#767577', true: '#f87b1b' }}
-        thumbColor={price ? '#ffffff' : '#f4f3f4'}
-        ios_backgroundColor="#3e3e3e"
-        value={price}
-        onValueChange={onPriceChange}
-      />
-    </View>
 
-    <View style={styles.formActions}>
-      <TouchableOpacity onPress={onCancel} style={[styles.button, styles.cancelButton]}>
-        <Text style={[styles.buttonText, styles.cancelButtonText]}>Annuler</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={onSubmit} style={[styles.button, styles.submitButton]} disabled={isSubmitting}>
-        {isSubmitting ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <Text style={styles.buttonText}>{isEditing ? 'Enregistrer' : 'Créer'}</Text>
-        )}
-      </TouchableOpacity>
+      <View style={styles.switchRow}>
+        <View style={styles.switchTextContainer}>
+          <Ionicons name="cash-outline" size={20} color="#f87b1b" />
+          <Text style={styles.switchLabel}>Activer le prix</Text>
+        </View>
+        <Switch
+          trackColor={{ false: '#767577', true: '#f87b1b' }}
+          thumbColor={price ? '#ffffff' : '#f4f3f4'}
+          ios_backgroundColor="#3e3e3e"
+          value={price}
+          onValueChange={onPriceChange}
+        />
+      </View>
+
+      <View style={styles.formActions}>
+        <TouchableOpacity onPress={onCancel} style={[styles.button, styles.cancelButton]}>
+          <Text style={[styles.buttonText, styles.cancelButtonText]}>Annuler</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onSubmit} style={[styles.button, styles.submitButton]} disabled={isSubmitting}>
+          {isSubmitting ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>{isEditing ? 'Enregistrer' : 'Créer'}</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <Modal transparent visible={isPickerVisible} animationType="fade" onRequestClose={() => setPickerVisible(false)}>
+        <TouchableOpacity style={styles.pickerModalOverlay} activeOpacity={1} onPressOut={() => setPickerVisible(false)}>
+          <View style={styles.pickerModalContainer}>
+            <FlatList
+              data={typeOptions}
+              keyExtractor={(item) => item.value}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.pickerItem}
+                  onPress={() => {
+                    onTypeChange(item.value as QuestionType['type']);
+                    setPickerVisible(false);
+                  }}
+                >
+                  <Text style={styles.pickerItemText}>{item.label}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
-  </View>
-);
+  );
+};
 
 
 type Props = {
@@ -363,32 +386,31 @@ const styles = StyleSheet.create({
     inputContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#F2F2F7',
+      backgroundColor: '#FFF',
       borderRadius: 10,
       paddingHorizontal: 15,
-      height: 55,
+      height: 50,
       marginBottom: 15,
+      borderWidth: 1,
+      borderColor: '#f87b1b',
     },
     input: {
       flex: 1,
       fontSize: 16,
-      color: '#1C1C1E',
-      marginLeft: 10,
-    },
-    picker: {
-      flex: 1,
-      color: '#1C1C1E',
+      color: '#11224e',
       marginLeft: 10,
     },
     switchRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: '#F2F2F7',
+      backgroundColor: '#FFF',
       borderRadius: 10,
       paddingHorizontal: 15,
-      paddingVertical: 10,
+      paddingVertical: 5,
       marginBottom: 15,
+      borderWidth: 1,
+      borderColor: '#f87b1b',
     },
     switchTextContainer: {
       flexDirection: 'row',
@@ -396,7 +418,7 @@ const styles = StyleSheet.create({
     },
     switchLabel: {
       fontSize: 16,
-      color: '#1C1C1E',
+      color: '#11224e',
       marginLeft: 10,
     },
     formActions: {
@@ -426,6 +448,33 @@ const styles = StyleSheet.create({
     },
     cancelButtonText: {
       color: '#1C1C1E',
+    },
+    pickerModalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    pickerModalContainer: {
+      backgroundColor: 'white',
+      borderRadius: 10,
+      width: '80%',
+      maxHeight: 300,
+      elevation: 5,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+    },
+    pickerItem: {
+      paddingHorizontal: 20,
+      paddingVertical: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: '#f2f2f2',
+    },
+    pickerItemText: {
+      fontSize: 16,
+      color: '#11224e',
     },
     itemCard: {
       backgroundColor: 'white',

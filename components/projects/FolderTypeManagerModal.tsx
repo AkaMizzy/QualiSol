@@ -222,7 +222,7 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
             ) : (
               <TouchableOpacity onPress={handleBeginAdd} style={styles.addButton}>
                 <Ionicons name="add" size={22} color="#f87b1b" />
-                <Text style={styles.addButtonText}>Ajouter un folder type</Text>
+                <Text style={styles.addButtonText}>Ajouter un type de dossier</Text>
               </TouchableOpacity>
             )}
 

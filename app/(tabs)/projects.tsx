@@ -46,18 +46,22 @@ export default function ProjectsScreen() {
     <>
       <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
         <AppHeader user={user || undefined} />
-        <View style={styles.pageHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 22, fontWeight: '700', color: '#11224e' }}>Chantiers</Text>
-            <Text style={{ marginTop: 4, color: '#6b7280' }}>Gérez et consultez vos chantiers en cours</Text>
+        <View style={styles.headerContainer}>
+          <View style={styles.typesContainer}>
+            <TouchableOpacity onPress={() => setProjectTypeManagerVisible(true)} style={styles.secondaryButton}>
+             
+              <Text style={styles.secondaryButtonText}>Type chantier</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setFolderTypeManagerVisible(true)} style={styles.secondaryButton}>
+              
+              <Text style={styles.secondaryButtonText}>Type dossier</Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.actionsContainer}>
-            <TouchableOpacity onPress={() => setProjectTypeManagerVisible(true)} style={styles.iconButton}>
-              <Ionicons name="albums-outline" size={24} color="#f87b1b" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setFolderTypeManagerVisible(true)} style={styles.iconButton}>
-              <Ionicons name="folder-outline" size={24} color="#f87b1b" />
-            </TouchableOpacity>
+          <View style={styles.pageHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 22, fontWeight: '700', color: '#11224e' }}>Chantiers</Text>
+              <Text style={{ marginTop: 4, color: '#6b7280' }}>Gérez et consultez vos chantiers en cours</Text>
+            </View>
             <TouchableOpacity onPress={() => setCreateVisible(true)} style={[styles.button]}>
               <Ionicons name="add-circle" size={20} color="#f87b1b" />
               <Text style={styles.ButtonText}>Ajouter</Text>
@@ -65,7 +69,7 @@ export default function ProjectsScreen() {
           </View>
         </View>
 
-        <View style={{ flex: 1, paddingHorizontal: horizontalPadding }}>
+        <View style={{ flex: 1, paddingHorizontal: horizontalPadding, marginTop: 16 }}>
           {isLoading && projects.length === 0 ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
               <ActivityIndicator color="#11224e" />
@@ -121,22 +125,38 @@ export default function ProjectsScreen() {
 }
 
 const styles = StyleSheet.create({
-  pageHeader: {
+  headerContainer: {
     padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  pageHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 16,
+    marginTop: 16,
   },
-  actionsContainer: {
+  typesContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
   },
-  iconButton: {
-    padding: 8,
-    borderRadius: 20,
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f3f4f6',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#f87b1b',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  secondaryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#f87b1b',
   },
   button: {
     flexDirection: 'row',
