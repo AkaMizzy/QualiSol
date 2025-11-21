@@ -5,7 +5,20 @@ export type QuestionType = {
   foldertype_id: string;
   title: string;
   description?: string | null;
-  type?: 'text' | 'number' | 'date' | 'boolean' | 'file' | null;
+  type?:
+    | 'text'
+    | 'long_text'
+    | 'number'
+    | 'file'
+    | 'photo'
+    | 'video'
+    | 'date'
+    | 'boolean'
+    | 'GPS'
+    | 'list'
+    | 'taux'
+    | 'voice'
+    | null;
   mask?: string | null;
   quantity?: number | null;
   price?: number | null;
@@ -29,7 +42,19 @@ export type CreateQuestionTypeDto = {
   foldertype_id: string;
   title: string;
   description?: string;
-  type?: 'text' | 'number' | 'date' | 'boolean' | 'file';
+  type?:
+    | 'text'
+    | 'long_text'
+    | 'number'
+    | 'file'
+    | 'photo'
+    | 'video'
+    | 'date'
+    | 'boolean'
+    | 'GPS'
+    | 'list'
+    | 'taux'
+    | 'voice';
   quantity?: number;
   price?: number;
 };
@@ -47,7 +72,19 @@ export async function createQuestionType(
 export type UpdateQuestionTypeDto = {
   title?: string;
   description?: string;
-  type?: 'text' | 'number' | 'date' | 'boolean' | 'file';
+  type?:
+    | 'text'
+    | 'long_text'
+    | 'number'
+    | 'file'
+    | 'photo'
+    | 'video'
+    | 'date'
+    | 'boolean'
+    | 'GPS'
+    | 'list'
+    | 'taux'
+    | 'voice';
   quantity?: number;
   price?: number;
 };

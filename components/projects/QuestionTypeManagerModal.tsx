@@ -29,10 +29,12 @@ type FormComponentProps = {
   isEditing: boolean;
   isSubmitting: boolean;
   title: string;
+  description: string;
   type: QuestionType['type'] | null;
   quantity: boolean;
   price: boolean;
   onTitleChange: (text: string) => void;
+  onDescriptionChange: (text: string) => void;
   onTypeChange: (type: QuestionType['type'] | null) => void;
   onQuantityChange: (value: boolean) => void;
   onPriceChange: (value: boolean) => void;
@@ -44,10 +46,12 @@ const FormComponent = ({
   isEditing,
   isSubmitting,
   title,
+  description,
   type,
   quantity,
   price,
   onTitleChange,
+  onDescriptionChange,
   onTypeChange,
   onQuantityChange,
   onPriceChange,
@@ -57,13 +61,20 @@ const FormComponent = ({
   const [isPickerVisible, setPickerVisible] = useState(false);
   const typeOptions = [
     { label: 'Texte', value: 'text' },
+    { label: 'Texte long', value: 'long_text' },
     { label: 'Nombre', value: 'number' },
+    { label: 'Fichier', value: 'file' },
+    { label: 'Photo', value: 'photo' },
+    { label: 'Vidéo', value: 'video' },
     { label: 'Date', value: 'date' },
     { label: 'Booléen', value: 'boolean' },
-    { label: 'Fichier', value: 'file' },
+    { label: 'GPS', value: 'GPS' },
+    { label: 'Liste', value: 'list' },
+    { label: 'Taux', value: 'taux' },
+    { label: 'Voix', value: 'voice' },
   ];
 
-  const selectedLabel = type ? typeOptions.find((opt) => opt.value === type)?.label : 'Type de question';
+  const selectedLabel = type ? typeOptions.find((opt) => opt.value === type)?.label : 'Type de question...';
 
   return (
     <View style={styles.formContainer}>
@@ -73,16 +84,28 @@ const FormComponent = ({
         <Ionicons name="text-outline" size={20} color="#f87b1b" />
         <TextInput
           placeholder="Titre de la question"
-          placeholderTextColor="#11224e"
+          placeholderTextColor="#f87b1b"
           value={title}
           onChangeText={onTitleChange}
           style={styles.input}
         />
       </View>
 
+      <View style={[styles.inputContainer, { height: 100, alignItems: 'flex-start', paddingTop: 15 }]}>
+        <Ionicons name="document-text-outline" size={20} color="#f87b1b" />
+        <TextInput
+          placeholder="Description (optionnel)"
+          placeholderTextColor="#f87b1b"
+          value={description}
+          onChangeText={onDescriptionChange}
+          style={[styles.input, { height: '100%' }]}
+          multiline
+        />
+      </View>
+
       <TouchableOpacity style={styles.inputContainer} onPress={() => setPickerVisible(true)}>
         <Ionicons name="options-outline" size={20} color="#f87b1b" />
-        <Text style={[styles.input, !type && { color: '#11224e' }]}>{selectedLabel}</Text>
+        <Text style={[styles.input, !type && { color: '#f87b1b' }]}>{selectedLabel}</Text>
         <Ionicons name="chevron-down-outline" size={20} color="#f87b1b" />
       </TouchableOpacity>
 
@@ -166,6 +189,7 @@ export default function QuestionTypeManagerModal({ visible, onClose, folderType 
   const [isEditing, setIsEditing] = useState<QuestionType | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [type, setType] = useState<QuestionType['type'] | null>(null);
   const [quantity, setQuantity] = useState(false);
   const [price, setPrice] = useState(false);
@@ -194,6 +218,7 @@ export default function QuestionTypeManagerModal({ visible, onClose, folderType 
     setIsEditing(item);
     setIsAdding(true);
     setTitle(item.title);
+    setDescription(item.description || '');
     setType(item.type || null);
     setQuantity(!!item.quantity);
     setPrice(!!item.price);
@@ -203,6 +228,7 @@ export default function QuestionTypeManagerModal({ visible, onClose, folderType 
     setIsEditing(null);
     setIsAdding(true);
     setTitle('');
+    setDescription('');
     setType(null);
     setQuantity(false);
     setPrice(false);
@@ -212,6 +238,7 @@ export default function QuestionTypeManagerModal({ visible, onClose, folderType 
     setIsEditing(null);
     setIsAdding(false);
     setTitle('');
+    setDescription('');
     setType(null);
     setQuantity(false);
     setPrice(false);
@@ -225,16 +252,20 @@ export default function QuestionTypeManagerModal({ visible, onClose, folderType 
 
     setIsSubmitting(true);
     try {
+      const questionData = {
+        title,
+        description: description.trim() ? description : undefined,
+        type,
+        quantity: quantity ? 1 : 0,
+        price: price ? 1 : 0,
+      };
+
       if (isEditing) {
-        const updated = await updateQuestionType(
-          isEditing.id,
-          { title, type, quantity: quantity ? 1 : 0, price: price ? 1 : 0 },
-          token
-        );
+        const updated = await updateQuestionType(isEditing.id, questionData, token);
         setQuestionTypes((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       } else {
         const newQuestion = await createQuestionType(
-          { foldertype_id: folderType.id, title, type, quantity: quantity ? 1 : 0, price: price ? 1 : 0 },
+          { ...questionData, foldertype_id: folderType.id },
           token
         );
         setQuestionTypes((prev) => [newQuestion, ...prev]);
@@ -261,7 +292,8 @@ export default function QuestionTypeManagerModal({ visible, onClose, folderType 
     <View style={styles.itemCard}>
       <View style={styles.itemTextContainer}>
         <Text style={styles.itemTitle}>{item.title}</Text>
-        <Text style={styles.itemDescription}>Type: {item.type}</Text>
+        {item.description ? <Text style={styles.itemDescription}>{item.description}</Text> : null}
+        <Text style={[styles.itemDescription, { fontStyle: 'italic', marginTop: 4 }]}>Type: {item.type}</Text>
       </View>
       <View style={styles.itemActions}>
         <TouchableOpacity onPress={() => handleBeginEdit(item)} style={styles.iconButton}>
@@ -290,10 +322,12 @@ export default function QuestionTypeManagerModal({ visible, onClose, folderType 
                 isEditing={!!isEditing}
                 isSubmitting={isSubmitting}
                 title={title}
+                description={description}
                 type={type}
                 quantity={quantity}
                 price={price}
                 onTitleChange={setTitle}
+                onDescriptionChange={setDescription}
                 onTypeChange={setType}
                 onQuantityChange={setQuantity}
                 onPriceChange={setPrice}
