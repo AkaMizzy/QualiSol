@@ -17,7 +17,7 @@ const QuestionTypeCard = ({ item }: { item: QuestionType }) => (
       <Text style={styles.cardTitle}>{item.title}</Text>
       {item.description ? <Text style={styles.cardDescription}>{item.description}</Text> : null}
       <View style={styles.cardFooter}>
-        <Ionicons name="pricetag-outline" size={14} color="#6b7280" />
+        <Ionicons name="pricetag-outline" size={14} color="#f87b1b" />
         <Text style={styles.cardType}>{item.type}</Text>
       </View>
     </View>
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#f87b1b',
     minHeight: 150,
     justifyContent: 'space-between',
   },
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   },
   cardType: {
     fontSize: 12,
-    color: '#6b7280',
+    color: '#f87b1b',
     marginLeft: 4,
     textTransform: 'capitalize',
     backgroundColor: '#f3f4f6',

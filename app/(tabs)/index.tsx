@@ -32,13 +32,13 @@ const GRID_ITEMS: {
 }[] = [
   { title: 'QualiPhoto', image: require('../../assets/icons/camera_p.png')},
   { title: 'Suivi', image: require('../../assets/icons/folder.png') },
-  { title: 'Pv', image: require('../../assets/icons/manifolder.png') },
-  { title: 'Déclarations', image: require('../../assets/icons/declaration_anomalie.png') },
   { title: 'Calendrier', image: require('../../assets/icons/calendar.png') },
-  { title: 'Prospects', image: require('../../assets/icons/cv.png') },
-  { title: 'Planning', image: require('../../assets/icons/planning.png'), disabled: true },
-  { title: 'Audit', image: require('../../assets/icons/audit_zone.png'), disabled: true },
-  { title: 'Echantillon', image: require('../../assets/icons/prelevement_echantillon.png'), disabled: true },
+  { title: 'Pv', image: require('../../assets/icons/pv.png') },
+  { title: 'Test', image: require('../../assets/icons/test.png') },
+  { title: 'Déclarations', image: require('../../assets/icons/declaration_anomalie.png') },
+  { title: 'Disponse', image: require('../../assets/icons/disponse.png')},
+  { title: 'Manifold', image: require('../../assets/icons/manifold.png')},
+  { title: 'Planning', image: require('../../assets/icons/planning.png') },
   { title: 'Chantiers', image: require('../../assets/icons/project.png') },
   { title: 'Utilisateurs', image: require('../../assets/icons/users.png') },
   { title: 'Organisme',  image: require('../../assets/icons/company.png') },
@@ -258,7 +258,7 @@ export default function DashboardScreen() {
                   setIsCalendarVisible(prevState => !prevState);
                 } else if (item.title === 'Pv') {
                   //router.push('/manifolder');
-                } else if (item.title === 'Déclarations') {
+                } else if (item.title === 'Test') {
                   router.push('/questions');
                 } else if (item.title === 'QualiPhoto') {
                   router.push('/galerie');
@@ -270,14 +270,10 @@ export default function DashboardScreen() {
                   //router.push('/inventaire');
                 } else if (item.title === 'Chantiers') {
                   router.push('/projects');
-                } else if (item.title === 'Paramètres') {
-                  //router.push('/parametre');
                 } else if (item.title === 'Utilisateurs') {
                   router.push('/users');
                 } else if (item.title === 'Organisme') {
                   router.push('/company');
-                } else if (item.title === 'Prospects') {
-                  router.push('/prospects');
                 } else {
                   Alert.alert('Bientôt disponible', `La fonctionnalité ${item.title} est en cours de développement.`);
                 }

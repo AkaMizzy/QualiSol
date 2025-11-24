@@ -5,7 +5,7 @@ export const ICONS = {
   cameraPng: require('@/assets/icons/camera_p.png'),
   planning: require('@/assets/icons/planning.png'),
   calendar: require('@/assets/icons/calendar.png'),
-  manifolder: require('@/assets/icons/manifolder.png'),
+  pv: require('@/assets/icons/pv.png'),
   declaration: require('@/assets/icons/declaration_anomalie.png'),
   auditZone: require('@/assets/icons/audit_zone.png'),
   prelevementEchantillon: require('@/assets/icons/prelevement_echantillon.png'),
@@ -22,6 +22,8 @@ export const ICONS = {
   google: require('@/assets/icons/google.png'),
   chantierPng: require('@/assets/icons/chantier.png'),
   cvPNG: require('@/assets/icons/cv.png'),
+  manifold: require('@/assets/icons/manifold.png'),
+  disponse: require('@/assets/icons/disponse.png'),
   // GIF icons
   cameraGif: require('@/assets/icons/camera.gif'),
   constructionGif: require('@/assets/icons/construction.gif'),

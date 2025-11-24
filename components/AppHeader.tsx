@@ -106,6 +106,16 @@ export default function AppHeader({
         
         {/* Right side - Action Icons */}
         <View style={styles.headerRight}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            style={styles.iconButton}
+            onPress={() => handleNavigate('/prospects')}
+          >
+            <Image 
+              source={ICONS.cvPNG} 
+              style={styles.headerIcon}
+            />
+          </TouchableOpacity>
           {showProfile && (
             <TouchableOpacity
               accessibilityRole="button"
@@ -190,4 +200,8 @@ const styles = StyleSheet.create({
     height: 45,
     borderRadius: 22.5,
   },
+  headerIcon: {
+    width: 32,
+    height: 32,
+  }
 });
