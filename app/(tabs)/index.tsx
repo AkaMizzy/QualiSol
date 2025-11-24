@@ -257,7 +257,7 @@ export default function DashboardScreen() {
                   LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                   setIsCalendarVisible(prevState => !prevState);
                 } else if (item.title === 'Pv') {
-                  //router.push('/manifolder');
+                  router.push('/pv');
                 } else if (item.title === 'Test') {
                   router.push('/questions');
                 } else if (item.title === 'QualiPhoto') {

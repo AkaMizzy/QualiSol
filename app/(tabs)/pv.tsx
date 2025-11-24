@@ -8,8 +8,6 @@ import CreateFolderModal from '@/components/folder/CreateFolderModal';
 import { useAuth } from '@/contexts/AuthContext';
 import folderService, { Folder, Project, Zone } from '@/services/folderService';
 import { getAllFolderTypes } from '@/services/folderTypeService';
-import { Image } from 'expo-image';
-import { ICONS } from '@/constants/Icons';
 
 const FolderCard = ({ item }: { item: Folder }) => (
   <TouchableOpacity style={styles.card}>
@@ -27,7 +25,7 @@ const FolderCard = ({ item }: { item: Folder }) => (
   </TouchableOpacity>
 );
 
-export default function QuestionsScreen() {
+export default function PvScreen() {
   const { token, user } = useAuth();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,13 +50,13 @@ export default function QuestionsScreen() {
 
     try {
       const folderTypes = await getAllFolderTypes(token);
-      const testFolderType = folderTypes.find((ft) => ft.title === 'Test');
+      const pvFolderType = folderTypes.find((ft) => ft.title === 'Pv');
 
-      if (testFolderType) {
-        const fetchedFolders = await folderService.getAllFolders(token, testFolderType.id);
+      if (pvFolderType) {
+        const fetchedFolders = await folderService.getAllFolders(token, pvFolderType.id);
         setFolders(fetchedFolders);
       } else {
-        setError('Le type de dossier "Test" est introuvable.');
+        setError('Le type de dossier "Pv" est introuvable.');
       }
     } catch (err) {
       setError('Impossible de charger les dossiers.');
@@ -131,9 +129,9 @@ export default function QuestionsScreen() {
     <SafeAreaView style={styles.container}>
       <AppHeader user={user || undefined} />
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Dossiers de Test</Text>
+        <Text style={styles.headerTitle}>Dossiers de Pv</Text>
         <TouchableOpacity style={styles.addButton} onPress={() => setIsModalVisible(true)} disabled={!selectedProject || !selectedZone}>
-          <Image source={ICONS.test} style={{ width: 28, height: 28 }} />
+          <Ionicons name="add-circle-outline" size={28} color={(!selectedProject || !selectedZone) ? '#a0a0a0' : '#f87b1b'} />
         </TouchableOpacity>
       </View>
       <View style={styles.filterContainer}>
