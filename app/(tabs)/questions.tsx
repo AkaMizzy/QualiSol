@@ -5,20 +5,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppHeader from '@/components/AppHeader';
 import { useAuth } from '@/contexts/AuthContext';
+import folderService, { Folder } from '@/services/folderService';
 import { getAllFolderTypes } from '@/services/folderTypeService';
-import { getQuestionTypesByFolder, QuestionType } from '@/services/questionTypeService';
 
-const QuestionTypeCard = ({ item }: { item: QuestionType }) => (
+const FolderCard = ({ item }: { item: Folder }) => (
   <View style={styles.card}>
     <View style={styles.cardIcon}>
-      <Ionicons name="help-circle-outline" size={24} color="#f87b1b" />
+      <Ionicons name="folder-outline" size={24} color="#f87b1b" />
     </View>
     <View style={styles.cardContent}>
       <Text style={styles.cardTitle}>{item.title}</Text>
       {item.description ? <Text style={styles.cardDescription}>{item.description}</Text> : null}
       <View style={styles.cardFooter}>
-        <Ionicons name="pricetag-outline" size={14} color="#f87b1b" />
-        <Text style={styles.cardType}>{item.type}</Text>
+        <Ionicons name="barcode-outline" size={14} color="#f87b1b" />
+        <Text style={styles.cardType}>{item.code}</Text>
       </View>
     </View>
   </View>
@@ -26,11 +26,11 @@ const QuestionTypeCard = ({ item }: { item: QuestionType }) => (
 
 export default function QuestionsScreen() {
   const { token, user } = useAuth();
-  const [questionTypes, setQuestionTypes] = useState<QuestionType[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchQuestions = useCallback(async () => {
+  const fetchFolders = useCallback(async () => {
     if (!token) {
       setIsLoading(false);
       return;
@@ -41,13 +41,13 @@ export default function QuestionsScreen() {
       const testFolderType = folderTypes.find((ft) => ft.title === 'Test');
 
       if (testFolderType) {
-        const questions = await getQuestionTypesByFolder(testFolderType.id, token);
-        setQuestionTypes(questions);
+        const fetchedFolders = await folderService.getAllFolders(token, testFolderType.id);
+        setFolders(fetchedFolders);
       } else {
         setError('Le type de dossier "Test" est introuvable.');
       }
     } catch (err) {
-      setError('Impossible de charger les questions.');
+      setError('Impossible de charger les dossiers.');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -55,8 +55,8 @@ export default function QuestionsScreen() {
   }, [token]);
 
   useEffect(() => {
-    fetchQuestions();
-  }, [fetchQuestions]);
+    fetchFolders();
+  }, [fetchFolders]);
 
   if (isLoading) {
     return (
@@ -78,14 +78,14 @@ export default function QuestionsScreen() {
     <SafeAreaView style={styles.container}>
       <AppHeader user={user || undefined} />
       <FlatList
-        data={questionTypes}
-        renderItem={({ item }) => <QuestionTypeCard item={item} />}
+        data={folders}
+        renderItem={({ item }) => <FolderCard item={item} />}
         keyExtractor={(item) => item.id}
         numColumns={2}
         contentContainerStyle={styles.grid}
         ListEmptyComponent={
           <View style={styles.center}>
-            <Text style={styles.emptyText}>Aucune question trouvée.</Text>
+            <Text style={styles.emptyText}>Aucun dossier trouvé.</Text>
           </View>
         }
       />

@@ -1,23 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-  Image,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  UIManager,
-  View,
-  ActivityIndicator
+    ActivityIndicator,
+    Image,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    UIManager,
+    View
 } from 'react-native';
 
 import API_CONFIG from '@/app/config/api';
 import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
+import folderService, { Folder } from '@/services/folderService';
 import { Ged } from '@/services/gedService';
-import folderService, { Folder } from '@/services/qualiphotoService';
 import { getAllStatuses, Status } from '@/services/statusService';
 import CustomAlert from '../CustomAlert';
 import QualiPhotoEditModal from './QualiPhotoEditModal';

@@ -1,8 +1,8 @@
 // import PictureAnnotator from '@/components/PictureAnnotator';
 import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { Folder } from '@/services/folderService';
 import { CreateGedInput, Ged, createGed, describeImage } from '@/services/gedService';
-import { Folder } from '@/services/qualiphotoService';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';

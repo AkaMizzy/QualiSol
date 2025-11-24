@@ -3,7 +3,7 @@ import CreateQualiPhotoModal from '@/components/reception/CreateQualiPhotoModal'
 import QualiPhotoDetail from '@/components/reception/QualiPhotoDetail';
 import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
-import folderService, { Folder, Project, Zone } from '@/services/qualiphotoService';
+import folderService, { Folder, Project, Zone } from '@/services/folderService';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';

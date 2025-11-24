@@ -1,7 +1,7 @@
 import API_CONFIG from '@/app/config/api';
 import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
-import folderService, { CreateFolderPayload, Folder } from '@/services/qualiphotoService';
+import folderService, { CreateFolderPayload, Folder } from '@/services/folderService';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';

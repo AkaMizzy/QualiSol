@@ -1,7 +1,7 @@
 import AppHeader from '@/components/AppHeader';
 import { useAuth } from '@/contexts/AuthContext';
+import { Folder, Project, Zone } from '@/services/folderService';
 import { Ged, getGedsBySource } from '@/services/gedService';
-import { Folder, Project, Zone } from '@/services/qualiphotoService';
 import { Audio } from 'expo-av';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, StyleSheet, UIManager, View } from 'react-native';

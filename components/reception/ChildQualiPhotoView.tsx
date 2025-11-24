@@ -3,24 +3,24 @@ import { Audio } from 'expo-av';
 import * as Linking from 'expo-linking';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 import API_CONFIG from '@/app/config/api';
 import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
-import { Ged, describeImage, getGedsBySource, updateGed, updateGedFile } from '@/services/gedService';
-import { Folder } from '@/services/qualiphotoService';
+import { Folder } from '@/services/folderService';
+import { describeImage, Ged, getGedsBySource, updateGed, updateGedFile } from '@/services/gedService';
 import { getAllStatuses, Status } from '@/services/statusService';
 
 import CustomAlert from '../CustomAlert';

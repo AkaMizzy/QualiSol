@@ -1,7 +1,7 @@
 import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
+import folderService, { Folder } from '@/services/folderService';
 import { createGed, getGedsBySource } from '@/services/gedService';
-import folderService, { Folder } from '@/services/qualiphotoService';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Linking from 'expo-linking';

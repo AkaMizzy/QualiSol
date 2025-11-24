@@ -1,16 +1,16 @@
 import { ICONS } from '@/constants/Icons';
-import { Folder } from '@/services/qualiphotoService';
+import { Folder } from '@/services/folderService';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
 
-type PhotoActionsProps = {
+interface PhotoActionsProps {
   item: Folder;
   onPlaySound: () => void;
   isPlaying: boolean;
   onMapPress: () => void;
   onEdit?: () => void;
-};
+}
 
 export const PhotoActions: React.FC<PhotoActionsProps> = ({
   item,
