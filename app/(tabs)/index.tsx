@@ -259,7 +259,7 @@ export default function DashboardScreen() {
                 } else if (item.title === 'Pv') {
                   //router.push('/manifolder');
                 } else if (item.title === 'Déclarations') {
-                  //router.push('/declaration');
+                  router.push('/questions');
                 } else if (item.title === 'QualiPhoto') {
                   router.push('/galerie');
                 } else if (item.title === 'Audit') {

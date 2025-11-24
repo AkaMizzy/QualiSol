@@ -1,26 +1,29 @@
 import { useAuth } from '@/contexts/AuthContext';
 import {
-    createQuestionType,
-    deleteQuestionType,
-    getQuestionTypesByFolder,
-    QuestionType,
-    updateQuestionType,
+  createQuestionType,
+  deleteQuestionType,
+  getQuestionTypesByFolder,
+  QuestionType,
+  updateQuestionType,
 } from '@/services/questionTypeService';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -60,19 +63,19 @@ const FormComponent = ({
 }: FormComponentProps) => {
   const [isPickerVisible, setPickerVisible] = useState(false);
   const typeOptions = [
-    { label: 'Texte', value: 'text' },
-    { label: 'Texte long', value: 'long_text' },
-    { label: 'Nombre', value: 'number' },
-    { label: 'Fichier', value: 'file' },
-    { label: 'Photo', value: 'photo' },
-    { label: 'Vidéo', value: 'video' },
-    { label: 'Date', value: 'date' },
     { label: 'Booléen', value: 'boolean' },
+    { label: 'Date', value: 'date' },
+    { label: 'Fichier', value: 'file' },
     { label: 'GPS', value: 'GPS' },
     { label: 'Liste', value: 'list' },
+    { label: 'Nombre', value: 'number' },
+    { label: 'Photo', value: 'photo' },
     { label: 'Taux', value: 'taux' },
+    { label: 'Texte', value: 'text' },
+    { label: 'Texte long', value: 'long_text' },
+    { label: 'Vidéo', value: 'video' },
     { label: 'Voix', value: 'voice' },
-  ];
+  ].sort((a, b) => a.label.localeCompare(b.label));
 
   const selectedLabel = type ? typeOptions.find((opt) => opt.value === type)?.label : 'Type de question...';
 
@@ -88,6 +91,8 @@ const FormComponent = ({
           value={title}
           onChangeText={onTitleChange}
           style={styles.input}
+          returnKeyType="done"
+          onSubmitEditing={Keyboard.dismiss}
         />
       </View>
 
@@ -100,6 +105,8 @@ const FormComponent = ({
           onChangeText={onDescriptionChange}
           style={[styles.input, { height: '100%' }]}
           multiline
+          returnKeyType="done"
+          blurOnSubmit={true}
         />
       </View>
 
@@ -309,53 +316,58 @@ export default function QuestionTypeManagerModal({ visible, onClose, folderType 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <SafeAreaView style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Gérer les Questions pour {folderType.title}</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color="#6b7280" />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.contentContainer}>
-            {isAdding ? (
-              <FormComponent
-                isEditing={!!isEditing}
-                isSubmitting={isSubmitting}
-                title={title}
-                description={description}
-                type={type}
-                quantity={quantity}
-                price={price}
-                onTitleChange={setTitle}
-                onDescriptionChange={setDescription}
-                onTypeChange={setType}
-                onQuantityChange={setQuantity}
-                onPriceChange={setPrice}
-                onSubmit={handleSubmit}
-                onCancel={handleCancel}
-              />
-            ) : (
-              <TouchableOpacity onPress={handleBeginAdd} style={styles.addButton}>
-                <Ionicons name="add" size={22} color="#f87b1b" />
-                <Text style={styles.addButtonText}>Ajouter une question</Text>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <SafeAreaView style={styles.container}>
+            <View style={styles.header}>
+              <Text style={styles.headerTitle}>Gérer les Questions pour {folderType.title}</Text>
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
-            )}
+            </View>
+            <ScrollView style={styles.contentContainer} contentContainerStyle={{ paddingBottom: 20 }}>
+              {isAdding ? (
+                <FormComponent
+                  isEditing={!!isEditing}
+                  isSubmitting={isSubmitting}
+                  title={title}
+                  description={description}
+                  type={type}
+                  quantity={quantity}
+                  price={price}
+                  onTitleChange={setTitle}
+                  onDescriptionChange={setDescription}
+                  onTypeChange={setType}
+                  onQuantityChange={setQuantity}
+                  onPriceChange={setPrice}
+                  onSubmit={handleSubmit}
+                  onCancel={handleCancel}
+                />
+              ) : (
+                <TouchableOpacity onPress={handleBeginAdd} style={styles.addButton}>
+                  <Ionicons name="add" size={22} color="#f87b1b" />
+                  <Text style={styles.addButtonText}>Ajouter une question</Text>
+                </TouchableOpacity>
+              )}
 
-            {isLoading && !isAdding ? (
-              <ActivityIndicator style={{ marginTop: 20 }} color="#11224e" size="large" />
-            ) : (
-              <FlatList
-                data={questionTypes}
-                keyExtractor={(item) => item.id}
-                renderItem={renderItem}
-                contentContainerStyle={{ paddingBottom: 20, paddingTop: isAdding ? 0 : 16 }}
-                ListEmptyComponent={
-                  !isLoading ? <Text style={styles.emptyText}>Aucune question. Appuyez sur &quot;Ajouter&quot; pour en créer une.</Text> : null
-                }
-              />
-            )}
-          </View>
-        </SafeAreaView>
+              {isLoading && !isAdding ? (
+                <ActivityIndicator style={{ marginTop: 20 }} color="#11224e" size="large" />
+              ) : (
+                <FlatList
+                  data={questionTypes}
+                  keyExtractor={(item) => item.id}
+                  renderItem={renderItem}
+                  scrollEnabled={false}
+                  contentContainerStyle={{ paddingTop: isAdding ? 0 : 16 }}
+                  ListEmptyComponent={
+                    !isLoading ? (
+                      <Text style={styles.emptyText}>Aucune question. Appuyez sur &quot;Ajouter&quot; pour en créer une.</Text>
+                    ) : null
+                  }
+                />
+              )}
+            </ScrollView>
+          </SafeAreaView>
+        </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -493,18 +505,19 @@ const styles = StyleSheet.create({
       backgroundColor: 'white',
       borderRadius: 10,
       width: '80%',
-      maxHeight: 300,
       elevation: 5,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.25,
       shadowRadius: 4,
+      borderWidth: 1,
+      borderColor: '#f87b1b',
     },
     pickerItem: {
       paddingHorizontal: 20,
       paddingVertical: 15,
       borderBottomWidth: 1,
-      borderBottomColor: '#f2f2f2',
+      borderBottomColor: '#f87b1b',
     },
     pickerItemText: {
       fontSize: 16,

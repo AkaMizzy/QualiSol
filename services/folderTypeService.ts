@@ -9,6 +9,8 @@ export type FolderType = {
   company_id: string;
   created_at: string;
   updated_at: string;
+  imageUrl?: string;
+  imageGedId?: string;
 };
 
 export async function getAllFolderTypes(token: string): Promise<FolderType[]> {

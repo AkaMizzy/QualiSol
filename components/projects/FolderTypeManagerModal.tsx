@@ -1,3 +1,4 @@
+import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   createFolderType,
@@ -6,11 +7,16 @@ import {
   getAllFolderTypes,
   updateFolderType,
 } from '@/services/folderTypeService';
+import { createGed, getGedsBySource, updateGedFile } from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { ImagePickerAsset } from 'expo-image-picker';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -32,6 +38,8 @@ type FormComponentProps = {
   onDescriptionChange: (text: string) => void;
   onSubmit: () => void;
   onCancel: () => void;
+  onPickImage: () => void;
+  imageUri?: string;
 };
 
 const FormComponent = ({
@@ -43,9 +51,21 @@ const FormComponent = ({
   onDescriptionChange,
   onSubmit,
   onCancel,
+  onPickImage,
+  imageUri,
 }: FormComponentProps) => (
   <View style={styles.formCard}>
     <Text style={styles.formTitle}>{isEditing ? 'Modifier le type' : 'Nouveau type de dossier'}</Text>
+    <TouchableOpacity onPress={onPickImage} style={styles.imagePicker}>
+      {imageUri ? (
+        <Image source={{ uri: imageUri }} style={styles.previewImage} />
+      ) : (
+        <View style={styles.imagePlaceholder}>
+          <Ionicons name="camera" size={24} color="#f87b1b" />
+          <Text style={styles.imagePickerText}>Ajouter une image</Text>
+        </View>
+      )}
+    </TouchableOpacity>
     <View style={styles.inputWrap}>
       <Ionicons name="text-outline" size={16} color="#f87b1b" />
       <TextInput
@@ -84,7 +104,7 @@ type Props = {
 };
 
 export default function FolderTypeManagerModal({ visible, onClose }: Props) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [folderTypes, setFolderTypes] = useState<FolderType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditing, setIsEditing] = useState<FolderType | null>(null);
@@ -94,13 +114,27 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFolderType, setSelectedFolderType] = useState<FolderType | null>(null);
   const [isQuestionModalVisible, setIsQuestionModalVisible] = useState(false);
+  const [image, setImage] = useState<ImagePickerAsset | null>(null);
 
   const fetchFolderTypes = useCallback(async () => {
     if (!token) return;
     setIsLoading(true);
     try {
       const types = await getAllFolderTypes(token);
-      setFolderTypes(types);
+      const typesWithImages = await Promise.all(
+        types.map(async (type) => {
+          const geds = await getGedsBySource(token, type.id, 'folder_type_icon');
+          if (geds.length > 0 && geds[0].url) {
+            return {
+              ...type,
+              imageUrl: `${API_CONFIG.BASE_URL}${geds[0].url}`,
+              imageGedId: geds[0].id,
+            };
+          }
+          return type;
+        })
+      );
+      setFolderTypes(typesWithImages);
     } catch (error) {
       console.error('Failed to fetch folder types:', error);
     } finally {
@@ -124,6 +158,7 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
     setIsAdding(false);
     setTitle(type.title);
     setDescription(type.description || '');
+    setImage(null);
   };
 
   const handleBeginAdd = () => {
@@ -131,6 +166,7 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
     setIsAdding(true);
     setTitle('');
     setDescription('');
+    setImage(null);
   };
 
   const handleCancel = () => {
@@ -138,29 +174,72 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
     setIsAdding(false);
     setTitle('');
     setDescription('');
+    setImage(null);
   };
 
   const handleSubmit = async () => {
-    if (!token || !title.trim()) {
+    if (!token || !title.trim() || !user) {
+      Alert.alert('Erreur', 'Titre manquant ou utilisateur non authentifié.');
       return;
     }
 
     setIsSubmitting(true);
     try {
+      let savedType: FolderType;
       if (isEditing) {
         const updatedType = await updateFolderType(
           isEditing.id,
           { title, description: description || undefined },
           token
         );
-        setFolderTypes((prev) => prev.map((t) => (t.id === updatedType.id ? updatedType : t)));
+        setFolderTypes((prev) =>
+          prev.map((t) => (t.id === updatedType.id ? { ...t, ...updatedType } : t))
+        );
+        savedType = { ...isEditing, ...updatedType };
       } else {
         const newType = await createFolderType({ title, description: description || undefined }, token);
         setFolderTypes((prev) => [newType, ...prev]);
+        savedType = newType;
       }
+
+      if (image && image.uri) {
+        const file = {
+          uri: image.uri,
+          name: image.fileName || `photo_${Date.now()}.jpg`,
+          type: image.type === 'image' ? 'image/jpeg' : 'video/mp4',
+        };
+
+        if (isEditing && isEditing.imageGedId) {
+          const updatedGed = await updateGedFile(token, isEditing.imageGedId, file);
+          setFolderTypes((prev) =>
+            prev.map((t) =>
+              t.id === savedType.id
+                ? { ...t, imageUrl: `${API_CONFIG.BASE_URL}${updatedGed.url}`, imageGedId: updatedGed.id }
+                : t
+            )
+          );
+        } else {
+          const gedData = await createGed(token, {
+            idsource: savedType.id,
+            title: `Icon for ${savedType.title}`,
+            kind: 'folder_type_icon',
+            author: user.id,
+            file,
+          });
+          setFolderTypes((prev) =>
+            prev.map((t) =>
+              t.id === savedType.id
+                ? { ...t, imageUrl: `${API_CONFIG.BASE_URL}${gedData.data.url}`, imageGedId: gedData.data.id }
+                : t
+            )
+          );
+        }
+      }
+
       handleCancel();
     } catch (error) {
       console.error(`Failed to ${isEditing ? 'update' : 'create'} folder type:`, error);
+      Alert.alert('Erreur', `Échec de ${isEditing ? 'la mise à jour' : 'la création'} du type de dossier.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -176,8 +255,32 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
     }
   };
 
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission refusée', 'La permission d’accès à la galerie est requise.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0]);
+    }
+  };
+
   const renderItem = ({ item }: { item: FolderType }) => (
     <View style={styles.itemCard}>
+      <Image
+        source={{ uri: item.imageUrl || undefined }}
+        style={styles.itemImage}
+        defaultSource={require('@/assets/images/icon.png')} // Provide a default image
+      />
       <View style={styles.itemTextContainer}>
         <Text style={styles.itemTitle}>{item.title}</Text>
         {item.description ? <Text style={styles.itemDescription}>{item.description}</Text> : null}
@@ -218,6 +321,8 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
                 onDescriptionChange={setDescription}
                 onSubmit={handleSubmit}
                 onCancel={handleCancel}
+                onPickImage={handlePickImage}
+                imageUri={image?.uri || (isEditing?.imageUrl)}
               />
             ) : (
               <TouchableOpacity onPress={handleBeginAdd} style={styles.addButton}>
@@ -309,6 +414,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#11224e',
   },
+  imagePicker: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 120,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#f87b1b',
+    borderStyle: 'dashed',
+    backgroundColor: '#fff7ed',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+  },
+  imagePlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  imagePickerText: {
+    color: '#f87b1b',
+    fontWeight: '600',
+  },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -352,6 +481,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#f87b1b',
     marginBottom: 12,
+  },
+  itemImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 16,
+    backgroundColor: '#e5e7eb',
   },
   itemTextContainer: { flex: 1, marginRight: 16 },
   itemTitle: { fontSize: 16, fontWeight: '600', color: '#11224e' },
