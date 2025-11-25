@@ -5,24 +5,48 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppHeader from '@/components/AppHeader';
 import CreateFolderModal from '@/components/folder/CreateFolderModal';
+import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
 import folderService, { Folder, Project, Zone } from '@/services/folderService';
 import { getAllFolderTypes } from '@/services/folderTypeService';
+import { Image } from 'expo-image';
 
-const FolderCard = ({ item }: { item: Folder }) => (
-  <TouchableOpacity style={styles.card}>
-    <View style={styles.cardIcon}>
-      <Ionicons name="folder-outline" size={24} color="#f87b1b" />
+function formatDateForGrid(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  try {
+    const compliantDateStr = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
+    return new Intl.DateTimeFormat('fr-FR', {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(compliantDateStr));
+  } catch {
+    return '';
+  }
+}
+
+const FolderCard = ({ item, projectTitle, zoneTitle }: { item: Folder; projectTitle?: string; zoneTitle?: string; }) => (
+  <Pressable style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
+    <View style={styles.cardBody}>
+      <Text style={styles.cardTitle} numberOfLines={2}>
+        {item.title}
+      </Text>
+      <View style={styles.infoRow}>
+        <Image source={ICONS.chantierPng} style={{ width: 14, height: 14 }} />
+        <Text style={styles.infoText} numberOfLines={1}>{projectTitle || 'N/A'}</Text>
+      </View>
+      <View style={styles.infoRow}>
+        <Ionicons name="location-outline" size={14} color="#f87b1b" />
+        <Text style={styles.infoText} numberOfLines={1}>{zoneTitle || 'N/A'}</Text>
+      </View>
+      <View style={styles.infoRow}>
+        <Ionicons name="calendar-outline" size={14} color="#f87b1b" />
+        <Text style={styles.infoText}>{formatDateForGrid(item.created_at)}</Text>
+      </View>
     </View>
-    <View style={styles.cardContent}>
-      <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-      <Text style={styles.cardDescription} numberOfLines={3}>{item.description || 'Aucune description'}</Text>
-    </View>
-    <View style={styles.cardFooter}>
-      <Ionicons name="barcode-outline" size={14} color="#6b7280" />
-      <Text style={styles.cardCode}>{item.code}</Text>
-    </View>
-  </TouchableOpacity>
+  </Pressable>
 );
 
 export default function PvScreen() {
@@ -41,6 +65,7 @@ export default function PvScreen() {
   const [zoneOpen, setZoneOpen] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [loadingZones, setLoadingZones] = useState(false);
+  const [allZones, setAllZones] = useState<Zone[]>([]);
 
   const fetchFolders = useCallback(async () => {
     if (!token) {
@@ -87,6 +112,20 @@ export default function PvScreen() {
     fetchProjects();
   }, [token]);
 
+  // Load all zones on mount (for display purposes)
+  useEffect(() => {
+    async function fetchAllZones() {
+      if (!token) return;
+      try {
+        const fetchedZones = await folderService.getAllZones(token);
+        setAllZones(fetchedZones);
+      } catch (error) {
+        console.error('Failed to load all zones', error);
+      }
+    }
+    fetchAllZones();
+  }, [token]);
+
   // Load zones when project changes
   useEffect(() => {
     async function fetchZones() {
@@ -128,12 +167,6 @@ export default function PvScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader user={user || undefined} />
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Dossiers de Pv</Text>
-        <TouchableOpacity style={styles.addButton} onPress={() => setIsModalVisible(true)} disabled={!selectedProject || !selectedZone}>
-          <Ionicons name="add-circle-outline" size={28} color={(!selectedProject || !selectedZone) ? '#a0a0a0' : '#f87b1b'} />
-        </TouchableOpacity>
-      </View>
       <View style={styles.filterContainer}>
         <View style={styles.dropdownsContainer}>
           {/* Project dropdown */}
@@ -240,24 +273,32 @@ export default function PvScreen() {
             )}
           </View>
         </View>
+        <TouchableOpacity style={[styles.addButton, (!selectedProject || !selectedZone) && styles.addButtonDisabled]} onPress={() => setIsModalVisible(true)} disabled={!selectedProject || !selectedZone}>
+          <Image source={ICONS.pv} style={{ width: 28, height: 28 }} />
+        </TouchableOpacity>
       </View>
       <FlatList
         data={folders}
-        renderItem={({ item }) => <FolderCard item={item} />}
+        renderItem={({ item }) => {
+          const projectTitle = projects.find(p => p.id === item.project_id)?.title;
+          const zoneTitle = allZones.find(z => z.id === item.zone_id)?.title;
+          return <FolderCard item={item} projectTitle={projectTitle} zoneTitle={zoneTitle} />;
+        }}
         keyExtractor={(item) => item.id}
         numColumns={2}
-        contentContainerStyle={styles.grid}
+        columnWrapperStyle={styles.row}
+        contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <View style={styles.center}>
-            <Text style={styles.emptyText}>Aucun dossier trouvé.</Text>
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyTitle}>Aucun dossier trouvé.</Text>
           </View>
         }
       />
       <CreateFolderModal
         visible={isModalVisible}
         onClose={() => setIsModalVisible(false)}
-        onSuccess={(newFolder) => {
-          setFolders(prev => [newFolder as Folder, ...prev]);
+        onSuccess={() => {
+          fetchFolders();
           setIsModalVisible(false);
         }}
         projectId={selectedProject}
@@ -270,29 +311,24 @@ export default function PvScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#11224e',
+    backgroundColor: '#FFFFFF',
   },
   addButton: {
     padding: 8,
   },
+  addButtonDisabled: {
+    opacity: 0.5,
+  },
   filterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 12,
+    paddingTop: 16,
+    gap: 12,
   },
   dropdownsContainer: {
+    flex: 1,
     flexDirection: 'row',
     gap: 12,
   },
@@ -367,62 +403,69 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     textAlign: 'center',
   },
-  emptyText: {
-    fontSize: 16,
-    color: '#6b7280',
+  emptyWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 16,
   },
-  grid: {
-    padding: 8,
+  emptyTitle: {
+    color: '#111827',
+    fontWeight: '700',
+    fontSize: 16,
+    marginBottom: 6,
+  },
+  row: {
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+  },
+  listContent: {
+    paddingVertical: 12,
+    gap: 12,
   },
   card: {
     flex: 1,
-    margin: 8,
-    backgroundColor: 'white',
+    maxWidth: '49%',
+    marginHorizontal: 4,
+    backgroundColor: '#ffffff',
     borderRadius: 16,
-    padding: 16,
-    shadowColor: '#11224e',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 4,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    minHeight: 180,
-    justifyContent: 'space-between',
+    borderColor: '#f87b1b',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    padding: 12,
   },
-  cardIcon: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#f87b1b1a',
-    borderRadius: 9999,
-    padding: 8,
-    marginBottom: 12,
+  pressed: {
+    transform: [{ scale: 0.98 }],
+    backgroundColor: '#f9fafb'
   },
-  cardContent: {
+  cardBody: {
     flex: 1,
+    gap: 8,
   },
   cardTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#11224e',
-    marginBottom: 6,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#f87b1b',
+    marginBottom: 8,
+    textAlign: 'center',
   },
-  cardDescription: {
-    fontSize: 12,
-    color: '#6b7280',
-    flexShrink: 1,
-  },
-  cardFooter: {
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 12,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
+    gap: 6,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
-  cardCode: {
+  infoText: {
     fontSize: 12,
-    color: '#6b7280',
-    marginLeft: 6,
-    fontWeight: '500',
+    color: '#4b5563',
+    flex: 1,
   },
 });

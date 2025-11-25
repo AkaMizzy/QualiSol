@@ -12,7 +12,7 @@ import VoiceNoteRecorder from '../VoiceNoteRecorder';
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onSuccess?: (created: Partial<Folder>) => void;
+  onSuccess?: () => void;
   projectId?: string;
   zoneId?: string;
 };
@@ -102,7 +102,7 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
         zone_id: zoneId,
       };
       const created = await folderService.createFolder(payload, token);
-      onSuccess && onSuccess(created);
+      onSuccess && onSuccess();
       handleClose();
     } catch (e: any) {
       setError(e?.message || 'Échec de l\'enregistrement');
