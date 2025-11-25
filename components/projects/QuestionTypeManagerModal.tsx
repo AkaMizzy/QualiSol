@@ -73,7 +73,7 @@ const FormComponent = ({
     { label: 'Taux', value: 'taux' },
     { label: 'Texte', value: 'text' },
     { label: 'Texte long', value: 'long_text' },
-    { label: 'Vidéo', value: 'video' },
+    { label: 'Vidéo', value: '  ' },
     { label: 'Voix', value: 'voice' },
   ].sort((a, b) => a.label.localeCompare(b.label));
 
