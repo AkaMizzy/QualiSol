@@ -79,7 +79,7 @@ export default function QuestionsScreen() {
       const testFolderType = folderTypes.find((ft) => ft.title === 'Test');
 
       if (testFolderType) {
-        const fetchedFolders = await folderService.getAllFolders(token, testFolderType.id);
+        const fetchedFolders = await folderService.getAllFolders(token, testFolderType.title);
         setFolders(fetchedFolders);
       } else {
         setError('Le type de dossier "Test" est introuvable.');

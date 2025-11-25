@@ -78,7 +78,7 @@ export default function PvScreen() {
       const pvFolderType = folderTypes.find((ft) => ft.title === 'Pv');
 
       if (pvFolderType) {
-        const fetchedFolders = await folderService.getAllFolders(token, pvFolderType.id);
+        const fetchedFolders = await folderService.getAllFolders(token, pvFolderType.title);
         setFolders(fetchedFolders);
       } else {
         setError('Le type de dossier "Pv" est introuvable.');
