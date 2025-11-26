@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth, User } from '@/contexts/AuthContext';
@@ -25,11 +26,30 @@ interface FolderQuestionsModalProps {
   onClose: () => void;
 }
 
-function QuestionInput({ item, token, user }: { item: Ged; token: string | null; user: User | null }) {
-  const [value, setValue] = useState(item.value || '');
-  const [boolValue, setBoolValue] = useState(item.value === 'true');
+function QuestionInput({
+  item,
+  token,
+  user,
+  answer,
+}: {
+  item: Ged;
+  token: string | null;
+  user: User | null;
+  answer?: Ged;
+}) {
+  const [value, setValue] = useState(answer?.description || item.value || '');
+  const [boolValue, setBoolValue] = useState(answer?.description === 'true' || item.value === 'true');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(!!answer);
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+
+  const showDatePicker = () => setDatePickerVisibility(true);
+  const hideDatePicker = () => setDatePickerVisibility(false);
+
+  const handleConfirm = (date: Date) => {
+    setValue(date.toISOString().split('T')[0]);
+    hideDatePicker();
+  };
 
   const handleSubmit = async () => {
     if (!token || !user || isSubmitting || isSubmitted) return;
@@ -107,6 +127,26 @@ function QuestionInput({ item, token, user }: { item: Ged; token: string | null;
     );
   }
 
+  if (item.type === 'date') {
+    return (
+      <>
+        <TouchableOpacity onPress={showDatePicker} style={styles.inputContainer} disabled={isSubmitted}>
+          <Ionicons name={getIconName(item.type)} size={22} style={styles.inputIcon} />
+          <Text style={[styles.input, !value && styles.placeholderText]}>
+            {value || 'YYYY-MM-DD'}
+          </Text>
+          {renderSubmitButton()}
+        </TouchableOpacity>
+        <DateTimePickerModal
+          isVisible={isDatePickerVisible}
+          mode="date"
+          onConfirm={handleConfirm}
+          onCancel={hideDatePicker}
+        />
+      </>
+    );
+  }
+
   const input = (
     <TextInput
       style={styles.input}
@@ -141,14 +181,16 @@ function QuestionInput({ item, token, user }: { item: Ged; token: string | null;
 export default function FolderQuestionsModal({ folderId, visible, onClose }: FolderQuestionsModalProps) {
   const { token, user } = useAuth();
   const [geds, setGeds] = useState<Ged[]>([]);
+  const [answers, setAnswers] = useState<Map<string, Ged>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    async function fetchGeds() {
+    async function fetchGedsAndAnswers() {
       if (!token || !folderId || !visible) {
         setGeds([]);
+        setAnswers(new Map());
         return;
       }
 
@@ -158,15 +200,27 @@ export default function FolderQuestionsModal({ folderId, visible, onClose }: Fol
         const fetchedGeds = await gedService.getGedsBySource(token, folderId, 'question');
         const filteredGeds = fetchedGeds.filter(ged => ged.type && SUPPORTED_TYPES.includes(ged.type));
         setGeds(filteredGeds);
+
+        if (filteredGeds.length > 0) {
+          const questionIds = filteredGeds.map(q => q.id);
+          const fetchedAnswers = await gedService.getGedsBySource(token, questionIds, 'answer');
+          const answersMap = new Map<string, Ged>();
+          fetchedAnswers.forEach(ans => {
+            if (ans.idsource) {
+              answersMap.set(ans.idsource, ans);
+            }
+          });
+          setAnswers(answersMap);
+        }
       } catch (err) {
-        setError('Impossible de charger les questions.');
-        console.error('Failed to fetch geds:', err);
+        setError('Impossible de charger les questions ou les réponses.');
+        console.error('Failed to fetch geds or answers:', err);
       } finally {
         setIsLoading(false);
       }
     }
 
-    fetchGeds();
+    fetchGedsAndAnswers();
   }, [folderId, token, visible]);
 
   return (
@@ -194,7 +248,7 @@ export default function FolderQuestionsModal({ folderId, visible, onClose }: Fol
             renderItem={({ item }) => (
               <View style={styles.questionContainer}>
                 <Text style={styles.questionLabel}>{item.title}</Text>
-                <QuestionInput item={item} token={token} user={user} />
+                <QuestionInput item={item} token={token} user={user} answer={answers.get(item.id)} />
               </View>
             )}
             ListEmptyComponent={
@@ -290,6 +344,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: '#111827',
+  },
+  placeholderText: {
+    color: '#9ca3af',
   },
   textArea: {
     height: 120,

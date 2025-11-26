@@ -205,8 +205,14 @@ export async function updateGedFile(
   }
 }
 
-export async function getGedsBySource(token: string, idsource: string, kind: string, sortOrder: 'asc' | 'desc' = 'desc'): Promise<Ged[]> {
-  const response = await api.get(`/api/geds/filter?idsource=${idsource}&kind=${kind}&sort=${sortOrder}`, {
+export async function getGedsBySource(
+  token: string,
+  idsource: string | string[],
+  kind: string,
+  sortOrder: 'asc' | 'desc' = 'desc'
+): Promise<Ged[]> {
+  const source = Array.isArray(idsource) ? idsource.join(',') : idsource;
+  const response = await api.get(`/api/geds/filter?idsource=${source}&kind=${kind}&sort=${sortOrder}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
