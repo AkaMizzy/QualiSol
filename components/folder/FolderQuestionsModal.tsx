@@ -446,15 +446,17 @@ function QuestionInput({
     if (status === 'recorded' || status === 'playing') {
       return (
         <View style={styles.voiceContainer}>
-          <View style={[styles.audioPlayerContainer, styles.recordedContainer]}>
-            <TouchableOpacity onPress={playSound} style={styles.playerButton}>
-              <Ionicons name={status === 'playing' ? 'pause-circle' : 'play-circle'} size={32} color="#11224e" />
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={[styles.audioPlayerContainer, styles.recordedContainer]}>
+              <TouchableOpacity onPress={playSound} style={styles.playerButton}>
+                <Ionicons name={status === 'playing' ? 'pause-circle' : 'play-circle'} size={32} color="#11224e" />
+              </TouchableOpacity>
+              <Text style={styles.recordedText}>{formatDuration(duration)}</Text>
+            </View>
+            <TouchableOpacity onPress={handleRerecord} style={styles.playerButton}>
+              <Ionicons name="trash-outline" size={28} color="#ef4444" />
             </TouchableOpacity>
-            <Text style={styles.recordedText}>{formatDuration(duration)}</Text>
           </View>
-          <TouchableOpacity onPress={handleRerecord} style={styles.playerButton}>
-            <Ionicons name="trash-outline" size={28} color="#ef4444" />
-          </TouchableOpacity>
           {renderSubmitButton()}
         </View>
       );
@@ -462,7 +464,7 @@ function QuestionInput({
 
     // Idle view
     return (
-      <TouchableOpacity style={styles.voiceContainer} onPress={startRecording}>
+      <TouchableOpacity style={styles.voiceIdleContainer} onPress={startRecording}>
         <Ionicons name="mic-outline" size={24} color="#f87b1b" />
         <Text style={styles.voiceButtonText}>Ajouter une note vocale</Text>
       </TouchableOpacity>
@@ -769,7 +771,6 @@ const styles = StyleSheet.create({
     color: '#11224e',
   },
   audioPlayerContainer: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
@@ -884,5 +885,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 99,
+  },
+  voiceIdleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 80,
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#f87b1b',
+    padding: 12,
   },
 });
