@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Modal,
   StyleSheet,
@@ -17,8 +18,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth, User } from '@/contexts/AuthContext';
 import * as gedService from '@/services/gedService';
 import { CreateGedInput, Ged } from '@/services/gedService';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 
-const SUPPORTED_TYPES = ['long_text', 'text', 'list', 'boolean', 'date', 'number', 'taux'];
+const SUPPORTED_TYPES = ['long_text', 'text', 'list', 'boolean', 'date', 'number', 'taux', 'photo'];
 
 interface FolderQuestionsModalProps {
   folderId: string | null;
@@ -42,6 +45,78 @@ function QuestionInput({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(!!answer);
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+
+  const requestCameraPermissions = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Désolé, nous avons besoin des autorisations de la caméra pour que cela fonctionne !');
+      return false;
+    }
+    return true;
+  };
+
+  const requestGalleryPermissions = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Désolé, nous avons besoin des autorisations de la galerie pour que cela fonctionne !');
+      return false;
+    }
+    return true;
+  };
+
+  const handleTakePhoto = async () => {
+    const hasPermission = await requestCameraPermissions();
+    if (!hasPermission) return;
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0]);
+    }
+  };
+
+  const handleChooseFromGallery = async () => {
+    const hasPermission = await requestGalleryPermissions();
+    if (!hasPermission) return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0]);
+    }
+  };
+
+  const handleSelectImage = () => {
+    Alert.alert(
+      'Sélectionner une image',
+      'Choisissez une option',
+      [
+        {
+          text: 'Prendre une photo',
+          onPress: handleTakePhoto,
+        },
+        {
+          text: 'Choisir de la galerie',
+          onPress: handleChooseFromGallery,
+        },
+        {
+          text: 'Annuler',
+          style: 'cancel',
+        },
+      ],
+      { cancelable: true }
+    );
+  };
 
   const showDatePicker = () => setDatePickerVisibility(true);
   const hideDatePicker = () => setDatePickerVisibility(false);
@@ -56,19 +131,40 @@ function QuestionInput({
 
     setIsSubmitting(true);
     try {
-      const answerValue = item.type === 'boolean' ? String(boolValue) : value;
-      if (!answerValue) {
-        return;
-      }
+      let answerPayload: CreateGedInput;
 
-      const answerPayload: CreateGedInput = {
-        idsource: item.id,
-        title: `Réponse: ${item.title}`,
-        kind: 'answer',
-        author: user.id,
-        description: answerValue,
-        type: item.type,
-      };
+      if (item.type === 'photo') {
+        if (!image) {
+          setIsSubmitting(false);
+          return;
+        }
+        answerPayload = {
+          idsource: item.id,
+          title: `Réponse: ${item.title}`,
+          kind: 'answer',
+          author: user.id,
+          type: item.type,
+          file: {
+            uri: image.uri,
+            type: image.mimeType || 'image/jpeg',
+            name: image.fileName || 'photo.jpg',
+          },
+        };
+      } else {
+        const answerValue = item.type === 'boolean' ? String(boolValue) : value;
+        if (!answerValue) {
+          setIsSubmitting(false);
+          return;
+        }
+        answerPayload = {
+          idsource: item.id,
+          title: `Réponse: ${item.title}`,
+          kind: 'answer',
+          author: user.id,
+          description: answerValue,
+          type: item.type,
+        };
+      }
 
       await gedService.createGed(token, answerPayload);
       setIsSubmitted(true);
@@ -105,12 +201,38 @@ function QuestionInput({
     if (isSubmitted) {
       return <Ionicons name="checkmark-circle" size={24} color="#22c55e" style={styles.submitButton} />;
     }
+    const canSubmit = item.type === 'photo' ? !!image : !!value || item.type === 'boolean';
     return (
-      <TouchableOpacity onPress={handleSubmit} disabled={isSubmitting || isSubmitted}>
-        <Ionicons name="send-outline" size={24} color="#f87b1b" style={styles.submitButton} />
+      <TouchableOpacity onPress={handleSubmit} disabled={isSubmitting || isSubmitted || !canSubmit}>
+        <Ionicons
+          name="send-outline"
+          size={24}
+          color={canSubmit ? '#f87b1b' : '#d1d5db'}
+          style={styles.submitButton}
+        />
       </TouchableOpacity>
     );
   };
+
+  if (item.type === 'photo') {
+    return (
+      <View style={styles.photoContainer}>
+        <View style={styles.photoContent}>
+          {isSubmitted && answer?.url ? (
+            <Image source={{ uri: answer.url }} style={styles.previewImage} />
+          ) : image ? (
+            <Image source={{ uri: image.uri }} style={styles.previewImage} />
+          ) : (
+            <TouchableOpacity style={styles.photoButton} onPress={handleSelectImage}>
+              <Ionicons name="add-circle-outline" size={32} color="#11224e" />
+              <Text style={styles.photoButtonText}>Ajouter une photo</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {renderSubmitButton()}
+      </View>
+    );
+  }
 
   if (item.type === 'boolean') {
     return (
@@ -357,6 +479,39 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     justifyContent: 'space-between',
   },
+  photoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 150,
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#f87b1b',
+    padding: 12,
+  },
+  photoContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  photoButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    borderRadius: 8,
+    backgroundColor: '#e5e7eb',
+    width: '100%',
+  },
+  photoButtonText: {
+    marginTop: 8,
+    color: '#11224e',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  previewImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+  },
   tauxSymbol: {
     fontSize: 16,
     color: '#6b7280',
@@ -371,5 +526,6 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     paddingRight: 12,
+    zIndex: 1,
   },
 });
