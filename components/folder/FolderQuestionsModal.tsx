@@ -25,6 +25,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import MapView, { Marker } from 'react-native-maps';
 import MapSelectionModal from './MapSelectionModal';
+import { ICONS } from '@/constants/Icons';
 
 const SUPPORTED_TYPES = ['long_text', 'text', 'list', 'boolean', 'date', 'number', 'taux', 'photo', 'voice', 'GPS'];
 
@@ -643,7 +644,7 @@ export default function FolderQuestionsModal({ folderId, visible, onClose }: Fol
             {isGeneratingPdf ? (
               <ActivityIndicator color="#f87b1b" />
             ) : (
-              <Ionicons name="document-text-outline" size={28} color="#f87b1b" />
+              <Image source={ICONS.pdf} style={{ width: 28, height: 28 }} />
             )}
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Questions du Dossier</Text>
