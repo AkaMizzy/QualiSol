@@ -18,10 +18,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth, User } from '@/contexts/AuthContext';
 import * as gedService from '@/services/gedService';
 import { CreateGedInput, Ged } from '@/services/gedService';
+import { Audio } from 'expo-av';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import MapView, { Marker } from 'react-native-maps';
+import MapSelectionModal from './MapSelectionModal';
 
-const SUPPORTED_TYPES = ['long_text', 'text', 'list', 'boolean', 'date', 'number', 'taux', 'photo'];
+const SUPPORTED_TYPES = ['long_text', 'text', 'list', 'boolean', 'date', 'number', 'taux', 'photo', 'voice', 'GPS'];
 
 interface FolderQuestionsModalProps {
   folderId: string | null;
@@ -46,6 +49,87 @@ function QuestionInput({
   const [isSubmitted, setIsSubmitted] = useState(!!answer);
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [recordingUri, setRecordingUri] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMapVisible, setMapVisible] = useState(false);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(
+    answer?.latitude && answer?.longitude
+      ? { latitude: parseFloat(answer.latitude), longitude: parseFloat(answer.longitude) }
+      : null
+  );
+
+  useEffect(() => {
+    return sound
+      ? () => {
+          sound.unloadAsync();
+        }
+      : undefined;
+  }, [sound]);
+
+  const requestAudioPermissions = async () => {
+    const { status } = await Audio.requestPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Désolé, nous avons besoin des autorisations du microphone pour que cela fonctionne !');
+      return false;
+    }
+    return true;
+  };
+
+  const startRecording = async () => {
+    const hasPermission = await requestAudioPermissions();
+    if (!hasPermission) return;
+
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      setRecording(recording);
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Failed to start recording', err);
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recording) return;
+
+    setIsRecording(false);
+    await recording.stopAndUnloadAsync();
+    const uri = recording.getURI();
+    setRecordingUri(uri);
+    setRecording(null);
+
+    // Prepare for playback
+    const { sound } = await Audio.Sound.createAsync({ uri: uri! });
+    setSound(sound);
+  };
+
+  const playSound = async () => {
+    if (!sound) return;
+    if (isPlaying) {
+      await sound.pauseAsync();
+      setIsPlaying(false);
+    } else {
+      await sound.replayAsync();
+      setIsPlaying(true);
+      sound.setOnPlaybackStatusUpdate(status => {
+        if (status.isLoaded && status.didJustFinish) {
+          setIsPlaying(false);
+        }
+      });
+    }
+  };
+
+  const handleRerecord = () => {
+    setRecordingUri(null);
+    setSound(null);
+    setIsPlaying(false);
+  };
 
   const requestCameraPermissions = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -143,12 +227,43 @@ function QuestionInput({
           title: `Réponse: ${item.title}`,
           kind: 'answer',
           author: user.id,
-          type: item.type,
+          type: 'answer',
           file: {
             uri: image.uri,
             type: image.mimeType || 'image/jpeg',
             name: image.fileName || 'photo.jpg',
           },
+        };
+      } else if (item.type === 'voice') {
+        if (!recordingUri) {
+          setIsSubmitting(false);
+          return;
+        }
+        answerPayload = {
+          idsource: item.id,
+          title: `Réponse: ${item.title}`,
+          kind: 'answer',
+          author: user.id,
+          type: 'answer',
+          file: {
+            uri: recordingUri,
+            type: 'audio/m4a',
+            name: `voice-answer-${Date.now()}.m4a`,
+          },
+        };
+      } else if (item.type === 'GPS') {
+        if (!location) {
+          setIsSubmitting(false);
+          return;
+        }
+        answerPayload = {
+          idsource: item.id,
+          title: `Réponse: ${item.title}`,
+          kind: 'answer',
+          author: user.id,
+          type: 'answer',
+          latitude: String(location.latitude),
+          longitude: String(location.longitude),
         };
       } else {
         const answerValue = item.type === 'boolean' ? String(boolValue) : value;
@@ -162,7 +277,7 @@ function QuestionInput({
           kind: 'answer',
           author: user.id,
           description: answerValue,
-          type: item.type,
+          type: 'answer',
         };
       }
 
@@ -201,7 +316,14 @@ function QuestionInput({
     if (isSubmitted) {
       return <Ionicons name="checkmark-circle" size={24} color="#22c55e" style={styles.submitButton} />;
     }
-    const canSubmit = item.type === 'photo' ? !!image : !!value || item.type === 'boolean';
+    const canSubmit =
+      item.type === 'photo'
+        ? !!image
+        : item.type === 'voice'
+          ? !!recordingUri
+          : item.type === 'GPS'
+            ? !!location
+            : !!value || item.type === 'boolean';
     return (
       <TouchableOpacity onPress={handleSubmit} disabled={isSubmitting || isSubmitted || !canSubmit}>
         <Ionicons
@@ -213,6 +335,91 @@ function QuestionInput({
       </TouchableOpacity>
     );
   };
+
+  if (item.type === 'GPS') {
+    return (
+      <>
+        <TouchableOpacity
+          style={styles.gpsContainer}
+          onPress={() => !isSubmitted && setMapVisible(true)}
+          disabled={isSubmitted}>
+          <View style={styles.gpsContent}>
+            {location ? (
+              <View style={styles.gpsDetailsContainer}>
+                <MapView
+                  style={styles.miniMap}
+                  initialRegion={{
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
+                  }}
+                  scrollEnabled={false}
+                  zoomEnabled={false}>
+                  <Marker coordinate={location} />
+                </MapView>
+                <Text style={styles.gpsCoordinates}>
+                  Lat: {location.latitude.toFixed(4)}, Lon: {location.longitude.toFixed(4)}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.gpsDetailsContainer}>
+                <Ionicons name="location-outline" size={28} color="#f87b1b" />
+                <Text style={styles.gpsPlaceholder}>choisir un emplacement</Text>
+              </View>
+            )}
+          </View>
+          {renderSubmitButton()}
+        </TouchableOpacity>
+        <MapSelectionModal
+          visible={isMapVisible}
+          onClose={() => setMapVisible(false)}
+          onLocationSelect={selectedLocation => {
+            setLocation(selectedLocation);
+          }}
+        />
+      </>
+    );
+  }
+
+  if (item.type === 'voice') {
+    if (isSubmitted && answer?.url) {
+      // Note: Actual playback of existing audio from URL is not implemented here,
+      // as it requires a more complex player setup. This just indicates completion.
+      return (
+        <View style={styles.audioPlayerContainer}>
+          <Text>Réponse enregistrée.</Text>
+          <Ionicons name="checkmark-circle" size={24} color="#22c55e" />
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.voiceContainer}>
+        {recordingUri && sound ? (
+          <View style={styles.audioPlayerContainer}>
+            <TouchableOpacity onPress={playSound} style={styles.playerButton}>
+              <Ionicons name={isPlaying ? 'pause-circle' : 'play-circle'} size={32} color="#11224e" />
+            </TouchableOpacity>
+            <Text style={styles.audioText}>Pré-écouter</Text>
+            <TouchableOpacity onPress={handleRerecord} style={styles.playerButton}>
+              <Ionicons name="trash-outline" size={28} color="#ef4444" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.voiceRecordButton}
+            onPress={isRecording ? stopRecording : startRecording}>
+            <Ionicons name={isRecording ? 'stop-circle' : 'mic-circle'} size={32} color="#ef4444" />
+            <Text style={styles.voiceButtonText}>
+              {isRecording ? 'Arrêter l\'enregistrement' : 'Démarrer l\'enregistrement'}
+            </Text>
+          </TouchableOpacity>
+        )}
+        {renderSubmitButton()}
+      </View>
+    );
+  }
 
   if (item.type === 'photo') {
     return (
@@ -284,8 +491,8 @@ function QuestionInput({
         item.type === 'date'
           ? 'YYYY-MM-DD'
           : item.type === 'list'
-            ? 'Select an option'
-            : 'Enter value'
+            ? 'Sélectionnez une option'
+            : 'Saisissez la réponse'
       }
     />
   );
@@ -488,6 +695,80 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#f87b1b',
     padding: 12,
+  },
+  voiceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 80,
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#f87b1b',
+    padding: 12,
+  },
+  voiceRecordButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+  },
+  voiceButtonText: {
+    marginLeft: 10,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#11224e',
+  },
+  audioPlayerContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  playerButton: {
+    padding: 8,
+  },
+  audioText: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  gpsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#f87b1b',
+    padding: 12,
+    minHeight: 80,
+  },
+  gpsContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  gpsDetailsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  miniMap: {
+    width: 50,
+    height: 50,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  gpsCoordinates: {
+    fontSize: 14,
+    color: '#11224e',
+    flexShrink: 1,
+  },
+  gpsPlaceholder: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#9ca3af',
   },
   photoContent: {
     flex: 1,
