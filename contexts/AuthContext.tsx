@@ -3,7 +3,7 @@ import { setAuthToken } from '../services/api';
 import { clearAuthToken, clearUser, getAuthToken, getUser, saveAuthToken, saveUser } from '../services/secureStore';
 
 // Types
-interface User {
+export interface User {
   id: string;
   email: string;
   firstname: string;
