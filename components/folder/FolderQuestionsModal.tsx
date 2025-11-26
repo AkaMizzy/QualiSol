@@ -24,7 +24,7 @@ import { CreateGedInput, Ged } from '@/services/gedService';
 import { Audio } from 'expo-av';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import MapView, { Marker, UrlTile } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 import MapSelectionModal from './MapSelectionModal';
 
 const SUPPORTED_TYPES = ['long_text', 'text', 'list', 'boolean', 'date', 'number', 'taux', 'photo', 'voice', 'GPS'];
@@ -65,6 +65,39 @@ function QuestionInput({
       ? { latitude: parseFloat(answer.latitude), longitude: parseFloat(answer.longitude) }
       : null
   );
+
+  const getMiniMapHtml = () => {
+    const latNum = location ? location.latitude : null;
+    const lngNum = location ? location.longitude : null;
+    const lat = Number.isFinite(latNum as number) ? (latNum as number) : 33.5731; // Casablanca default
+    const lng = Number.isFinite(lngNum as number) ? (lngNum as number) : -7.5898;
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <style>
+          html, body, #miniMap { height: 100%; }
+          body { margin: 0; padding: 0; }
+          #miniMap { width: 100%; }
+        </style>
+      </head>
+      <body>
+        <div id="miniMap"></div>
+        <script>
+          const miniMap = L.map('miniMap', { zoomControl: false, attributionControl: false }).setView([${lat}, ${lng}], 14);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+          }).addTo(miniMap);
+          L.marker([${lat}, ${lng}]).addTo(miniMap);
+          setTimeout(() => { miniMap.invalidateSize(); }, 100);
+        </script>
+      </body>
+      </html>
+    `;
+  };
 
   useEffect(() => {
     return sound
@@ -388,19 +421,17 @@ function QuestionInput({
           <View style={styles.gpsContent}>
             {location ? (
               <View style={styles.gpsDetailsContainer}>
-                <MapView
-                  style={styles.miniMap}
-                  initialRegion={{
-                    latitude: location.latitude,
-                    longitude: location.longitude,
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01,
-                  }}
-                  scrollEnabled={false}
-                  zoomEnabled={false}>
-                  <UrlTile urlTemplate="http://c.tile.stamen.com/watercolor/{z}/{x}/{y}.jpg" maximumZ={19} />
-                  <Marker coordinate={location} />
-                </MapView>
+                <View style={styles.miniMapContainer}>
+                  <WebView
+                    source={{ html: getMiniMapHtml() }}
+                    style={styles.miniMap}
+                    javaScriptEnabled={true}
+                    scrollEnabled={false}
+                    bounces={false}
+                    pointerEvents="none"
+                  />
+                </View>
+
                 <Text style={styles.gpsCoordinates}>
                   Lat: {location.latitude.toFixed(4)}, Lon: {location.longitude.toFixed(4)}
                 </Text>
@@ -879,11 +910,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  miniMap: {
+  miniMapContainer: {
     width: 50,
     height: 50,
     borderRadius: 6,
     marginRight: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  miniMap: {
+    width: '100%',
+    height: '100%',
   },
   gpsCoordinates: {
     fontSize: 14,
