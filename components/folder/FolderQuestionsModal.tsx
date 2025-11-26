@@ -52,8 +52,8 @@ function QuestionInput({
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [recordingUri, setRecordingUri] = useState<string | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'recording' | 'recorded' | 'playing'>('idle');
+  const [duration, setDuration] = useState(0);
   const [isMapVisible, setMapVisible] = useState(false);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(
     answer?.latitude && answer?.longitude
@@ -68,6 +68,16 @@ function QuestionInput({
         }
       : undefined;
   }, [sound]);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (status === 'recording') {
+      interval = setInterval(() => {
+        setDuration(prev => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [status]);
 
   const requestAudioPermissions = async () => {
     const { status } = await Audio.requestPermissionsAsync();
@@ -87,48 +97,74 @@ function QuestionInput({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
+      setStatus('recording');
+      setDuration(0);
       const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
       setRecording(recording);
-      setIsRecording(true);
     } catch (err) {
       console.error('Failed to start recording', err);
+      setStatus('idle');
     }
   };
 
   const stopRecording = async () => {
     if (!recording) return;
 
-    setIsRecording(false);
-    await recording.stopAndUnloadAsync();
-    const uri = recording.getURI();
-    setRecordingUri(uri);
-    setRecording(null);
-
-    // Prepare for playback
-    const { sound } = await Audio.Sound.createAsync({ uri: uri! });
-    setSound(sound);
+    try {
+      const status = await recording.getStatusAsync();
+      await recording.stopAndUnloadAsync();
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+      const uri = recording.getURI();
+      setRecordingUri(uri);
+      setRecording(null);
+      if (status.isRecording && status.durationMillis) {
+        setDuration(Math.round(status.durationMillis / 1000));
+      }
+      setStatus('recorded');
+    } catch (err) {
+      console.error('Failed to stop recording', err);
+      setStatus('idle');
+    }
   };
 
   const playSound = async () => {
-    if (!sound) return;
-    if (isPlaying) {
-      await sound.pauseAsync();
-      setIsPlaying(false);
-    } else {
-      await sound.replayAsync();
-      setIsPlaying(true);
-      sound.setOnPlaybackStatusUpdate(status => {
-        if (status.isLoaded && status.didJustFinish) {
-          setIsPlaying(false);
+    if (!sound) {
+      const { sound: newSound } = await Audio.Sound.createAsync({ uri: recordingUri! });
+      setSound(newSound);
+      await newSound.replayAsync();
+      setStatus('playing');
+      newSound.setOnPlaybackStatusUpdate(playbackStatus => {
+        if (playbackStatus.isLoaded && playbackStatus.didJustFinish) {
+          setStatus('recorded');
         }
       });
+      return;
+    }
+
+    const currentStatus = await sound.getStatusAsync();
+    if (currentStatus.isLoaded && currentStatus.isPlaying) {
+      await sound.pauseAsync();
+      setStatus('recorded');
+    } else {
+      await sound.replayAsync();
+      setStatus('playing');
     }
   };
 
   const handleRerecord = () => {
+    if (sound) {
+      sound.unloadAsync();
+    }
     setRecordingUri(null);
     setSound(null);
-    setIsPlaying(false);
+    setDuration(0);
+    setStatus('idle');
+  };
+
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   const requestCameraPermissions = async () => {
@@ -383,9 +419,8 @@ function QuestionInput({
   }
 
   if (item.type === 'voice') {
+    // Submitted view
     if (isSubmitted && answer?.url) {
-      // Note: Actual playback of existing audio from URL is not implemented here,
-      // as it requires a more complex player setup. This just indicates completion.
       return (
         <View style={styles.audioPlayerContainer}>
           <Text>Réponse enregistrée.</Text>
@@ -394,30 +429,43 @@ function QuestionInput({
       );
     }
 
-    return (
-      <View style={styles.voiceContainer}>
-        {recordingUri && sound ? (
-          <View style={styles.audioPlayerContainer}>
-            <TouchableOpacity onPress={playSound} style={styles.playerButton}>
-              <Ionicons name={isPlaying ? 'pause-circle' : 'play-circle'} size={32} color="#11224e" />
-            </TouchableOpacity>
-            <Text style={styles.audioText}>Pré-écouter</Text>
-            <TouchableOpacity onPress={handleRerecord} style={styles.playerButton}>
-              <Ionicons name="trash-outline" size={28} color="#ef4444" />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity
-            style={styles.voiceRecordButton}
-            onPress={isRecording ? stopRecording : startRecording}>
-            <Ionicons name={isRecording ? 'stop-circle' : 'mic-circle'} size={32} color="#ef4444" />
-            <Text style={styles.voiceButtonText}>
-              {isRecording ? 'Arrêter l\'enregistrement' : 'Démarrer l\'enregistrement'}
-            </Text>
+    // Recording view
+    if (status === 'recording') {
+      return (
+        <View style={[styles.voiceContainer, styles.recordingContainer]}>
+          <ActivityIndicator size="small" color="#dc2626" />
+          <Text style={styles.timerText}>{formatDuration(duration)}</Text>
+          <TouchableOpacity style={styles.stopButton} onPress={stopRecording}>
+            <Ionicons name="stop-circle" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-        )}
-        {renderSubmitButton()}
-      </View>
+        </View>
+      );
+    }
+
+    // Recorded / Preview view
+    if (status === 'recorded' || status === 'playing') {
+      return (
+        <View style={styles.voiceContainer}>
+          <View style={[styles.audioPlayerContainer, styles.recordedContainer]}>
+            <TouchableOpacity onPress={playSound} style={styles.playerButton}>
+              <Ionicons name={status === 'playing' ? 'pause-circle' : 'play-circle'} size={32} color="#11224e" />
+            </TouchableOpacity>
+            <Text style={styles.recordedText}>{formatDuration(duration)}</Text>
+          </View>
+          <TouchableOpacity onPress={handleRerecord} style={styles.playerButton}>
+            <Ionicons name="trash-outline" size={28} color="#ef4444" />
+          </TouchableOpacity>
+          {renderSubmitButton()}
+        </View>
+      );
+    }
+
+    // Idle view
+    return (
+      <TouchableOpacity style={styles.voiceContainer} onPress={startRecording}>
+        <Ionicons name="mic-outline" size={24} color="#f87b1b" />
+        <Text style={styles.voiceButtonText}>Ajouter une note vocale</Text>
+      </TouchableOpacity>
     );
   }
 
@@ -724,7 +772,19 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    gap: 12,
+  },
+  recordedContainer: {
+    backgroundColor: '#e0e7ff',
+    borderColor: '#a5b4fc',
+    padding: 8,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  recordedText: {
+    color: '#3730a3',
+    fontWeight: '600',
   },
   playerButton: {
     padding: 8,
@@ -808,5 +868,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingRight: 12,
     zIndex: 1,
+  },
+  recordingContainer: {
+    justifyContent: 'space-between',
+    backgroundColor: '#fee2e2',
+    borderColor: '#fca5a5',
+  },
+  timerText: {
+    color: '#b91c1c',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  stopButton: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 99,
   },
 });
