@@ -36,6 +36,7 @@ export interface Ged {
   type?: string;
   categorie?: string;
   created_at: string;
+  value?: string;
 }
 
 export async function createGed(token: string, input: CreateGedInput): Promise<{ message: string; data: Ged }> {

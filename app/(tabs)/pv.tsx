@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppHeader from '@/components/AppHeader';
 import CreateFolderModal from '@/components/folder/CreateFolderModal';
+import FolderQuestionsModal from '@/components/folder/FolderQuestionsModal';
 import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
 import folderService, { Folder, Project, Zone } from '@/services/folderService';
@@ -27,8 +28,18 @@ function formatDateForGrid(dateStr?: string | null): string {
   }
 }
 
-const FolderCard = ({ item, projectTitle, zoneTitle }: { item: Folder; projectTitle?: string; zoneTitle?: string; }) => (
-  <Pressable style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
+const FolderCard = ({ 
+  item, 
+  projectTitle, 
+  zoneTitle,
+  onPress,
+}: { 
+  item: Folder; 
+  projectTitle?: string; 
+  zoneTitle?: string;
+  onPress: () => void;
+}) => (
+  <Pressable style={({ pressed }) => [styles.card, pressed && styles.pressed]} onPress={onPress}>
     <View style={styles.cardBody}>
       <Text style={styles.cardTitle} numberOfLines={2}>
         {item.title}
@@ -55,6 +66,8 @@ export default function PvScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isQuestionsModalVisible, setIsQuestionsModalVisible] = useState(false);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
 
   // Filter states
   const [projects, setProjects] = useState<Project[]>([]);
@@ -163,6 +176,11 @@ export default function PvScreen() {
       </View>
     );
   }
+
+  const handleOpenQuestionsModal = (folderId: string) => {
+    setSelectedFolderId(folderId);
+    setIsQuestionsModalVisible(true);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -282,7 +300,7 @@ export default function PvScreen() {
         renderItem={({ item }) => {
           const projectTitle = projects.find(p => p.id === item.project_id)?.title;
           const zoneTitle = allZones.find(z => z.id === item.zone_id)?.title;
-          return <FolderCard item={item} projectTitle={projectTitle} zoneTitle={zoneTitle} />;
+          return <FolderCard item={item} projectTitle={projectTitle} zoneTitle={zoneTitle} onPress={() => handleOpenQuestionsModal(item.id)} />;
         }}
         keyExtractor={(item) => item.id}
         numColumns={2}
@@ -303,6 +321,11 @@ export default function PvScreen() {
         }}
         projectId={selectedProject}
         zoneId={selectedZone}
+      />
+      <FolderQuestionsModal
+        visible={isQuestionsModalVisible}
+        onClose={() => setIsQuestionsModalVisible(false)}
+        folderId={selectedFolderId}
       />
     </SafeAreaView>
   );
