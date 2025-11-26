@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, UrlTile } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface MapSelectionModalProps {
@@ -11,8 +11,8 @@ interface MapSelectionModalProps {
 }
 
 const INITIAL_REGION = {
-  latitude: 36.8065, // Tunis, Tunisia
-  longitude: 10.1815,
+  latitude: 33.5731, // Casablanca, Morocco
+  longitude: -7.5898,
   latitudeDelta: 0.0922,
   longitudeDelta: 0.0421,
 };
@@ -43,6 +43,7 @@ export default function MapSelectionModal({ visible, onClose, onLocationSelect }
         </View>
 
         <MapView style={styles.map} initialRegion={INITIAL_REGION} onPress={handleMapPress}>
+          <UrlTile urlTemplate="http://c.tile.stamen.com/watercolor/{z}/{x}/{y}.jpg" maximumZ={19} />
           {selectedLocation && <Marker coordinate={selectedLocation} />}
         </MapView>
 

@@ -17,15 +17,15 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import API_CONFIG from '@/app/config/api';
+import { ICONS } from '@/constants/Icons';
 import { useAuth, User } from '@/contexts/AuthContext';
 import * as gedService from '@/services/gedService';
 import { CreateGedInput, Ged } from '@/services/gedService';
 import { Audio } from 'expo-av';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, UrlTile } from 'react-native-maps';
 import MapSelectionModal from './MapSelectionModal';
-import { ICONS } from '@/constants/Icons';
 
 const SUPPORTED_TYPES = ['long_text', 'text', 'list', 'boolean', 'date', 'number', 'taux', 'photo', 'voice', 'GPS'];
 
@@ -40,11 +40,13 @@ function QuestionInput({
   token,
   user,
   answer,
+  onAnswerCreated,
 }: {
   item: Ged;
   token: string | null;
   user: User | null;
   answer?: Ged;
+  onAnswerCreated: (newAnswer: Ged) => void;
 }) {
   const [value, setValue] = useState(answer?.description || item.value || '');
   const [boolValue, setBoolValue] = useState(answer?.description === 'true' || item.value === 'true');
@@ -320,7 +322,8 @@ function QuestionInput({
         };
       }
 
-      await gedService.createGed(token, answerPayload);
+      const result = await gedService.createGed(token, answerPayload);
+      onAnswerCreated(result.data);
       setIsSubmitted(true);
     } catch (err) {
       console.error('Submission failed:', err);
@@ -395,6 +398,7 @@ function QuestionInput({
                   }}
                   scrollEnabled={false}
                   zoomEnabled={false}>
+                  <UrlTile urlTemplate="http://c.tile.stamen.com/watercolor/{z}/{x}/{y}.jpg" maximumZ={19} />
                   <Marker coordinate={location} />
                 </MapView>
                 <Text style={styles.gpsCoordinates}>
@@ -415,6 +419,7 @@ function QuestionInput({
           onClose={() => setMapVisible(false)}
           onLocationSelect={selectedLocation => {
             setLocation(selectedLocation);
+            setMapVisible(false);
           }}
         />
       </>
@@ -479,11 +484,11 @@ function QuestionInput({
       <View style={styles.photoContainer}>
         <View style={styles.photoContent}>
           {isSubmitted && answer?.url ? (
-            <Image source={{ uri: answer.url }} style={styles.previewImage} />
+            <Image source={{ uri: `${API_CONFIG.BASE_URL}${answer.url}` }} style={styles.previewImage} />
           ) : image ? (
             <Image source={{ uri: image.uri }} style={styles.previewImage} />
           ) : (
-            <TouchableOpacity style={styles.photoButton} onPress={handleSelectImage}>
+            <TouchableOpacity style={styles.photoButton} onPress={handleSelectImage} disabled={isSubmitted}>
               <Ionicons name="add-circle-outline" size={32} color="#11224e" />
               <Text style={styles.photoButtonText}>Ajouter une photo</Text>
             </TouchableOpacity>
@@ -606,6 +611,12 @@ export default function FolderQuestionsModal({ folderId, visible, onClose }: Fol
     fetchGedsAndAnswers();
   }, [folderId, token, visible]);
 
+  const handleAnswerCreated = (newAnswer: Ged) => {
+    if (newAnswer.idsource) {
+      setAnswers(prevAnswers => new Map(prevAnswers).set(newAnswer.idsource!, newAnswer));
+    }
+  };
+
   const handleGeneratePdf = async () => {
     if (!token || !folderId) return;
 
@@ -640,16 +651,16 @@ export default function FolderQuestionsModal({ folderId, visible, onClose }: Fol
     <Modal animationType="slide" transparent={false} visible={visible} onRequestClose={onClose}>
       <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <View style={styles.header}>
+          <TouchableOpacity onPress={onClose} style={styles.closeIcon}>
+            <Ionicons name="close-circle" size={32} color="#f87b1b" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Questions du Dossier</Text>
           <TouchableOpacity onPress={handleGeneratePdf} style={styles.pdfIcon} disabled={isGeneratingPdf}>
             {isGeneratingPdf ? (
               <ActivityIndicator color="#f87b1b" />
             ) : (
               <Image source={ICONS.pdf} style={{ width: 28, height: 28 }} />
             )}
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Questions du Dossier</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeIcon}>
-            <Ionicons name="close-circle" size={32} color="#f87b1b" />
           </TouchableOpacity>
         </View>
 
@@ -668,7 +679,13 @@ export default function FolderQuestionsModal({ folderId, visible, onClose }: Fol
             renderItem={({ item }) => (
               <View style={styles.questionContainer}>
                 <Text style={styles.questionLabel}>{item.title}</Text>
-                <QuestionInput item={item} token={token} user={user} answer={answers.get(item.id)} />
+                <QuestionInput
+                  item={item}
+                  token={token}
+                  user={user}
+                  answer={answers.get(item.id)}
+                  onAnswerCreated={handleAnswerCreated}
+                />
               </View>
             )}
             ListEmptyComponent={
@@ -707,13 +724,13 @@ const styles = StyleSheet.create({
   },
   pdfIcon: {
     position: 'absolute',
-    left: 16,
+    right: 16,
     top: '50%',
-    transform: [{ translateY: -4 }], 
+    transform: [{ translateY: -4 }],
   },
   closeIcon: {
     position: 'absolute',
-    right: 16,
+    left: 16,
     top: '50%',
     transform: [{ translateY: -4 }], // Adjust based on icon size and padding
   },
