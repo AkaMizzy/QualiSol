@@ -238,4 +238,13 @@ export async function getGedsByIds(token: string, ids: string[]): Promise<Ged[]>
   return response.data;
 }
 
+export async function generateFolderReport(token: string, folderId: string): Promise<{ message: string; data: Ged }> {
+  const response = await api.get(`/api/gedparallele/generate-pdf/${folderId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.data;
+}
+
 

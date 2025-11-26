@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Linking,
   Modal,
   StyleSheet,
   Switch,
@@ -15,6 +16,7 @@ import {
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import API_CONFIG from '@/app/config/api';
 import { useAuth, User } from '@/contexts/AuthContext';
 import * as gedService from '@/services/gedService';
 import { CreateGedInput, Ged } from '@/services/gedService';
@@ -563,6 +565,7 @@ export default function FolderQuestionsModal({ folderId, visible, onClose }: Fol
   const [answers, setAnswers] = useState<Map<string, Ged>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -602,10 +605,47 @@ export default function FolderQuestionsModal({ folderId, visible, onClose }: Fol
     fetchGedsAndAnswers();
   }, [folderId, token, visible]);
 
+  const handleGeneratePdf = async () => {
+    if (!token || !folderId) return;
+
+    setIsGeneratingPdf(true);
+    try {
+      const result = await gedService.generateFolderReport(token, folderId);
+      Alert.alert(
+        'Succès',
+        'Le rapport PDF a été généré avec succès. Voulez-vous le voir?',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { 
+            text: 'Ouvrir', 
+            onPress: () => {
+              if (result.data.url) {
+                const fileUrl = `${API_CONFIG.BASE_URL}${result.data.url}`;
+                Linking.openURL(fileUrl);
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+      Alert.alert('Erreur', 'Impossible de générer le rapport PDF.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   return (
     <Modal animationType="slide" transparent={false} visible={visible} onRequestClose={onClose}>
       <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <View style={styles.header}>
+          <TouchableOpacity onPress={handleGeneratePdf} style={styles.pdfIcon} disabled={isGeneratingPdf}>
+            {isGeneratingPdf ? (
+              <ActivityIndicator color="#f87b1b" />
+            ) : (
+              <Ionicons name="document-text-outline" size={28} color="#f87b1b" />
+            )}
+          </TouchableOpacity>
           <Text style={styles.headerTitle}>Questions du Dossier</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeIcon}>
             <Ionicons name="close-circle" size={32} color="#f87b1b" />
@@ -663,6 +703,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#11224e',
+  },
+  pdfIcon: {
+    position: 'absolute',
+    left: 16,
+    top: '50%',
+    transform: [{ translateY: -4 }], 
   },
   closeIcon: {
     position: 'absolute',
