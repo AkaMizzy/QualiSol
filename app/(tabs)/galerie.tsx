@@ -35,7 +35,7 @@ export default function GalerieScreen() {
   const [annotatorImageUri, setAnnotatorImageUri] = useState<string | null>(null);
 
   const isTablet = width >= 768;
-  const numColumns = isTablet ? 4 : 2;
+  const numColumns = isTablet ? 4 : 1;
 
   const fetchGeds = useCallback(async () => {
     if (token) {
@@ -249,7 +249,7 @@ export default function GalerieScreen() {
               hasVoiceNote={voiceNotesBySource[item.idsource]}
             />
           )}
-          columnWrapperStyle={styles.row}
+          columnWrapperStyle={numColumns > 1 ? styles.row : undefined}
           ListEmptyComponent={
             <View style={styles.centered}>
               <Text style={styles.emptyText}>Pas d&apos;images trouvées.</Text>

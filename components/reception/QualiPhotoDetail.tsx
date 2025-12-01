@@ -219,7 +219,7 @@ function QualiPhotoDetailView({
 
   if (selectedGed) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[styles.container]}>
         <AppHeader user={user || undefined} onNavigate={() => setSelectedGed(null)} />
         <ChildQualiPhotoView
           item={selectedGed}
@@ -236,7 +236,7 @@ function QualiPhotoDetailView({
 
   return (
     <>
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[styles.container]}>
         <AppHeader user={user || undefined} onNavigate={onClose} />
         <ParentQualiPhotoView
           item={item}
