@@ -6,10 +6,10 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
+  FlatList,
   LayoutAnimation,
   Linking,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -61,7 +61,7 @@ export default function DashboardScreen() {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
-  const { height } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const [eventModalVisible, setEventModalVisible] = useState(false);
   const [isCalendarVisible, setIsCalendarVisible] = useState(false);
   const [eventsByDate, setEventsByDate] = useState<Record<string, string[]>>({});
@@ -74,6 +74,9 @@ export default function DashboardScreen() {
   const [upcomingActivities, setUpcomingActivities] = useState<any[]>([]);
   const [expandedSection, setExpandedSection] = useState<string | null>('overdue');
   const [prospectModalVisible, setProspectModalVisible] = useState(false);
+
+  const isTablet = width >= 768;
+  const numColumns = isTablet ? 5 : 3;
 
   useEffect(() => {
     async function loadAuthData() {
@@ -192,253 +195,220 @@ export default function DashboardScreen() {
     } catch {}
   }, [token]);
 
+  const renderGridItem = ({ item }: { item: (typeof GRID_ITEMS)[0] }) => (
+    <Pressable
+      style={[
+        styles.gridButton,
+        {
+          width: `${100 / numColumns - 3}%`, // Dynamic width based on numColumns
+        },
+        item.disabled && styles.gridButtonDisabled,
+      ]}
+      onPress={() => {
+        if (item.title === 'Suivi') {
+          router.push('/qualiphoto');
+        } else if (item.title === 'Planning') {
+          //router.push('/planning');
+        } else if (item.title === 'Calendrier') {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setIsCalendarVisible(prevState => !prevState);
+        } else if (item.title === 'Pv') {
+          router.push('/pv');
+        } else if (item.title === 'Test') {
+          router.push('/questions');
+        } else if (item.title === 'QualiPhoto') {
+          router.push('/galerie');
+        } else if (item.title === 'Audit') {
+          //router.push('/audit');
+        } else if (item.title === 'Echantillon') {
+          //router.push('/echantillon');
+        } else if (item.title === 'Inventaires') {
+          //router.push('/inventaire');
+        } else if (item.title === 'Chantiers') {
+          router.push('/projects');
+        } else if (item.title === 'Utilisateurs') {
+          router.push('/users');
+        } else if (item.title === 'Organisme') {
+          router.push('/company');
+        } else {
+          Alert.alert('Bientôt disponible', `La fonctionnalité ${item.title} est en cours de développement.`);
+        }
+      }}
+      disabled={item.disabled}
+    >
+      {item.image ? (
+        <Image source={item.image} style={[styles.gridImage, item.disabled && { opacity: 0.5 }]} />
+      ) : (
+        <Ionicons name={item.icon!} size={32} color={item.disabled ? '#a0a0a0' : '#f87b1b'} />
+      )}
+      <Text style={[styles.gridButtonText, item.disabled && styles.gridButtonTextDisabled]}>{item.title}</Text>
+    </Pressable>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <AppHeader user={user || undefined} />
-      <ScrollView style={styles.scrollView}>
-        {/* Quick Stats (framed single row)
-        <View style={styles.kpiContainer}>
-          <View style={styles.kpiRow}>
-            <View style={styles.kpiCard}>
-              <View style={styles.kpiIconContainer}>
-                <Ionicons name="time-outline" size={20} color="#FF9500" />
+      <FlatList
+        data={GRID_ITEMS}
+        renderItem={renderGridItem}
+        keyExtractor={(item) => item.title}
+        numColumns={numColumns}
+        key={numColumns} // Re-renders the list when numColumns changes
+        contentContainerStyle={styles.gridContainer}
+        ListFooterComponent={
+          <>
+            {/* Calendar */}
+            {isCalendarVisible && (
+              <View style={styles.calendarContainer}>
+                <CalendarComp
+                  eventsByDate={eventsByDate}
+                  onMonthChange={onMonthChange}
+                  onDayPress={async (dateIso) => {
+                    setSelectedDate(dateIso);
+                    if (!token) { setDayEvents([]); setDayModalVisible(true); return; }
+                    try {
+                      const res = await fetch(`${API_CONFIG.BASE_URL}/calendar?start_date=${dateIso}&end_date=${dateIso}`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                      });
+                      const data = await res.json();
+                      if (!res.ok) throw new Error('Failed');
+                      setDayEvents(Array.isArray(data) ? data : []);
+                    } catch {
+                      setDayEvents([]);
+                    } finally {
+                      setDayModalVisible(true);
+                    }
+                  }}
+                  onAddEvent={() => setEventModalVisible(true)}
+                />
               </View>
-              <Text style={styles.kpiNumber}>{stats?.pending ?? '—'}</Text>
-              <Text style={styles.kpiLabel}>Pending</Text>
-            </View>
-            
-            <View style={styles.kpiCard}>
-              <View style={styles.kpiIconContainer}>
-                <Ionicons name="calendar-outline" size={20} color="#007AFF" />
-              </View>
-              <Text style={styles.kpiNumber}>{stats?.today ?? '—'}</Text>
-              <Text style={styles.kpiLabel}>Today</Text>
-            </View>
-            
-            <View style={styles.kpiCard}>
-              <View style={styles.kpiIconContainer}>
-                <Ionicons name="checkmark-circle-outline" size={20} color="#34C759" />
-              </View>
-              <Text style={styles.kpiNumber}>{stats?.completed ?? '—'}</Text>
-              <Text style={styles.kpiLabel}>Completed</Text>
-            </View>
-            
-            <View style={styles.kpiCard}>
-              <View style={styles.kpiIconContainer}>
-                <Ionicons name="alert-circle-outline" size={20} color="#FF3B30" />
-              </View>
-              <Text style={styles.kpiNumber}>{stats?.retard ?? '—'}</Text>
-              <Text style={styles.kpiLabel}>Overdue</Text>
-            </View>
-            
-            <View style={styles.kpiCard}>
-              <View style={styles.kpiIconContainer}>
-                <Ionicons name="close-circle-outline" size={20} color="#8E8E93" />
-              </View>
-              <Text style={styles.kpiNumber}>{stats?.canceled ?? '—'}</Text>
-              <Text style={styles.kpiLabel}>Canceled</Text>
-            </View>
-          </View>
-        </View> */}
+            )}
 
-        {/* Feature Grid */}
-        <View style={styles.gridContainer}>
-          {GRID_ITEMS.map((item) => (
-            <Pressable
-              key={item.title}
-              style={[styles.gridButton, item.disabled && styles.gridButtonDisabled]}
-              onPress={() => {
-                if (item.title === 'Suivi') {
-                  router.push('/qualiphoto');
-                } else if (item.title === 'Planning') {
-                  //router.push('/planning');
-                } else if (item.title === 'Calendrier') {
-                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                  setIsCalendarVisible(prevState => !prevState);
-                } else if (item.title === 'Pv') {
-                  router.push('/pv');
-                } else if (item.title === 'Test') {
-                  router.push('/questions');
-                } else if (item.title === 'QualiPhoto') {
-                  router.push('/galerie');
-                } else if (item.title === 'Audit') {
-                  //router.push('/audit');
-                } else if (item.title === 'Echantillon') {
-                  //router.push('/echantillon');
-                } else if (item.title === 'Inventaires') {
-                  //router.push('/inventaire');
-                } else if (item.title === 'Chantiers') {
-                  router.push('/projects');
-                } else if (item.title === 'Utilisateurs') {
-                  router.push('/users');
-                } else if (item.title === 'Organisme') {
-                  router.push('/company');
-                } else {
-                  Alert.alert('Bientôt disponible', `La fonctionnalité ${item.title} est en cours de développement.`);
-                }
-              }}
-              disabled={item.disabled}
-            >
-              {item.image ? (
-                <Image source={item.image} style={[styles.gridImage, item.disabled && { opacity: 0.5 }]} />
-              ) : (
-                <Ionicons name={item.icon!} size={32} color={item.disabled ? '#a0a0a0' : '#f87b1b'} />
-              )}
-              <Text style={[styles.gridButtonText, item.disabled && styles.gridButtonTextDisabled]}>{item.title}</Text>
-            </Pressable>
-          ))}
-        </View>
+            {/* Recent Activity */}
+            <View style={[styles.section, !isCalendarVisible && styles.sectionNoCalendar]}>
+              {/* Activity Tabs */}
+              <View style={styles.activityTabsContainer}>
+                <Pressable
+                  onPress={() => toggleSection('overdue')}
+                  style={[styles.activityTab, expandedSection === 'overdue' && styles.activeTab]}
+                >
+                  <Text style={[styles.activityTabText, { color: '#FF3B30' }]}>
+                    En Retard ({overdueActivities.length})
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => toggleSection('today')}
+                  style={[styles.activityTab, expandedSection === 'today' && styles.activeTab]}
+                >
+                  <Text style={[styles.activityTabText, { color: '#f87b1b' }]}>
+                    Aujourd&apos;hui ({todayActivities.length})
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => toggleSection('upcoming')}
+                  style={[styles.activityTab, expandedSection === 'upcoming' && styles.activeTab]}
+                >
+                  <Text style={[styles.activityTabText, { color: '#007AFF' }]}>
+                    À Venir ({upcomingActivities.length})
+                  </Text>
+                </Pressable>
+              </View>
 
-        {/* Calendar */}
-        {isCalendarVisible && (
-          <View style={{ marginTop: -50 }}>
-            <CalendarComp
-              eventsByDate={eventsByDate}
-              onMonthChange={onMonthChange}
-              onDayPress={async (dateIso) => {
-                setSelectedDate(dateIso);
-                if (!token) { setDayEvents([]); setDayModalVisible(true); return; }
-                try {
-                  const res = await fetch(`${API_CONFIG.BASE_URL}/calendar?start_date=${dateIso}&end_date=${dateIso}`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                  });
-                  const data = await res.json();
-                  if (!res.ok) throw new Error('Failed');
-                  setDayEvents(Array.isArray(data) ? data : []);
-                } catch {
-                  setDayEvents([]);
-                } finally {
-                  setDayModalVisible(true);
-                }
-              }}
-              onAddEvent={() => setEventModalVisible(true)}
-            />
-          </View>
-        )}
-
-        {/* Recent Activity */}
-        <View style={[styles.section, !isCalendarVisible && { ...styles.sectionNoCalendar, marginTop: -(height * 0.08) }]}>
-          {/* Activity Tabs */}
-          <View style={styles.activityTabsContainer}>
-            <Pressable
-              onPress={() => toggleSection('overdue')}
-              style={[styles.activityTab, expandedSection === 'overdue' && styles.activeTab]}
-            >
-              <Text style={[styles.activityTabText, { color: '#FF3B30' }]}>
-                En Retard ({overdueActivities.length})
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => toggleSection('today')}
-              style={[styles.activityTab, expandedSection === 'today' && styles.activeTab]}
-            >
-              <Text style={[styles.activityTabText, { color: '#f87b1b' }]}>
-                Aujourd&apos;hui ({todayActivities.length})
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => toggleSection('upcoming')}
-              style={[styles.activityTab, expandedSection === 'upcoming' && styles.activeTab]}
-            >
-              <Text style={[styles.activityTabText, { color: '#007AFF' }]}>
-                À Venir ({upcomingActivities.length})
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* Expanded Content */}
-          <View style={styles.activityContentPlaceholder}>
-            {expandedSection === 'overdue' && (
-              <View style={styles.activityContainer}>
-                {overdueActivities.length > 0 ? (
-                  overdueActivities.map((activity) => (
-                    <Pressable
-                      key={activity.id}
-                      style={styles.activityItem}
-                      // onPress={() => router.push('/(tabs)/tasks')}
-                    >
-                      <View style={styles.activityIcon}>
-                        <Ionicons name="warning" size={16} color="#FF3B30" />
+              {/* Expanded Content */}
+              <View style={styles.activityContentPlaceholder}>
+                {expandedSection === 'overdue' && (
+                  <View style={styles.activityContainer}>
+                    {overdueActivities.length > 0 ? (
+                      overdueActivities.map((activity) => (
+                        <Pressable
+                          key={activity.id}
+                          style={styles.activityItem}
+                          // onPress={() => router.push('/(tabs)/tasks')}
+                        >
+                          <View style={styles.activityIcon}>
+                            <Ionicons name="warning" size={16} color="#FF3B30" />
+                          </View>
+                          <View style={styles.activityContent}>
+                            <Text style={[styles.activityText, { color: '#FF3B30' }]}>{activity.title || 'Activité sans titre'}</Text>
+                            <Text style={[styles.activityTime, { color: '#FF3B30' }]}>
+                              {formatTime(activity.date_planification)} • En retard
+                              {activity.declaration_title && ` • ${activity.declaration_title}`}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      ))
+                    ) : (
+                      <View style={styles.activityItem}>
+                        <Text style={[styles.activityText, { color: '#FF3B30' }]}>Aucune activité en retard</Text>
                       </View>
-                      <View style={styles.activityContent}>
-                        <Text style={[styles.activityText, { color: '#FF3B30' }]}>{activity.title || 'Activité sans titre'}</Text>
-                        <Text style={[styles.activityTime, { color: '#FF3B30' }]}>
-                          {formatTime(activity.date_planification)} • En retard
-                          {activity.declaration_title && ` • ${activity.declaration_title}`}
-                        </Text>
+                    )}
+                  </View>
+                )}
+                {expandedSection === 'today' && (
+                  <View style={styles.activityContainer}>
+                    {todayActivities.length > 0 ? (
+                      todayActivities.map((activity) => (
+                        <Pressable
+                          key={activity.id}
+                          style={styles.activityItem}
+                          // onPress={() => router.push('/(tabs)/tasks')}
+                        >
+                          <View style={styles.activityIcon}>
+                            <Ionicons name="time" size={16} color="#f87b1b" />
+                          </View>
+                          <View style={styles.activityContent}>
+                            <Text style={[styles.activityText, { color: '#f87b1b' }]}>{activity.title || 'Activité sans titre'}</Text>
+                            <Text style={[styles.activityTime, { color: '#f87b1b' }]}>
+                              {formatTime(activity.date_planification)} • Aujourd&apos;hui
+                              {activity.declaration_title && ` • ${activity.declaration_title}`}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      ))
+                    ) : (
+                      <View style={styles.activityItem}>
+                        <Text style={[styles.activityText, { color: '#f87b1b' }]}>Aucune activité prévue aujourd&apos;hui</Text>
                       </View>
-                    </Pressable>
-                  ))
-                ) : (
-                  <View style={styles.activityItem}>
-                    <Text style={[styles.activityText, { color: '#FF3B30' }]}>Aucune activité en retard</Text>
+                    )}
+                  </View>
+                )}
+                {expandedSection === 'upcoming' && (
+                  <View style={styles.activityContainer}>
+                    {upcomingActivities.length > 0 ? (
+                      upcomingActivities.map((activity) => (
+                        <Pressable
+                          key={activity.id}
+                          style={styles.activityItem}
+                          // onPress={() => router.push('/(tabs)/tasks')}
+                        >
+                          <View style={styles.activityIcon}>
+                            <Ionicons name="calendar" size={16} color="#007AFF" />
+                          </View>
+                          <View style={styles.activityContent}>
+                            <Text style={[styles.activityText, { color: '#007AFF' }]}>{activity.title || 'Activité sans titre'}</Text>
+                            <Text style={[styles.activityTime, { color: '#007AFF' }]}>
+                              {formatTime(activity.date_planification)} • À venir
+                              {activity.declaration_title && ` • ${activity.declaration_title}`}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      ))
+                    ) : (
+                      <View style={styles.activityItem}>
+                        <Text style={[styles.activityText, { color: '#007AFF' }]}>Aucune activité à venir</Text>
+                      </View>
+                    )}
                   </View>
                 )}
               </View>
-            )}
-            {expandedSection === 'today' && (
-              <View style={styles.activityContainer}>
-                {todayActivities.length > 0 ? (
-                  todayActivities.map((activity) => (
-                    <Pressable
-                      key={activity.id}
-                      style={styles.activityItem}
-                      // onPress={() => router.push('/(tabs)/tasks')}
-                    >
-                      <View style={styles.activityIcon}>
-                        <Ionicons name="time" size={16} color="#f87b1b" />
-                      </View>
-                      <View style={styles.activityContent}>
-                        <Text style={[styles.activityText, { color: '#f87b1b' }]}>{activity.title || 'Activité sans titre'}</Text>
-                        <Text style={[styles.activityTime, { color: '#f87b1b' }]}>
-                          {formatTime(activity.date_planification)} • Aujourd&apos;hui
-                          {activity.declaration_title && ` • ${activity.declaration_title}`}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  ))
-                ) : (
-                  <View style={styles.activityItem}>
-                    <Text style={[styles.activityText, { color: '#f87b1b' }]}>Aucune activité prévue aujourd&apos;hui</Text>
-                  </View>
-                )}
-              </View>
-            )}
-            {expandedSection === 'upcoming' && (
-              <View style={styles.activityContainer}>
-                {upcomingActivities.length > 0 ? (
-                  upcomingActivities.map((activity) => (
-                    <Pressable
-                      key={activity.id}
-                      style={styles.activityItem}
-                      // onPress={() => router.push('/(tabs)/tasks')}
-                    >
-                      <View style={styles.activityIcon}>
-                        <Ionicons name="calendar" size={16} color="#007AFF" />
-                      </View>
-                      <View style={styles.activityContent}>
-                        <Text style={[styles.activityText, { color: '#007AFF' }]}>{activity.title || 'Activité sans titre'}</Text>
-                        <Text style={[styles.activityTime, { color: '#007AFF' }]}>
-                          {formatTime(activity.date_planification)} • À venir
-                          {activity.declaration_title && ` • ${activity.declaration_title}`}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  ))
-                ) : (
-                  <View style={styles.activityItem}>
-                    <Text style={[styles.activityText, { color: '#007AFF' }]}>Aucune activité à venir</Text>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-        </View>
+            </View>
 
-        {/* Spacer for custom tab bar */}
-        <View style={{ height: 100 }} />
-      </ScrollView>
+            {/* Spacer for custom tab bar */}
+            <View style={{ height: 100 }} />
+          </>
+        }
+      />
       <View style={styles.footer}>
         <Text style={styles.footerText}>© 2025 Qualisol. Tous droits réservés.</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -499,19 +469,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F2F2F7',
   },
+  calendarContainer: {
+    marginTop: 20,
+  },
   scrollView: {
     flex: 1,
   },
   gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-around',
-    paddingHorizontal: 20,
-    marginTop: 20,
-    gap: 10,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingTop: 20,
   },
   gridButton: {
-    width: '30%',
+    margin: '1.5%',
     aspectRatio: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -613,6 +583,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   sectionNoCalendar: {
+    marginTop: 20,
     paddingTop: 0,
     paddingBottom: 10,
   },

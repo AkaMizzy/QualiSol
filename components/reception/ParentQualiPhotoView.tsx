@@ -1,16 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    UIManager,
-    View
+  ActivityIndicator,
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  UIManager,
+  useWindowDimensions,
+  View
 } from 'react-native';
 
 import API_CONFIG from '@/app/config/api';
@@ -88,6 +89,7 @@ type ParentQualiPhotoViewProps = {
     childrenWithAfterPhotos,
   }) => {
     const { token } = useAuth();
+    const { width } = useWindowDimensions();
     const [isEditModalVisible, setIsEditModalVisible] = React.useState(false);
     const [statuses, setStatuses] = React.useState<Status[]>([]);
     const [currentStatus, setCurrentStatus] = React.useState<Status | null>(null);
@@ -98,6 +100,8 @@ type ParentQualiPhotoViewProps = {
       title: string;
       message: string;
     }>({ visible: false, type: 'success', title: '', message: '' });
+
+    const isTablet = width >= 768;
 
     React.useEffect(() => {
       async function fetchStatuses() {
@@ -213,7 +217,11 @@ type ParentQualiPhotoViewProps = {
                 {!isLoadingChildren && childGeds.length === 0 && (
                   <Text style={styles.noChildrenText}>Aucune photo suivie n&apos;a encore été ajoutée.</Text>
                 )}
-                <View style={layoutMode === 'grid' ? styles.childGridContainer : styles.childListContainer}>
+                <View style={
+                  (layoutMode === 'list' && isTablet) || layoutMode === 'grid'
+                  ? styles.childGridContainer
+                  : styles.childListContainer
+                }>
                   {childGeds.map((ged) => {
                     const hasAfterPhoto = childrenWithAfterPhotos.has(ged.id);
                     const borderColor = hasAfterPhoto ? '#10b981' : '#EE4B2B'; // Green if has "after", red if not
@@ -221,7 +229,9 @@ type ParentQualiPhotoViewProps = {
                       <TouchableOpacity 
                         key={ged.id} 
                         style={[
-                          layoutMode === 'grid' ? styles.childGridItem : styles.childListItem,
+                          layoutMode === 'grid'
+                            ? styles.childGridItem
+                            : [styles.childListItem, { width: isTablet ? '49%' : '100%' }],
                           { borderColor, borderWidth: 2.5 }
                         ]} 
                         onPress={() => onChildPress(ged)}
@@ -500,7 +510,6 @@ const styles = StyleSheet.create({
         position: 'relative',
       },
       childListItem: {
-        width: '100%',
         marginBottom: 8,
         borderRadius: 12,
         overflow: 'hidden',

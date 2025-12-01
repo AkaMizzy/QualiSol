@@ -13,7 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, Modal, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Modal, RefreshControl, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -21,6 +21,7 @@ const PAGE_SIZE = 10;
 
 export default function GalerieScreen() {
   const { token, user } = useAuth();
+  const { width } = useWindowDimensions();
   const [geds, setGeds] = useState<Ged[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -32,6 +33,9 @@ export default function GalerieScreen() {
   const [selectedItem, setSelectedItem] = useState<Ged | null>(null);
   const [isAnnotatorVisible, setIsAnnotatorVisible] = useState(false);
   const [annotatorImageUri, setAnnotatorImageUri] = useState<string | null>(null);
+
+  const isTablet = width >= 768;
+  const numColumns = isTablet ? 4 : 2;
 
   const fetchGeds = useCallback(async () => {
     if (token) {
@@ -228,15 +232,16 @@ export default function GalerieScreen() {
 
       {loading && !refreshing ? (
         <View style={styles.skeletonContainer}>
-          {[...Array(6)].map((_, index) => (
-            <View key={index} style={styles.skeletonCard} />
+          {[...Array(8)].map((_, index) => (
+            <View key={index} style={[styles.skeletonCard, { width: `${100 / numColumns - 4}%` }]} />
           ))}
         </View>
       ) : (
         <FlatList
           data={displayedImages}
           keyExtractor={(item) => item.id}
-          numColumns={1}
+          numColumns={numColumns}
+          key={numColumns}
           renderItem={({ item }) => (
             <GalerieCard
               item={item}
@@ -244,6 +249,7 @@ export default function GalerieScreen() {
               hasVoiceNote={voiceNotesBySource[item.idsource]}
             />
           )}
+          columnWrapperStyle={styles.row}
           ListEmptyComponent={
             <View style={styles.centered}>
               <Text style={styles.emptyText}>Pas d&apos;images trouvées.</Text>
@@ -299,6 +305,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.lightWhite,
+  },
+  row: {
+    justifyContent: 'space-between',
+    marginHorizontal: SIZES.medium,
   },
   centered: {
     flex: 1,
@@ -364,14 +374,17 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   skeletonContainer: {
-    paddingHorizontal: 8,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+    paddingHorizontal: SIZES.medium,
+    marginTop: SIZES.medium,
   },
   skeletonCard: {
-    width: '100%',
     height: 200,
     backgroundColor: '#E0E0E0',
     borderRadius: SIZES.medium,
-    marginBottom: 16,
+    marginBottom: SIZES.medium,
   },
   loadMoreContainer: {
     alignItems: 'center',

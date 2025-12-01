@@ -13,7 +13,8 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
+    useWindowDimensions
 } from 'react-native';
 
 import API_CONFIG from '@/app/config/api';
@@ -48,6 +49,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   onAvantPhotoUpdate,
 }) => {
   const { token } = useAuth();
+  const { width } = useWindowDimensions();
   const [afterPhotos, setAfterPhotos] = useState<Ged[]>([]);
   const [isLoadingAfter, setIsLoadingAfter] = useState(true);
   const [isCreateAfterModalVisible, setCreateAfterModalVisible] = useState(false);
@@ -80,6 +82,8 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     title: string;
     message: string;
   }>({ visible: false, type: 'success', title: '', message: '' });
+
+  const isTablet = width >= 768;
 
   // Update local state when item prop changes
   useEffect(() => {
@@ -586,50 +590,52 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
       {header}
       <ScrollView bounces>
         <View style={styles.content}>
-          <View>
-            <Text style={styles.sectionTitle}>Avant</Text>
-            {item.url ? (
-              <TouchableOpacity onPress={() => handleOpenPreview(item)} style={styles.photoContainer}>
-                <Image source={{ uri: getFullImageUrl(item.url) as string }} style={styles.childThumbnail} />
-                <View style={styles.childGridOverlay}>
-                  <Text style={styles.childGridTitle} numberOfLines={1}>{item.title}</Text>
-                </View>
-              </TouchableOpacity>
-            ) : null}
-            {(item.type || item.categorie) && (
-              <View style={styles.metaContainer}>
-                {item.type ? (
-                  <Text style={styles.metaText}>
-                    <Text style={styles.metaLabel}>Type: </Text>
-                    {item.type}
-                  </Text>
-                ) : null}
-                {item.categorie ? (
-                  <Text style={styles.metaText}>
-                    <Text style={styles.metaLabel}>Catégorie: </Text>
-                    {item.categorie}
-                  </Text>
-                ) : null}
-              </View>
-            )}
-          </View>
-
-          <View>
-            <Text style={styles.sectionTitle}>Après</Text>
-            {isLoadingAfter ? (
-              <ActivityIndicator style={{ marginVertical: 12 }} />
-            ) : afterPhotos.length > 0 ? (
-              afterPhotos.map(photo => (
-                <TouchableOpacity key={photo.id} onPress={() => handleOpenPreview(photo)} style={styles.photoContainer}>
-                  <Image source={{ uri: getFullImageUrl(photo.url) as string }} style={styles.childThumbnail} />
+          <View style={isTablet ? styles.avantApresContainer : undefined}>
+            <View style={isTablet ? styles.avantApresColumn : undefined}>
+              <Text style={styles.sectionTitle}>Avant</Text>
+              {item.url ? (
+                <TouchableOpacity onPress={() => handleOpenPreview(item)} style={styles.photoContainer}>
+                  <Image source={{ uri: getFullImageUrl(item.url) as string }} style={styles.childThumbnail} />
                   <View style={styles.childGridOverlay}>
-                    <Text style={styles.childGridTitle} numberOfLines={1}>{photo.title}</Text>
+                    <Text style={styles.childGridTitle} numberOfLines={1}>{item.title}</Text>
                   </View>
                 </TouchableOpacity>
-              ))
-            ) : (
-              <Text style={styles.noAfterPhotosText}>Aucune photo après n&apos;a encore été ajoutée.</Text>
-            )}
+              ) : null}
+              {(item.type || item.categorie) && (
+                <View style={styles.metaContainer}>
+                  {item.type ? (
+                    <Text style={styles.metaText}>
+                      <Text style={styles.metaLabel}>Type: </Text>
+                      {item.type}
+                    </Text>
+                  ) : null}
+                  {item.categorie ? (
+                    <Text style={styles.metaText}>
+                      <Text style={styles.metaLabel}>Catégorie: </Text>
+                      {item.categorie}
+                    </Text>
+                  ) : null}
+                </View>
+              )}
+            </View>
+
+            <View style={isTablet ? styles.avantApresColumn : undefined}>
+              <Text style={styles.sectionTitle}>Après</Text>
+              {isLoadingAfter ? (
+                <ActivityIndicator style={{ marginVertical: 12 }} />
+              ) : afterPhotos.length > 0 ? (
+                afterPhotos.map(photo => (
+                  <TouchableOpacity key={photo.id} onPress={() => handleOpenPreview(photo)} style={styles.photoContainer}>
+                    <Image source={{ uri: getFullImageUrl(photo.url) as string }} style={styles.childThumbnail} />
+                    <View style={styles.childGridOverlay}>
+                      <Text style={styles.childGridTitle} numberOfLines={1}>{photo.title}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={styles.noAfterPhotosText}>Aucune photo après n&apos;a encore été ajoutée.</Text>
+              )}
+            </View>
           </View>
           {afterPhotos.length > 0 && (
             <View style={styles.comparisonContainer}>
@@ -1088,5 +1094,12 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#11224e',
         fontWeight: '500',
+      },
+      avantApresContainer: {
+        flexDirection: 'row',
+        gap: 12,
+      },
+      avantApresColumn: {
+        flex: 1,
       },
 });

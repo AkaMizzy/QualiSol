@@ -17,7 +17,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  useWindowDimensions
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import ConnectivityModal from '../../components/Connectivity/ConnectivityModal';
@@ -42,6 +43,7 @@ interface AlertState {
 export default function LoginScreen() {
   const { setLoginData } = useAuth();
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const { bottom } = useSafeAreaInsets();
   const [form, setForm] = useState<LoginForm>({ identifier: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -59,6 +61,8 @@ export default function LoginScreen() {
   const [isConnectivityDismissed, setConnectivityDismissed] = useState(false);
   const [serverStatus, setServerStatus] = useState<'unknown' | 'loading' | 'ok' | 'down' | 'error'>('unknown');
   const [isLoading, setIsLoading] = useState(false);
+
+  const isTablet = width >= 768;
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId: "1003184877153-pe30nmchbu9ji54o957qkh1isusesn34.apps.googleusercontent.com",
@@ -151,233 +155,276 @@ export default function LoginScreen() {
   }, [serverStatus]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        enabled={false}
-        behavior={undefined}
-        style={styles.keyboardView}
-        keyboardVerticalOffset={0}
-      >
-        <View style={styles.content}>
-          <View style={styles.mainContent}>
-              {/* Header */}
-              <View style={styles.header}>
-                <View style={styles.logoContainer}>
-                  <Image
-                    source={ICONS.newIcon}
-                    style={styles.logoImage}
-                    contentFit="contain"
-                  />
-                </View>
-                
-              </View>
-
-              {/* Form */}
-              <View style={styles.form}>
-                {/* identifier Input */}
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>identifier</Text>
-                  <View style={[
-                    styles.inputWrapper,
-                    focusedField === 'identifier' && styles.inputWrapperFocused
-                  ]}>
-                    <Ionicons
-                      name="person-outline"
-                      size={22}
-                      color={focusedField === 'identifier' ? '#f87b1b' : '#6B7280'}
-                      style={styles.inputIcon}
-                    />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Entrer l'identifiant"
-                      placeholderTextColor="#9CA3AF"
-                      value={form.identifier}
-                      onChangeText={(value) => handleInputChange('identifier', value)}
-                      onFocus={() => handleInputFocus('identifier')}
-                      onBlur={handleInputBlur}
-                      keyboardType="default"
-                      autoCapitalize="none"
-                      autoCorrect={false}
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#f7f7f7', '#e7e7e7']}
+        style={styles.gradient}
+      />
+      {/* Decorative Shapes */}
+      <View style={styles.shape1} />
+      <View style={styles.shape2} />
+      <View style={styles.shape3} />
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          enabled={false}
+          behavior={undefined}
+          style={styles.keyboardView}
+          keyboardVerticalOffset={0}
+        >
+          <View style={styles.content}>
+            <View style={styles.mainContent}>
+                {/* Header */}
+                <View style={styles.header}>
+                  <View style={styles.logoContainer}>
+                    <Image
+                      source={ICONS.newIcon}
+                      style={styles.logoImage}
+                      contentFit="contain"
                     />
                   </View>
+                  
                 </View>
 
-                {/* Password Input */}
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Mot de passe</Text>
-                  <View style={[
-                    styles.inputWrapper,
-                    focusedField === 'password' && styles.inputWrapperFocused
-                  ]}>
-                    <Ionicons
-                      name="lock-closed-outline"
-                      size={22}
-                      color={focusedField === 'password' ? '#f87b1b' : '#6B7280'}
-                      style={styles.inputIcon}
-                    />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Enter le mot de passe"
-                      placeholderTextColor="#9CA3AF"
-                      value={form.password}
-                      onChangeText={(value) => handleInputChange('password', value)}
-                      onFocus={() => handleInputFocus('password')}
-                      onBlur={handleInputBlur}
-                      secureTextEntry={!showPassword}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                    <TouchableOpacity
-                      onPress={() => setShowPassword(!showPassword)}
-                      style={styles.eyeIcon}
-                    >
+                {/* Form */}
+                <View style={[styles.formContainer, isTablet && styles.formContainerTablet]}>
+                  {/* identifier Input */}
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>identifier</Text>
+                    <View style={[
+                      styles.inputWrapper,
+                      focusedField === 'identifier' && styles.inputWrapperFocused
+                    ]}>
                       <Ionicons
-                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                        name="person-outline"
+                        size={22}
+                        color={focusedField === 'identifier' ? '#f87b1b' : '#6B7280'}
+                        style={styles.inputIcon}
+                      />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Entrer l'identifiant"
+                        placeholderTextColor="#9CA3AF"
+                        value={form.identifier}
+                        onChangeText={(value) => handleInputChange('identifier', value)}
+                        onFocus={() => handleInputFocus('identifier')}
+                        onBlur={handleInputBlur}
+                        keyboardType="default"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                      />
+                    </View>
+                  </View>
+
+                  {/* Password Input */}
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Mot de passe</Text>
+                    <View style={[
+                      styles.inputWrapper,
+                      focusedField === 'password' && styles.inputWrapperFocused
+                    ]}>
+                      <Ionicons
+                        name="lock-closed-outline"
                         size={22}
                         color={focusedField === 'password' ? '#f87b1b' : '#6B7280'}
+                        style={styles.inputIcon}
                       />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.forgotPassword}
-                  onPress={() => setForgotPasswordModalVisible(true)}
-                >
-                  <Text style={styles.forgotPasswordText}>Mot de passe oublié?</Text>
-                </TouchableOpacity>
-                
-                {/* Login Button */}
-                <TouchableOpacity
-                  style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-                  onPress={handleLogin}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
-                  ) : (
-                    <Text style={styles.loginButtonText}>Se connecter</Text>
-                  )}
-                </TouchableOpacity>
-
-                <View style={styles.orDivider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.orText}>OR</Text>
-                  <View style={styles.dividerLine} />
-                </View>
-
-                <TouchableOpacity onPress={() => promptAsync()} activeOpacity={0.9} accessibilityRole="button" accessibilityLabel="Sign in with Google">
-                  <LinearGradient
-                    colors={["#EA4335", "#FBBC05", "#34A853", "#4285F4", "#A142F4"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.googleButtonBorder}
-                  >
-                    <View style={styles.googleButtonInner}>
-                      <Image source={ICONS.google} style={styles.googleIcon} contentFit="contain" />
-                      <Text style={styles.googleButtonText}>Se connecter avec Google</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Enter le mot de passe"
+                        placeholderTextColor="#9CA3AF"
+                        value={form.password}
+                        onChangeText={(value) => handleInputChange('password', value)}
+                        onFocus={() => handleInputFocus('password')}
+                        onBlur={handleInputBlur}
+                        secureTextEntry={!showPassword}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                      />
+                      <TouchableOpacity
+                        onPress={() => setShowPassword(!showPassword)}
+                        style={styles.eyeIcon}
+                      >
+                        <Ionicons
+                          name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                          size={22}
+                          color={focusedField === 'password' ? '#f87b1b' : '#6B7280'}
+                        />
+                      </TouchableOpacity>
                     </View>
-                  </LinearGradient>
-                </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.forgotPassword}
+                    onPress={() => setForgotPasswordModalVisible(true)}
+                  >
+                    <Text style={styles.forgotPasswordText}>Mot de passe oublié?</Text>
+                  </TouchableOpacity>
+                  
+                  {/* Login Button */}
+                  <TouchableOpacity
+                    style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+                    onPress={handleLogin}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <Text style={styles.loginButtonText}>Se connecter</Text>
+                    )}
+                  </TouchableOpacity>
+
+                  <View style={styles.orDivider}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.orText}>OR</Text>
+                    <View style={styles.dividerLine} />
+                  </View>
+
+                  <TouchableOpacity onPress={() => promptAsync()} activeOpacity={0.9} accessibilityRole="button" accessibilityLabel="Sign in with Google">
+                    <LinearGradient
+                      colors={["#EA4335", "#FBBC05", "#34A853", "#4285F4", "#A142F4"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.googleButtonBorder}
+                    >
+                      <View style={styles.googleButtonInner}>
+                        <Image source={ICONS.google} style={styles.googleIcon} contentFit="contain" />
+                        <Text style={styles.googleButtonText}>Se connecter avec Google</Text>
+                      </View>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
               </View>
+
+              {/* Footer */}
+              <View style={[styles.footer, { paddingBottom: Math.max(16, bottom) }]}>
+                <Text style={styles.footerText}>
+                  Vous n&apos;avez pas de compte?{' '}
+                  <Link href="/Register" style={styles.footerLink}>
+                    Créer un compte
+                  </Link>
+                </Text>
+                <Text style={styles.copyrightText}>
+                  <Text style={styles.copyrightBrand}>QualiSol</Text> ©{new Date().getFullYear()}. Tous droits réservés.
+                </Text>
+                <TouchableOpacity
+                  onPress={() => Linking.openURL('https://www.muntadaa.com')}
+                  accessibilityRole="link"
+                  accessibilityHint="Ouvre www.muntaada.com dans le navigateur"
+                >
+                  <Text style={styles.websiteText}>www.muntaada.com</Text>
+                </TouchableOpacity>
             </View>
-
-            {/* Footer */}
-            <View style={[styles.footer, { paddingBottom: Math.max(16, bottom) }]}>
-              <Text style={styles.footerText}>
-                Vous n&apos;avez pas de compte?{' '}
-                <Link href="/Register" style={styles.footerLink}>
-                  Créer un compte
-                </Link>
-              </Text>
-              <Text style={styles.copyrightText}>
-                <Text style={styles.copyrightBrand}>QualiSol</Text> ©{new Date().getFullYear()}. Tous droits réservés.
-              </Text>
-              <TouchableOpacity
-                onPress={() => Linking.openURL('https://www.muntadaa.com')}
-                accessibilityRole="link"
-                accessibilityHint="Ouvre www.muntaada.com dans le navigateur"
-              >
-                <Text style={styles.websiteText}>www.muntaada.com</Text>
-              </TouchableOpacity>
           </View>
-        </View>
-      </KeyboardAvoidingView>
-      
-      
-      <CustomAlert
-        visible={alert.visible}
-        type={alert.type}
-        title={alert.title}
-        message={alert.message}
-        onClose={hideAlert}
-        duration={alert.type === 'success' ? 2000 : 4000}
-      />
+        </KeyboardAvoidingView>
+        
+        
+        <CustomAlert
+          visible={alert.visible}
+          type={alert.type}
+          title={alert.title}
+          message={alert.message}
+          onClose={hideAlert}
+          duration={alert.type === 'success' ? 2000 : 4000}
+        />
 
 
-      <ServerHealthModal
-        visible={isHealthModalVisible}
-        onClose={() => setHealthModalVisible(false)}
-      />
+        <ServerHealthModal
+          visible={isHealthModalVisible}
+          onClose={() => setHealthModalVisible(false)}
+        />
 
-      {/* Automatic server down alert */}
-      <ServerDownModal
-        visible={(serverStatus === 'down' || serverStatus === 'error') && !isDownModalDismissed}
-        onClose={() => setDownModalDismissed(true)}
-        onRetry={async () => {
-          const res = await getHealthStatus();
-          setServerStatus(res.status);
-        }}
-      />
+        {/* Automatic server down alert */}
+        <ServerDownModal
+          visible={(serverStatus === 'down' || serverStatus === 'error') && !isDownModalDismissed}
+          onClose={() => setDownModalDismissed(true)}
+          onRetry={async () => {
+            const res = await getHealthStatus();
+            setServerStatus(res.status);
+          }}
+        />
 
-      {/* Connectivity alert */}
-      <ConnectivityModal
-        visible={isOffline && !isConnectivityDismissed}
-        onRetry={async () => {
-          const res = await getConnectivity();
-          const offline = res.status === 'offline';
-          setIsOffline(offline);
-          if (!offline) setConnectivityDismissed(false);
-        }}
-        onClose={() => setConnectivityDismissed(true)}
-      />
+        {/* Connectivity alert */}
+        <ConnectivityModal
+          visible={isOffline && !isConnectivityDismissed}
+          onRetry={async () => {
+            const res = await getConnectivity();
+            const offline = res.status === 'offline';
+            setIsOffline(offline);
+            if (!offline) setConnectivityDismissed(false);
+          }}
+          onClose={() => setConnectivityDismissed(true)}
+        />
 
-      <ForgetPassword
-        visible={isForgotPasswordModalVisible}
-        onClose={() => setForgotPasswordModalVisible(false)}
-        onSuccess={() => {
-          // Surface top-level success and keep user on login
-          setForgotPasswordModalVisible(false);
-          setTimeout(() => {
-            setAlert({
-              visible: true,
-              type: 'success',
-              title: 'Demande envoyée',
-              message: '📩 Un e-mail vous a été envoyé. Veuillez vérifier votre boîte de réception.',
-            });
-          }, 50);
-        }}
-      />
+        <ForgetPassword
+          visible={isForgotPasswordModalVisible}
+          onClose={() => setForgotPasswordModalVisible(false)}
+          onSuccess={() => {
+            // Surface top-level success and keep user on login
+            setForgotPasswordModalVisible(false);
+            setTimeout(() => {
+              setAlert({
+                visible: true,
+                type: 'success',
+                title: 'Demande envoyée',
+                message: '📩 Un e-mail vous a été envoyé. Veuillez vérifier votre boîte de réception.',
+              });
+            }, 50);
+          }}
+        />
 
-      {/* Floating Health FAB (non-clickable indicator) */}
-      <TouchableOpacity
-        style={[styles.healthFab, { backgroundColor: getHealthColor(), bottom: bottom + 16 }]}
-        disabled
-        accessibilityRole="button"
-        accessibilityLabel="Server health indicator"
-        accessibilityState={{ disabled: true }}
-        activeOpacity={1}
-      >
-        <Ionicons name="pulse" size={22} color="#FFFFFF" />
-      </TouchableOpacity>
-    </SafeAreaView>
+        {/* Floating Health FAB (non-clickable indicator) */}
+        <TouchableOpacity
+          style={[styles.healthFab, { backgroundColor: getHealthColor(), bottom: bottom + 16 }]}
+          disabled
+          accessibilityRole="button"
+          accessibilityLabel="Server health indicator"
+          accessibilityState={{ disabled: true }}
+          activeOpacity={1}
+        >
+          <Ionicons name="pulse" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+  },
+  shape1: {
+    position: 'absolute',
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: 'rgba(248, 123, 27, 0.1)',
+    top: -80,
+    left: -100,
+  },
+  shape2: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(248, 123, 27, 0.1)',
+    bottom: -70,
+    right: -80,
+  },
+  shape3: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(248, 123, 27, 0.05)',
+    bottom: '30%',
+    left: 20,
+  },
+  gradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: 'transparent',
   },
   keyboardView: {
     flex: 1,
@@ -431,6 +478,21 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     marginTop: 8,
+  },
+  formContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 15,
+  },
+  formContainerTablet: {
+    maxWidth: 450,
+    alignSelf: 'center',
+    width: '100%',
   },
   form: {
     width: '100%',
