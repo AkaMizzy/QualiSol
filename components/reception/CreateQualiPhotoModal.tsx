@@ -39,6 +39,9 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
 
   const adminUser = useMemo(() => companyUsers.find(u => u.id === ownerId), [companyUsers, ownerId]);
 
+  const controlUsers = useMemo(() => companyUsers.filter(u => u.id !== ownerId), [companyUsers, ownerId]);
+  const technicienUsers = useMemo(() => companyUsers.filter(u => u.id !== ownerId && u.id !== controlId), [companyUsers, ownerId, controlId]);
+
   useEffect(() => {
     if (visible && user?.id) {
       setOwnerId(user.id);
@@ -93,12 +96,22 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
     loadUsers();
   }, [visible, token]);
 
-  const isDisabled = useMemo(() => !title || !token || submitting || !folderTypeId, [title, token, submitting, folderTypeId]);
+  const isDisabled = useMemo(() => !title || !token || submitting || !folderTypeId || !controlId, [title, token, submitting, folderTypeId, controlId]);
 
   const handleSubmit = async () => {
     if (!token || !folderTypeId) return;
     setError(null);
     if (!title || title.trim().length === 0) { setError('Veuillez saisir un titre.'); return; }
+    if (!controlId) { setError('Veuillez sélectionner un contrôleur.'); return; }
+
+    const roles = [ownerId, controlId, technicienId].filter(Boolean);
+    const uniqueRoles = new Set(roles);
+
+    if (roles.length !== uniqueRoles.size) {
+      setError('Un utilisateur ne peut pas être assigné à plusieurs rôles (Admin, Contrôleur, Technicien).');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload: CreateFolderPayload = {
@@ -242,10 +255,10 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingUsers ? (
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
-                      ) : companyUsers.length === 0 ? (
+                      ) : controlUsers.length === 0 ? (
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
                       ) : (
-                        companyUsers.map(u => (
+                        controlUsers.map(u => (
                           <TouchableOpacity key={u.id} onPress={() => { setControlId(String(u.id)); setControlOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(controlId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
                             <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
                             {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
@@ -274,10 +287,10 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingUsers ? (
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
-                      ) : companyUsers.length === 0 ? (
+                      ) : technicienUsers.length === 0 ? (
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
                       ) : (
-                        companyUsers.map(u => (
+                        technicienUsers.map(u => (
                           <TouchableOpacity key={u.id} onPress={() => { setTechnicienId(String(u.id)); setTechnicienOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(technicienId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
                             <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
                             {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}

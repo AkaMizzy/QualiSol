@@ -12,6 +12,7 @@ export type CreateGedInput = {
   level?: number;
   type?: string;
   categorie?: string;
+  assigned?: string;
   file?: {
     uri: string;
     type: string;
@@ -70,6 +71,10 @@ export async function createGed(token: string, input: CreateGedInput): Promise<{
 
   if (input.categorie) {
     formData.append('categorie', input.categorie);
+  }
+
+  if (input.assigned) {
+    formData.append('assigned', input.assigned);
   }
 
   // Append file if provided
