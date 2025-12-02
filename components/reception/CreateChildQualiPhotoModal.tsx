@@ -564,13 +564,14 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
         </ScrollView>
 
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.stopButton} onPress={onClose}>
-            <Text style={styles.stopButtonText}>Arrêter</Text>
+          <TouchableOpacity style={styles.footerStopButton} onPress={onClose}>
+            <Ionicons name="close-circle-outline" size={20} color="#dc2626" />
+            <Text style={styles.footerStopButtonText}>Arrêter</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.submitButton, !canSave && styles.submitButtonDisabled]} disabled={!canSave} onPress={handleSubmit}>
             {submitting ? (
               <>
-                <Ionicons name="hourglass" size={16} color="#FFFFFF" />
+                <Ionicons name="hourglass" size={18} color="#FFFFFF" />
                 <Text style={styles.submitButtonText}>Enregistrement...</Text>
               </>
             ) : isGeneratingDescription ? (
@@ -580,12 +581,12 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
               </>
             ) : isUploadingAudio ? (
                 <>
-                  <Ionicons name="mic-outline" size={16} color="#FFFFFF" />
+                  <Ionicons name="mic-outline" size={18} color="#FFFFFF" />
                   <Text style={styles.submitButtonText}>Note vocale...</Text>
                 </>
             ) : (
               <>
-                <Ionicons name="save" size={16} color="#FFFFFF" />
+                <Ionicons name="save" size={18} color="#FFFFFF" />
                 <Text style={styles.submitButtonText}>Enregistrer</Text>
               </>
             )}
@@ -925,8 +926,77 @@ const styles = StyleSheet.create({
     borderColor: '#f87b1b'
   },
 
-  footer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#e5e7eb', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  submitButton: { backgroundColor: '#f87b1b', borderRadius: 12, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, height: 48, flex: 1 },
-  submitButtonDisabled: { backgroundColor: '#d1d5db' },
-  submitButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  footer: { 
+    paddingHorizontal: 16, 
+    paddingTop: 8, 
+    paddingBottom: 24, 
+    backgroundColor: '#FFFFFF', 
+    borderTopWidth: 1, 
+    borderTopColor: '#e5e7eb', 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    gap: 12 
+  },
+  
+  footerStopButton: {
+    backgroundColor: '#fef2f2',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    minHeight: 52,
+    flex: 1,
+    borderWidth: 2,
+    borderColor: '#dc2626',
+    shadowColor: '#dc2626',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  
+  footerStopButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#dc2626',
+    letterSpacing: 0.3,
+  },
+  
+  submitButton: { 
+    backgroundColor: '#f87b1b', 
+    borderRadius: 12, 
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    flexDirection: 'row', 
+    gap: 8, 
+    minHeight: 52, 
+    flex: 1.2,
+    borderWidth: 2,
+    borderColor: '#f87b1b',
+    shadowColor: '#f87b1b',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  
+  submitButtonDisabled: { 
+    backgroundColor: '#d1d5db',
+    borderColor: '#d1d5db',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  
+  submitButtonText: { 
+    fontSize: 16, 
+    fontWeight: '700', 
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
 });
