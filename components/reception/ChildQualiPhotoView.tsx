@@ -3,18 +3,18 @@ import { Audio } from 'expo-av';
 import * as Linking from 'expo-linking';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View
 } from 'react-native';
 
 import API_CONFIG from '@/app/config/api';

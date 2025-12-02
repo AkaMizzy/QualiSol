@@ -25,6 +25,7 @@ export const ICONS = {
   manifold: require('@/assets/icons/manifold.png'),
   disponse: require('@/assets/icons/disponse.png'),
   test: require('@/assets/icons/test.png'),
+  danger: require('@/assets/icons/danger.png'),
   // GIF icons
   cameraGif: require('@/assets/icons/camera.gif'),
   constructionGif: require('@/assets/icons/construction.gif'),

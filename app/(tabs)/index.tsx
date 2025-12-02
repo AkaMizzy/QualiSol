@@ -38,7 +38,7 @@ const GRID_ITEMS: {
   { title: 'Déclarations', image: require('../../assets/icons/declaration_anomalie.png') },
   { title: 'Disponse', image: require('../../assets/icons/disponse.png')},
   { title: 'Manifold', image: require('../../assets/icons/manifold.png')},
-  { title: 'Planning', image: require('../../assets/icons/planning.png') },
+  { title: 'Danger', image: require('../../assets/icons/danger.png') },
   { title: 'Chantiers', image: require('../../assets/icons/project.png') },
   { title: 'Utilisateurs', image: require('../../assets/icons/users.png') },
   { title: 'Organisme',  image: require('../../assets/icons/company.png') },
@@ -76,7 +76,7 @@ export default function DashboardScreen() {
   const [prospectModalVisible, setProspectModalVisible] = useState(false);
 
   const isTablet = width >= 768;
-  const numColumns = isTablet ? 5 : 3;
+  const numColumns = isTablet ? 6 : 3;
 
   useEffect(() => {
     async function loadAuthData() {
@@ -207,8 +207,8 @@ export default function DashboardScreen() {
       onPress={() => {
         if (item.title === 'Suivi') {
           router.push('/qualiphoto');
-        } else if (item.title === 'Planning') {
-          //router.push('/planning');
+        } else if (item.title === 'Danger') {
+          router.push('/danger');
         } else if (item.title === 'Calendrier') {
           LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
           setIsCalendarVisible(prevState => !prevState);

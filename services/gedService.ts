@@ -21,6 +21,7 @@ export type CreateGedInput = {
 };
 
 export interface Ged {
+  level: undefined;
   id: string;
   idsource: string;
   title: string;
@@ -35,7 +36,8 @@ export interface Ged {
   status_id: string;
   company_id: string;
   type?: string;
-  categorie?: string;
+  categorie?: string; 
+  assigned?: string;
   created_at: string;
   value?: string;
 }
@@ -252,4 +254,11 @@ export async function generateFolderReport(token: string, folderId: string): Pro
   return response.data;
 }
 
-
+export async function getAssignedPhotoAvant(token: string): Promise<Ged[]> {
+  const response = await api.get('/api/geds/assigned/photoavant', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.data;
+}
