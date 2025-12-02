@@ -18,7 +18,7 @@ type Props = {
 };
 
 export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, projectId, zoneId }: Props) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
@@ -34,9 +34,16 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
   const [ownerId, setOwnerId] = useState('');
   const [controlId, setControlId] = useState('');
   const [technicienId, setTechnicienId] = useState('');
-  const [ownerOpen, setOwnerOpen] = useState(false);
   const [controlOpen, setControlOpen] = useState(false);
   const [technicienOpen, setTechnicienOpen] = useState(false);
+
+  const adminUser = useMemo(() => companyUsers.find(u => u.id === ownerId), [companyUsers, ownerId]);
+
+  useEffect(() => {
+    if (visible && user?.id) {
+      setOwnerId(user.id);
+    }
+  }, [visible, user]);
 
   useEffect(() => {
     async function loadFolderTypes() {
@@ -49,7 +56,7 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
           const reception = types.find(t => t.title?.toLowerCase() === 'reception');
           setFolderTypeId(String((reception ?? types[0]).id));
         }
-      } catch (error) {
+      } catch {
         setFolderTypes([]);
       } finally {
         setLoadingFolderTypes(false);
@@ -122,7 +129,6 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
     setOwnerId('');
     setControlId('');
     setTechnicienId('');
-    setOwnerOpen(false);
     setControlOpen(false);
     setTechnicienOpen(false);
     setFolderTypeOpen(false);
@@ -205,33 +211,18 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
               {/* Owner (Admin) Select */}
               <View style={{ gap: 8, marginTop: 12 }}>
                 <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Admin </Text>
-                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setOwnerOpen(v => !v)}>
+                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }, styles.disabledInput]} disabled>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                     <Ionicons name="person-circle-outline" size={16} color="#f87b1b" />
                     <Text style={[styles.input, { color: ownerId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {ownerId ? (companyUsers.find(u => String(u.id) === String(ownerId))?.firstname ? `${companyUsers.find(u => String(ownerId) === String(u.id))?.firstname} ${companyUsers.find(u => String(ownerId) === String(u.id))?.lastname || ''}` : ownerId) : 'Choisir un admin'}
+                      {adminUser
+                        ? `${adminUser.firstname || ''} ${adminUser.lastname || ''}`.trim() || adminUser.email
+                        : (loadingUsers ? 'Chargement...' : (user?.email || 'Admin non défini'))
+                      }
                     </Text>
                   </View>
-                  <Ionicons name={ownerOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#f87b1b" />
+                  <Ionicons name="lock-closed-outline" size={16} color="#9ca3af" />
                 </TouchableOpacity>
-                {ownerOpen && (
-                  <View style={{ maxHeight: 200, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
-                    <ScrollView keyboardShouldPersistTaps="handled">
-                      {loadingUsers ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
-                      ) : companyUsers.length === 0 ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
-                      ) : (
-                        companyUsers.map(u => (
-                          <TouchableOpacity key={u.id} onPress={() => { setOwnerId(String(u.id)); setOwnerOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(ownerId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
-                            <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
-                            {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
-                          </TouchableOpacity>
-                        ))
-                      )}
-                    </ScrollView>
-                  </View>
-                )}
               </View>
 
               {/* Control Select */}
@@ -347,6 +338,10 @@ const styles = StyleSheet.create({
   alertBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fffbeb', borderColor: '#f59e0b', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, marginHorizontal: 16, marginTop: 8, borderRadius: 10 },
   alertBannerText: { color: '#b45309', flex: 1, fontSize: 12 },
   inputWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#f87b1b', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  disabledInput: {
+    backgroundColor: '#f3f4f6',
+    borderColor: '#d1d5db',
+  },
   input: { flex: 1, color: '#111827' },
   footer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#e5e7eb' },
   submitButton: { backgroundColor: '#f87b1b', borderRadius: 12, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, height: 48, alignSelf: 'center', width: '92%' },

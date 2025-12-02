@@ -48,10 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const initializeAuth = async () => {
     try {
-      const [token, user] = await Promise.all([
+      const [token, storedUser] = await Promise.all([
         getAuthToken(),
         getUser(),
       ]);
+
+      const user = storedUser && storedUser.user ? storedUser.user : storedUser;
 
       if (token && user) {
         setAuthToken(token); // Set token for API calls

@@ -22,10 +22,10 @@ export async function login({ identifier, password }: LoginInput): Promise<Login
       if (response.status === 200 && data?.token) {
         const authToken: string = data.token;
         await saveAuthToken(authToken);
-        await saveUser(data);
+        await saveUser(data.user);
         await clearHealthToken();
         setAuthToken(authToken);
-        return { success: true, data: { token: authToken, user: data } };
+        return { success: true, data: { token: authToken, user: data.user } };
       }
 
       const message = data?.error || 'Authentication failed';
@@ -44,10 +44,10 @@ export async function login({ identifier, password }: LoginInput): Promise<Login
           if (alt.status === 200 && data2?.token) {
             const authToken: string = data2.token;
             await saveAuthToken(authToken);
-            await saveUser(data2);
+            await saveUser(data2.user);
             await clearHealthToken();
             setAuthToken(authToken);
-            return { success: true, data: { token: authToken, user: data2 } };
+            return { success: true, data: { token: authToken, user: data2.user } };
           }
         } catch {}
       }
@@ -126,7 +126,7 @@ export async function checkEmailExists(email: string): Promise<{ exists: boolean
       headers: { Authorization: `Bearer ${healthToken}` },
     });
     return response.data;
-  } catch (error) {
+  } catch {
     // Handle error, maybe return a default value
     return { exists: false };
   }
