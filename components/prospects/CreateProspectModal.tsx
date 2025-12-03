@@ -5,16 +5,17 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
 } from 'react-native';
 
 interface CreateProspectModalProps {
@@ -22,7 +23,10 @@ interface CreateProspectModalProps {
   onClose: () => void;
 }
 
+type ScanStep = 'scan' | 'processing' | 'preview' | 'form';
+
 export default function CreateProspectModal({ visible, onClose }: CreateProspectModalProps) {
+  const [currentStep, setCurrentStep] = useState<ScanStep>('scan');
   const [prospectCompany, setProspectCompany] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -31,7 +35,8 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
   const [rectoImage, setRectoImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [versoImage, setVersoImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
+  const [extractedData, setExtractedData] = useState<any>(null);
+  const [fadeAnim] = useState(new Animated.Value(1));
 
   const handleImagePick = async (type: 'recto' | 'verso') => {
     Alert.alert(
@@ -74,7 +79,7 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3] as [number, number],
-      quality: 1,
+      quality: 0.8,
     };
 
     if (pickerType === 'camera') {
@@ -100,7 +105,6 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
         const reader = new FileReader();
         reader.onloadend = () => {
           const base64 = reader.result as string;
-          // Remove data URI prefix to get just the base64 data
           const base64Data = base64.split(',')[1];
           resolve(base64Data);
         };
@@ -113,6 +117,23 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
     }
   };
 
+  const transitionToStep = (nextStep: ScanStep) => {
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    setTimeout(() => setCurrentStep(nextStep), 200);
+  };
+
   const handleScanBusinessCard = async () => {
     if (!rectoImage && !versoImage) {
       Alert.alert(
@@ -122,7 +143,7 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
       return;
     }
 
-    setIsScanning(true);
+    transitionToStep('processing');
 
     try {
       const token = await getAuthToken();
@@ -130,34 +151,38 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
         throw new Error('Token d\'authentification non trouvé.');
       }
 
-      // Prefer recto image, fall back to verso
       const imageToScan = rectoImage || versoImage;
       const base64Image = await convertImageToBase64(imageToScan!.uri);
 
       const result = await scanBusinessCard(token, base64Image);
 
       if (result.success && result.data) {
-        // Auto-populate fields with extracted data
-        if (result.data.prospectcompany) setProspectCompany(result.data.prospectcompany);
-        if (result.data.firstname) setFirstName(result.data.firstname);
-        if (result.data.lastname) setLastName(result.data.lastname);
-        if (result.data.email) setEmail(result.data.email);
-        if (result.data.phone1) setPhone1(result.data.phone1);
-
-        Alert.alert(
-          'Scan réussi',
-          'Les informations ont été extraites et insérées dans le formulaire. Veuillez vérifier les données avant de sauvegarder.'
-        );
+        setExtractedData(result.data);
+        transitionToStep('preview');
       }
     } catch (error) {
       console.error('Error scanning business card:', error);
       Alert.alert(
         'Erreur',
-        'Impossible d\'analyser la carte de visite. Veuillez réessayer ou saisir les informations manuellement.'
+        'Impossible d\'analyser la carte de visite. Veuillez réessayer.'
       );
-    } finally {
-      setIsScanning(false);
+      transitionToStep('scan');
     }
+  };
+
+  const handleApplyData = () => {
+    if (extractedData) {
+      if (extractedData.prospectcompany) setProspectCompany(extractedData.prospectcompany);
+      if (extractedData.firstname) setFirstName(extractedData.firstname);
+      if (extractedData.lastname) setLastName(extractedData.lastname);
+      if (extractedData.email) setEmail(extractedData.email);
+      if (extractedData.phone1) setPhone1(extractedData.phone1);
+    }
+    transitionToStep('form');
+  };
+
+  const handleSkipScan = () => {
+    transitionToStep('form');
   };
 
   const handleReset = () => {
@@ -168,6 +193,8 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
     setPhone1('');
     setRectoImage(null);
     setVersoImage(null);
+    setExtractedData(null);
+    setCurrentStep('scan');
     onClose();
   };
 
@@ -190,7 +217,6 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
         throw new Error('Token d\'authentification non trouvé.');
       }
 
-      // 1. Create prospect
       const prospectData: {
         prospectcompany?: string;
         firstname: string;
@@ -213,7 +239,6 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
       const prospectRes = await createProspect(token, prospectData);
       const prospectId = prospectRes.data.id;
 
-      // 2. Upload images to GED
       const uploadPromises = [];
       if (rectoImage) {
         uploadPromises.push(
@@ -221,7 +246,7 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
             idsource: prospectId,
             title: `CV Recto - ${firstName} ${lastName}`,
             kind: 'cv_recto',
-            author: 'user', // Replace with actual user info if available
+            author: 'user',
             file: {
               uri: rectoImage.uri,
               type: rectoImage.mimeType || 'image/jpeg',
@@ -237,7 +262,7 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
             idsource: prospectId,
             title: `CV Verso - ${firstName} ${lastName}`,
             kind: 'cv_verso',
-            author: 'user', // Replace with actual user info if available
+            author: 'user',
             file: {
               uri: versoImage.uri,
               type: versoImage.mimeType || 'image/jpeg',
@@ -257,260 +282,629 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
     }
   };
 
+  const renderScanStep = () => (
+    <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
+      <View style={styles.scanHeader}>
+        <Ionicons name="scan" size={64} color="#2563eb" />
+        <Text style={styles.scanTitle}>Scanner une Carte de Visite</Text>
+        <Text style={styles.scanSubtitle}>
+          Prenez une photo de la carte pour extraire automatiquement les informations
+        </Text>
+      </View>
+
+      <View style={styles.imagePickerRow}>
+        <Pressable style={styles.imagePickerLarge} onPress={() => handleImagePick('recto')}>
+          {rectoImage ? (
+            <Image source={{ uri: rectoImage.uri }} style={styles.previewImageLarge} />
+          ) : (
+            <>
+              <Ionicons name="camera" size={48} color="#2563eb" />
+              <Text style={styles.imagePickerLabel}>Recto</Text>
+            </>
+          )}
+        </Pressable>
+
+        <Pressable style={styles.imagePickerLarge} onPress={() => handleImagePick('verso')}>
+          {versoImage ? (
+            <Image source={{ uri: versoImage.uri }} style={styles.previewImageLarge} />
+          ) : (
+            <>
+              <Ionicons name="camera-outline" size={48} color="#64748b" />
+              <Text style={styles.imagePickerLabelSecondary}>Verso (Optionnel)</Text>
+            </>
+          )}
+        </Pressable>
+      </View>
+
+      <View style={styles.scanActions}>
+        <Pressable
+          style={[styles.primaryButton, !(rectoImage || versoImage) && styles.buttonDisabled]}
+          onPress={handleScanBusinessCard}
+          disabled={!(rectoImage || versoImage)}
+        >
+          <Ionicons name="sparkles" size={20} color="#fff" />
+          <Text style={styles.primaryButtonText}>Analyser avec IA</Text>
+        </Pressable>
+
+        <Pressable style={styles.secondaryButton} onPress={handleSkipScan}>
+          <Text style={styles.secondaryButtonText}>Saisir manuellement</Text>
+        </Pressable>
+      </View>
+    </Animated.View>
+  );
+
+  const renderProcessingStep = () => (
+    <Animated.View style={[styles.stepContainer, styles.processingContainer, { opacity: fadeAnim }]}>
+      <View style={styles.processingContent}>
+        <ActivityIndicator size="large" color="#2563eb" />
+        <Text style={styles.processingTitle}>Analyse en cours...</Text>
+        <Text style={styles.processingSubtitle}>
+          L'IA extrait les informations de la carte de visite
+        </Text>
+        
+        <View style={styles.processingSteps}>
+          <View style={styles.processingStep}>
+            <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+            <Text style={styles.processingStepText}>Image reçue</Text>
+          </View>
+          <View style={styles.processingStep}>
+            <ActivityIndicator size="small" color="#2563eb" />
+            <Text style={styles.processingStepText}>Analyse GPT-4...</Text>
+          </View>
+          <View style={styles.processingStep}>
+            <Ionicons name="ellipse-outline" size={20} color="#cbd5e1" />
+            <Text style={[styles.processingStepText, styles.processingStepInactive]}>
+              Extraction des données
+            </Text>
+          </View>
+        </View>
+      </View>
+    </Animated.View>
+  );
+
+  const renderPreviewStep = () => (
+    <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
+      <View style={styles.previewHeader}>
+        <Ionicons name="checkmark-circle" size={48} color="#10b981" />
+        <Text style={styles.previewTitle}>Données Extraites</Text>
+        <Text style={styles.previewSubtitle}>Vérifiez les informations détectées</Text>
+      </View>
+
+      <View style={styles.previewData}>
+        <DataPreviewItem
+          icon="business"
+          label="Société"
+          value={extractedData?.prospectcompany || 'Non détecté'}
+          detected={!!extractedData?.prospectcompany}
+        />
+        <DataPreviewItem
+          icon="person"
+          label="Prénom"
+          value={extractedData?.firstname || 'Non détecté'}
+          detected={!!extractedData?.firstname}
+        />
+        <DataPreviewItem
+          icon="person-outline"
+          label="Nom"
+          value={extractedData?.lastname || 'Non détecté'}
+          detected={!!extractedData?.lastname}
+        />
+        <DataPreviewItem
+          icon="mail"
+          label="Email"
+          value={extractedData?.email || 'Non détecté'}
+          detected={!!extractedData?.email}
+        />
+        <DataPreviewItem
+          icon="call"
+          label="Téléphone"
+          value={extractedData?.phone1 || 'Non détecté'}
+          detected={!!extractedData?.phone1}
+        />
+      </View>
+
+      <View style={styles.previewActions}>
+        <Pressable style={styles.primaryButton} onPress={handleApplyData}>
+          <Ionicons name="checkmark" size={20} color="#fff" />
+          <Text style={styles.primaryButtonText}>Utiliser ces données</Text>
+        </Pressable>
+
+        <Pressable style={styles.secondaryButton} onPress={() => transitionToStep('scan')}>
+          <Ionicons name="refresh" size={20} color="#64748b" />
+          <Text style={styles.secondaryButtonText}>Scanner à nouveau</Text>
+        </Pressable>
+      </View>
+    </Animated.View>
+  );
+
+  const renderFormStep = () => (
+    <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.formHeader}>
+          <Text style={styles.formTitle}>Informations du Prospect</Text>
+          {extractedData && (
+            <View style={styles.aiBadge}>
+              <Ionicons name="sparkles" size={12} color="#2563eb" />
+              <Text style={styles.aiBadgeText}>Rempli par IA</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.form}>
+          <FormInput
+            icon="business"
+            placeholder="Société"
+            value={prospectCompany}
+            onChangeText={setProspectCompany}
+            autoDetected={extractedData?.prospectcompany}
+          />
+          <FormInput
+            icon="person-outline"
+            placeholder="Nom"
+            value={lastName}
+            onChangeText={setLastName}
+            required
+            autoDetected={extractedData?.lastname}
+          />
+          <FormInput
+            icon="person"
+            placeholder="Prénom"
+            value={firstName}
+            onChangeText={setFirstName}
+            required
+            autoDetected={extractedData?.firstname}
+          />
+          <FormInput
+            icon="mail"
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            required
+            autoDetected={extractedData?.email}
+          />
+          <FormInput
+            icon="call"
+            placeholder="Téléphone"
+            value={phone1}
+            onChangeText={setPhone1}
+            keyboardType="phone-pad"
+            autoDetected={extractedData?.phone1}
+          />
+        </View>
+
+        <View style={styles.formActions}>
+          <Pressable
+            style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
+            onPress={handleSubmit}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                <Text style={styles.primaryButtonText}>Enregistrer</Text>
+              </>
+            )}
+          </Pressable>
+
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={handleReset}
+            disabled={isLoading}
+          >
+            <Text style={styles.secondaryButtonText}>Annuler</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </Animated.View>
+  );
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Créer un Prospect</Text>
-              <Pressable onPress={onClose}>
-                <Ionicons name="close-circle-outline" size={30} color="#f87b1b" />
-              </Pressable>
-            </View>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Nouveau Prospect</Text>
+            <Pressable onPress={handleReset} style={styles.closeButton}>
+              <Ionicons name="close" size={28} color="#64748b" />
+            </Pressable>
+          </View>
 
-            <View style={styles.form}>
-              <TextInput
-                style={styles.input}
-                placeholder="Société"
-                placeholderTextColor="#f87b1b"
-                value={prospectCompany}
-                onChangeText={setProspectCompany}
-                autoCapitalize="words"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Nom"
-                placeholderTextColor="#f87b1b"
-                value={lastName}
-                onChangeText={setLastName}
-                autoCapitalize="words"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Prénom"
-                placeholderTextColor="#f87b1b"
-                value={firstName}
-                onChangeText={setFirstName}
-                autoCapitalize="words"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor="#f87b1b"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Téléphone"
-                placeholderTextColor="#f87b1b"
-                value={phone1}
-                onChangeText={setPhone1}
-                keyboardType="phone-pad"
-              />
-
-              <View style={styles.imagePickerContainer}>
-                
-                 {/* Verso Image Picker */}
-                 <Pressable style={styles.imagePicker} onPress={() => handleImagePick('verso')}>
-                  {versoImage ? (
-                    <Image source={{ uri: versoImage.uri }} style={styles.previewImage} />
-                  ) : (
-                    <>
-                      <Ionicons name="camera-outline" size={32} color="#f87b1b" />
-                      <Text style={styles.imagePickerText}>Carte de visite (Verso)</Text>
-                    </>
-                  )}
-                </Pressable>
-                {/* Recto Image Picker */}
-                <Pressable style={styles.imagePicker} onPress={() => handleImagePick('recto')}>
-                  {rectoImage ? (
-                    <Image source={{ uri: rectoImage.uri }} style={styles.previewImage} />
-                  ) : (
-                    <>
-                      <Ionicons name="camera-outline" size={32} color="#f87b1b" />
-                      <Text style={styles.imagePickerText}>Carte de visite (Recto)</Text>
-                    </>
-                  )}
-                </Pressable>
-               
-              </View>
-
-              {/* AI Scan Button */}
-              {(rectoImage || versoImage) && (
-                <Pressable
-                  style={[
-                    styles.scanButton,
-                    (isScanning || isLoading) && styles.scanButtonDisabled
-                  ]}
-                  onPress={handleScanBusinessCard}
-                  disabled={isScanning || isLoading}
-                >
-                  {isScanning ? (
-                    <>
-                      <ActivityIndicator color="#FFFFFF" size="small" />
-                      <Text style={styles.scanButtonText}>Analyse en cours...</Text>
-                    </>
-                  ) : (
-                    <>
-                      <Ionicons name="scan-outline" size={20} color="#FFFFFF" />
-                      <Text style={styles.scanButtonText}>Scanner la carte de visite</Text>
-                    </>
-                  )}
-                </Pressable>
-              )}
-            </View>
-
-            <View style={styles.footer}>
-              <Pressable
-                style={[styles.button, styles.submitButton]}
-                onPress={handleSubmit}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.buttonText}>Enregistrer</Text>
-                )}
-              </Pressable>
-              <Pressable
-                style={[styles.button, styles.cancelButton]}
-                onPress={handleReset}
-                disabled={isLoading}
-              >
-                <Text style={[styles.buttonText, styles.cancelButtonText]}>Annuler</Text>
-              </Pressable>
-            </View>
-          </ScrollView>
+          {currentStep === 'scan' && renderScanStep()}
+          {currentStep === 'processing' && renderProcessingStep()}
+          {currentStep === 'preview' && renderPreviewStep()}
+          {currentStep === 'form' && renderFormStep()}
         </View>
       </View>
     </Modal>
   );
 }
 
+// Helper Components
+const DataPreviewItem = ({ icon, label, value, detected }: any) => (
+  <View style={styles.previewItem}>
+    <View style={styles.previewItemHeader}>
+      <Ionicons
+        name={icon}
+        size={20}
+        color={detected ? '#2563eb' : '#cbd5e1'}
+      />
+      <Text style={styles.previewItemLabel}>{label}</Text>
+      {detected && (
+        <View style={styles.detectedBadge}>
+          <Ionicons name="checkmark" size={10} color="#10b981" />
+        </View>
+      )}
+    </View>
+    <Text style={[styles.previewItemValue, !detected && styles.previewItemValueEmpty]}>
+      {value}
+    </Text>
+  </View>
+);
+
+const FormInput = ({ icon, placeholder, value, onChangeText, keyboardType, required, autoDetected }: any) => (
+  <View style={styles.inputContainer}>
+    <View style={styles.inputHeader}>
+      <View style={styles.inputLabelRow}>
+        <Ionicons name={icon} size={18} color="#64748b" />
+        <Text style={styles.inputLabel}>
+          {placeholder}
+          {required && <Text style={styles.required}> *</Text>}
+        </Text>
+      </View>
+      {autoDetected && (
+        <View style={styles.autoDetectedBadge}>
+          <Ionicons name="sparkles" size={10} color="#2563eb" />
+          <Text style={styles.autoDetectedText}>Auto</Text>
+        </View>
+      )}
+    </View>
+    <TextInput
+      style={[styles.input, autoDetected && styles.inputAutoDetected]}
+      placeholder={placeholder}
+      placeholderTextColor="#cbd5e1"
+      value={value}
+      onChangeText={onChangeText}
+      keyboardType={keyboardType || 'default'}
+      autoCapitalize={keyboardType === 'email-address' ? 'none' : 'words'}
+    />
+  </View>
+);
+
 const styles = StyleSheet.create({
-  modalContainer: {
+  modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  modalContent: {
-    width: '90%',
-    maxHeight: '80%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    padding: 20,
+  modalContainer: {
+    width: '92%',
+    maxHeight: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 10,
   },
-  header: {
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
-    paddingBottom: 15,
-    marginBottom: 15,
+    borderBottomColor: '#f1f5f9',
   },
-  title: {
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  stepContainer: {
+    padding: 24,
+    minHeight: 400,
+  },
+  
+  // Scan Step
+  scanHeader: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  scanTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  scanSubtitle: {
+    fontSize: 15,
+    color: '#64748b',
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  imagePickerRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  imagePickerLarge: {
+    flex: 1,
+    height: 180,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderStyle: 'dashed',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+  },
+  previewImageLarge: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 14,
+  },
+  imagePickerLabel: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2563eb',
+  },
+  imagePickerLabelSecondary: {
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#64748b',
+  },
+  scanActions: {
+    gap: 12,
+  },
+
+  // Processing Step
+  processingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  processingContent: {
+    alignItems: 'center',
+  },
+  processingTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginTop: 24,
+  },
+  processingSubtitle: {
+    fontSize: 15,
+    color: '#64748b',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  processingSteps: {
+    marginTop: 32,
+    gap: 16,
+    width: '100%',
+  },
+  processingStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  processingStepText: {
+    fontSize: 15,
+    color: '#475569',
+    fontWeight: '500',
+  },
+  processingStepInactive: {
+    color: '#cbd5e1',
+  },
+
+  // Preview Step
+  previewHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  previewTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginTop: 12,
+  },
+  previewSubtitle: {
+    fontSize: 15,
+    color: '#64748b',
+    marginTop: 6,
+  },
+  previewData: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  previewItem: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  previewItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  previewItemLabel: {
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    flex: 1,
+  },
+  detectedBadge: {
+    backgroundColor: '#d1fae5',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewItemValue: {
+    fontSize: 16,
+    color: '#1e293b',
+    fontWeight: '500',
+  },
+  previewItemValueEmpty: {
+    color: '#cbd5e1',
+    fontStyle: 'italic',
+  },
+  previewActions: {
+    gap: 12,
+  },
+
+  // Form Step
+  formHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  formTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#f87b1b',
+    color: '#1e293b',
+  },
+  aiMessage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  aiMessageText: {
+    fontSize: 12,
+    color: '#2563eb',
+    fontWeight: '600',
   },
   form: {
-    gap: 12,
+    gap: 16,
+  },
+  inputContainer: {
+    gap: 8,
+  },
+  inputHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  inputLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  required: {
+    color: '#ef4444',
+  },
+  autoDetectedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  autoDetectedText: {
+    fontSize: 11,
+    color: '#2563eb',
+    fontWeight: '600',
   },
   input: {
     height: 50,
-    borderColor: '#f87b1b',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    backgroundColor: '#F2F2F7',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
     fontSize: 16,
-    color: '#1C1C1E',
+    color: '#1e293b',
+    backgroundColor: '#fff',
   },
-  imagePickerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-    marginTop: 10,
+  inputAutoDetected: {
+    borderColor: '#bfdbfe',
+    backgroundColor: '#f0f9ff',
   },
-  imagePicker: {
-    flex: 1,
-    height: 120,
-    borderWidth: 2,
-    borderColor: '#f87b1b',
-    borderStyle: 'dashed',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFF8F2',
+  formActions: {
+    marginTop: 24,
+    gap: 12,
   },
-  imagePickerText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: '#f87b1b',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  previewImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 8,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 25,
-    gap: 10,
-  },
-  button: {
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    alignItems: 'center',
-  },
-  submitButton: {
-    backgroundColor: '#f87b1b',
-  },
-  cancelButton: {
-    backgroundColor: '#F2F2F7',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  cancelButtonText: {
-    color: '#1C1C1E',
-  },
-  scanButton: {
+
+  // Buttons
+  primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#2563eb',
-    borderRadius: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    marginTop: 15,
+    paddingVertical: 16,
+    borderRadius: 12,
     gap: 8,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  scanButtonDisabled: {
-    backgroundColor: '#93c5fd',
-  },
-  scanButtonText: {
-    color: '#FFFFFF',
+  primaryButtonText: {
+    color: '#fff',
     fontSize: 16,
+    fontWeight: '700',
+  },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f8fafc',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+  },
+  secondaryButtonText: {
+    color: '#475569',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  aiBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  aiBadgeText: {
+    fontSize: 12,
+    color: '#2563eb',
     fontWeight: '600',
   },
 });
