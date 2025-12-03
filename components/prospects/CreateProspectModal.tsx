@@ -23,7 +23,7 @@ interface CreateProspectModalProps {
   onClose: () => void;
 }
 
-type ScanStep = 'scan' | 'processing' | 'preview' | 'form';
+type ScanStep = 'scan' | 'processing' | 'form';
 
 export default function CreateProspectModal({ visible, onClose }: CreateProspectModalProps) {
   const [currentStep, setCurrentStep] = useState<ScanStep>('scan');
@@ -37,7 +37,7 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
   const [isLoading, setIsLoading] = useState(false);
   const [extractedData, setExtractedData] = useState<any>(null);
   const [fadeAnim] = useState(new Animated.Value(1));
-
+  
   const handleImagePick = async (type: 'recto' | 'verso') => {
     Alert.alert(
       'Choisir une image',
@@ -158,7 +158,12 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
 
       if (result.success && result.data) {
         setExtractedData(result.data);
-        transitionToStep('preview');
+        setProspectCompany(result.data.prospectcompany || '');
+        setFirstName(result.data.firstname || '');
+        setLastName(result.data.lastname || '');
+        setEmail(result.data.email || '');
+        setPhone1(result.data.phone1 || '');
+        transitionToStep('form');
       }
     } catch (error) {
       console.error('Error scanning business card:', error);
@@ -168,17 +173,6 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
       );
       transitionToStep('scan');
     }
-  };
-
-  const handleApplyData = () => {
-    if (extractedData) {
-      if (extractedData.prospectcompany) setProspectCompany(extractedData.prospectcompany);
-      if (extractedData.firstname) setFirstName(extractedData.firstname);
-      if (extractedData.lastname) setLastName(extractedData.lastname);
-      if (extractedData.email) setEmail(extractedData.email);
-      if (extractedData.phone1) setPhone1(extractedData.phone1);
-    }
-    transitionToStep('form');
   };
 
   const handleSkipScan = () => {
@@ -285,7 +279,7 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
   const renderScanStep = () => (
     <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
       <View style={styles.scanHeader}>
-        <Ionicons name="scan" size={64} color="#2563eb" />
+        <Ionicons name="scan" size={64} color="#f87b1b" />
         <Text style={styles.scanTitle}>Scanner une Carte de Visite</Text>
         <Text style={styles.scanSubtitle}>
           Prenez une photo de la carte pour extraire automatiquement les informations
@@ -298,7 +292,7 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
             <Image source={{ uri: rectoImage.uri }} style={styles.previewImageLarge} />
           ) : (
             <>
-              <Ionicons name="camera" size={48} color="#2563eb" />
+              <Ionicons name="camera" size={48} color="#f87b1b" />
               <Text style={styles.imagePickerLabel}>Recto</Text>
             </>
           )}
@@ -310,7 +304,7 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
           ) : (
             <>
               <Ionicons name="camera-outline" size={48} color="#64748b" />
-              <Text style={styles.imagePickerLabelSecondary}>Verso (Optionnel)</Text>
+              <Text style={styles.imagePickerLabelSecondary}>Verso</Text>
             </>
           )}
         </Pressable>
@@ -336,10 +330,10 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
   const renderProcessingStep = () => (
     <Animated.View style={[styles.stepContainer, styles.processingContainer, { opacity: fadeAnim }]}>
       <View style={styles.processingContent}>
-        <ActivityIndicator size="large" color="#2563eb" />
+        <ActivityIndicator size="large" color="#f87b1b" />
         <Text style={styles.processingTitle}>Analyse en cours...</Text>
         <Text style={styles.processingSubtitle}>
-          L'IA extrait les informations de la carte de visite
+          L&apos;IA extrait les informations de la carte de visite
         </Text>
         
         <View style={styles.processingSteps}>
@@ -348,7 +342,7 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
             <Text style={styles.processingStepText}>Image reçue</Text>
           </View>
           <View style={styles.processingStep}>
-            <ActivityIndicator size="small" color="#2563eb" />
+            <ActivityIndicator size="small" color="#f87b1b" />
             <Text style={styles.processingStepText}>Analyse GPT-4...</Text>
           </View>
           <View style={styles.processingStep}>
@@ -362,72 +356,12 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
     </Animated.View>
   );
 
-  const renderPreviewStep = () => (
-    <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
-      <View style={styles.previewHeader}>
-        <Ionicons name="checkmark-circle" size={48} color="#10b981" />
-        <Text style={styles.previewTitle}>Données Extraites</Text>
-        <Text style={styles.previewSubtitle}>Vérifiez les informations détectées</Text>
-      </View>
-
-      <View style={styles.previewData}>
-        <DataPreviewItem
-          icon="business"
-          label="Société"
-          value={extractedData?.prospectcompany || 'Non détecté'}
-          detected={!!extractedData?.prospectcompany}
-        />
-        <DataPreviewItem
-          icon="person"
-          label="Prénom"
-          value={extractedData?.firstname || 'Non détecté'}
-          detected={!!extractedData?.firstname}
-        />
-        <DataPreviewItem
-          icon="person-outline"
-          label="Nom"
-          value={extractedData?.lastname || 'Non détecté'}
-          detected={!!extractedData?.lastname}
-        />
-        <DataPreviewItem
-          icon="mail"
-          label="Email"
-          value={extractedData?.email || 'Non détecté'}
-          detected={!!extractedData?.email}
-        />
-        <DataPreviewItem
-          icon="call"
-          label="Téléphone"
-          value={extractedData?.phone1 || 'Non détecté'}
-          detected={!!extractedData?.phone1}
-        />
-      </View>
-
-      <View style={styles.previewActions}>
-        <Pressable style={styles.primaryButton} onPress={handleApplyData}>
-          <Ionicons name="checkmark" size={20} color="#fff" />
-          <Text style={styles.primaryButtonText}>Utiliser ces données</Text>
-        </Pressable>
-
-        <Pressable style={styles.secondaryButton} onPress={() => transitionToStep('scan')}>
-          <Ionicons name="refresh" size={20} color="#64748b" />
-          <Text style={styles.secondaryButtonText}>Scanner à nouveau</Text>
-        </Pressable>
-      </View>
-    </Animated.View>
-  );
-
   const renderFormStep = () => (
     <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.formHeader}>
           <Text style={styles.formTitle}>Informations du Prospect</Text>
-          {extractedData && (
-            <View style={styles.aiBadge}>
-              <Ionicons name="sparkles" size={12} color="#2563eb" />
-              <Text style={styles.aiBadgeText}>Rempli par IA</Text>
-            </View>
-          )}
+         
         </View>
 
         <View style={styles.form}>
@@ -514,7 +448,6 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
 
           {currentStep === 'scan' && renderScanStep()}
           {currentStep === 'processing' && renderProcessingStep()}
-          {currentStep === 'preview' && renderPreviewStep()}
           {currentStep === 'form' && renderFormStep()}
         </View>
       </View>
@@ -523,43 +456,17 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
 }
 
 // Helper Components
-const DataPreviewItem = ({ icon, label, value, detected }: any) => (
-  <View style={styles.previewItem}>
-    <View style={styles.previewItemHeader}>
-      <Ionicons
-        name={icon}
-        size={20}
-        color={detected ? '#2563eb' : '#cbd5e1'}
-      />
-      <Text style={styles.previewItemLabel}>{label}</Text>
-      {detected && (
-        <View style={styles.detectedBadge}>
-          <Ionicons name="checkmark" size={10} color="#10b981" />
-        </View>
-      )}
-    </View>
-    <Text style={[styles.previewItemValue, !detected && styles.previewItemValueEmpty]}>
-      {value}
-    </Text>
-  </View>
-);
-
 const FormInput = ({ icon, placeholder, value, onChangeText, keyboardType, required, autoDetected }: any) => (
   <View style={styles.inputContainer}>
     <View style={styles.inputHeader}>
       <View style={styles.inputLabelRow}>
-        <Ionicons name={icon} size={18} color="#64748b" />
+        <Ionicons name={icon} size={18} color="#f87b1b" />
         <Text style={styles.inputLabel}>
           {placeholder}
           {required && <Text style={styles.required}> *</Text>}
         </Text>
       </View>
-      {autoDetected && (
-        <View style={styles.autoDetectedBadge}>
-          <Ionicons name="sparkles" size={10} color="#2563eb" />
-          <Text style={styles.autoDetectedText}>Auto</Text>
-        </View>
-      )}
+     
     </View>
     <TextInput
       style={[styles.input, autoDetected && styles.inputAutoDetected]}
@@ -658,7 +565,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     fontWeight: '600',
-    color: '#2563eb',
+    color: '#f87b1b',
   },
   imagePickerLabelSecondary: {
     marginTop: 12,
@@ -709,68 +616,6 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
   },
 
-  // Preview Step
-  previewHeader: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  previewTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginTop: 12,
-  },
-  previewSubtitle: {
-    fontSize: 15,
-    color: '#64748b',
-    marginTop: 6,
-  },
-  previewData: {
-    gap: 12,
-    marginBottom: 24,
-  },
-  previewItem: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  previewItemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  previewItemLabel: {
-    fontSize: 13,
-    color: '#64748b',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    flex: 1,
-  },
-  detectedBadge: {
-    backgroundColor: '#d1fae5',
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  previewItemValue: {
-    fontSize: 16,
-    color: '#1e293b',
-    fontWeight: '500',
-  },
-  previewItemValueEmpty: {
-    color: '#cbd5e1',
-    fontStyle: 'italic',
-  },
-  previewActions: {
-    gap: 12,
-  },
-
   // Form Step
   formHeader: {
     flexDirection: 'row',
@@ -794,7 +639,7 @@ const styles = StyleSheet.create({
   },
   aiMessageText: {
     fontSize: 12,
-    color: '#2563eb',
+    color: '#f87b1b',
     fontWeight: '600',
   },
   form: {
@@ -832,7 +677,7 @@ const styles = StyleSheet.create({
   },
   autoDetectedText: {
     fontSize: 11,
-    color: '#2563eb',
+    color: '#f87b1b',
     fontWeight: '600',
   },
   input: {
@@ -859,11 +704,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2563eb',
+    backgroundColor: '#f87b1b',
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,
-    shadowColor: '#2563eb',
+    shadowColor: '#f87b1b',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -904,7 +749,8 @@ const styles = StyleSheet.create({
   },
   aiBadgeText: {
     fontSize: 12,
-    color: '#2563eb',
+    color: '#f87b1b',
     fontWeight: '600',
   },
 });
+
