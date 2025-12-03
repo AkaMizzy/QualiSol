@@ -1,20 +1,20 @@
 import { createGed } from '@/services/gedService';
-import { createProspect } from '@/services/prospectService';
+import { createProspect, scanBusinessCard } from '@/services/prospectService';
 import { getAuthToken } from '@/services/secureStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View
 } from 'react-native';
 
 interface CreateProspectModalProps {
@@ -31,6 +31,7 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
   const [rectoImage, setRectoImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [versoImage, setVersoImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
 
   const handleImagePick = async (type: 'recto' | 'verso') => {
     Alert.alert(
@@ -88,6 +89,74 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
       } else {
         setVersoImage(result.assets[0]);
       }
+    }
+  };
+
+  const convertImageToBase64 = async (imageUri: string): Promise<string> => {
+    try {
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          // Remove data URI prefix to get just the base64 data
+          const base64Data = base64.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Error converting image to base64:', error);
+      throw error;
+    }
+  };
+
+  const handleScanBusinessCard = async () => {
+    if (!rectoImage && !versoImage) {
+      Alert.alert(
+        'Aucune image',
+        'Veuillez d\'abord prendre une photo de la carte de visite.'
+      );
+      return;
+    }
+
+    setIsScanning(true);
+
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('Token d\'authentification non trouvé.');
+      }
+
+      // Prefer recto image, fall back to verso
+      const imageToScan = rectoImage || versoImage;
+      const base64Image = await convertImageToBase64(imageToScan!.uri);
+
+      const result = await scanBusinessCard(token, base64Image);
+
+      if (result.success && result.data) {
+        // Auto-populate fields with extracted data
+        if (result.data.prospectcompany) setProspectCompany(result.data.prospectcompany);
+        if (result.data.firstname) setFirstName(result.data.firstname);
+        if (result.data.lastname) setLastName(result.data.lastname);
+        if (result.data.email) setEmail(result.data.email);
+        if (result.data.phone1) setPhone1(result.data.phone1);
+
+        Alert.alert(
+          'Scan réussi',
+          'Les informations ont été extraites et insérées dans le formulaire. Veuillez vérifier les données avant de sauvegarder.'
+        );
+      }
+    } catch (error) {
+      console.error('Error scanning business card:', error);
+      Alert.alert(
+        'Erreur',
+        'Impossible d\'analyser la carte de visite. Veuillez réessayer ou saisir les informations manuellement.'
+      );
+    } finally {
+      setIsScanning(false);
     }
   };
 
@@ -269,6 +338,30 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
                 </Pressable>
                
               </View>
+
+              {/* AI Scan Button */}
+              {(rectoImage || versoImage) && (
+                <Pressable
+                  style={[
+                    styles.scanButton,
+                    (isScanning || isLoading) && styles.scanButtonDisabled
+                  ]}
+                  onPress={handleScanBusinessCard}
+                  disabled={isScanning || isLoading}
+                >
+                  {isScanning ? (
+                    <>
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                      <Text style={styles.scanButtonText}>Analyse en cours...</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Ionicons name="scan-outline" size={20} color="#FFFFFF" />
+                      <Text style={styles.scanButtonText}>Scanner la carte de visite</Text>
+                    </>
+                  )}
+                </Pressable>
+              )}
             </View>
 
             <View style={styles.footer}>
@@ -400,5 +493,24 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: '#1C1C1E',
+  },
+  scanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2563eb',
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginTop: 15,
+    gap: 8,
+  },
+  scanButtonDisabled: {
+    backgroundColor: '#93c5fd',
+  },
+  scanButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

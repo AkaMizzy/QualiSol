@@ -54,3 +54,32 @@ export async function searchProspects(token: string, term: string): Promise<Pros
     throw error;
   }
 }
+
+export interface ExtractedProspectData {
+  prospectcompany: string | null;
+  firstname: string | null;
+  lastname: string | null;
+  email: string | null;
+  phone1: string | null;
+}
+
+export async function scanBusinessCard(
+  token: string, 
+  imageBase64: string
+): Promise<{ success: boolean; data: ExtractedProspectData }> {
+  try {
+    const response = await api.post(
+      '/api/prospects/scan-business-card',
+      { image: imageBase64 },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Failed to scan business card:', error);
+    throw error;
+  }
+}
