@@ -4,8 +4,8 @@ import { Folder, Project, Zone } from '@/services/folderService';
 import { Ged, getGedsBySource } from '@/services/gedService';
 import { Audio } from 'expo-av';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Platform, StyleSheet, UIManager, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActivityIndicator, Modal, Platform, StyleSheet, UIManager } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChildQualiPhotoView } from './ChildQualiPhotoView';
 import CreateChildQualiPhotoModal from './CreateChildQualiPhotoModal';
 import { ParentQualiPhotoView } from './ParentQualiPhotoView';
@@ -211,15 +211,15 @@ function QualiPhotoDetailView({
 
   if (!item) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#11224e" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (selectedGed) {
     return (
-      <View style={[styles.container]}>
+      <SafeAreaView style={[styles.container]}>
         <AppHeader user={user || undefined} onNavigate={() => setSelectedGed(null)} />
         <ChildQualiPhotoView
           item={selectedGed}
@@ -230,13 +230,13 @@ function QualiPhotoDetailView({
           zoneTitle={zoneTitle}
           onAvantPhotoUpdate={handleAvantPhotoUpdate}
         />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
     <>
-      <View style={[styles.container]}>
+      <SafeAreaView style={[styles.container]}>
         <AppHeader user={user || undefined} onNavigate={onClose} />
         <ParentQualiPhotoView
           item={item}
@@ -261,7 +261,7 @@ function QualiPhotoDetailView({
           zoneTitle={zoneTitle}
           childrenWithAfterPhotos={childrenWithAfterPhotos}
         />
-      </View>
+      </SafeAreaView>
       <CreateChildQualiPhotoModal
         visible={isChildModalVisible}
         onClose={() => setChildModalVisible(false)}

@@ -71,6 +71,14 @@ export default function QuestionsScreen() {
   const [loadingZones, setLoadingZones] = useState(false);
   const [allZones, setAllZones] = useState<Zone[]>([]); // All zones for display purposes
 
+  const filteredFolders = React.useMemo(() => {
+    return folders.filter(folder => {
+        const projectMatch = !selectedProject || folder.project_id === selectedProject;
+        const zoneMatch = !selectedZone || folder.zone_id === selectedZone;
+        return projectMatch && zoneMatch;
+    });
+  }, [folders, selectedProject, selectedZone]);
+
   const fetchFolders = useCallback(async () => {
     if (!token) {
       setIsLoading(false);
@@ -83,7 +91,12 @@ export default function QuestionsScreen() {
 
       if (testFolderType) {
         const fetchedFolders = await folderService.getAllFolders(token, testFolderType.title);
-        setFolders(fetchedFolders);
+        const sortedFolders = fetchedFolders.sort((a, b) => {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return dateB - dateA;
+        });
+        setFolders(sortedFolders);
       } else {
         setError('Le type de dossier "Test" est introuvable.');
       }
@@ -167,6 +180,30 @@ export default function QuestionsScreen() {
       </View>
     );
   }
+
+  const handleOpenQuestionsModal = (folderId: string) => {
+    setSelectedFolderId(folderId);
+    setQuestionsModalVisible(true);
+  };
+
+  const renderEmptyList = () => {
+    if (selectedProject || selectedZone) {
+      return (
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyTitle}>Aucun dossier trouvé</Text>
+          <Text style={styles.emptySubtitle}>
+            Aucun dossier ne correspond aux filtres sélectionnés.
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.emptyWrap}>
+        <Text style={styles.emptyTitle}>Aucun dossier pour le moment</Text>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -282,7 +319,7 @@ export default function QuestionsScreen() {
         </TouchableOpacity>
       </View>
       <FlatList
-        data={folders}
+        data={filteredFolders}
         renderItem={({ item }) => {
           const projectTitle = projects.find(p => p.id === item.project_id)?.title;
           const zoneTitle = allZones.find(z => z.id === item.zone_id)?.title;
@@ -296,11 +333,7 @@ export default function QuestionsScreen() {
         numColumns={2}
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyWrap}>
-            <Text style={styles.emptyTitle}>Aucun dossier trouvé.</Text>
-          </View>
-        }
+        ListEmptyComponent={renderEmptyList}
       />
       <CreateFolderModal
         visible={isModalVisible}
@@ -428,6 +461,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
     marginBottom: 6,
+  },
+  emptySubtitle: {
+    color: '#6b7280',
+    fontSize: 13,
+    textAlign: 'center',
   },
   row: {
     justifyContent: 'space-between',

@@ -1,15 +1,13 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 
-// import { CustomTabBar } from '@/components/CustomTabBar';
-
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         freezeOnBlur: true,
-        tabBarStyle: { 
+        tabBarStyle: {
           display: 'none',
           height: 0,
           padding: 0,
@@ -19,70 +17,19 @@ export default function TabLayout() {
         tabBarActiveTintColor: 'transparent',
         tabBarInactiveTintColor: 'transparent',
       }}
-      // tabBar={(props) => <CustomTabBar {...props} />}
     >
-      <Tabs.Screen
-        name="manifolder"
-        options={{
-          title: 'Manifold',
-          
-        }}
-      />
-      <Tabs.Screen
-        name="declaration"
-        options={{
-          title: 'Declaration',
-          
-        }}
-      />
-      
-      <Tabs.Screen
-        name="audit"
-        options={{
-          title: 'Audit',
-          
-        }}
-      />
-      <Tabs.Screen
-        name="echantillon"
-        options={{
-          title: 'Echantillon',
-         
-        }}
-      />
-      <Tabs.Screen
-        name="inventaire"
-        options={{
-          title: 'Inventaire',
-        }}
-      />
-      <Tabs.Screen
-        name="galerie"
-        options={{
-          title: 'Galerie',
-        }}
-      />
-      <Tabs.Screen
-        name="parametre"
-        options={{
-          title: 'Parametre',
-        }}
-      />
-      <Tabs.Screen
-        name="company"
-        options={{
-          title: 'Company',
-          
-        }}
-      />
-      <Tabs.Screen
-        name="users"
-        options={{
-          title: 'Users',
-          
-        }}
-      />
-     
+      <Tabs.Screen name="index" />
+      <Tabs.Screen name="change-password" />
+      <Tabs.Screen name="company" />
+      <Tabs.Screen name="danger" />
+      <Tabs.Screen name="galerie" />
+      <Tabs.Screen name="profile" />
+      <Tabs.Screen name="projects" />
+      <Tabs.Screen name="prospects" />
+      <Tabs.Screen name="pv" />
+      <Tabs.Screen name="qualiphoto" />
+      <Tabs.Screen name="questions" />
+      <Tabs.Screen name="users" />
     </Tabs>
   );
 }

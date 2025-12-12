@@ -1,7 +1,6 @@
 import API_CONFIG from '@/app/config/api';
 import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { Ged } from '@/services/gedService';
-import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -22,11 +21,6 @@ export default function GalerieCard({ item, onPress, hasVoiceNote }: GalerieCard
           source={{ uri: `${GofG}${item.url}` }}
           style={styles.image}
         />
-        {hasVoiceNote && (
-          <View style={styles.voiceNoteIcon}>
-            <Ionicons name="mic" size={18} color={COLORS.white} />
-          </View>
-        )}
         <View style={styles.overlay}>
           <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
           <Text style={styles.date}>{formattedDate}</Text>

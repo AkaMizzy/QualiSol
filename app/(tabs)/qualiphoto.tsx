@@ -56,6 +56,14 @@ export default function QualiPhotoGalleryScreen() {
   const fetchingRef = useRef(false);
   const requestIdRef = useRef(0);
 
+  const filteredFolders = React.useMemo(() => {
+    return folders.filter(folder => {
+        const projectMatch = !selectedProject || folder.project_id === selectedProject;
+        const zoneMatch = !selectedZone || folder.zone_id === selectedZone;
+        return projectMatch && zoneMatch;
+    });
+  }, [folders, selectedProject, selectedZone]);
+
   const fetchFolders = useCallback(async () => {
     if (!token) return;
 
@@ -207,6 +215,36 @@ export default function QualiPhotoGalleryScreen() {
 
   const keyExtractor = useCallback((item: Folder) => item.id, []);
 
+  const renderEmptyList = () => {
+    if (errorMessage) {
+      return (
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyTitle}>Impossible de charger les dossiers</Text>
+          <Text style={styles.emptySubtitle}>{errorMessage}</Text>
+        </View>
+      );
+    }
+    if (selectedProject || selectedZone) {
+      return (
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyTitle}>Aucun dossier trouvé</Text>
+          <Text style={styles.emptySubtitle}>
+            Aucun dossier ne correspond aux filtres sélectionnés.
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.emptyWrap}>
+        <Text style={styles.emptyTitle}>Aucun dossier pour le moment</Text>
+        <Text style={styles.emptySubtitle}>
+          Tirez pour actualiser ou créer un nouveau dossier.
+        </Text>
+      </View>
+    );
+  };
+
   
 
   return (
@@ -342,7 +380,7 @@ export default function QualiPhotoGalleryScreen() {
           </View>
         ) : (
           <FlatList
-            data={folders}
+            data={filteredFolders}
             keyExtractor={keyExtractor}
             numColumns={2}
             columnWrapperStyle={styles.row}
@@ -350,12 +388,7 @@ export default function QualiPhotoGalleryScreen() {
             contentContainerStyle={styles.listContent}
             refreshing={isRefreshing}
             onRefresh={refresh}
-            ListEmptyComponent={
-              <View style={styles.emptyWrap}>
-                <Text style={styles.emptyTitle}>{errorMessage ? 'Impossible de charger les dossiers' : 'Aucun dossier pour le moment'}</Text>
-                {errorMessage ? <Text style={styles.emptySubtitle}>{errorMessage}</Text> : <Text style={styles.emptySubtitle}>Tirez pour actualiser ou créer un nouveau dossier.</Text>}
-              </View>
-            }
+            ListEmptyComponent={renderEmptyList}
             ListFooterComponent={
               <>
                 {/* Spacer for custom tab bar */}
