@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 import { createUser } from '../../services/userService';
 import { CreateUserData } from '../../types/user';
@@ -135,8 +136,9 @@ export default function CreateUserModal({ visible, onClose, onUserCreated }: Cre
         presentationStyle="pageSheet"
         onRequestClose={handleClose}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
             <TouchableOpacity onPress={handleClose} disabled={loading}>
               <Ionicons name="close" size={24} color="#11224e" />
             </TouchableOpacity>
@@ -291,13 +293,18 @@ export default function CreateUserModal({ visible, onClose, onUserCreated }: Cre
               )}
             </TouchableOpacity>
           </View>
-        </View>
+          </View>
+        </SafeAreaView>
       </Modal>
     </>
   );
 }
 
 const styles = {
+  safeArea: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
   modalContainer: {
     flex: 1,
     backgroundColor: 'white',
