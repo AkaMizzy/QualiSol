@@ -1,4 +1,3 @@
-import AppHeader from '@/components/AppHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { Folder, Project, Zone } from '@/services/folderService';
 import { Ged, getGedsBySource } from '@/services/gedService';
@@ -220,7 +219,6 @@ function QualiPhotoDetailView({
   if (selectedGed) {
     return (
       <SafeAreaView style={[styles.container]}>
-        <AppHeader user={user || undefined} onNavigate={() => setSelectedGed(null)} />
         <ChildQualiPhotoView
           item={selectedGed}
           parentFolder={item}
@@ -237,7 +235,6 @@ function QualiPhotoDetailView({
   return (
     <>
       <SafeAreaView style={[styles.container]}>
-        <AppHeader user={user || undefined} onNavigate={onClose} />
         <ParentQualiPhotoView
           item={item}
           onClose={onClose}

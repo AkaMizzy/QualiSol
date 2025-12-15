@@ -169,7 +169,7 @@ export default function DangerScreen() {
                   <Text style={styles.emptySubtitle}>{errorMessage}</Text>
                 ) : (
                   <Text style={styles.emptySubtitle}>
-                    Vous n'avez aucune situation "avant" qui vous a été assignée pour le moment.
+                    Vous n&apos;avez aucune situation &quot;avant&quot; qui vous a été assignée pour le moment.
                   </Text>
                 )}
               </View>
