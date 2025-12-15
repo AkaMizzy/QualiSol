@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { setAuthToken } from '../services/api';
+import { setAuthToken, setOnUnauthorized } from '../services/api';
 import { clearAuthToken, clearUser, getAuthToken, getUser, saveAuthToken, saveUser } from '../services/secureStore';
 
 // Types
@@ -44,6 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Initialize auth state from storage
   useEffect(() => {
     initializeAuth();
+  }, []);
+
+  // Register auto-logout callback for when token expires (401 errors)
+  useEffect(() => {
+    setOnUnauthorized(() => {
+      console.log('Token expired - auto logout triggered');
+      logout();
+    });
   }, []);
 
   const initializeAuth = async () => {
