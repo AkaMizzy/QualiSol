@@ -8,18 +8,18 @@ import * as Linking from 'expo-linking';
 import * as Location from 'expo-location';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    useWindowDimensions,
-    View
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SignatureFieldQualiphoto from '../signature/SignatureFieldQualiphoto';
@@ -248,6 +248,11 @@ export default function QualiPhotoEditModal({
     setConclusion(prev => (prev ? `${prev}\n${text}` : text));
   };
 
+  // Permission checks: Only users assigned to specific roles can sign
+  const canSignAsTechnicien = item?.technicien_id ? String(user?.id) === String(item.technicien_id) : false;
+  const canSignAsControl = item?.control_id ? String(user?.id) === String(item.control_id) : false;
+  const canSignAsAdmin = item?.owner_id ? String(user?.id) === String(item.owner_id) : false;
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={handleClose}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -393,6 +398,7 @@ export default function QualiPhotoEditModal({
                   onSignatureComplete={(role, sig) => handleSignatureComplete('technicien', sig)}
                   isCompleted={signatures.technicien.completed}
                   signerName={signatures.technicien.signerName}
+                  disabled={!canSignAsTechnicien || signatures.technicien.completed}
                   />
                   <SignatureFieldQualiphoto
                   role="control"
@@ -400,13 +406,15 @@ export default function QualiPhotoEditModal({
                   onSignatureComplete={(role, sig) => handleSignatureComplete('control', sig)}
                   isCompleted={signatures.control.completed}
                   signerName={signatures.control.signerName}
+                  disabled={!canSignAsControl || signatures.control.completed}
                   />
                   <SignatureFieldQualiphoto
                   role="admin"
-                  roleLabel="Client"
+                  roleLabel="Admin"
                   onSignatureComplete={(role, sig) => handleSignatureComplete('admin', sig)}
                   isCompleted={signatures.admin.completed}
                   signerName={signatures.admin.signerName}
+                  disabled={!canSignAsAdmin || signatures.admin.completed}
                   />
               </View>
               </View>

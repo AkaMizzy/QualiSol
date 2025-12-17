@@ -135,7 +135,7 @@ export default function SignatureFieldQualiphoto({
             {/* Header */}
             <View style={styles.modalHeader}>
               <View style={styles.headerContent}>
-                <Text style={styles.modalTitle}>Digital Signature</Text>
+                <Text style={styles.modalTitle}>Signature numérique</Text>
                 <Text style={styles.modalSubtitle}>{roleLabel}</Text>
               </View>
               <Pressable onPress={handleCancel} style={styles.closeButton}>
@@ -185,7 +185,7 @@ export default function SignatureFieldQualiphoto({
                         display: none !important;
                       }
                       .m-signature-pad--body::before {
-                        content: "Sign here";
+                        content: "Signez ici";
                         position: absolute;
                         top: 50%;
                         left: 50%;
@@ -195,6 +195,7 @@ export default function SignatureFieldQualiphoto({
                         font-weight: 500;
                         pointer-events: none;
                         z-index: 1;
+                        text-align: center;
                       }
                     `}
                     style={styles.signatureCanvas}
@@ -212,11 +213,11 @@ export default function SignatureFieldQualiphoto({
               <View style={styles.actionButtons}>
                 <Pressable onPress={clearSignature} style={styles.secondaryButton}>
                   <Ionicons name="refresh" size={18} color="#f87b1b" />
-                  <Text style={styles.secondaryButtonText}>Clear</Text>
+                  <Text style={styles.secondaryButtonText}>Effacer</Text>
                 </Pressable>
                 <Pressable onPress={handleSave} style={styles.primaryButton}>
                   <Ionicons name="checkmark" size={18} color="#f87b1b" />
-                  <Text style={styles.primaryButtonText}>Confirm</Text>
+                  <Text style={styles.primaryButtonText}>Confirmer</Text>
                 </Pressable>
               </View>
             </View>
@@ -370,7 +371,8 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
     borderStyle: 'dashed',
     overflow: 'hidden',
-    width: screenWidth - 96,
+    width: '100%',
+    maxWidth: 420,
     height: 200,
     justifyContent: 'center',
     alignItems: 'center',

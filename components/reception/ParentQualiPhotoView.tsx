@@ -18,7 +18,7 @@ import API_CONFIG from '@/app/config/api';
 import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
 import folderService, { Folder } from '@/services/folderService';
-import { Ged } from '@/services/gedService';
+import { Ged, getGedsBySource } from '@/services/gedService';
 import { getAllStatuses, Status } from '@/services/statusService';
 import CustomAlert from '../CustomAlert';
 import QualiPhotoEditModal from './QualiPhotoEditModal';
@@ -100,6 +100,10 @@ type ParentQualiPhotoViewProps = {
       title: string;
       message: string;
     }>({ visible: false, type: 'success', title: '', message: '' });
+    
+    // Map to store apres photos for each avant photo (child ged)
+    const [apresPhotosMap, setApresPhotosMap] = React.useState<Map<string, Ged[]>>(new Map());
+    const [isLoadingApresPhotos, setIsLoadingApresPhotos] = React.useState(false);
 
     const isTablet = width >= 768;
 
@@ -118,6 +122,44 @@ type ParentQualiPhotoViewProps = {
 
       fetchStatuses();
     }, [token, item.status_id]);
+
+    // Fetch apres photos for grid mode on tablets
+    React.useEffect(() => {
+      async function fetchApresPhotos() {
+        if (!token || layoutMode !== 'grid' || childGeds.length === 0) {
+          return;
+        }
+
+        setIsLoadingApresPhotos(true);
+        try {
+          const apresMap = new Map<string, Ged[]>();
+          
+          // Fetch apres photos for each child ged that has them
+          await Promise.all(
+            childGeds.map(async (childGed) => {
+              if (childrenWithAfterPhotos.has(childGed.id)) {
+                try {
+                  const apresPhotos = await getGedsBySource(token, childGed.id, 'photoapres');
+                  if (apresPhotos.length > 0) {
+                    apresMap.set(childGed.id, apresPhotos);
+                  }
+                } catch (error) {
+                  console.error(`Failed to fetch apres photos for ${childGed.id}:`, error);
+                }
+              }
+            })
+          );
+          
+          setApresPhotosMap(apresMap);
+        } catch (error) {
+          console.error('Failed to fetch apres photos:', error);
+        } finally {
+          setIsLoadingApresPhotos(false);
+        }
+      }
+
+      fetchApresPhotos();
+    }, [token, layoutMode, isTablet, childGeds, childrenWithAfterPhotos]);
 
     const handleValidate = async () => {
       const activeStatus = statuses.find(s => s.status === 'Active');
@@ -222,32 +264,93 @@ type ParentQualiPhotoViewProps = {
                   ? styles.childGridContainer
                   : styles.childListContainer
                 }>
-                  {childGeds.map((ged) => {
-                    const hasAfterPhoto = childrenWithAfterPhotos.has(ged.id);
-                    const borderColor = hasAfterPhoto ? '#10b981' : '#EE4B2B'; // Green if has "after", red if not
-                    return (
-                      <TouchableOpacity 
-                        key={ged.id} 
-                        style={[
-                          layoutMode === 'grid'
-                            ? styles.childGridItem
-                            : [styles.childListItem, { width: isTablet ? '49%' : '100%' }],
-                          { borderColor, borderWidth: 2.5 }
-                        ]} 
-                        onPress={() => onChildPress(ged)}
-                      >
-                        {ged.url ? (
-                          <Image source={{ uri: `${API_CONFIG.BASE_URL}${ged.url}` }} style={styles.childThumbnail} />
-                        ) : (
-                          <View style={[styles.childThumbnail, { backgroundColor: '#e5e7eb' }]} />
-                        )}
-                        <View style={styles.childGridOverlay}>
-                          <Text style={styles.childGridTitle} numberOfLines={1}>{ged.title}</Text>
-                          {ged.created_at && <Text style={styles.childGridDate}>{formatDate(ged.created_at)}</Text>}
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
+                  {layoutMode === 'grid' ? (
+                    // Grid mode: Display avant and apres side by side with headers
+                    <View style={styles.gridPairContainer}>
+                      {/* Section Headers */}
+                      <View style={styles.gridHeaderRow}>
+                        <Text style={styles.gridSectionHeader}>Situation Avant</Text>
+                        <Text style={styles.gridSectionHeader}>Situation Après</Text>
+                      </View>
+                      
+                      {/* Cards */}
+                      {childGeds.map((ged) => {
+                        const hasAfterPhoto = childrenWithAfterPhotos.has(ged.id);
+                        const borderColor = hasAfterPhoto ? '#10b981' : '#EE4B2B';
+                        const apresPhotos = apresPhotosMap.get(ged.id);
+                        
+                        return (
+                          <View key={ged.id} style={styles.gridPairRow}>
+                            {/* Left: Situation Avant Card */}
+                            <TouchableOpacity 
+                              style={[styles.gridCard, { borderColor, borderWidth: 2.5 }]} 
+                              onPress={() => onChildPress(ged)}
+                            >
+                              {ged.url ? (
+                                <Image source={{ uri: `${API_CONFIG.BASE_URL}${ged.url}` }} style={styles.childThumbnail} />
+                              ) : (
+                                <View style={[styles.childThumbnail, { backgroundColor: '#e5e7eb' }]} />
+                              )}
+                              <View style={styles.childGridOverlay}>
+                                <Text style={styles.childGridTitle} numberOfLines={1}>{ged.title}</Text>
+                                {ged.created_at && <Text style={styles.childGridDate}>{formatDate(ged.created_at)}</Text>}
+                              </View>
+                            </TouchableOpacity>
+                            
+                            {/* Right: Situation Apres Card */}
+                            {apresPhotos && apresPhotos.length > 0 ? (
+                              <TouchableOpacity 
+                                style={[styles.gridCard, { borderColor, borderWidth: 2.5 }]} 
+                                onPress={() => onChildPress(ged)}
+                              >
+                                {apresPhotos[0].url ? (
+                                  <Image source={{ uri: `${API_CONFIG.BASE_URL}${apresPhotos[0].url}` }} style={styles.childThumbnail} />
+                                ) : (
+                                  <View style={[styles.childThumbnail, { backgroundColor: '#e5e7eb' }]} />
+                                )}
+                                <View style={styles.childGridOverlay}>
+                                  <Text style={styles.childGridTitle} numberOfLines={1}>{apresPhotos[0].title}</Text>
+                                  {apresPhotos[0].created_at && <Text style={styles.childGridDate}>{formatDate(apresPhotos[0].created_at)}</Text>}
+                                </View>
+                              </TouchableOpacity>
+                            ) : (
+                              <View style={[styles.gridCard, styles.placeholderCard, { borderColor: '#EE4B2B', borderWidth: 2.5 }]}>
+                                <Ionicons name="camera-outline" size={48} color="#94a3b8" />
+                                <Text style={styles.placeholderText}>Aucune photo après</Text>
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    // List mode: Display cards normally
+                    childGeds.map((ged) => {
+                      const hasAfterPhoto = childrenWithAfterPhotos.has(ged.id);
+                      const borderColor = hasAfterPhoto ? '#10b981' : '#EE4B2B';
+                      
+                      return (
+                        <TouchableOpacity 
+                          key={ged.id} 
+                          style={[
+                            [styles.childListItem, { width: isTablet ? '49%' : '100%' }],
+                            { borderColor, borderWidth: 2.5 }
+                          ]} 
+                          onPress={() => onChildPress(ged)}
+                        >
+                          {ged.url ? (
+                            <Image source={{ uri: `${API_CONFIG.BASE_URL}${ged.url}` }} style={styles.childThumbnail} />
+                          ) : (
+                            <View style={[styles.childThumbnail, { backgroundColor: '#e5e7eb' }]} />
+                          )}
+                          <View style={styles.childGridOverlay}>
+                            <Text style={styles.childGridTitle} numberOfLines={1}>{ged.title}</Text>
+                            {ged.created_at && <Text style={styles.childGridDate}>{formatDate(ged.created_at)}</Text>}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })
+                  )}
                 </View>
               </View>
               </>
@@ -509,6 +612,13 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         position: 'relative',
       },
+      childGridItemSplit: {
+        width: '100%',
+        marginBottom: 12,
+        borderRadius: 12,
+        overflow: 'hidden',
+        position: 'relative',
+      },
       childListItem: {
         marginBottom: 8,
         borderRadius: 12,
@@ -662,5 +772,45 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: 'bold',
+      },
+      gridPairContainer: {
+        width: '100%',
+      },
+      gridHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+        paddingHorizontal: 4,
+      },
+      gridSectionHeader: {
+        flex: 1,
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#f87b1b',
+        textAlign: 'center',
+      },
+      gridPairRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+        gap: 8,
+      },
+      gridCard: {
+        flex: 1,
+        borderRadius: 12,
+        overflow: 'hidden',
+        position: 'relative',
+      },
+      placeholderCard: {
+        backgroundColor: '#f9fafb',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: 150,
+        gap: 8,
+      },
+      placeholderText: {
+        color: '#94a3b8',
+        fontSize: 12,
+        textAlign: 'center',
       },
 });
