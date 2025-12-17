@@ -1,6 +1,7 @@
 import API_CONFIG from '@/app/config/api';
 import AppHeader from '@/components/AppHeader';
 import PreviewModal from '@/components/PreviewModal';
+import CreateProspectModal from '@/components/prospects/CreateProspectModal';
 import { getGedsByIds } from '@/services/gedService';
 import { Prospect, searchProspects } from '@/services/prospectService';
 import { getAuthToken, getUser } from '@/services/secureStore';
@@ -28,6 +29,7 @@ export default function ProspectsScreen() {
   const [previewVisible, setPreviewVisible] = useState(false);
   const [selectedMediaUrl, setSelectedMediaUrl] = useState<string | undefined>();
   const [selectedMediaTitle, setSelectedMediaTitle] = useState<string | undefined>();
+  const [prospectModalVisible, setProspectModalVisible] = useState(false);
 
   useEffect(() => {
     async function loadAuthData() {
@@ -158,6 +160,9 @@ export default function ProspectsScreen() {
             <Ionicons name="close-circle" size={22} color="#8E8E93" />
           </Pressable>
         )}
+        <Pressable style={styles.addButton} onPress={() => setProspectModalVisible(true)}>
+          <Ionicons name="person-add-outline" size={22} color="#f87b1b" />
+        </Pressable>
       </View>
       {isLoading ? (
         <ActivityIndicator size="large" color="#f87b1b" style={{ marginTop: 20 }} />
@@ -184,6 +189,10 @@ export default function ProspectsScreen() {
         mediaUrl={selectedMediaUrl}
         mediaType="image"
         title={selectedMediaTitle}
+      />
+      <CreateProspectModal
+        visible={prospectModalVisible}
+        onClose={() => setProspectModalVisible(false)}
       />
     </SafeAreaView>
   );
@@ -217,6 +226,10 @@ const styles = StyleSheet.create({
     color: '#11224e',
   },
   clearIcon: {
+    marginLeft: 8,
+    padding: 4,
+  },
+  addButton: {
     marginLeft: 8,
     padding: 4,
   },

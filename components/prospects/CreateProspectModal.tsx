@@ -287,17 +287,7 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
       </View>
 
       <View style={styles.imagePickerRow}>
-        <Pressable style={styles.imagePickerLarge} onPress={() => handleImagePick('recto')}>
-          {rectoImage ? (
-            <Image source={{ uri: rectoImage.uri }} style={styles.previewImageLarge} />
-          ) : (
-            <>
-              <Ionicons name="camera" size={48} color="#f87b1b" />
-              <Text style={styles.imagePickerLabel}>Recto</Text>
-            </>
-          )}
-        </Pressable>
-
+        
         <Pressable style={styles.imagePickerLarge} onPress={() => handleImagePick('verso')}>
           {versoImage ? (
             <Image source={{ uri: versoImage.uri }} style={styles.previewImageLarge} />
@@ -305,6 +295,16 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
             <>
               <Ionicons name="camera-outline" size={48} color="#64748b" />
               <Text style={styles.imagePickerLabelSecondary}>Verso</Text>
+            </>
+          )}
+        </Pressable>
+        <Pressable style={styles.imagePickerLarge} onPress={() => handleImagePick('recto')}>
+          {rectoImage ? (
+            <Image source={{ uri: rectoImage.uri }} style={styles.previewImageLarge} />
+          ) : (
+            <>
+              <Ionicons name="camera" size={48} color="#f87b1b" />
+              <Text style={styles.imagePickerLabel}>Recto</Text>
             </>
           )}
         </Pressable>

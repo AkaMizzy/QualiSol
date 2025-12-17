@@ -167,7 +167,7 @@ type ParentQualiPhotoViewProps = {
             onPress={() => setChildModalVisible(true)} 
             accessibilityLabel="Ajouter une photo avant"
             >
-            <Image source={ICONS.cameraGif} style={styles.headerActionIcon} />
+            <Image source={ICONS.cameraPng} style={styles.headerActionIcon} />
             </TouchableOpacity>
               <TouchableOpacity style={styles.headerAction} onPress={() => setIsEditModalVisible(true)} accessibilityLabel="Éditer">
                     <Image source={ICONS.edit} style={styles.headerActionIcon} />

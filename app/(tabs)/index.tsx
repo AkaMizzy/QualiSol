@@ -20,7 +20,6 @@ import AppHeader from '../../components/AppHeader';
 import CalendarComp from '../../components/calander/CalendarComp';
 import CreateCalendarEventModal from '../../components/calander/CreateCalendarEventModal';
 import DayEventsModal from '../../components/calander/DayEventsModal';
-import CreateProspectModal from '../../components/prospects/CreateProspectModal';
 
 import API_CONFIG from '../config/api';
 
@@ -73,7 +72,6 @@ export default function DashboardScreen() {
   const [overdueActivities, setOverdueActivities] = useState<any[]>([]);
   const [upcomingActivities, setUpcomingActivities] = useState<any[]>([]);
   const [expandedSection, setExpandedSection] = useState<string | null>('overdue');
-  const [prospectModalVisible, setProspectModalVisible] = useState(false);
 
   const isTablet = width >= 768;
   const numColumns = isTablet ? 6 : 3;
@@ -411,14 +409,9 @@ export default function DashboardScreen() {
       />
       <View style={styles.footer}>
         <Text style={styles.footerText}>© 2025 Qualisol. Tous droits réservés.</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Pressable style={{ marginRight: 16 }} onPress={() => setProspectModalVisible(true)}>
-            <Ionicons name="person-add-outline" size={22} color="#f87b1b" />
-          </Pressable>
-          <Pressable onPress={() => Linking.openURL('https://www.muntadaa.com/qualisol/help')}>
-            <Ionicons name="help-circle-outline" size={24} color="#f87b1b" />
-          </Pressable>
-        </View>
+        <Pressable onPress={() => Linking.openURL('https://www.muntadaa.com/qualisol/help')}>
+          <Ionicons name="help-circle-outline" size={24} color="#f87b1b" />
+        </Pressable>
       </View>
       <CreateCalendarEventModal
         visible={eventModalVisible}
@@ -455,10 +448,6 @@ export default function DashboardScreen() {
         date={selectedDate}
         events={dayEvents}
         onClose={() => setDayModalVisible(false)}
-      />
-      <CreateProspectModal
-        visible={prospectModalVisible}
-        onClose={() => setProspectModalVisible(false)}
       />
     </SafeAreaView>
   );

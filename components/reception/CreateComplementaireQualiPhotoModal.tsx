@@ -6,19 +6,19 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import VoiceNoteRecorder from '../VoiceNoteRecorder';
@@ -289,7 +289,11 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
           </ScrollView>
 
           <View style={styles.footer}>
-            <TouchableOpacity style={[styles.submitButton, !canSave && styles.submitButtonDisabled]} disabled={!canSave} onPress={handleSubmit}>
+            <TouchableOpacity 
+              style={[styles.submitButton, !canSave && styles.submitButtonDisabled]} 
+              disabled={!canSave} 
+              onPress={handleSubmit}
+            >
               {submitting ? (
                 <>
                   <ActivityIndicator size="small" color="#FFFFFF" />
@@ -302,7 +306,7 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
                 </>
               ) : (
                 <>
-                  <Ionicons name="save" size={16} color="#FFFFFF" />
+                  <Ionicons name="save" size={20} color="#FFFFFF" />
                   <Text style={styles.submitButtonText}>Enregistrer</Text>
                 </>
               )}
@@ -389,9 +393,24 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
    footer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#e5e7eb', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-   submitButton: { backgroundColor: '#f87b1b', borderRadius: 12, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, height: 48, flex: 1 },
+   submitButton: { 
+    backgroundColor: '#f87b1b', 
+    borderRadius: 12, 
+    paddingVertical: 16, 
+    paddingHorizontal: 24,
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    flexDirection: 'row', 
+    gap: 8, 
+    flex: 1,
+    shadowColor: '#f87b1b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
    submitButtonDisabled: { backgroundColor: '#d1d5db' },
-    submitButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+    submitButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
 });
 
 

@@ -579,7 +579,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
           disabled={isLoadingAfter || afterPhotos.length > 0}
           accessibilityLabel="Ajouter une photo complémentaire"
         >
-          <Image source={ICONS.cameraGif} style={styles.headerActionIcon} />
+          <Image source={ICONS.cameraPng} style={styles.headerActionIcon} />
         </TouchableOpacity>
       </View>
     </View>

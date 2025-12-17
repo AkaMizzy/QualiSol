@@ -8,17 +8,18 @@ import * as Linking from 'expo-linking';
 import * as Location from 'expo-location';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    useWindowDimensions,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SignatureFieldQualiphoto from '../signature/SignatureFieldQualiphoto';
@@ -38,6 +39,8 @@ export default function QualiPhotoEditModal({
   onSuccess,
 }: Props) {
   const { token, user } = useAuth();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
   const [description, setDescription] = useState('');
   const [conclusion, setConclusion] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -249,7 +252,7 @@ export default function QualiPhotoEditModal({
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={handleClose}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <SafeAreaView style={styles.container}>
-          <View style={styles.header}>
+          <View style={[styles.header, isTablet && styles.headerTablet]}>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color="#6b7280" />
             </TouchableOpacity>
@@ -261,7 +264,7 @@ export default function QualiPhotoEditModal({
           </View>
 
           {error && (
-            <View style={styles.alertBanner}>
+            <View style={[styles.alertBanner, isTablet && styles.alertBannerTablet]}>
               <Ionicons name="warning" size={16} color="#b45309" />
               <Text style={styles.alertBannerText}>{error}</Text>
               <TouchableOpacity onPress={() => setError(null)}>
@@ -270,7 +273,11 @@ export default function QualiPhotoEditModal({
             </View>
           )}
 
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={[styles.content, isTablet && styles.contentTablet]} 
+            contentContainerStyle={[styles.scrollContent, isTablet && styles.scrollContentTablet]}
+            showsVerticalScrollIndicator={false}
+          >
             <View style={styles.contextDisplay}>
               <View style={styles.contextItem}>
                 <Ionicons name="briefcase-outline" size={16} color="#f87b1b" />
@@ -296,26 +303,28 @@ export default function QualiPhotoEditModal({
               />
             </View>
 
-            {/* Introduction */}
-            <View style={{ marginTop: 16 }}>
-               <View style={styles.fieldLabelContainer}>
-                 <Ionicons name="chatbubble-ellipses-outline" size={18} color="#f87b1b" />
-                 <Text style={styles.fieldLabel}>Description</Text>
-               </View>
-               <VoiceNoteRecorder
+            {/* Description and Conclusion - Side by side on tablets */}
+            <View style={[styles.fieldsContainer, isTablet && styles.fieldsContainerTablet]}>
+              {/* Description */}
+              <View style={[styles.fieldSection, isTablet && styles.fieldSectionTablet]}>
+                <View style={styles.fieldLabelContainer}>
+                  <Ionicons name="chatbubble-ellipses-outline" size={18} color="#f87b1b" />
+                  <Text style={styles.fieldLabel}>Description</Text>
+                </View>
+                <VoiceNoteRecorder
                   onRecordingComplete={() => {}}
                   onTranscriptionComplete={handleDescriptionTranscription}
+                />
+                <View style={[styles.inputWrap, { alignItems: 'flex-start', marginTop: 8 }]}>
+                  <TextInput
+                    placeholder="Saisir la description..."
+                    value={description}
+                    onChangeText={setDescription}
+                    style={[styles.input, { height: 250, paddingRight: 60 }]}
+                    multiline
+                    textAlignVertical="top"
                   />
-               <View style={[styles.inputWrap, { alignItems: 'flex-start', marginTop: 8 }]}>
-                 <TextInput
-                   placeholder="Saisir la description..."
-                   value={description}
-                   onChangeText={setDescription}
-                   style={[styles.input, { height: 250, paddingRight: 60 }]}
-                   multiline
-                   textAlignVertical="top"
-                 />
-                 <TouchableOpacity
+                  <TouchableOpacity
                     style={styles.enhanceButton}
                     onPress={() => handleEnhance(description, setDescription)}
                     disabled={isEnhancing || !description}
@@ -326,34 +335,34 @@ export default function QualiPhotoEditModal({
                       <Ionicons name="sparkles-outline" size={20} color={!description ? '#d1d5db' : '#f87b1b'} />
                     )}
                   </TouchableOpacity>
-                 {description ? (
-                  <TouchableOpacity style={styles.clearButton} onPress={() => setDescription('')}>
-                    <Ionicons name="trash-outline" size={20} color="#EE4B2B" />
-                  </TouchableOpacity>
-                ) : null}
-               </View>
-             </View>
+                  {description ? (
+                    <TouchableOpacity style={styles.clearButton} onPress={() => setDescription('')}>
+                      <Ionicons name="trash-outline" size={20} color="#EE4B2B" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
 
-            {/* Conclusion */}
-            <View style={{ marginTop: 16 }}>
-               <View style={styles.fieldLabelContainer}>
-                 <Ionicons name="chatbubble-ellipses-outline" size={18} color="#f87b1b" />
-                 <Text style={styles.fieldLabel}>Conclusion</Text>
-               </View>
-               <VoiceNoteRecorder
+              {/* Conclusion */}
+              <View style={[styles.fieldSection, isTablet && styles.fieldSectionTablet, !isTablet && { marginTop: 16 }]}>
+                <View style={styles.fieldLabelContainer}>
+                  <Ionicons name="chatbubble-ellipses-outline" size={18} color="#f87b1b" />
+                  <Text style={styles.fieldLabel}>Conclusion</Text>
+                </View>
+                <VoiceNoteRecorder
                   onRecordingComplete={() => {}}
                   onTranscriptionComplete={handleConclusionTranscription}
+                />
+                <View style={[styles.inputWrap, { alignItems: 'flex-start', marginTop: 8 }]}>
+                  <TextInput
+                    placeholder="Saisir la conclusion..."
+                    value={conclusion}
+                    onChangeText={setConclusion}
+                    style={[styles.input, { height: 250, paddingRight: 60 }]}
+                    multiline
+                    textAlignVertical="top"
                   />
-               <View style={[styles.inputWrap, { alignItems: 'flex-start', marginTop: 8 }]}>
-                 <TextInput
-                   placeholder="Saisir la conclusion..."
-                   value={conclusion}
-                   onChangeText={setConclusion}
-                   style={[styles.input, { height: 250, paddingRight: 60 }]}
-                   multiline
-                   textAlignVertical="top"
-                 />
-                 <TouchableOpacity
+                  <TouchableOpacity
                     style={styles.enhanceButton}
                     onPress={() => handleEnhance(conclusion, setConclusion)}
                     disabled={isEnhancing || !conclusion}
@@ -364,19 +373,20 @@ export default function QualiPhotoEditModal({
                       <Ionicons name="sparkles-outline" size={20} color={!conclusion ? '#d1d5db' : '#f87b1b'} />
                     )}
                   </TouchableOpacity>
-                 {conclusion ? (
-                  <TouchableOpacity style={styles.clearButton} onPress={() => setConclusion('')}>
-                    <Ionicons name="trash-outline" size={20} color="#EE4B2B" />
-                  </TouchableOpacity>
-                ) : null}
-               </View>
-             </View>
-             <View style={{ marginTop: 16 }}>
+                  {conclusion ? (
+                    <TouchableOpacity style={styles.clearButton} onPress={() => setConclusion('')}>
+                      <Ionicons name="trash-outline" size={20} color="#EE4B2B" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+            </View>
+             <View style={[styles.signaturesSection, isTablet && styles.signaturesSectionTablet]}>
               <View style={styles.fieldLabelContainer}>
                   <Ionicons name="pencil-outline" size={18} color="#11224e" />
                   <Text style={styles.fieldLabel}>Signatures</Text>
               </View>
-              <View style={styles.signaturesContainer}>
+              <View style={[styles.signaturesContainer, isTablet && styles.signaturesContainerTablet]}>
                   <SignatureFieldQualiphoto
                   role="technicien"
                   roleLabel="Technicien"
@@ -403,7 +413,7 @@ export default function QualiPhotoEditModal({
 
            </ScrollView>
 
-          <View style={styles.footer}>
+          <View style={[styles.footer, isTablet && styles.footerTablet]}>
             <View style={styles.footerActions}>
               <TouchableOpacity
                 style={styles.footerActionButton}
@@ -425,12 +435,12 @@ export default function QualiPhotoEditModal({
             >
               {submitting ? (
                 <>
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color="#f87b1b" />
                   <Text style={styles.submitButtonText}>Enregistrement...</Text>
                 </>
               ) : (
                 <>
-                  <Ionicons name="save" size={16} color="#f87b1b" />
+                  <Ionicons name="save" size={20} color="#f87b1b" />
                   <Text style={styles.submitButtonText}>Enregistrer</Text>
                 </>
               )}
@@ -450,6 +460,8 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#11224e' },
   placeholder: { width: 40 },
   content: { flex: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 },
+  scrollContent: { width: '100%', flexGrow: 1, paddingBottom: 24 },
+  scrollContentTablet: { paddingBottom: 32 },
   alertBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fffbeb', borderColor: '#f59e0b', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, marginHorizontal: 16, marginTop: 8, borderRadius: 10 },
   alertBannerText: { color: '#b45309', flex: 1, fontSize: 12 },
   contextDisplay: { backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e5e7eb', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
@@ -478,15 +490,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#f87b1b',
     paddingVertical: 16,
+    paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 8,
-    height: 48,
     flex: 1,
+    shadowColor: '#f87b1b',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   submitButtonDisabled: { backgroundColor: '#d1d5db' },
-  submitButtonText: { fontSize: 16, fontWeight: '600', color: '#f87b1b' },
+  submitButtonText: { fontSize: 16, fontWeight: '700', color: '#f87b1b' },
   clearButton: {
     position: 'absolute',
     top: 12,
@@ -517,10 +534,52 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
   },
+  signaturesSection: {
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  signaturesSectionTablet: {
+    marginBottom: 24,
+  },
   signaturesContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 8,
     marginTop: 8,
+    width: '100%',
+    alignItems: 'stretch',
+  },
+  // Responsive styles for tablets
+  contentTablet: {
+    paddingHorizontal: 32,
+  },
+  fieldsContainer: {
+    marginTop: 16,
+  },
+  fieldsContainerTablet: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 16,
+  },
+  fieldSection: {
+    flex: 1,
+  },
+  fieldSectionTablet: {
+    flex: 1,
+  },
+  footerTablet: {
+    paddingHorizontal: 32,
+    maxWidth: '100%',
+  },
+  signaturesContainerTablet: {
+    gap: 16,
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  headerTablet: {
+    paddingHorizontal: 32,
+  },
+  alertBannerTablet: {
+    marginHorizontal: 32,
   },
 });

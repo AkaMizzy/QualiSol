@@ -14,6 +14,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +28,9 @@ type Props = {
 
 export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: Props) {
   const { token, user } = useAuth();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -297,7 +301,11 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
             </View>
             {selectedImage ? (
               <View style={styles.imageContainer}>
-                <Image source={{ uri: selectedImage }} style={styles.previewImage} resizeMode="cover" />
+                <Image 
+                  source={{ uri: selectedImage }} 
+                  style={[styles.previewImage, isTablet && styles.previewImageTablet]} 
+                  resizeMode="cover" 
+                />
                 <View style={styles.imageOverlay}>
                   <TouchableOpacity
                     style={styles.removeImageButton}
@@ -342,7 +350,12 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
               </View>
             ) : (
               <TextInput
-                style={[styles.input, styles.textArea, focusedInput === 'description' && styles.inputFocused]}
+                style={[
+                  styles.input, 
+                  styles.textArea, 
+                  isTablet && styles.textAreaTablet,
+                  focusedInput === 'description' && styles.inputFocused
+                ]}
                 value={description}
                 onChangeText={setDescription}
                 placeholder="Ajoutez une description (optionnel)"
@@ -471,6 +484,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 0,
+    paddingBottom: 80,  // Increased padding to ensure submit button is fully visible and scrollable
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -519,6 +533,9 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     paddingTop: 14,
   },
+  textAreaTablet: {
+    minHeight: 80,  // Reduced height for tablets
+  },
   imagePickerButton: {
     borderWidth: 2,
     borderColor: '#e5e7eb',
@@ -558,6 +575,9 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     borderRadius: 14,
+  },
+  previewImageTablet: {
+    height: 140,  // Reduced height for tablets to fit everything on screen
   },
   imageOverlay: {
     position: 'absolute',
@@ -654,7 +674,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 16,
-    marginBottom: 12,
+    marginBottom: 40,  // Increased margin to ensure button is fully visible with space
     flexDirection: 'row',
     gap: 8,
     shadowColor: '#f87b1b',

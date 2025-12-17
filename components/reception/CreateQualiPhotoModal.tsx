@@ -330,8 +330,22 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
           </ScrollView>
 
           <View style={styles.footer}>
-            <TouchableOpacity style={[styles.submitButton, isDisabled && styles.submitButtonDisabled]} disabled={isDisabled} onPress={handleSubmit}>
-              {submitting ? (<><Ionicons name="hourglass" size={16} color="#FFFFFF" /><Text style={styles.submitButtonText}>Enregistrement...</Text></>) : (<><Ionicons name="save" size={16} color="#FFFFFF" /><Text style={styles.submitButtonText}>Enregistrer</Text></>)}
+            <TouchableOpacity 
+              style={[styles.submitButton, isDisabled && styles.submitButtonDisabled]} 
+              disabled={isDisabled} 
+              onPress={handleSubmit}
+            >
+              {submitting ? (
+                <>
+                  <Ionicons name="hourglass" size={20} color="#FFFFFF" />
+                  <Text style={styles.submitButtonText}>Enregistrement...</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="save" size={20} color="#FFFFFF" />
+                  <Text style={styles.submitButtonText}>Enregistrer</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -357,9 +371,23 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, color: '#111827' },
   footer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#e5e7eb' },
-  submitButton: { backgroundColor: '#f87b1b', borderRadius: 12, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, height: 48, alignSelf: 'center', width: '92%' },
+  submitButton: { 
+    backgroundColor: '#f87b1b', 
+    borderRadius: 12, 
+    paddingVertical: 16, 
+    paddingHorizontal: 24,
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    flexDirection: 'row', 
+    gap: 8, 
+    shadowColor: '#f87b1b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
   submitButtonDisabled: { backgroundColor: '#d1d5db' },
-  submitButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  submitButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
 });
 
 
