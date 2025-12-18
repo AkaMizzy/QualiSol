@@ -9,6 +9,8 @@ export interface Prospect {
   phone1?: string;
   phone2?: string;
   email_second?: string;
+  fax?: string;
+  url?: string;
   status_id: string;
   company_id: string;
   created_at: string;
@@ -25,6 +27,8 @@ export interface CreateProspectInput {
   phone1?: string;
   phone2?: string;
   email_second?: string;
+  fax?: string;
+  url?: string;
 }
 
 export async function createProspect(token: string, prospectData: CreateProspectInput): Promise<{ message: string; data: Prospect }> {
@@ -37,6 +41,20 @@ export async function createProspect(token: string, prospectData: CreateProspect
     return response.data;
   } catch (error) {
     console.error('Failed to create prospect:', error);
+    throw error;
+  }
+}
+
+export async function getAllProspects(token: string): Promise<Prospect[]> {
+  try {
+    const response = await api.get('/api/prospects', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get all prospects:', error);
     throw error;
   }
 }
@@ -61,6 +79,10 @@ export interface ExtractedProspectData {
   lastname: string | null;
   email: string | null;
   phone1: string | null;
+  phone2: string | null;
+  email_second: string | null;
+  fax: string | null;
+  url: string | null;
 }
 
 export async function scanBusinessCard(

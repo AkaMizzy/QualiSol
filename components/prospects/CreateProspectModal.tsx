@@ -32,6 +32,10 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone1, setPhone1] = useState('');
+  const [phone2, setPhone2] = useState('');
+  const [emailSecond, setEmailSecond] = useState('');
+  const [fax, setFax] = useState('');
+  const [url, setUrl] = useState('');
   const [rectoImage, setRectoImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [versoImage, setVersoImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -163,6 +167,10 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
         setLastName(result.data.lastname || '');
         setEmail(result.data.email || '');
         setPhone1(result.data.phone1 || '');
+        setPhone2(result.data.phone2 || '');
+        setEmailSecond(result.data.email_second || '');
+        setFax(result.data.fax || '');
+        setUrl(result.data.url || '');
         transitionToStep('form');
       }
     } catch (error) {
@@ -185,6 +193,10 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
     setLastName('');
     setEmail('');
     setPhone1('');
+    setPhone2('');
+    setEmailSecond('');
+    setFax('');
+    setUrl('');
     setRectoImage(null);
     setVersoImage(null);
     setExtractedData(null);
@@ -217,6 +229,10 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
         lastname: string;
         email: string;
         phone1?: string;
+        phone2?: string;
+        email_second?: string;
+        fax?: string;
+        url?: string;
       } = {
         firstname: firstName,
         lastname: lastName,
@@ -228,6 +244,18 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
       }
       if (phone1) {
         prospectData.phone1 = phone1;
+      }
+      if (phone2) {
+        prospectData.phone2 = phone2;
+      }
+      if (emailSecond) {
+        prospectData.email_second = emailSecond;
+      }
+      if (fax) {
+        prospectData.fax = fax;
+      }
+      if (url) {
+        prospectData.url = url;
       }
       
       const prospectRes = await createProspect(token, prospectData);
@@ -358,7 +386,10 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
 
   const renderFormStep = () => (
     <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={styles.formHeader}>
           <Text style={styles.formTitle}>Informations du Prospect</Text>
          
@@ -404,6 +435,38 @@ export default function CreateProspectModal({ visible, onClose }: CreateProspect
             onChangeText={setPhone1}
             keyboardType="phone-pad"
             autoDetected={extractedData?.phone1}
+          />
+          <FormInput
+            icon="call-outline"
+            placeholder="Téléphone 2"
+            value={phone2}
+            onChangeText={setPhone2}
+            keyboardType="phone-pad"
+            autoDetected={extractedData?.phone2}
+          />
+          <FormInput
+            icon="mail-outline"
+            placeholder="Email 2"
+            value={emailSecond}
+            onChangeText={setEmailSecond}
+            keyboardType="email-address"
+            autoDetected={extractedData?.email_second}
+          />
+          <FormInput
+            icon="print-outline"
+            placeholder="Fax"
+            value={fax}
+            onChangeText={setFax}
+            keyboardType="phone-pad"
+            autoDetected={extractedData?.fax}
+          />
+          <FormInput
+            icon="globe-outline"
+            placeholder="Site Web"
+            value={url}
+            onChangeText={setUrl}
+            keyboardType="url"
+            autoDetected={extractedData?.url}
           />
         </View>
 
@@ -697,6 +760,9 @@ const styles = StyleSheet.create({
   formActions: {
     marginTop: 24,
     gap: 12,
+  },
+  scrollContent: {
+    paddingBottom: 40,
   },
 
   // Buttons

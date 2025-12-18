@@ -3,7 +3,7 @@ import AppHeader from '@/components/AppHeader';
 import PreviewModal from '@/components/PreviewModal';
 import CreateProspectModal from '@/components/prospects/CreateProspectModal';
 import { getGedsByIds } from '@/services/gedService';
-import { Prospect, searchProspects } from '@/services/prospectService';
+import { Prospect, getAllProspects, searchProspects } from '@/services/prospectService';
 import { getAuthToken, getUser } from '@/services/secureStore';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -40,6 +40,50 @@ export default function ProspectsScreen() {
     }
     loadAuthData();
   }, []);
+
+  // Load initial prospects
+  const loadInitialProspects = async (authToken: string) => {
+    setIsLoading(true);
+    try {
+      const prospects = await getAllProspects(authToken);
+      // Take only first 10 prospects
+      const limitedProspects = prospects.slice(0, 10);
+      
+      if (limitedProspects.length > 0) {
+        const prospectIds = limitedProspects.map(p => p.id);
+        const images = await getGedsByIds(authToken, prospectIds);
+        
+        const imagesMap = images.reduce((acc, image) => {
+          if (!acc[image.idsource]) {
+            acc[image.idsource] = {};
+          }
+          if (image.kind === 'cv_recto') {
+            acc[image.idsource].rectoUrl = image.url ?? undefined;
+          } else if (image.kind === 'cv_verso') {
+            acc[image.idsource].versoUrl = image.url ?? undefined;
+          }
+          return acc;
+        }, {} as Record<string, { rectoUrl?: string; versoUrl?: string }>);
+
+        const combinedResults = limitedProspects.map(prospect => ({
+          ...prospect,
+          ...imagesMap[prospect.id],
+        }));
+        setResults(combinedResults);
+      }
+    } catch (error) {
+      console.error('Failed to load initial prospects:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load initial prospects when token is available
+  useEffect(() => {
+    if (token && searchTerm.length === 0) {
+      loadInitialProspects(token);
+    }
+  }, [token]);
 
   const debouncedSearch = useMemo(
     () =>
@@ -86,7 +130,12 @@ export default function ProspectsScreen() {
   );
 
   useEffect(() => {
-    debouncedSearch(searchTerm, token);
+    if (searchTerm.length >= 2) {
+      debouncedSearch(searchTerm, token);
+    } else if (searchTerm.length === 0 && token) {
+      // When search is cleared, reload initial prospects
+      loadInitialProspects(token);
+    }
     return () => {
       debouncedSearch.cancel();
     };
@@ -124,6 +173,30 @@ export default function ProspectsScreen() {
             <View style={styles.contactInfo}>
               <Ionicons name="call-outline" size={16} color="#f87b1b" />
               <Text style={styles.itemText}>{item.phone1}</Text>
+            </View>
+          )}
+          {item.phone2 && (
+            <View style={styles.contactInfo}>
+              <Ionicons name="call" size={16} color="#f87b1b" />
+              <Text style={styles.itemText}>{item.phone2}</Text>
+            </View>
+          )}
+          {item.email_second && (
+            <View style={styles.contactInfo}>
+              <Ionicons name="mail" size={16} color="#f87b1b" />
+              <Text style={styles.itemText}>{item.email_second}</Text>
+            </View>
+          )}
+          {item.fax && (
+            <View style={styles.contactInfo}>
+              <Ionicons name="print-outline" size={16} color="#f87b1b" />
+              <Text style={styles.itemText}>{item.fax}</Text>
+            </View>
+          )}
+          {item.url && (
+            <View style={styles.contactInfo}>
+              <Ionicons name="globe-outline" size={16} color="#f87b1b" />
+              <Text style={styles.itemText}>{item.url}</Text>
             </View>
           )}
         </View>
