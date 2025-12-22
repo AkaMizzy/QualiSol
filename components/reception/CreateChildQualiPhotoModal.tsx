@@ -1,4 +1,4 @@
-// import PictureAnnotator from '@/components/PictureAnnotator';
+import PictureAnnotator from '@/components/PictureAnnotator';
 import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Folder } from '@/services/folderService';
@@ -613,7 +613,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
         visible={isAnnotatorVisible}
         onRequestClose={() => setAnnotatorVisible(false)}
       >
-        {/* <PictureAnnotator
+        <PictureAnnotator
           baseImageUri={annotatorBaseUri}
           onClose={() => setAnnotatorVisible(false)}
           onSaved={(image) => {
@@ -621,7 +621,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
             setAnnotatorVisible(false);
           }}
           title="Annoter la photo"
-        /> */}
+        />
       </Modal>
     )}
      <CustomAlert

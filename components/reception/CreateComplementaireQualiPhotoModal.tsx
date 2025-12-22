@@ -6,21 +6,22 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import PictureAnnotator from '../PictureAnnotator';
 import VoiceNoteRecorder from '../VoiceNoteRecorder';
 
 export type QualiPhotoItem = {
@@ -331,16 +332,16 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
           visible={isAnnotatorVisible}
           onRequestClose={() => setAnnotatorVisible(false)}
         >
-          {/* <PictureAnnotator
+          <PictureAnnotator
             baseImageUri={annotatorBaseUri}
             onClose={() => setAnnotatorVisible(false)}
             onSaved={(image: { uri: string; name: string; type: string }) => {
               setPhoto(image);
               setAnnotatorVisible(false);
-              handleGenerateDescription(image);
+              handleGenerateDescription();
             }}
             title="Annoter la photo complémentaire"
-          /> */}
+          />
         </Modal>
       )}
     </KeyboardAvoidingView>

@@ -18,7 +18,7 @@ const COLORS = ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#111827'
 
 export default function PictureAnnotator({ baseImageUri, onClose, onSaved, title }: Props) {
   const insets = useSafeAreaInsets();
-  const [selectedColor, setSelectedColor] = useState(COLORS[3]);
+  const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [strokeWidth, setStrokeWidth] = useState(4);
   const [paths, setPaths] = useState<DrawPath[]>([]);
   const [currentPath, setCurrentPath] = useState<string>('');

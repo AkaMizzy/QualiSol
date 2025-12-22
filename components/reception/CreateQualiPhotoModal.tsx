@@ -74,13 +74,12 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
     loadUsers();
   }, [visible, token]);
 
-  const isDisabled = useMemo(() => !title || !token || submitting || !controlId, [title, token, submitting, controlId]);
+  const isDisabled = useMemo(() => !title || !token || submitting, [title, token, submitting]);
 
   const handleSubmit = async () => {
     if (!token) return;
     setError(null);
     if (!title || title.trim().length === 0) { setError('Veuillez saisir un titre.'); return; }
-    if (!controlId) { setError('Veuillez sélectionner un contrôleur.'); return; }
 
     const roles = [ownerId, controlId, technicienId].filter(Boolean);
     const uniqueRoles = new Set(roles);
