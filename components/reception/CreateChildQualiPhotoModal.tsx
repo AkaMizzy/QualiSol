@@ -51,7 +51,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
 
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const canSave = useMemo(() => !!photo && !!selectedType && !!selectedCategorie && !submitting && !isGeneratingDescription && !isUploadingAudio, [photo, selectedType, selectedCategorie, submitting, isGeneratingDescription, isUploadingAudio]);
+  const canSave = useMemo(() => !!photo && !submitting && !isGeneratingDescription && !isUploadingAudio, [photo, submitting, isGeneratingDescription, isUploadingAudio]);
 
   useEffect(() => {
     async function loadUsers() {
@@ -136,7 +136,19 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
       const description = await describeImage(token, photo);
       setComment(prev => prev ? `${prev}\n${description}` : description);
     } catch (e: any) {
-      setError(e?.message || 'Failed to generate description');
+      console.error('AI Description Error:', e);
+      
+      // Check if it's an AI refusal
+      const errorData = e?.response?.data;
+      if (errorData?.refusal) {
+        setError(`IA: ${errorData.error || "L'IA ne peut pas analyser cette image."}`);
+      } else if (errorData?.error) {
+        // Use the backend's specific error message
+        setError(errorData.error);
+      } else {
+        // Fallback error message
+        setError(e?.message || "Échec de la génération de description. Réessayez ou décrivez manuellement.");
+      }
     } finally {
       setIsGeneratingDescription(false);
     }
