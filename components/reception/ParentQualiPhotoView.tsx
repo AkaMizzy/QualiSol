@@ -6,6 +6,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -189,6 +190,18 @@ type ParentQualiPhotoViewProps = {
     const isValidated = currentStatus?.status === 'Active';
     const canValidate = childGeds.length > 0 && childGeds.length === childrenWithAfterPhotos.size;
 
+    const handleSharePhoto = async (ged: Ged) => {
+      try {
+        const imageUrl = `${API_CONFIG.BASE_URL}${ged.url}`;
+        await Share.share({
+          message: `${ged.title}\n${imageUrl}`,
+          url: imageUrl, // iOS specific
+        });
+      } catch (error) {
+        console.error('Error sharing photo:', error);
+      }
+    };
+
     const header = (
         <View style={styles.header}>
             <Pressable
@@ -294,6 +307,16 @@ type ParentQualiPhotoViewProps = {
                               <View style={styles.childGridOverlay}>
                                 <Text style={styles.childGridTitle} numberOfLines={1}>{ged.title}</Text>
                                 {ged.created_at && <Text style={styles.childGridDate}>{formatDate(ged.created_at)}</Text>}
+                                <TouchableOpacity 
+                                  onPress={(e) => {
+                                    e.stopPropagation();
+                                    handleSharePhoto(ged);
+                                  }}
+                                  style={styles.shareButton}
+                                  accessibilityLabel="Partager cette photo"
+                                >
+                                  <Ionicons name="share-social-outline" size={18} color="#f87b1b" />
+                                </TouchableOpacity>
                               </View>
                             </TouchableOpacity>
                             
@@ -311,6 +334,16 @@ type ParentQualiPhotoViewProps = {
                                 <View style={styles.childGridOverlay}>
                                   <Text style={styles.childGridTitle} numberOfLines={1}>{apresPhotos[0].title}</Text>
                                   {apresPhotos[0].created_at && <Text style={styles.childGridDate}>{formatDate(apresPhotos[0].created_at)}</Text>}
+                                  <TouchableOpacity 
+                                    onPress={(e) => {
+                                      e.stopPropagation();
+                                      handleSharePhoto(apresPhotos[0]);
+                                    }}
+                                    style={styles.shareButton}
+                                    accessibilityLabel="Partager cette photo"
+                                  >
+                                    <Ionicons name="share-social-outline" size={18} color="#f87b1b" />
+                                  </TouchableOpacity>
                                 </View>
                               </TouchableOpacity>
                             ) : (
@@ -346,6 +379,16 @@ type ParentQualiPhotoViewProps = {
                           <View style={styles.childGridOverlay}>
                             <Text style={styles.childGridTitle} numberOfLines={1}>{ged.title}</Text>
                             {ged.created_at && <Text style={styles.childGridDate}>{formatDate(ged.created_at)}</Text>}
+                            <TouchableOpacity 
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                handleSharePhoto(ged);
+                              }}
+                              style={styles.shareButton}
+                              accessibilityLabel="Partager cette photo"
+                            >
+                              <Ionicons name="share-social-outline" size={18} color="#f87b1b" />
+                            </TouchableOpacity>
                           </View>
                         </TouchableOpacity>
                       );
@@ -807,6 +850,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         minHeight: 150,
         gap: 8,
+      },
+      shareButton: {
+        padding: 4,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        width: 28,
+        height: 28,
+        justifyContent: 'center',
+        alignItems: 'center',
       },
       placeholderText: {
         color: '#94a3b8',
