@@ -2,7 +2,6 @@ import API_CONFIG from '@/app/config/api';
 import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
 import folderService, { CreateFolderPayload, Folder } from '@/services/folderService';
-import { FolderType, getAllFolderTypes } from '@/services/folderTypeService';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -24,10 +23,7 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [folderTypes, setFolderTypes] = useState<FolderType[]>([]);
-  const [loadingFolderTypes, setLoadingFolderTypes] = useState(false);
-  const [folderTypeId, setFolderTypeId] = useState('');
-  const [folderTypeOpen, setFolderTypeOpen] = useState(false);
+
 
   const [companyUsers, setCompanyUsers] = useState<{ id: string; firstname?: string; lastname?: string; email?: string }[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -48,25 +44,7 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
     }
   }, [visible, user]);
 
-  useEffect(() => {
-    async function loadFolderTypes() {
-      if (!visible || !token) return;
-      setLoadingFolderTypes(true);
-      try {
-        const types = await getAllFolderTypes(token);
-        setFolderTypes(types);
-        if (types.length > 0) {
-          const reception = types.find(t => t.title?.toLowerCase() === 'reception');
-          setFolderTypeId(String((reception ?? types[0]).id));
-        }
-      } catch {
-        setFolderTypes([]);
-      } finally {
-        setLoadingFolderTypes(false);
-      }
-    }
-    loadFolderTypes();
-  }, [visible, token]);
+
 
   useEffect(() => {
     async function loadUsers() {
@@ -96,10 +74,10 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
     loadUsers();
   }, [visible, token]);
 
-  const isDisabled = useMemo(() => !title || !token || submitting || !folderTypeId || !controlId, [title, token, submitting, folderTypeId, controlId]);
+  const isDisabled = useMemo(() => !title || !token || submitting || !controlId, [title, token, submitting, controlId]);
 
   const handleSubmit = async () => {
-    if (!token || !folderTypeId) return;
+    if (!token) return;
     setError(null);
     if (!title || title.trim().length === 0) { setError('Veuillez saisir un titre.'); return; }
     if (!controlId) { setError('Veuillez sélectionner un contrôleur.'); return; }
@@ -118,7 +96,6 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
         code: `F-${Date.now().toString(36).toUpperCase()}`,
         title,
         description,
-        foldertype: folderTypeId,
         owner_id: ownerId || undefined,
         control_id: controlId || undefined,
         technicien_id: technicienId || undefined,
@@ -138,13 +115,11 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
   const handleClose = () => {
     setTitle('');
     setDescription('');
-    setFolderTypeId('');
     setOwnerId('');
     setControlId('');
     setTechnicienId('');
     setControlOpen(false);
     setTechnicienOpen(false);
-    setFolderTypeOpen(false);
     setError(null);
     onClose();
   };
@@ -190,36 +165,7 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
                 />
               </View>
 
-              {/* FolderType Select */}
-              <View style={{ gap: 8, marginTop: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Type de dossier</Text>
-                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setFolderTypeOpen(v => !v)}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="folder-outline" size={16} color="#f87b1b" />
-                    <Text style={[styles.input, { color: folderTypeId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {folderTypeId ? (folderTypes.find(ft => String(ft.id) === String(folderTypeId))?.title || folderTypeId) : 'Choisir un type'}
-                    </Text>
-                  </View>
-                  <Ionicons name={folderTypeOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#f87b1b" />
-                </TouchableOpacity>
-                {folderTypeOpen && (
-                  <View style={{ maxHeight: 200, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
-                    <ScrollView keyboardShouldPersistTaps="handled">
-                      {loadingFolderTypes ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
-                      ) : folderTypes.length === 0 ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun type de dossier</Text></View>
-                      ) : (
-                        folderTypes.map(ft => (
-                          <TouchableOpacity key={ft.id} onPress={() => { setFolderTypeId(String(ft.id)); setFolderTypeOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(folderTypeId) === String(ft.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
-                            <Text style={{ color: '#11224e' }}>{ft.title}</Text>
-                          </TouchableOpacity>
-                        ))
-                      )}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
+
 
               {/* Owner (Admin) Select */}
               <View style={{ gap: 8, marginTop: 12 }}>
