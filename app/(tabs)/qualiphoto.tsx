@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import folderService, { Folder, Project, Zone } from '@/services/folderService';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 
@@ -407,12 +407,19 @@ export default function QualiPhotoGalleryScreen() {
         onSuccess={(created) => {
           setModalVisible(false);
           if (created) {
+            // Validate that the folder was created with a complete ID
+            if (!created.id) {
+              console.error('Created folder missing ID:', created);
+              Alert.alert('Erreur', 'Le dossier a été créé mais manque d\'informations. Veuillez réessayer.');
+              fetchFolders(); // Refresh to show the new folder
+              return;
+            }
             const projectTitle = projects.find(p => p.id === selectedProject)?.title;
             const zoneTitle = allZones.find(z => z.id === selectedZone)?.title;
             setDetailProjectTitle(projectTitle);
             setDetailZoneTitle(zoneTitle);
             setDetailFolderTitle(created.title);
-            setSelectedItem(created as Folder);
+            setSelectedItem(created);
             setDetailVisible(true);
           }
           // Refresh list in background to include the new item

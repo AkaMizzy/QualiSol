@@ -543,8 +543,9 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
                   placeholderTextColor="#9ca3af"
                   value={comment}
                   onChangeText={setComment}
-                  style={[styles.input, { height:300 }]}
+                  style={[styles.input, { height: 250 }]}
                   multiline
+                  textAlignVertical="top"
                   onFocus={() => {
                     setTimeout(() => {
                       scrollViewRef.current?.scrollToEnd({ animated: true });

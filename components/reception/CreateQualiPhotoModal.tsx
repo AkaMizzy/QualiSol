@@ -12,7 +12,7 @@ import VoiceNoteRecorder from '../VoiceNoteRecorder';
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onSuccess?: (created: Partial<Folder>) => void;
+  onSuccess?: (created: Folder) => void;
   projectId?: string;
   zoneId?: string;
 };

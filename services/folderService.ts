@@ -85,7 +85,7 @@ async function createFolder(payload: CreateFolderPayload, token: string): Promis
   const response = await api.post('api/folders', payload, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  return response.data;
+  return response.data.data;
 }
 
 async function updateFolder(
