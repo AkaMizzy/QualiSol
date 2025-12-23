@@ -193,8 +193,29 @@ type ParentQualiPhotoViewProps = {
     const handleSharePhoto = async (ged: Ged) => {
       try {
         const imageUrl = `${API_CONFIG.BASE_URL}${ged.url}`;
+        
+        // Build rich metadata message
+        const parts = [];
+        parts.push(`📸 ${ged.title}`);
+        
+        if (projectTitle) {
+          parts.push(`🏗️ Projet: ${projectTitle}`);
+        }
+        
+        if (zoneTitle) {
+          parts.push(`📍 Zone: ${zoneTitle}`);
+        }
+        
+        if (ged.author) {
+          parts.push(`👤 Auteur: ${ged.author}`);
+        }
+        
+        parts.push(`🔗 ${imageUrl}`);
+        
+        const message = parts.join('\n');
+        
         await Share.share({
-          message: `${ged.title}\n${imageUrl}`,
+          message: message,
           url: imageUrl, // iOS specific
         });
       } catch (error) {
