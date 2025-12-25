@@ -38,9 +38,7 @@ const SYSTEM_GRID_ITEMS: {
   { title: 'Suivi', image: require('../../assets/icons/folder.png'), type: 'system' },
   { title: 'Danger', image: require('../../assets/icons/danger.png'), type: 'system' },
   { title: 'Calendrier', image: require('../../assets/icons/calendar.png'), type: 'system' },
-  { title: 'Chantiers', image: require('../../assets/icons/project.png'), type: 'system' },
-  { title: 'Utilisateurs', image: require('../../assets/icons/users.png'), type: 'system' },
-  { title: 'Organisme', image: require('../../assets/icons/company.png'), type: 'system' },
+  { title: 'Paramètres', image: require('../../assets/icons/settings.png'), type: 'system' },
 ];
 
 // const GRID_ITEMS: { title: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -326,12 +324,8 @@ export default function DashboardScreen() {
           setIsCalendarVisible(prevState => !prevState);
         } else if (item.title === 'QualiPhoto') {
           router.push('/galerie');
-        } else if (item.title === 'Chantiers') {
-          router.push('/projects');
-        } else if (item.title === 'Utilisateurs') {
-          router.push('/users');
-        } else if (item.title === 'Organisme') {
-          router.push('/company');
+        } else if (item.title === 'Paramètres') {
+          router.push('/parameters');
         } else {
           Alert.alert('Bientôt disponible', `La fonctionnalité ${item.title} est en cours de développement.`);
         }
