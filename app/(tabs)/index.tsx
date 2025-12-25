@@ -1,4 +1,5 @@
 import { createCalendarEvent } from '@/services/calendarService';
+import { FolderType, getAllFolderTypes } from '@/services/folderTypeService';
 import { getAuthToken, getUser } from '@/services/secureStore';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -23,25 +24,22 @@ import DayEventsModal from '../../components/calander/DayEventsModal';
 
 import API_CONFIG from '../config/api';
 
-const GRID_ITEMS: { 
+// System items that are not folder types
+const SYSTEM_GRID_ITEMS: { 
   title: string;
   icon?: keyof typeof Ionicons.glyphMap;
   image?: any;
   disabled?: boolean;
+  type: 'system';
 }[] = [
-  { title: 'QualiPhoto', image: require('../../assets/icons/camera_p.png')},
-  { title: 'Suivi', image: require('../../assets/icons/folder.png') },
-  { title: 'Danger', image: require('../../assets/icons/danger.png') },
-  { title: 'Calendrier', image: require('../../assets/icons/calendar.png') },
-  { title: 'Pv', image: require('../../assets/icons/pv.png') },
-  { title: 'Test', image: require('../../assets/icons/test.png') },
-  { title: 'Déclarations', image: require('../../assets/icons/declaration_anomalie.png') },
-  { title: 'Disponse', image: require('../../assets/icons/disponse.png')},
-  { title: 'Manifold', image: require('../../assets/icons/manifold.png')},
-  { title: 'Chantiers', image: require('../../assets/icons/project.png') },
-  { title: 'Utilisateurs', image: require('../../assets/icons/users.png') },
-  { title: 'Organisme',  image: require('../../assets/icons/company.png') },
-  // { title: 'Prospects', image: require('../../assets/icons/users.png') },
+  { title: 'QualiPhoto', image: require('../../assets/icons/camera_p.png'), type: 'system' },
+  { title: 'Suivi', image: require('../../assets/icons/folder.png'), type: 'system' },
+  { title: 'Danger', image: require('../../assets/icons/danger.png'), type: 'system' },
+  { title: 'Calendrier', image: require('../../assets/icons/calendar.png'), type: 'system' },
+  { title: 'Déclarations', image: require('../../assets/icons/declaration_anomalie.png'), type: 'system' },
+  { title: 'Chantiers', image: require('../../assets/icons/project.png'), type: 'system' },
+  { title: 'Utilisateurs', image: require('../../assets/icons/users.png'), type: 'system' },
+  { title: 'Organisme', image: require('../../assets/icons/company.png'), type: 'system' },
 ];
 
 // const GRID_ITEMS: { title: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -55,6 +53,15 @@ const GRID_ITEMS: {
 //   { title: 'Employés', icon: 'people-outline' },
 //   { title: 'Paramètres', icon: 'settings-outline' },
 // ];
+
+type GridItem = {
+  title: string;
+  icon?: keyof typeof Ionicons.glyphMap;
+  image?: any;
+  disabled?: boolean;
+  type: 'system' | 'folderType';
+  imageUrl?: string; // For folder types with GED images
+};
 
 export default function DashboardScreen() {
   const [token, setToken] = useState<string | null>(null);
@@ -72,6 +79,11 @@ export default function DashboardScreen() {
   const [overdueActivities, setOverdueActivities] = useState<any[]>([]);
   const [upcomingActivities, setUpcomingActivities] = useState<any[]>([]);
   const [expandedSection, setExpandedSection] = useState<string | null>('overdue');
+  
+  // Dynamic folder types
+  const [folderTypes, setFolderTypes] = useState<FolderType[]>([]);
+  const [gridItems, setGridItems] = useState<GridItem[]>(SYSTEM_GRID_ITEMS);
+  const [loadingFolderTypes, setLoadingFolderTypes] = useState(false);
 
   const isTablet = width >= 768;
   const numColumns = isTablet ? 6 : 3;
@@ -85,6 +97,37 @@ export default function DashboardScreen() {
     }
     loadAuthData();
   }, []);
+
+  // Fetch folder types and merge with system items
+  useEffect(() => {
+    async function loadFolderTypes() {
+      if (!token) return;
+      setLoadingFolderTypes(true);
+      try {
+        const fetchedFolderTypes = await getAllFolderTypes(token);
+        setFolderTypes(fetchedFolderTypes);
+        
+        // Convert folder types to grid items
+        const folderTypeItems: GridItem[] = fetchedFolderTypes.map((ft) => ({
+          title: ft.title,
+          // Use imageUrl from GED if available, otherwise use default folder icon
+          image: ft.imageUrl ? { uri: ft.imageUrl } : require('../../assets/icons/folder.png'),
+          imageUrl: ft.imageUrl,
+          type: 'folderType' as const,
+        }));
+        
+        // Merge system items with folder type items
+        setGridItems([...SYSTEM_GRID_ITEMS, ...folderTypeItems]);
+      } catch (error) {
+        console.error('Failed to load folder types:', error);
+        // On error, still show system items
+        setGridItems(SYSTEM_GRID_ITEMS);
+      } finally {
+        setLoadingFolderTypes(false);
+      }
+    }
+    loadFolderTypes();
+  }, [token]);
 
   useEffect(() => {
     (async () => {
@@ -193,7 +236,7 @@ export default function DashboardScreen() {
     } catch {}
   }, [token]);
 
-  const renderGridItem = ({ item }: { item: (typeof GRID_ITEMS)[0] }) => (
+  const renderGridItem = ({ item }: { item: GridItem }) => (
     <Pressable
       style={[
         styles.gridButton,
@@ -203,25 +246,20 @@ export default function DashboardScreen() {
         item.disabled && styles.gridButtonDisabled,
       ]}
       onPress={() => {
-        if (item.title === 'Suivi') {
+        // Handle folder types dynamically  
+        if (item.type === 'folderType') {
+          router.push(`/folders/${item.title}` as any);
+        }
+        // Handle system items with fixed routes
+        else if (item.title === 'Suivi') {
           router.push('/qualiphoto');
         } else if (item.title === 'Danger') {
           router.push('/danger');
         } else if (item.title === 'Calendrier') {
           LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
           setIsCalendarVisible(prevState => !prevState);
-        } else if (item.title === 'Pv') {
-          router.push('/pv');
-        } else if (item.title === 'Test') {
-          router.push('/questions');
         } else if (item.title === 'QualiPhoto') {
           router.push('/galerie');
-        } else if (item.title === 'Audit') {
-          //router.push('/audit');
-        } else if (item.title === 'Echantillon') {
-          //router.push('/echantillon');
-        } else if (item.title === 'Inventaires') {
-          //router.push('/inventaire');
         } else if (item.title === 'Chantiers') {
           router.push('/projects');
         } else if (item.title === 'Utilisateurs') {
@@ -248,7 +286,7 @@ export default function DashboardScreen() {
       {/* Header */}
       <AppHeader user={user || undefined} />
       <FlatList
-        data={GRID_ITEMS}
+        data={gridItems}
         renderItem={renderGridItem}
         keyExtractor={(item) => item.title}
         numColumns={numColumns}
