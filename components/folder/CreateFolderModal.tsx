@@ -15,10 +15,11 @@ type Props = {
   onSuccess?: () => void;
   projectId?: string;
   zoneId?: string;
+  folderTypeTitle?: string; // Auto-select folder type by title
 };
 
-export default function CreateFolderModal({ visible, onClose, onSuccess, projectId, zoneId }: Props) {
-  const { token } = useAuth();
+export default function CreateFolderModal({ visible, onClose, onSuccess, projectId, zoneId, folderTypeTitle }: Props) {
+  const { token, user } = useAuth();
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
@@ -34,9 +35,20 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
   const [ownerId, setOwnerId] = useState('');
   const [controlId, setControlId] = useState('');
   const [technicienId, setTechnicienId] = useState('');
-  const [ownerOpen, setOwnerOpen] = useState(false);
   const [controlOpen, setControlOpen] = useState(false);
   const [technicienOpen, setTechnicienOpen] = useState(false);
+
+  // Filtered user lists to prevent same user in multiple roles
+  const adminUser = useMemo(() => companyUsers.find(u => u.id === ownerId), [companyUsers, ownerId]);
+  const controlUsers = useMemo(() => companyUsers.filter(u => u.id !== ownerId), [companyUsers, ownerId]);
+  const technicienUsers = useMemo(() => companyUsers.filter(u => u.id !== ownerId && u.id !== controlId), [companyUsers, ownerId, controlId]);
+
+  // Auto-set admin to current user when modal opens
+  useEffect(() => {
+    if (visible && user?.id) {
+      setOwnerId(user.id);
+    }
+  }, [visible, user]);
 
   useEffect(() => {
     async function loadFolderTypes() {
@@ -45,6 +57,14 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
       try {
         const types = await getAllFolderTypes(token);
         setFolderTypes(types);
+        
+        // Auto-select folder type if folderTypeTitle is provided
+        if (folderTypeTitle) {
+          const matchingType = types.find(ft => ft.title === folderTypeTitle);
+          if (matchingType) {
+            setFolderTypeId(String(matchingType.id));
+          }
+        }
       } catch {
         setFolderTypes([]);
       } finally {
@@ -52,7 +72,7 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
       }
     }
     loadFolderTypes();
-  }, [visible, token]);
+  }, [visible, token, folderTypeTitle]);
 
   useEffect(() => {
     async function loadUsers() {
@@ -88,6 +108,16 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
     if (!token || !folderTypeId) return;
     setError(null);
     if (!title || title.trim().length === 0) { setError('Veuillez saisir un titre.'); return; }
+
+    // Validate that controller and technician are not the same user
+    const roles = [ownerId, controlId, technicienId].filter(Boolean);
+    const uniqueRoles = new Set(roles);
+
+    if (roles.length !== uniqueRoles.size) {
+      setError('Un utilisateur ne peut pas être assigné à plusieurs rôles (Admin, Contrôleur, Technicien).');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload: CreateFolderPayload = {
@@ -118,7 +148,6 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
     setOwnerId('');
     setControlId('');
     setTechnicienId('');
-    setOwnerOpen(false);
     setControlOpen(false);
     setTechnicienOpen(false);
     setError(null);
@@ -197,36 +226,21 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
                 )}
               </View>
 
-              {/* Owner (Admin) Select */}
+              {/* Owner (Admin) Select - Locked to current user */}
               <View style={{ gap: 8, marginTop: 12 }}>
                 <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Admin </Text>
-                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setOwnerOpen(v => !v)}>
+                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }, styles.disabledInput]} disabled>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                     <Ionicons name="person-circle-outline" size={16} color="#f87b1b" />
                     <Text style={[styles.input, { color: ownerId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {ownerId ? (companyUsers.find(u => String(u.id) === String(ownerId))?.firstname ? `${companyUsers.find(u => String(ownerId) === String(u.id))?.firstname} ${companyUsers.find(u => String(ownerId) === String(u.id))?.lastname || ''}` : ownerId) : 'Choisir un admin'}
+                      {adminUser
+                        ? `${adminUser.firstname || ''} ${adminUser.lastname || ''}`.trim() || adminUser.email
+                        : (loadingUsers ? 'Chargement...' : (user?.email || 'Admin non défini'))
+                      }
                     </Text>
                   </View>
-                  <Ionicons name={ownerOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#f87b1b" />
+                  <Ionicons name="lock-closed-outline" size={16} color="#9ca3af" />
                 </TouchableOpacity>
-                {ownerOpen && (
-                  <View style={{ maxHeight: 200, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
-                    <ScrollView keyboardShouldPersistTaps="handled">
-                      {loadingUsers ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
-                      ) : companyUsers.length === 0 ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
-                      ) : (
-                        companyUsers.map(u => (
-                          <TouchableOpacity key={u.id} onPress={() => { setOwnerId(String(u.id)); setOwnerOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(ownerId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
-                            <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
-                            {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
-                          </TouchableOpacity>
-                        ))
-                      )}
-                    </ScrollView>
-                  </View>
-                )}
               </View>
 
               {/* Control Select */}
@@ -246,10 +260,10 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingUsers ? (
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
-                      ) : companyUsers.length === 0 ? (
+                      ) : controlUsers.length === 0 ? (
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
                       ) : (
-                        companyUsers.map(u => (
+                        controlUsers.map(u => (
                           <TouchableOpacity key={u.id} onPress={() => { setControlId(String(u.id)); setControlOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(controlId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
                             <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
                             {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
@@ -278,10 +292,10 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingUsers ? (
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
-                      ) : companyUsers.length === 0 ? (
+                      ) : technicienUsers.length === 0 ? (
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
                       ) : (
-                        companyUsers.map(u => (
+                        technicienUsers.map(u => (
                           <TouchableOpacity key={u.id} onPress={() => { setTechnicienId(String(u.id)); setTechnicienOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(technicienId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
                             <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
                             {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
@@ -375,4 +389,8 @@ const styles = StyleSheet.create({
   },
   submitButtonDisabled: { backgroundColor: '#d1d5db' },
   submitButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  disabledInput: {
+    backgroundColor: '#f3f4f6',
+    borderColor: '#d1d5db',
+  },
 });

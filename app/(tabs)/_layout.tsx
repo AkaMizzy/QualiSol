@@ -26,9 +26,7 @@ export default function TabLayout() {
       <Tabs.Screen name="profile" />
       <Tabs.Screen name="projects" />
       <Tabs.Screen name="prospects" />
-      <Tabs.Screen name="pv" />
       <Tabs.Screen name="qualiphoto" />
-      <Tabs.Screen name="questions" />
       <Tabs.Screen name="users" />
     </Tabs>
   );

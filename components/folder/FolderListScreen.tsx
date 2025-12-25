@@ -355,6 +355,7 @@ export default function FolderListScreen({ folderTypeTitle, folderTypeIcon }: Fo
         }}
         projectId={selectedProject}
         zoneId={selectedZone}
+        folderTypeTitle={folderTypeTitle}
       />
       <FolderQuestionsModal
         visible={isQuestionsModalVisible}

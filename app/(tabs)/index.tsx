@@ -11,6 +11,7 @@ import {
   LayoutAnimation,
   Linking,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   View,
@@ -22,6 +23,7 @@ import CalendarComp from '../../components/calander/CalendarComp';
 import CreateCalendarEventModal from '../../components/calander/CreateCalendarEventModal';
 import DayEventsModal from '../../components/calander/DayEventsModal';
 
+import { getGedsBySource } from '@/services/gedService';
 import API_CONFIG from '../config/api';
 
 // System items that are not folder types
@@ -36,7 +38,6 @@ const SYSTEM_GRID_ITEMS: {
   { title: 'Suivi', image: require('../../assets/icons/folder.png'), type: 'system' },
   { title: 'Danger', image: require('../../assets/icons/danger.png'), type: 'system' },
   { title: 'Calendrier', image: require('../../assets/icons/calendar.png'), type: 'system' },
-  { title: 'Déclarations', image: require('../../assets/icons/declaration_anomalie.png'), type: 'system' },
   { title: 'Chantiers', image: require('../../assets/icons/project.png'), type: 'system' },
   { title: 'Utilisateurs', image: require('../../assets/icons/users.png'), type: 'system' },
   { title: 'Organisme', image: require('../../assets/icons/company.png'), type: 'system' },
@@ -84,6 +85,7 @@ export default function DashboardScreen() {
   const [folderTypes, setFolderTypes] = useState<FolderType[]>([]);
   const [gridItems, setGridItems] = useState<GridItem[]>(SYSTEM_GRID_ITEMS);
   const [loadingFolderTypes, setLoadingFolderTypes] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const isTablet = width >= 768;
   const numColumns = isTablet ? 6 : 3;
@@ -107,8 +109,27 @@ export default function DashboardScreen() {
         const fetchedFolderTypes = await getAllFolderTypes(token);
         setFolderTypes(fetchedFolderTypes);
         
+        // Fetch GED images for each folder type (same logic as FolderTypeManagerModal)
+        const typesWithImages = await Promise.all(
+          fetchedFolderTypes.map(async (type) => {
+            try {
+              const geds = await getGedsBySource(token, type.id, 'folder_type_icon');
+              if (geds.length > 0 && geds[0].url) {
+                return {
+                  ...type,
+                  imageUrl: `${API_CONFIG.BASE_URL}${geds[0].url}`,
+                  imageGedId: geds[0].id,
+                };
+              }
+            } catch (error) {
+              console.error(`Failed to fetch GED image for folder type ${type.title}:`, error);
+            }
+            return type;
+          })
+        );
+        
         // Convert folder types to grid items
-        const folderTypeItems: GridItem[] = fetchedFolderTypes.map((ft) => ({
+        const folderTypeItems: GridItem[] = typesWithImages.map((ft) => ({
           title: ft.title,
           // Use imageUrl from GED if available, otherwise use default folder icon
           image: ft.imageUrl ? { uri: ft.imageUrl } : require('../../assets/icons/folder.png'),
@@ -127,6 +148,51 @@ export default function DashboardScreen() {
       }
     }
     loadFolderTypes();
+  }, [token]);
+
+  // Pull-to-refresh handler
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      if (!token) return;
+      
+      // Reload folder types with their images
+      const fetchedFolderTypes = await getAllFolderTypes(token);
+      setFolderTypes(fetchedFolderTypes);
+      
+      // Fetch GED images for each folder type
+      const typesWithImages = await Promise.all(
+        fetchedFolderTypes.map(async (type) => {
+          try {
+            const geds = await getGedsBySource(token, type.id, 'folder_type_icon');
+            if (geds.length > 0 && geds[0].url) {
+              return {
+                ...type,
+                imageUrl: `${API_CONFIG.BASE_URL}${geds[0].url}`,
+                imageGedId: geds[0].id,
+              };
+            }
+          } catch (error) {
+            console.error(`Failed to fetch GED image for folder type ${type.title}:`, error);
+          }
+          return type;
+        })
+      );
+      
+      // Update grid items
+      const folderTypeItems: GridItem[] = typesWithImages.map((ft) => ({
+        title: ft.title,
+        image: ft.imageUrl ? { uri: ft.imageUrl } : require('../../assets/icons/folder.png'),
+        imageUrl: ft.imageUrl,
+        type: 'folderType' as const,
+      }));
+      
+      setGridItems([...SYSTEM_GRID_ITEMS, ...folderTypeItems]);
+    } catch (error) {
+      console.error('Failed to refresh folder types:', error);
+    } finally {
+      setRefreshing(false);
+    }
   }, [token]);
 
   useEffect(() => {
@@ -292,6 +358,14 @@ export default function DashboardScreen() {
         numColumns={numColumns}
         key={numColumns} // Re-renders the list when numColumns changes
         contentContainerStyle={styles.gridContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#f87b1b']}
+            tintColor="#f87b1b"
+          />
+        }
         ListFooterComponent={
           <>
             {/* Calendar */}
