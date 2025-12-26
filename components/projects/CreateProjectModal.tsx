@@ -15,7 +15,7 @@ type Props = {
 };
 
 export default function CreateProjectModal({ visible, onClose, onCreated }: Props) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -29,7 +29,7 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
   const [projectTypeOpen, setProjectTypeOpen] = useState(false);
   const [companyUsers, setCompanyUsers] = useState<{ id: string; firstname?: string; lastname?: string; email?: string }[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [ownerOpen, setOwnerOpen] = useState(false);
+
   const [controlOpen, setControlOpen] = useState(false);
   const [technicienOpen, setTechnicienOpen] = useState(false);
   const [loadingTypes, setLoadingTypes] = useState(false);
@@ -38,7 +38,11 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
   const [isDdPickerVisible, setDdPickerVisible] = useState(false);
   const [isDfPickerVisible, setDfPickerVisible] = useState(false);
 
-  const isDisabled = useMemo(() => !title || !controlId || !technicienId || !token, [title, controlId, technicienId, token]);
+  const adminUser = useMemo(() => companyUsers.find(u => u.id === ownerId), [companyUsers, ownerId]);
+  const controlUsers = useMemo(() => companyUsers.filter(u => u.id !== ownerId), [companyUsers, ownerId]);
+  const technicienUsers = useMemo(() => companyUsers.filter(u => u.id !== ownerId && u.id !== controlId), [companyUsers, ownerId, controlId]);
+
+  const isDisabled = useMemo(() => !title || !token, [title, token]);
 
   function validate(): string | null {
     if (!title) return 'Le titre est requis';
@@ -49,10 +53,22 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
       if (isNaN(start.getTime()) || isNaN(end.getTime())) return 'Dates invalides';
       if (start >= end) return 'La date de fin doit être postérieure à la date de début';
     }
-    if (!controlId) return 'Le contrôleur est requis';
-    if (!technicienId) return 'Le technicien est requis';
+    
+    // Check for duplicate role assignments
+    const roles = [ownerId, controlId, technicienId].filter(Boolean);
+    const uniqueRoles = new Set(roles);
+    if (roles.length !== uniqueRoles.size) {
+      return 'Un utilisateur ne peut pas être assigné à plusieurs rôles (Admin, Contrôleur, Technicien).';
+    }
+    
     return null;
   }
+
+  useEffect(() => {
+    if (visible && user?.id) {
+      setOwnerId(user.id);
+    }
+  }, [visible, user]);
 
   useEffect(() => {
     async function loadUsers() {
@@ -240,42 +256,27 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
               </View>
               <View style={{ gap: 8 }}>
                 <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Admin</Text>
-                <TouchableOpacity style={[stylesFS.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setOwnerOpen(v => !v)}>
+                <TouchableOpacity style={[stylesFS.inputWrap, { justifyContent: 'space-between' }, stylesFS.disabledInput]} disabled>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                     <Ionicons name="person-circle-outline" size={16} color="#6b7280" />
                     <Text style={[stylesFS.input, { color: ownerId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {ownerId ? (companyUsers.find(u => String(u.id) === String(ownerId))?.firstname ? `${companyUsers.find(u => String(u.id) === String(ownerId))?.firstname} ${companyUsers.find(u => String(u.id) === String(ownerId))?.lastname || ''}` : ownerId) : 'Choisir un admin (optionnel)'}
+                      {adminUser
+                        ? `${adminUser.firstname || ''} ${adminUser.lastname || ''}`.trim() || adminUser.email
+                        : (loadingUsers ? 'Chargement...' : (user?.email || 'Admin non défini'))
+                      }
                     </Text>
                   </View>
-                  <Ionicons name={ownerOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
+                  <Ionicons name="lock-closed-outline" size={16} color="#9ca3af" />
                 </TouchableOpacity>
-                {ownerOpen && (
-                  <View style={{ maxHeight: 200, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
-                    <ScrollView keyboardShouldPersistTaps="handled">
-                      {loadingUsers ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
-                      ) : companyUsers.length === 0 ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
-                      ) : (
-                        companyUsers.map(u => (
-                          <TouchableOpacity key={u.id} onPress={() => { setOwnerId(String(u.id)); setOwnerOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(ownerId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
-                            <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
-                            {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
-                          </TouchableOpacity>
-                        ))
-                      )}
-                    </ScrollView>
-                  </View>
-                )}
               </View>
               {/* Control User Select */}
               <View style={{ gap: 8 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Contrôleur</Text>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Contrôleur (optionnel)</Text>
                 <TouchableOpacity style={[stylesFS.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setControlOpen(v => !v)}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                     <Ionicons name="shield-checkmark-outline" size={16} color="#6b7280" />
                     <Text style={[stylesFS.input, { color: controlId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {controlId ? (companyUsers.find(u => String(u.id) === String(controlId))?.firstname ? `${companyUsers.find(u => String(u.id) === String(controlId))?.firstname} ${companyUsers.find(u => String(u.id) === String(controlId))?.lastname || ''}` : controlId) : 'Choisir un contrôleur'}
+                      {controlId ? (controlUsers.find(u => String(u.id) === String(controlId))?.firstname ? `${controlUsers.find(u => String(u.id) === String(controlId))?.firstname} ${controlUsers.find(u => String(u.id) === String(controlId))?.lastname || ''}` : controlId) : 'Choisir un contrôleur'}
                     </Text>
                   </View>
                   <Ionicons name={controlOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
@@ -285,10 +286,10 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingUsers ? (
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
-                      ) : companyUsers.length === 0 ? (
+                      ) : controlUsers.length === 0 ? (
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
                       ) : (
-                        companyUsers.map(u => (
+                        controlUsers.map(u => (
                           <TouchableOpacity key={u.id} onPress={() => { setControlId(String(u.id)); setControlOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(controlId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
                             <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
                             {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
@@ -301,12 +302,12 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
               </View>
               {/* Technicien User Select */}
               <View style={{ gap: 8 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Technicien</Text>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Technicien (optionnel)</Text>
                 <TouchableOpacity style={[stylesFS.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setTechnicienOpen(v => !v)}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                     <Ionicons name="construct-outline" size={16} color="#6b7280" />
                     <Text style={[stylesFS.input, { color: technicienId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {technicienId ? (companyUsers.find(u => String(u.id) === String(technicienId))?.firstname ? `${companyUsers.find(u => String(u.id) === String(technicienId))?.firstname} ${companyUsers.find(u => String(u.id) === String(technicienId))?.lastname || ''}` : technicienId) : 'Choisir un technicien'}
+                      {technicienId ? (technicienUsers.find(u => String(u.id) === String(technicienId))?.firstname ? `${technicienUsers.find(u => String(u.id) === String(technicienId))?.firstname} ${technicienUsers.find(u => String(u.id) === String(technicienId))?.lastname || ''}` : technicienId) : 'Choisir un technicien'}
                     </Text>
                   </View>
                   <Ionicons name={technicienOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
@@ -316,10 +317,10 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingUsers ? (
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
-                      ) : companyUsers.length === 0 ? (
+                      ) : technicienUsers.length === 0 ? (
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
                       ) : (
-                        companyUsers.map(u => (
+                        technicienUsers.map(u => (
                           <TouchableOpacity key={u.id} onPress={() => { setTechnicienId(String(u.id)); setTechnicienOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(technicienId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
                             <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
                             {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
@@ -407,6 +408,10 @@ const stylesFS = StyleSheet.create({
   },
   submitButtonDisabled: { backgroundColor: '#d1d5db' },
   submitButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  disabledInput: {
+    backgroundColor: '#f3f4f6',
+    borderColor: '#d1d5db',
+  },
 });
 
 
