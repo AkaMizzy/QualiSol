@@ -2,6 +2,7 @@ import { createCalendarEvent } from '@/services/calendarService';
 import { FolderType, getAllFolderTypes } from '@/services/folderTypeService';
 import { getAuthToken, getUser } from '@/services/secureStore';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -99,54 +100,58 @@ export default function DashboardScreen() {
   }, []);
 
   // Fetch folder types and merge with system items
-  useEffect(() => {
-    async function loadFolderTypes() {
-      if (!token) return;
-      setLoadingFolderTypes(true);
-      try {
-        const fetchedFolderTypes = await getAllFolderTypes(token);
-        setFolderTypes(fetchedFolderTypes);
-        
-        // Fetch GED images for each folder type (same logic as FolderTypeManagerModal)
-        const typesWithImages = await Promise.all(
-          fetchedFolderTypes.map(async (type) => {
-            try {
-              const geds = await getGedsBySource(token, type.id, 'folder_type_icon');
-              if (geds.length > 0 && geds[0].url) {
-                return {
-                  ...type,
-                  imageUrl: `${API_CONFIG.BASE_URL}${geds[0].url}`,
-                  imageGedId: geds[0].id,
-                };
-              }
-            } catch (error) {
-              console.error(`Failed to fetch GED image for folder type ${type.title}:`, error);
+  const loadFolderTypes = useCallback(async () => {
+    if (!token) return;
+    setLoadingFolderTypes(true);
+    try {
+      const fetchedFolderTypes = await getAllFolderTypes(token);
+      setFolderTypes(fetchedFolderTypes);
+      
+      // Fetch GED images for each folder type (same logic as FolderTypeManagerModal)
+      const typesWithImages = await Promise.all(
+        fetchedFolderTypes.map(async (type) => {
+          try {
+            const geds = await getGedsBySource(token, type.id, 'folder_type_icon');
+            if (geds.length > 0 && geds[0].url) {
+              return {
+                ...type,
+                imageUrl: `${API_CONFIG.BASE_URL}${geds[0].url}`,
+                imageGedId: geds[0].id,
+              };
             }
-            return type;
-          })
-        );
-        
-        // Convert folder types to grid items
-        const folderTypeItems: GridItem[] = typesWithImages.map((ft) => ({
-          title: ft.title,
-          // Use imageUrl from GED if available, otherwise use default folder icon
-          image: ft.imageUrl ? { uri: ft.imageUrl } : require('../../assets/icons/folder.png'),
-          imageUrl: ft.imageUrl,
-          type: 'folderType' as const,
-        }));
-        
-        // Merge system items with folder type items
-        setGridItems([...SYSTEM_GRID_ITEMS, ...folderTypeItems]);
-      } catch (error) {
-        console.error('Failed to load folder types:', error);
-        // On error, still show system items
-        setGridItems(SYSTEM_GRID_ITEMS);
-      } finally {
-        setLoadingFolderTypes(false);
-      }
+          } catch (error) {
+            console.error(`Failed to fetch GED image for folder type ${type.title}:`, error);
+          }
+          return type;
+        })
+      );
+      
+      // Convert folder types to grid items
+      const folderTypeItems: GridItem[] = typesWithImages.map((ft) => ({
+        title: ft.title,
+        // Use imageUrl from GED if available, otherwise use default folder icon
+        image: ft.imageUrl ? { uri: ft.imageUrl } : require('../../assets/icons/folder.png'),
+        imageUrl: ft.imageUrl,
+        type: 'folderType' as const,
+      }));
+      
+      // Merge system items with folder type items
+      setGridItems([...SYSTEM_GRID_ITEMS, ...folderTypeItems]);
+    } catch (error) {
+      console.error('Failed to load folder types:', error);
+      // On error, still show system items
+      setGridItems(SYSTEM_GRID_ITEMS);
+    } finally {
+      setLoadingFolderTypes(false);
     }
-    loadFolderTypes();
   }, [token]);
+
+  // Auto-refresh folder types when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadFolderTypes();
+    }, [loadFolderTypes])
+  );
 
   // Pull-to-refresh handler
   const onRefresh = useCallback(async () => {

@@ -1,26 +1,46 @@
 import API_CONFIG from '@/app/config/api';
 import PreviewModal from '@/components/PreviewModal';
+import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppHeader from '../../components/AppHeader';
+import companyService from '../../services/companyService';
+import { Company } from '../../types/company';
 
 export default function ProfileScreen() {
   const { user, logout, updateUser, token } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [company, setCompany] = useState<Company | null>(null);
+
+  // Fetch company data on mount
+  useEffect(() => {
+    const fetchCompany = async () => {
+      try {
+        const companyData = await companyService.getCompany();
+        setCompany(companyData);
+      } catch (error) {
+        console.error('Error fetching company:', error);
+      }
+    };
+
+    if (user) {
+      fetchCompany();
+    }
+  }, [user]);
 
   // Watch for authentication changes and navigate automatically
   useEffect(() => {
@@ -134,18 +154,21 @@ export default function ProfileScreen() {
           <View style={styles.headerTopRow}>
             <TouchableOpacity 
               style={styles.avatarLarge} 
-              onPress={() => user?.photo && setIsPreviewVisible(true)} 
-              disabled={isUploading || !user?.photo}
+              onPress={() => (company?.logo || user?.photo) && setIsPreviewVisible(true)} 
+              disabled={isUploading || (!company?.logo && !user?.photo)}
             >
               {isUploading ? (
                 <ActivityIndicator size="large" color="#f87b1b" />
-              ) : user?.photo ? (
+              ) : company?.logo ? (
                 <Image
-                  source={{ uri: `${API_CONFIG.BASE_URL}${user.photo}` }}
+                  source={{ uri: company.logo }}
                   style={styles.avatarImage}
                 />
               ) : (
-                <Ionicons name="person" size={44} color="#f87b1b" />
+                <Image
+                  source={ICONS.newIcon}
+                  style={styles.avatarImage}
+                />
               )}
             </TouchableOpacity>
             <View style={{ flex: 1 }}>
@@ -208,9 +231,9 @@ export default function ProfileScreen() {
       <PreviewModal
         visible={isPreviewVisible}
         onClose={() => setIsPreviewVisible(false)}
-        mediaUrl={user?.photo ? `${API_CONFIG.BASE_URL}${user.photo}` : undefined}
+        mediaUrl={company?.logo || (user?.photo ? `${API_CONFIG.BASE_URL}${user.photo}` : undefined)}
         mediaType="image"
-        title="Photo de profil"
+        title={company?.logo ? "Logo de l'organisme" : "Photo de profil"}
         onEdit={handlePickImage}
       />
     </SafeAreaView>
