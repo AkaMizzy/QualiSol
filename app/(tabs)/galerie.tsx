@@ -285,6 +285,13 @@ export default function GalerieScreen() {
           mediaType={selectedItem.kind === 'qualiphoto' ? 'image' : 'file'}
           title={selectedItem.title}
           onAnnotate={handleOpenAnnotator}
+          description={selectedItem.description}
+          author={selectedItem.author}
+          createdAt={selectedItem.created_at}
+          type={selectedItem.type}
+          categorie={selectedItem.categorie}
+          latitude={selectedItem.latitude}
+          longitude={selectedItem.longitude}
         />
       )}
       <Modal visible={isAnnotatorVisible} animationType="slide">

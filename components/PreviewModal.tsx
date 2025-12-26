@@ -20,10 +20,18 @@ interface PreviewModalProps {
   mediaUrl?: string;
   mediaType?: 'image' | 'video' | 'file' | 'voice';
   title?: string;
-  onEdit?: () => void; // Add this line
+  onEdit?: () => void;
   onAnnotate?: () => void;
   onAutoDescribe?: () => Promise<void>;
   isDescribing?: boolean;
+  // Metadata props
+  description?: string | null;
+  author?: string;
+  createdAt?: string;
+  type?: string;
+  categorie?: string;
+  latitude?: string | null;
+  longitude?: string | null;
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -34,16 +42,24 @@ export default function PreviewModal({
   mediaUrl,
   mediaType,
   title,
-  onEdit, // Add this line
+  onEdit,
   onAnnotate,
   onAutoDescribe,
   isDescribing,
+  description,
+  author,
+  createdAt,
+  type,
+  categorie,
+  latitude,
+  longitude,
 }: PreviewModalProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [showMetadata, setShowMetadata] = useState(true);
 
   useEffect(() => {
     return sound
@@ -100,6 +116,19 @@ export default function PreviewModal({
     const seconds = totalSeconds % 60;
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const hasMetadata = description || author || createdAt || type || categorie || (latitude && longitude);
 
   // Load audio when modal opens for voice type
   useEffect(() => {
@@ -271,6 +300,20 @@ export default function PreviewModal({
           </View>
 
           <View style={styles.headerActions}>
+            {mediaType === 'image' && hasMetadata && (
+              <Pressable
+                style={styles.actionButton}
+                onPress={() => setShowMetadata(!showMetadata)}
+                accessibilityRole="button"
+                accessibilityLabel="Toggle metadata"
+              >
+                <Ionicons 
+                  name={showMetadata ? "information" : "information-outline"} 
+                  size={24} 
+                  color="#FFFFFF" 
+                />
+              </Pressable>
+            )}
             {mediaType === 'image' && onAutoDescribe && (
               <Pressable
                 style={styles.actionButton}
@@ -286,7 +329,6 @@ export default function PreviewModal({
                 )}
               </Pressable>
             )}
-            {/* Edit Button for Images */}
             {mediaType === 'image' && onEdit && (
               <Pressable
                 style={styles.actionButton}
@@ -324,6 +366,61 @@ export default function PreviewModal({
         <View style={styles.mediaContainer}>
           {renderMedia()}
         </View>
+
+        {/* Metadata Overlay */}
+        {mediaType === 'image' && showMetadata && hasMetadata && (
+          <View style={styles.metadataOverlay}>
+            <View style={styles.metadataCard}>
+              {description && (
+                <View style={styles.metadataSection}>
+                  <Text style={styles.metadataLabel}>Description</Text>
+                  <Text style={styles.metadataValue}>{description}</Text>
+                </View>
+              )}
+              
+              <View style={styles.metadataRow}>
+                {author && (
+                  <View style={styles.metadataItem}>
+                    <Ionicons name="person-outline" size={16} color="#8E8E93" />
+                    <Text style={styles.metadataSmallValue}>{author}</Text>
+                  </View>
+                )}
+                {createdAt && (
+                  <View style={styles.metadataItem}>
+                    <Ionicons name="calendar-outline" size={16} color="#8E8E93" />
+                    <Text style={styles.metadataSmallValue}>{formatDate(createdAt)}</Text>
+                  </View>
+                )}
+              </View>
+
+              {(type || categorie) && (
+                <View style={styles.metadataRow}>
+                  {type && (
+                    <View style={styles.badge}>
+                      <Ionicons name="pricetag-outline" size={14} color="#007AFF" />
+                      <Text style={styles.badgeText}>{type}</Text>
+                    </View>
+                  )}
+                  {categorie && (
+                    <View style={styles.badge}>
+                      <Ionicons name="folder-outline" size={14} color="#007AFF" />
+                      <Text style={styles.badgeText}>{categorie}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {latitude && longitude && (
+                <View style={styles.metadataItem}>
+                  <Ionicons name="location-outline" size={16} color="#8E8E93" />
+                  <Text style={styles.metadataSmallValue}>
+                    {parseFloat(latitude).toFixed(6)}, {parseFloat(longitude).toFixed(6)}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Backdrop for closing */}
         <Pressable style={styles.backdrop} onPress={onClose} />
@@ -517,5 +614,66 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: -1,
+  },
+  metadataOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 5,
+    paddingHorizontal: 16,
+    paddingBottom: 40,
+  },
+  metadataCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    backdropFilter: 'blur(10px)',
+  },
+  metadataSection: {
+    gap: 4,
+  },
+  metadataLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#8E8E93',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  metadataValue: {
+    fontSize: 15,
+    color: '#FFFFFF',
+    lineHeight: 20,
+  },
+  metadataRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  metadataItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metadataSmallValue: {
+    fontSize: 13,
+    color: '#FFFFFF',
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 122, 255, 0.3)',
+  },
+  badgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#007AFF',
   },
 });

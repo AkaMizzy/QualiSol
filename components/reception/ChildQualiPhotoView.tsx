@@ -779,6 +779,13 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
           onAnnotate={previewedItem ? handleOpenAnnotator : undefined}
           onAutoDescribe={previewedItem ? handleAutoDescribe : undefined}
           isDescribing={isDescribing}
+          description={previewedItem?.description}
+          author={previewedItem?.author}
+          createdAt={previewedItem?.created_at}
+          type={previewedItem?.type}
+          categorie={previewedItem?.categorie}
+          latitude={previewedItem?.latitude}
+          longitude={previewedItem?.longitude}
         />
       )}
       <Modal visible={isAnnotatorVisible} animationType="slide">
