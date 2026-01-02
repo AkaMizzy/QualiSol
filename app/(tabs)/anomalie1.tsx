@@ -1,26 +1,26 @@
 import { useAuth } from '@/contexts/AuthContext';
 import {
-    Anomalie1,
-    createAnomalie1,
-    deleteAnomalie1,
-    getAllAnomalies1,
-    updateAnomalie1
+  Anomalie1,
+  createAnomalie1,
+  deleteAnomalie1,
+  getAllAnomalies1,
+  updateAnomalie1
 } from '@/services/anomalie1Service';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppHeader from '../../components/AppHeader';
@@ -33,7 +33,6 @@ export default function Anomalie1Screen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingAnomalie, setEditingAnomalie] = useState<Anomalie1 | null>(null);
   const [anomalie, setAnomalie] = useState('');
-  const [cpomany, setCpomany] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const fetchAnomalies = useCallback(async () => {
@@ -63,11 +62,9 @@ export default function Anomalie1Screen() {
     if (anomalie) {
       setEditingAnomalie(anomalie);
       setAnomalie(anomalie.anomalie || '');
-      setCpomany(anomalie.cpomany || '');
     } else {
       setEditingAnomalie(null);
       setAnomalie('');
-      setCpomany('');
     }
     setModalVisible(true);
   };
@@ -76,7 +73,6 @@ export default function Anomalie1Screen() {
     setModalVisible(false);
     setEditingAnomalie(null);
     setAnomalie('');
-    setCpomany('');
   };
 
   const handleSubmit = async () => {
@@ -84,9 +80,9 @@ export default function Anomalie1Screen() {
     setSubmitting(true);
     try {
       if (editingAnomalie) {
-        await updateAnomalie1(editingAnomalie.id, { anomalie, cpomany }, token);
+        await updateAnomalie1(editingAnomalie.id, { anomalie }, token);
       } else {
-        await createAnomalie1({ anomalie, cpomany }, token);
+        await createAnomalie1({ anomalie }, token);
       }
       handleCloseModal();
       fetchAnomalies();
@@ -125,8 +121,8 @@ export default function Anomalie1Screen() {
   const renderItem = ({ item }: { item: Anomalie1 }) => (
     <View style={styles.card}>
       <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>{item.anomalie || 'Sans description'}</Text>
-        {item.cpomany && <Text style={styles.cardSubtitle}>{item.cpomany}</Text>}
+        <Text style={styles.cardTitle}>{item.anomalie || 'Sans anomalie'}</Text>
+        {item.cpmany && <Text style={styles.cardSubtitle}>{item.cpmany}</Text>}
         <Text style={styles.cardDate}>
           {new Date(item.created_at).toLocaleDateString('fr-FR')}
         </Text>
@@ -204,25 +200,15 @@ export default function Anomalie1Screen() {
 
             <View style={styles.modalContent}>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Description</Text>
+                <Text style={styles.label}>Nom d'anomalie</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Description de l'anomalie"
+                  placeholder="Nom d'anomalie"
                   value={anomalie}
                   onChangeText={setAnomalie}
                   multiline
                   numberOfLines={4}
                   textAlignVertical="top"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Entreprise</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Nom de l'entreprise"
-                  value={cpomany}
-                  onChangeText={setCpomany}
                 />
               </View>
             </View>

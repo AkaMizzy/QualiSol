@@ -33,7 +33,6 @@ export default function Anomalie2Screen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingAnomalie, setEditingAnomalie] = useState<Anomalie2 | null>(null);
   const [anomalie, setAnomalie] = useState('');
-  const [cpomany, setCpomany] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const fetchAnomalies = useCallback(async () => {
@@ -63,11 +62,9 @@ export default function Anomalie2Screen() {
     if (anomalie) {
       setEditingAnomalie(anomalie);
       setAnomalie(anomalie.anomalie || '');
-      setCpomany(anomalie.cpomany || '');
     } else {
       setEditingAnomalie(null);
       setAnomalie('');
-      setCpomany('');
     }
     setModalVisible(true);
   };
@@ -76,7 +73,6 @@ export default function Anomalie2Screen() {
     setModalVisible(false);
     setEditingAnomalie(null);
     setAnomalie('');
-    setCpomany('');
   };
 
   const handleSubmit = async () => {
@@ -84,9 +80,9 @@ export default function Anomalie2Screen() {
     setSubmitting(true);
     try {
       if (editingAnomalie) {
-        await updateAnomalie2(editingAnomalie.id, { anomalie, cpomany }, token);
+        await updateAnomalie2(editingAnomalie.id, { anomalie }, token);
       } else {
-        await createAnomalie2({ anomalie, cpomany }, token);
+        await createAnomalie2({ anomalie }, token);
       }
       handleCloseModal();
       fetchAnomalies();
@@ -126,7 +122,7 @@ export default function Anomalie2Screen() {
     <View style={styles.card}>
       <View style={styles.cardContent}>
         <Text style={styles.cardTitle}>{item.anomalie || 'Sans description'}</Text>
-        {item.cpomany && <Text style={styles.cardSubtitle}>{item.cpomany}</Text>}
+        {item.cpmany && <Text style={styles.cardSubtitle}>{item.cpmany}</Text>}
         <Text style={styles.cardDate}>
           {new Date(item.created_at).toLocaleDateString('fr-FR')}
         </Text>
@@ -213,16 +209,6 @@ export default function Anomalie2Screen() {
                   multiline
                   numberOfLines={4}
                   textAlignVertical="top"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Entreprise</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Nom de l'entreprise"
-                  value={cpomany}
-                  onChangeText={setCpomany}
                 />
               </View>
             </View>
