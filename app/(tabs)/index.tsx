@@ -39,7 +39,6 @@ const SYSTEM_GRID_ITEMS: {
   { title: 'Suivi', image: require('../../assets/icons/folder.png'), type: 'system' },
   { title: 'Danger', image: require('../../assets/icons/danger.png'), type: 'system' },
   { title: 'Calendrier', image: require('../../assets/icons/calendar.png'), type: 'system' },
-  { title: 'Paramètres', image: require('../../assets/icons/settings.png'), type: 'system' },
 ];
 
 // const GRID_ITEMS: { title: string; icon: keyof typeof Ionicons.glyphMap }[] = [

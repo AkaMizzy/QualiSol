@@ -26,6 +26,7 @@ export const ICONS = {
   disponse: require('@/assets/icons/disponse.png'),
   test: require('@/assets/icons/test.png'),
   danger: require('@/assets/icons/danger.png'),
+  settings: require('@/assets/icons/settings.png'),
   // GIF icons
   cameraGif: require('@/assets/icons/camera.gif'),
   constructionGif: require('@/assets/icons/construction.gif'),

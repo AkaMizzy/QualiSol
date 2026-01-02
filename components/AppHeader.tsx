@@ -4,12 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
+
 
 
 interface AppHeaderProps {
@@ -93,14 +94,8 @@ export default function AppHeader({
           />
         </TouchableOpacity>
         
-        {/* Center - User Name */}
+        {/* Center - Date/Time */}
         <View style={styles.headerCenter}>
-          <Text style={styles.userName}>
-            {user?.firstname && user?.lastname 
-              ? `${user.firstname} ${user.lastname}`
-              : 'QualiSol'
-            }
-          </Text>
           <Text style={styles.dateTime}>{formatDateTime(currentDate)}</Text>
         </View>
         
@@ -115,6 +110,13 @@ export default function AppHeader({
               source={ICONS.cvPNG} 
               style={styles.headerIcon}
             />
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityRole="button"
+            style={styles.iconButton}
+            onPress={() => handleNavigate('/parameters')}
+          >
+            <Image source={ICONS.settings} style={styles.headerIcon} />
           </TouchableOpacity>
           {showProfile && (
             <TouchableOpacity
@@ -167,11 +169,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   headerRight: { 
-    width: 100,
+    width: 140,
     flexDirection: 'row', 
     justifyContent: 'flex-end', 
     alignItems: 'center', 
-    gap: 8 
+    gap: 6 
   },
   userName: { 
     fontSize: 20, 
@@ -180,9 +182,9 @@ const styles = StyleSheet.create({
     textAlign: 'center'
   },
   dateTime: {
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: '600',
     color: '#11224e',
-    opacity: 0.9,
     textAlign: 'center',
   },
   logo: {
