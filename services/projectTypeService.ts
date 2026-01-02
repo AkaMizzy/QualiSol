@@ -5,7 +5,7 @@ const projectTypeSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string().nullable(),
-  status_id: z.string().nullable(),
+  status_id: z.string().nullish(), // Accepts string | null | undefined
   company_id: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
