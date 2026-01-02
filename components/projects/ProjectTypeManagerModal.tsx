@@ -1,25 +1,25 @@
 import { useAuth } from '@/contexts/AuthContext';
 import {
-    createProjectType,
-    deleteProjectType,
-    getAllProjectTypes,
-    ProjectType,
-    updateProjectType,
+  createProjectType,
+  deleteProjectType,
+  getAllProjectTypes,
+  ProjectType,
+  updateProjectType,
 } from '@/services/projectTypeService';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -56,7 +56,7 @@ const FormComponent = ({
         style={styles.input}
       />
     </View>
-    <View style={[styles.inputWrap, { height: 80, alignItems: 'flex-start', paddingTop: 12 }]}>
+    <View style={[styles.inputWrap, { height: 150, alignItems: 'flex-start', paddingTop: 12 }]}>
       <Ionicons name="document-text-outline" size={16} color="#6b7280" />
       <TextInput
         placeholder="Description (optionnel)"

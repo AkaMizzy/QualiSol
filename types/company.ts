@@ -20,5 +20,4 @@ export interface Company {
   nb_users?: number;
   status?: string;
   prompt1?: string | null;
-  prompt2?: string | null;
 }
