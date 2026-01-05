@@ -107,9 +107,14 @@ export default function GalerieScreen() {
         });
       }
       fetchGeds();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to upload files:', error);
-      Alert.alert('Upload Failed', 'Please try again.');
+      // Handle 403 error specifically for limit reached
+      if (error?.message?.includes('limit') || error?.message?.includes('Image limit')) {
+        Alert.alert('Limite atteinte', error?.message || 'Vous avez atteint votre limite d\'images.');
+      } else {
+        Alert.alert('Upload Failed', 'Please try again.');
+      }
     } finally {
       if (shouldClose) {
         setModalVisible(false);
