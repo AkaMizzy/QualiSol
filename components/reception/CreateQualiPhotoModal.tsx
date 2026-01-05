@@ -1,7 +1,9 @@
 import API_CONFIG from '@/app/config/api';
 import { ICONS } from '@/constants/Icons';
 import { useAuth } from '@/contexts/AuthContext';
+import companyService from '@/services/companyService';
 import folderService, { CreateFolderPayload, Folder } from '@/services/folderService';
+import { Company } from '@/types/company';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -33,6 +35,11 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
   const [controlOpen, setControlOpen] = useState(false);
   const [technicienOpen, setTechnicienOpen] = useState(false);
 
+  const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
+  const [currentFoldersCount, setCurrentFoldersCount] = useState(0);
+  const [isLimitReached, setIsLimitReached] = useState(false);
+  const [loadingLimits, setLoadingLimits] = useState(true);
+
   const adminUser = useMemo(() => companyUsers.find(u => u.id === ownerId), [companyUsers, ownerId]);
 
   const controlUsers = useMemo(() => companyUsers.filter(u => u.id !== ownerId), [companyUsers, ownerId]);
@@ -43,6 +50,34 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
       setOwnerId(user.id);
     }
   }, [visible, user]);
+
+  useEffect(() => {
+    const fetchLimitInfo = async () => {
+      try {
+        setLoadingLimits(true);
+        if (!token) return;
+        
+        const [company, folders] = await Promise.all([
+          companyService.getCompany(),
+          folderService.getAllFolders(token)
+        ]);
+        
+        setCompanyInfo(company);
+        setCurrentFoldersCount(folders.length);
+        
+        const limit = company.nbfolders || 2;
+        setIsLimitReached(folders.length >= limit);
+      } catch (error) {
+        console.error('Error fetching limit info:', error);
+      } finally {
+        setLoadingLimits(false);
+      }
+    };
+
+    if (visible) {
+      fetchLimitInfo();
+    }
+  }, [visible, token]);
 
 
 
@@ -74,12 +109,17 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
     loadUsers();
   }, [visible, token]);
 
-  const isDisabled = useMemo(() => !title || !token || submitting, [title, token, submitting]);
+  const isDisabled = useMemo(() => !title || !token || submitting || isLimitReached, [title, token, submitting, isLimitReached]);
 
   const handleSubmit = async () => {
     if (!token) return;
     setError(null);
     if (!title || title.trim().length === 0) { setError('Veuillez saisir un titre.'); return; }
+
+    if (isLimitReached) {
+      setError(`Vous avez atteint la limite de ${companyInfo?.nbfolders || 2} dossiers. Veuillez mettre à niveau votre plan pour ajouter plus de dossiers.`);
+      return;
+    }
 
     const roles = [ownerId, controlId, technicienId].filter(Boolean);
     const uniqueRoles = new Set(roles);
@@ -105,7 +145,12 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
       onSuccess && onSuccess(created);
       handleClose();
     } catch (e: any) {
-      setError(e?.message || 'Échec de l\'enregistrement');
+      // Handle 403 error specifically for limit reached
+      if (e?.message?.includes('limit') || e?.message?.includes('Folder limit')) {
+        setError(e?.message || `Vous avez atteint la limite de ${companyInfo?.nbfolders || 2} dossiers.`);
+      } else {
+        setError(e?.message || 'Échec de l\'enregistrement');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -148,6 +193,21 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
               <TouchableOpacity onPress={() => setError(null)}>
                 <Ionicons name="close" size={16} color="#b45309" />
               </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Limit Info Banner */}
+          {!loadingLimits && companyInfo && (
+            <View style={[styles.limitInfoBanner, isLimitReached && styles.limitInfoBannerWarning]}>
+              <Ionicons 
+                name={isLimitReached ? "warning" : "folder"} 
+                size={16} 
+                color={isLimitReached ? "#b45309" : "#3b82f6"} 
+              />
+              <Text style={[styles.limitInfoText, isLimitReached && styles.limitInfoTextWarning]}>
+                Dossiers: {currentFoldersCount} / {companyInfo.nbfolders || 2}
+                {isLimitReached && " - Nombre des dossiers dépassé"}
+              </Text>
             </View>
           )}
 
@@ -333,6 +393,32 @@ const styles = StyleSheet.create({
   },
   submitButtonDisabled: { backgroundColor: '#d1d5db' },
   submitButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  limitInfoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 10,
+  },
+  limitInfoBannerWarning: {
+    backgroundColor: '#fffbeb',
+    borderColor: '#f59e0b',
+  },
+  limitInfoText: {
+    color: '#1e40af',
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  limitInfoTextWarning: {
+    color: '#b45309',
+  },
 });
 
 

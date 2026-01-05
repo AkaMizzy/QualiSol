@@ -1,6 +1,8 @@
 import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { createZone, getAllZoneTypes, type ZoneType } from '@/services/zoneService';
+import companyService from '@/services/companyService';
+import { createZone, getAllZones, getAllZoneTypes, type ZoneType } from '@/services/zoneService';
+import { Company } from '@/types/company';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -38,7 +40,12 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showLocationInput, setShowLocationInput] = useState(false);
 
-  const isDisabled = useMemo(() => !title || !token || !projectId || !controlId || !technicienId, [title, token, projectId, controlId, technicienId]);
+  const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
+  const [currentZonesCount, setCurrentZonesCount] = useState(0);
+  const [isLimitReached, setIsLimitReached] = useState(false);
+  const [loadingLimits, setLoadingLimits] = useState(true);
+
+  const isDisabled = useMemo(() => !title || !token || !projectId || !controlId || !technicienId || isLimitReached, [title, token, projectId, controlId, technicienId, isLimitReached]);
 
   function validate(): string | null {
     if (!title) return 'Le titre est requis';
@@ -56,6 +63,12 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
     if (!token) return;
     const v = validate();
     if (v) { setError(v); return; }
+    
+    if (isLimitReached) {
+      setError(`Vous avez atteint la limite de ${companyInfo?.nbzones || 2} zones. Veuillez mettre à niveau votre plan pour ajouter plus de zones.`);
+      return;
+    }
+    
     try {
       setIsSubmitting(true);
       await createZone(token, {
@@ -72,7 +85,12 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
       if (onCreated) await onCreated();
       onClose();
     } catch (e: any) {
-      setError(e?.message || 'Création de zone échouée');
+      // Handle 403 error specifically for limit reached
+      if (e?.message?.includes('limit') || e?.message?.includes('Zone limit')) {
+        setError(e?.message || `Vous avez atteint la limite de ${companyInfo?.nbzones || 2} zones.`);
+      } else {
+        setError(e?.message || 'Création de zone échouée');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -179,6 +197,34 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
   }
 
   useEffect(() => {
+    const fetchLimitInfo = async () => {
+      try {
+        setLoadingLimits(true);
+        if (!token) return;
+        
+        const [company, zones] = await Promise.all([
+          companyService.getCompany(),
+          getAllZones(token)
+        ]);
+        
+        setCompanyInfo(company);
+        setCurrentZonesCount(zones.length);
+        
+        const limit = company.nbzones || 2;
+        setIsLimitReached(zones.length >= limit);
+      } catch (error) {
+        console.error('Error fetching limit info:', error);
+      } finally {
+        setLoadingLimits(false);
+      }
+    };
+
+    if (visible) {
+      fetchLimitInfo();
+    }
+  }, [visible, token]);
+
+  useEffect(() => {
     async function loadZoneTypes() {
       if (!token) return;
       setLoadingTypes(true);
@@ -249,6 +295,21 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
               <TouchableOpacity onPress={() => setError(null)}>
                 <Ionicons name="close" size={16} color="#b45309" />
               </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Limit Info Banner */}
+          {!loadingLimits && companyInfo && (
+            <View style={[styles.limitInfoBanner, isLimitReached && styles.limitInfoBannerWarning]}>
+              <Ionicons 
+                name={isLimitReached ? "warning" : "map"} 
+                size={16} 
+                color={isLimitReached ? "#b45309" : "#3b82f6"} 
+              />
+              <Text style={[styles.limitInfoText, isLimitReached && styles.limitInfoTextWarning]}>
+                Zones: {currentZonesCount} / {companyInfo.nbzones || 2}
+                {isLimitReached && " - Nombre des zones dépassé"}
+              </Text>
             </View>
           )}
 
@@ -473,6 +534,32 @@ const styles = StyleSheet.create({
   },
   submitButtonDisabled: { backgroundColor: '#d1d5db' },
   submitButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  limitInfoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 10,
+  },
+  limitInfoBannerWarning: {
+    backgroundColor: '#fffbeb',
+    borderColor: '#f59e0b',
+  },
+  limitInfoText: {
+    color: '#1e40af',
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  limitInfoTextWarning: {
+    color: '#b45309',
+  },
 });
 
 
