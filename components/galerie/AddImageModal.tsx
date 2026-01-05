@@ -1,6 +1,9 @@
 import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
 import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
+import companyService from '@/services/companyService';
+import { getAllGeds } from '@/services/gedService';
+import { Company } from '@/types/company';
 // import { describeImage } from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -30,6 +33,11 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
   const [selectedCategorie, setSelectedCategorie] = useState<string | null>(null);
   const [severitySliderWidth, setSeveritySliderWidth] = useState(0);
   const prevVisibleRef = useRef(visible);
+
+  const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
+  const [currentImagesCount, setCurrentImagesCount] = useState(0);
+  const [isLimitReached, setIsLimitReached] = useState(false);
+  const [loadingLimits, setLoadingLimits] = useState(true);
 
   const ANOMALY_CATEGORIES = [
     { key: 'securite', label: 'Sécurité' },
@@ -168,6 +176,34 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
   }, [visible, showImagePickerOptions, openCameraOnShow]);
 
   useEffect(() => {
+    const fetchLimitInfo = async () => {
+      try {
+        setLoadingLimits(true);
+        if (!token) return;
+        
+        const [company, geds] = await Promise.all([
+          companyService.getCompany(),
+          getAllGeds(token)
+        ]);
+        
+        setCompanyInfo(company);
+        setCurrentImagesCount(geds.length);
+        
+        const limit = company.nbimages || 20;
+        setIsLimitReached(geds.length >= limit);
+      } catch (error) {
+        console.error('Error fetching limit info:', error);
+      } finally {
+        setLoadingLimits(false);
+      }
+    };
+
+    if (visible) {
+      fetchLimitInfo();
+    }
+  }, [visible, token]);
+
+  useEffect(() => {
     const fetchLocation = async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -214,6 +250,14 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
   const handleAdd = (shouldClose: boolean) => {
     if (!title || !image) {
       Alert.alert('Informations manquantes', 'Veuillez fournir un titre et une image.');
+      return;
+    }
+
+    if (isLimitReached) {
+      Alert.alert(
+        'Limite atteinte',
+        `Vous avez atteint la limite de ${companyInfo?.nbimages || 20} images. Veuillez mettre à niveau votre plan pour ajouter plus d'images.`
+      );
       return;
     }
 
@@ -280,6 +324,21 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
               keyboardShouldPersistTaps="handled"
             >
               <Text style={styles.headerTitle}>Ajouter une nouvelle image</Text>
+              
+              {/* Limit Info Banner */}
+              {!loadingLimits && companyInfo && (
+                <View style={[styles.limitInfoBanner, isLimitReached && styles.limitInfoBannerWarning]}>
+                  <Ionicons 
+                    name={isLimitReached ? "warning" : "images"} 
+                    size={16} 
+                    color={isLimitReached ? "#b45309" : "#3b82f6"} 
+                  />
+                  <Text style={[styles.limitInfoText, isLimitReached && styles.limitInfoTextWarning]}>
+                    Images: {currentImagesCount} / {companyInfo.nbimages || 20}
+                    {isLimitReached && " - Nombre des images dépassé"}
+                  </Text>
+                </View>
+              )}
               
               <View style={styles.imageContainer}>
                 <TouchableOpacity style={styles.imagePicker} onPress={showImagePickerOptions}>
@@ -428,7 +487,11 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
                 <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
                   <Text style={[styles.buttonText, styles.cancelButtonText]}>Arrêt</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, styles.addButton]} onPress={() => handleAdd(false)}>
+                <TouchableOpacity 
+                  style={[styles.button, styles.addButton, isLimitReached && styles.addButtonDisabled]} 
+                  onPress={() => handleAdd(false)}
+                  disabled={isLimitReached}
+                >
                   <Text style={styles.buttonText}>Ajouter l&apos;image</Text>
                 </TouchableOpacity>
               </View>
@@ -695,5 +758,36 @@ const styles = StyleSheet.create({
     severityDotSelected: {
       backgroundColor: '#FFFFFF',
       borderWidth: 3,
+    },
+    limitInfoBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: '#eff6ff',
+      borderColor: '#bfdbfe',
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginHorizontal: 0,
+      marginTop: 12,
+      marginBottom: 8,
+      borderRadius: 10,
+    },
+    limitInfoBannerWarning: {
+      backgroundColor: '#fffbeb',
+      borderColor: '#f59e0b',
+    },
+    limitInfoText: {
+      color: '#1e40af',
+      flex: 1,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    limitInfoTextWarning: {
+      color: '#b45309',
+    },
+    addButtonDisabled: {
+      backgroundColor: '#d1d5db',
+      opacity: 0.6,
     },
 });

@@ -1,8 +1,10 @@
-import PictureAnnotator from '@/components/PictureAnnotator';
 import API_CONFIG from '@/app/config/api';
+import PictureAnnotator from '@/components/PictureAnnotator';
 import { useAuth } from '@/contexts/AuthContext';
+import companyService from '@/services/companyService';
 import { Folder } from '@/services/folderService';
-import { CreateGedInput, Ged, createGed, describeImage } from '@/services/gedService';
+import { CreateGedInput, Ged, createGed, describeImage, getAllGeds } from '@/services/gedService';
+import { Company } from '@/types/company';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -49,9 +51,40 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
   const [annotatorBaseUri, setAnnotatorBaseUri] = useState<string | null>(null);
   const [alertInfo, setAlertInfo] = useState<{ visible: boolean; title: string; message: string; type: 'success' | 'error', buttons?: any[] }>({ visible: false, title: '', message: '', type: 'success' });
 
+  const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
+  const [currentImagesCount, setCurrentImagesCount] = useState(0);
+  const [isLimitReached, setIsLimitReached] = useState(false);
+  const [loadingLimits, setLoadingLimits] = useState(true);
+
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const canSave = useMemo(() => !!photo && !submitting && !isGeneratingDescription && !isUploadingAudio, [photo, submitting, isGeneratingDescription, isUploadingAudio]);
+  const canSave = useMemo(() => !!photo && !submitting && !isGeneratingDescription && !isUploadingAudio && !isLimitReached, [photo, submitting, isGeneratingDescription, isUploadingAudio, isLimitReached]);
+
+  useEffect(() => {
+    const fetchLimitInfo = async () => {
+      try {
+        setLoadingLimits(true);
+        if (!token) return;
+        
+        const [company, geds] = await Promise.all([
+          companyService.getCompany(),
+          getAllGeds(token)
+        ]);
+        
+        setCompanyInfo(company);
+        setCurrentImagesCount(geds.length);
+        
+        const limit = company.nbimages || 20;
+        setIsLimitReached(geds.length >= limit);
+      } catch (error) {
+        console.error('Error fetching limit info:', error);
+      } finally {
+        setLoadingLimits(false);
+      }
+    };
+
+    fetchLimitInfo();
+  }, [token]);
 
   useEffect(() => {
     async function loadUsers() {
@@ -209,6 +242,15 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
       setError('Impossible de soumettre : informations utilisateur ou photo manquantes.');
       return;
     }
+
+    if (isLimitReached) {
+      Alert.alert(
+        'Limite atteinte',
+        `Vous avez atteint la limite de ${companyInfo?.nbimages || 20} images. Veuillez mettre à niveau votre plan pour ajouter plus d'images.`
+      );
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -378,6 +420,21 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
             <TouchableOpacity onPress={() => setError(null)}>
               <Ionicons name="close" size={16} color="#b45309" />
             </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Limit Info Banner */}
+        {!loadingLimits && companyInfo && (
+          <View style={[styles.limitInfoBanner, isLimitReached && styles.limitInfoBannerWarning]}>
+            <Ionicons 
+              name={isLimitReached ? "warning" : "images"} 
+              size={16} 
+              color={isLimitReached ? "#b45309" : "#3b82f6"} 
+            />
+            <Text style={[styles.limitInfoText, isLimitReached && styles.limitInfoTextWarning]}>
+              Images: {currentImagesCount} / {companyInfo.nbimages || 20}
+              {isLimitReached && " - Nombre des images dépassé"}
+            </Text>
           </View>
         )}
 
@@ -1011,5 +1068,31 @@ const styles = StyleSheet.create({
     fontWeight: '700', 
     color: '#FFFFFF',
     letterSpacing: 0.3,
+  },
+  limitInfoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 10,
+  },
+  limitInfoBannerWarning: {
+    backgroundColor: '#fffbeb',
+    borderColor: '#f59e0b',
+  },
+  limitInfoText: {
+    color: '#1e40af',
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  limitInfoTextWarning: {
+    color: '#b45309',
   },
 });

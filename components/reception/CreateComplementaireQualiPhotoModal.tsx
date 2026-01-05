@@ -1,6 +1,8 @@
 
 import { useAuth } from '@/contexts/AuthContext';
+import companyService from '@/services/companyService';
 import * as gedService from '@/services/gedService';
+import { Company } from '@/types/company';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -56,7 +58,38 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
   const [annotatorBaseUri, setAnnotatorBaseUri] = useState<string | null>(null);
   const [audioUri, setAudioUri] = useState<string | null>(null);
 
-  const canSave = useMemo(() => !!photo && !submitting && !isGeneratingDescription, [photo, submitting, isGeneratingDescription]);
+  const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
+  const [currentImagesCount, setCurrentImagesCount] = useState(0);
+  const [isLimitReached, setIsLimitReached] = useState(false);
+  const [loadingLimits, setLoadingLimits] = useState(true);
+
+  const canSave = useMemo(() => !!photo && !submitting && !isGeneratingDescription && !isLimitReached, [photo, submitting, isGeneratingDescription, isLimitReached]);
+
+  useEffect(() => {
+    const fetchLimitInfo = async () => {
+      try {
+        setLoadingLimits(true);
+        if (!token) return;
+        
+        const [company, geds] = await Promise.all([
+          companyService.getCompany(),
+          gedService.getAllGeds(token)
+        ]);
+        
+        setCompanyInfo(company);
+        setCurrentImagesCount(geds.length);
+        
+        const limit = company.nbimages || 20;
+        setIsLimitReached(geds.length >= limit);
+      } catch (error) {
+        console.error('Error fetching limit info:', error);
+      } finally {
+        setLoadingLimits(false);
+      }
+    };
+
+    fetchLimitInfo();
+  }, [token]);
 
   const handleGenerateDescription = useCallback(async () => {
     if (!photo || !token) {
@@ -118,6 +151,15 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
 
   const handleSubmit = async () => {
     if (!token || !photo || !user) return;
+
+    if (isLimitReached) {
+      Alert.alert(
+        'Limite atteinte',
+        `Vous avez atteint la limite de ${companyInfo?.nbimages || 20} images. Veuillez mettre à niveau votre plan pour ajouter plus d'images.`
+      );
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     try {
@@ -214,6 +256,21 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
             </TouchableOpacity>
           </View>
         )}
+
+          {/* Limit Info Banner */}
+          {!loadingLimits && companyInfo && (
+            <View style={[styles.limitInfoBanner, isLimitReached && styles.limitInfoBannerWarning]}>
+              <Ionicons 
+                name={isLimitReached ? "warning" : "images"} 
+                size={16} 
+                color={isLimitReached ? "#b45309" : "#3b82f6"} 
+              />
+              <Text style={[styles.limitInfoText, isLimitReached && styles.limitInfoTextWarning]}>
+                Images: {currentImagesCount} / {companyInfo.nbimages || 20}
+                {isLimitReached && " - Nombre des images dépassé"}
+              </Text>
+            </View>
+          )}
 
           <ScrollView
             ref={scrollViewRef}
@@ -424,6 +481,32 @@ const styles = StyleSheet.create({
   },
    submitButtonDisabled: { backgroundColor: '#d1d5db' },
     submitButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+    limitInfoBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: '#eff6ff',
+      borderColor: '#bfdbfe',
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginHorizontal: 16,
+      marginTop: 8,
+      borderRadius: 10,
+    },
+    limitInfoBannerWarning: {
+      backgroundColor: '#fffbeb',
+      borderColor: '#f59e0b',
+    },
+    limitInfoText: {
+      color: '#1e40af',
+      flex: 1,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    limitInfoTextWarning: {
+      color: '#b45309',
+    },
 });
 
 
