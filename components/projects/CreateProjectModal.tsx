@@ -1,7 +1,9 @@
 import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { createProject } from '@/services/projectService';
+import companyService from '@/services/companyService';
+import { createProject, getAllProjects } from '@/services/projectService';
 import { getAllProjectTypes } from '@/services/projectTypeService';
+import { Company } from '@/types/company';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -38,6 +40,11 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
   const [isDdPickerVisible, setDdPickerVisible] = useState(false);
   const [isDfPickerVisible, setDfPickerVisible] = useState(false);
 
+  const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
+  const [currentChantiersCount, setCurrentChantiersCount] = useState(0);
+  const [isLimitReached, setIsLimitReached] = useState(false);
+  const [loadingLimits, setLoadingLimits] = useState(true);
+
   const adminUser = useMemo(() => companyUsers.find(u => u.id === ownerId), [companyUsers, ownerId]);
   const controlUsers = useMemo(() => companyUsers.filter(u => u.id !== ownerId), [companyUsers, ownerId]);
   const technicienUsers = useMemo(() => companyUsers.filter(u => u.id !== ownerId && u.id !== controlId), [companyUsers, ownerId, controlId]);
@@ -67,8 +74,31 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
   useEffect(() => {
     if (visible && user?.id) {
       setOwnerId(user.id);
+      fetchLimitInfo();
     }
   }, [visible, user]);
+
+  const fetchLimitInfo = async () => {
+    try {
+      setLoadingLimits(true);
+      if (!token) return;
+      
+      const [company, projects] = await Promise.all([
+        companyService.getCompany(),
+        getAllProjects(token)
+      ]);
+      
+      setCompanyInfo(company);
+      setCurrentChantiersCount(projects.length);
+      
+      const limit = company.nbchanitiers || 2;
+      setIsLimitReached(projects.length >= limit);
+    } catch (error) {
+      console.error('Error fetching limit info:', error);
+    } finally {
+      setLoadingLimits(false);
+    }
+  };
 
   useEffect(() => {
     async function loadUsers() {
@@ -136,6 +166,15 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
     if (!token) return;
     const validationError = validate();
     if (validationError) { setError(validationError); return; }
+    
+    if (isLimitReached) {
+      Alert.alert(
+        'Limite atteinte',
+        `Vous avez atteint la limite de ${companyInfo?.nbchanitiers || 2} chantiers. Veuillez mettre à niveau votre plan pour ajouter plus de chantiers.`
+      );
+      return;
+    }
+    
     try {
       setIsSubmitting(true);
       await createProject(token, {
@@ -154,7 +193,15 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
       onClose();
       Alert.alert('Succès', 'Chantier créé avec succès');
     } catch (e: any) {
-      setError(e?.message || 'Création échouée');
+      // Handle 403 error specifically for limit reached
+      if (e?.message?.includes('limit') || e?.message?.includes('Chantier limit')) {
+        Alert.alert(
+          'Limite atteinte',
+          e?.message || `Vous avez atteint la limite de ${companyInfo?.nbchanitiers || 2} chantiers.`
+        );
+      } else {
+        setError(e?.message || 'Création échouée');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -192,6 +239,21 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
               <TouchableOpacity onPress={() => setError(null)}>
                 <Ionicons name="close" size={16} color="#b45309" />
               </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Limit Info Banner */}
+          {!loadingLimits && companyInfo && (
+            <View style={[stylesFS.limitInfoBanner, isLimitReached && stylesFS.limitInfoBannerWarning]}>
+              <Ionicons 
+                name={isLimitReached ? "warning" : "business"} 
+                size={16} 
+                color={isLimitReached ? "#b45309" : "#3b82f6"} 
+              />
+              <Text style={[stylesFS.limitInfoText, isLimitReached && stylesFS.limitInfoTextWarning]}>
+                Chantiers: {currentChantiersCount} / {companyInfo.nbchanitiers || 2}
+                {isLimitReached && " - Nombre des chantiers dépassé"}
+              </Text>
             </View>
           )}
 
@@ -337,8 +399,8 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
           {/* Footer */}
           <View style={stylesFS.footer}>
             <TouchableOpacity 
-              style={[stylesFS.submitButton, (!token || isSubmitting || isDisabled) && stylesFS.submitButtonDisabled]} 
-              disabled={!token || isSubmitting || isDisabled} 
+              style={[stylesFS.submitButton, (!token || isSubmitting || isDisabled || isLimitReached) && stylesFS.submitButtonDisabled]} 
+              disabled={!token || isSubmitting || isDisabled || isLimitReached} 
               onPress={onSubmit}
             >
               {isSubmitting ? (
@@ -411,6 +473,32 @@ const stylesFS = StyleSheet.create({
   disabledInput: {
     backgroundColor: '#f3f4f6',
     borderColor: '#d1d5db',
+  },
+  limitInfoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 10,
+  },
+  limitInfoBannerWarning: {
+    backgroundColor: '#fffbeb',
+    borderColor: '#f59e0b',
+  },
+  limitInfoText: {
+    color: '#1e40af',
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  limitInfoTextWarning: {
+    color: '#b45309',
   },
 });
 

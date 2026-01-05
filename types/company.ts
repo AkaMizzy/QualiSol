@@ -18,6 +18,14 @@ export interface Company {
   ice_number?: string | null;
   logo?: string;
   nb_users?: number;
+  nbusers?: number;
+  nbfolders?: number;
+  nbzones?: number;
+  nbchanitiers?: number;
   status?: string;
   prompt1?: string | null;
+  prompt3?: string | null;
+  prompt4?: string | null;
+  prompt5?: string | null;
 }
+

@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
-import { createUser } from '../../services/userService';
+import companyService from '../../services/companyService';
+import { createUser, getUsers } from '../../services/userService';
+import { Company } from '../../types/company';
 import { CreateUserData } from '../../types/user';
 
 interface CreateUserModalProps {
@@ -25,6 +27,10 @@ export default function CreateUserModal({ visible, onClose, onUserCreated }: Cre
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
+  const [currentUserCount, setCurrentUserCount] = useState(0);
+  const [isLimitReached, setIsLimitReached] = useState(false);
+  const [loadingLimits, setLoadingLimits] = useState(true);
 
   const [formData, setFormData] = useState<CreateUserData>({
     firstname: '',
@@ -54,8 +60,29 @@ export default function CreateUserModal({ visible, onClose, onUserCreated }: Cre
         company_id: user?.company_id || '',
       });
       setErrors({});
+      fetchLimitInfo();
     }
   }, [visible, user]);
+
+  const fetchLimitInfo = async () => {
+    try {
+      setLoadingLimits(true);
+      const [company, users] = await Promise.all([
+        companyService.getCompany(),
+        getUsers()
+      ]);
+      
+      setCompanyInfo(company);
+      setCurrentUserCount(users.length);
+      
+      const limit = company.nbusers || 2;
+      setIsLimitReached(users.length >= limit);
+    } catch (error) {
+      console.error('Error fetching limit info:', error);
+    } finally {
+      setLoadingLimits(false);
+    }
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -89,6 +116,14 @@ export default function CreateUserModal({ visible, onClose, onUserCreated }: Cre
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
+    if (isLimitReached) {
+      Alert.alert(
+        'Limite atteinte',
+        `Vous avez atteint la limite de ${companyInfo?.nbusers || 2} utilisateurs. Veuillez mettre à niveau votre plan pour ajouter plus d'utilisateurs.`
+      );
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -116,9 +151,19 @@ export default function CreateUserModal({ visible, onClose, onUserCreated }: Cre
       onUserCreated();
       onClose();
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating user:', error);
-      Alert.alert('Erreur', error instanceof Error ? error.message : 'Impossible de créer l\'utilisateur');
+      
+      // Handle 403 error specifically for limit reached
+      if (error.response?.status === 403) {
+        const errorData = error.response?.data;
+        Alert.alert(
+          'Limite atteinte',
+          errorData?.error || `Vous avez atteint la limite de ${companyInfo?.nbusers || 2} utilisateurs.`
+        );
+      } else {
+        Alert.alert('Erreur', error instanceof Error ? error.message : 'Impossible de créer l\'utilisateur');
+      }
     } finally {
       setLoading(false);
     }
@@ -148,6 +193,27 @@ export default function CreateUserModal({ visible, onClose, onUserCreated }: Cre
 
           <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
             <View style={styles.formContainer}>
+              {/* Limit Info Banner */}
+              {!loadingLimits && companyInfo && (
+                <View style={[styles.limitInfoCard, isLimitReached && styles.limitInfoCardWarning]}>
+                  <View style={styles.limitInfoHeader}>
+                    <Ionicons 
+                      name={isLimitReached ? "warning" : "people"} 
+                      size={20} 
+                      color={isLimitReached ? "#dc2626" : "#3b82f6"} 
+                    />
+                    <Text style={[styles.limitInfoTitle, isLimitReached && styles.limitInfoTitleWarning]}>
+                      Utilisateurs: {currentUserCount} / {companyInfo.nbusers || 2}
+                    </Text>
+                  </View>
+                  {isLimitReached && (
+                    <Text style={styles.limitWarningText}>
+                      ⚠️ Nombre d'utilisateurs dépassé. Veuillez mettre à niveau votre plan pour ajouter plus d'utilisateurs.
+                    </Text>
+                  )}
+                </View>
+              )}
+
               <View style={styles.nameRow}>
                 <View style={styles.nameCol}>
                   <Text style={styles.label}>Prénom <Text style={styles.required}>*</Text></Text>
@@ -279,9 +345,9 @@ export default function CreateUserModal({ visible, onClose, onUserCreated }: Cre
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.submitButton, loading && styles.buttonDisabled]}
+              style={[styles.submitButton, (loading || isLimitReached) && styles.buttonDisabled]}
               onPress={handleSubmit}
-              disabled={loading}
+              disabled={loading || isLimitReached}
             >
               {loading ? (
                 <ActivityIndicator color="white" size="small" />
@@ -448,5 +514,37 @@ const styles = {
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  limitInfoCard: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  limitInfoCardWarning: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+  },
+  limitInfoHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    marginBottom: 4,
+  },
+  limitInfoTitle: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#1e40af',
+    marginLeft: 8,
+  },
+  limitInfoTitleWarning: {
+    color: '#dc2626',
+  },
+  limitWarningText: {
+    fontSize: 14,
+    color: '#dc2626',
+    marginTop: 8,
+    lineHeight: 20,
   },
 } as const;

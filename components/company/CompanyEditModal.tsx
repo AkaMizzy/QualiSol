@@ -3,17 +3,17 @@ import Ionicons from '@expo/vector-icons/build/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Company } from '../../types/company';
@@ -77,6 +77,9 @@ export default function CompanyEditModal({
     pays: '',
     ice_number: '',
     prompt1: '',
+    prompt3: '',
+    prompt4: '',
+    prompt5: '',
   });
 
   useEffect(() => {
@@ -91,6 +94,9 @@ export default function CompanyEditModal({
         pays: company.pays || '',
         ice_number: company.ice_number || '',
         prompt1: company.prompt1 || "Critiquer et relever les anomalies dans cette image en 100 mots. Soyez critique.",
+        prompt3: company.prompt3 || '',
+        prompt4: company.prompt4 || '',
+        prompt5: company.prompt5 || '',
       });
     }
   }, [company]);
@@ -155,6 +161,9 @@ export default function CompanyEditModal({
         pays: formData.pays.trim() || null,
         ice_number: formData.ice_number.trim() || null,
         prompt1: formData.prompt1.trim() || null,
+        prompt3: formData.prompt3.trim() || null,
+        prompt4: formData.prompt4.trim() || null,
+        prompt5: formData.prompt5.trim() || null,
       };
 
       const updatedCompany = await companyService.updateCompany(updateData, logoUri);
@@ -282,11 +291,41 @@ export default function CompanyEditModal({
               onChangeText={(text) => handleInputChange('ice_number', text)}
               placeholder="001234567890123"
             />
-             <InputField
+          </View>
+
+          {/* Prompts Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Prompts pour description d&apos;image</Text>
+            <Text style={styles.promptDescription}>
+              Configurez les prompts utilisés pour décrire les images avec l&apos;intelligence artificielle. Les utilisateurs pourront choisir parmi les prompts 1, 3, 4 ou 5 lors de l&apos;analyse d&apos;images.
+            </Text>
+            
+            <InputField
               label="Prompt 1"
               value={formData.prompt1}
               onChangeText={(text) => handleInputChange('prompt1', text)}
               placeholder="Prompt pour la description d'image"
+              multiline
+            />
+            <InputField
+              label="Prompt 2"
+              value={formData.prompt3}
+              onChangeText={(text) => handleInputChange('prompt3', text)}
+              placeholder="Prompt pour la description d'image (optionnel)"
+              multiline
+            />
+            <InputField
+              label="Prompt 3"
+              value={formData.prompt4}
+              onChangeText={(text) => handleInputChange('prompt4', text)}
+              placeholder="Prompt pour la description d'image (optionnel)"
+              multiline
+            />
+            <InputField
+              label="Prompt 4"
+              value={formData.prompt5}
+              onChangeText={(text) => handleInputChange('prompt5', text)}
+              placeholder="Prompt pour la description d'image (optionnel)"
               multiline
             />
           </View>
@@ -354,6 +393,12 @@ const styles = {
     fontWeight: '600',
     color: '#11224e',
     marginBottom: 20,
+  },
+  promptDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 16,
+    lineHeight: 20,
   },
   inputContainer: {
     marginBottom: 20,
