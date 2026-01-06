@@ -35,14 +35,12 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
   const prevVisibleRef = useRef(visible);
 
   const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
-  const [currentImagesCount, setCurrentImagesCount] = useState(0);
-  const [isLimitReached, setIsLimitReached] = useState(false);
-  const [loadingLimits, setLoadingLimits] = useState(true);
   
   // Storage quota state
   const [currentStorageGB, setCurrentStorageGB] = useState(0);
   const [storageQuotaGB, setStorageQuotaGB] = useState(0);
   const [isStorageQuotaReached, setIsStorageQuotaReached] = useState(false);
+  const [loadingLimits, setLoadingLimits] = useState(true);
 
   const ANOMALY_CATEGORIES = [
     { key: 'securite', label: 'Sécurité' },
@@ -192,13 +190,9 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
         ]);
         
         setCompanyInfo(company);
-        setCurrentImagesCount(geds.length);
-        
-        const limit = company.nbimages || 20;
-        setIsLimitReached(geds.length >= limit);
         
         // Calculate storage quota
-        const storageUsedGB = company.nbimagetaken || 0;
+        const storageUsedGB = company.nbimagetake || 0;
         const storageQuotaTB = company.sizeimages || 1;
         const storageQuotaGBValue = storageQuotaTB * 1024; // Convert TB to GB
         
@@ -264,14 +258,6 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
   const handleAdd = (shouldClose: boolean) => {
     if (!title || !image) {
       Alert.alert('Informations manquantes', 'Veuillez fournir un titre et une image.');
-      return;
-    }
-
-    if (isLimitReached) {
-      Alert.alert(
-        'Limite atteinte',
-        `Vous avez atteint la limite de ${companyInfo?.nbimages || 20} images. Veuillez mettre à niveau votre plan pour ajouter plus d'images.`
-      );
       return;
     }
 
@@ -347,21 +333,6 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
             >
               <Text style={styles.headerTitle}>Ajouter une nouvelle image</Text>
               
-              {/* Limit Info Banner */}
-              {!loadingLimits && companyInfo && (
-                <View style={[styles.limitInfoBanner, isLimitReached && styles.limitInfoBannerWarning]}>
-                  <Ionicons 
-                    name={isLimitReached ? "warning" : "images"} 
-                    size={16} 
-                    color={isLimitReached ? "#b45309" : "#3b82f6"} 
-                  />
-                  <Text style={[styles.limitInfoText, isLimitReached && styles.limitInfoTextWarning]}>
-                    Images: {currentImagesCount} / {companyInfo.nbimages || 20}
-                    {isLimitReached && " - Nombre des images dépassé"}
-                  </Text>
-                </View>
-              )}
-
               {/* Storage Quota Banner */}
               {!loadingLimits && companyInfo && (
                 <View style={[styles.limitInfoBanner, isStorageQuotaReached && styles.limitInfoBannerWarning]}>
@@ -525,9 +496,9 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
                   <Text style={[styles.buttonText, styles.cancelButtonText]}>Arrêt</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={[styles.button, styles.addButton, (isLimitReached || isStorageQuotaReached) && styles.addButtonDisabled]} 
+                  style={[styles.button, styles.addButton, isStorageQuotaReached && styles.addButtonDisabled]} 
                   onPress={() => handleAdd(false)}
-                  disabled={isLimitReached || isStorageQuotaReached}
+                  disabled={isStorageQuotaReached}
                 >
                   <Text style={styles.buttonText}>Ajouter l&apos;image</Text>
                 </TouchableOpacity>

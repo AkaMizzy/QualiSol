@@ -1,5 +1,6 @@
 import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
+import companyService from '@/services/companyService';
 import {
   createFolderType,
   deleteFolderType,
@@ -7,7 +8,8 @@ import {
   getAllFolderTypes,
   updateFolderType,
 } from '@/services/folderTypeService';
-import { createGed, getGedsBySource, updateGedFile } from '@/services/gedService';
+import { createGed, getAllGeds, getGedsBySource, updateGedFile } from '@/services/gedService';
+import { Company } from '@/types/company';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { ImagePickerAsset } from 'expo-image-picker';
@@ -116,6 +118,13 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
   const [isQuestionModalVisible, setIsQuestionModalVisible] = useState(false);
   const [image, setImage] = useState<ImagePickerAsset | null>(null);
 
+  // Limit tracking state
+  const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
+  const [currentStorageGB, setCurrentStorageGB] = useState(0);
+  const [storageQuotaGB, setStorageQuotaGB] = useState(0);
+  const [isStorageQuotaReached, setIsStorageQuotaReached] = useState(false);
+  const [loadingLimits, setLoadingLimits] = useState(true);
+
   const fetchFolderTypes = useCallback(async () => {
     if (!token) return;
     setIsLoading(true);
@@ -147,6 +156,39 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
       fetchFolderTypes();
     }
   }, [visible, fetchFolderTypes]);
+
+  useEffect(() => {
+    const fetchLimitInfo = async () => {
+      try {
+        setLoadingLimits(true);
+        if (!token) return;
+        
+        const [company, geds] = await Promise.all([
+          companyService.getCompany(),
+          getAllGeds(token)
+        ]);
+        
+        setCompanyInfo(company);
+        
+        // Calculate storage quota
+        const storageUsedGB = company.nbimagetake || 0;
+        const storageQuotaTB = company.sizeimages || 1;
+        const storageQuotaGBValue = storageQuotaTB * 1024;
+        
+        setCurrentStorageGB(storageUsedGB);
+        setStorageQuotaGB(storageQuotaGBValue);
+        setIsStorageQuotaReached(storageUsedGB >= storageQuotaGBValue);
+      } catch (error) {
+        console.error('Error fetching limit info:', error);
+      } finally {
+        setLoadingLimits(false);
+      }
+    };
+
+    if (visible) {
+      fetchLimitInfo();
+    }
+  }, [visible, token]);
 
   const handleOpenQuestionManager = (type: FolderType) => {
     setSelectedFolderType(type);
@@ -181,6 +223,17 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
     if (!token || !title.trim() || !user) {
       Alert.alert('Erreur', 'Titre manquant ou utilisateur non authentifié.');
       return;
+    }
+
+    // Check limits before submitting if uploading an image
+    if (image) {
+      if (isStorageQuotaReached) {
+        Alert.alert(
+          'Quota de stockage dépassé',
+          `Vous avez atteint votre quota de stockage de ${(storageQuotaGB / 1024).toFixed(1)}TB. Utilisation actuelle: ${currentStorageGB.toFixed(2)}GB.`
+        );
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -309,6 +362,22 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
               <Ionicons name="close" size={24} color="#6b7280" />
             </TouchableOpacity>
           </View>
+
+          {/* Limit Info Banners */}
+          {!loadingLimits && companyInfo && (
+            <View style={styles.limitsContainer}>
+              <View style={[styles.limitInfoBanner, isStorageQuotaReached && styles.limitInfoBannerWarning]}>
+                <Ionicons 
+                  name={isStorageQuotaReached ? "warning" : "cloud-outline"} 
+                  size={14} 
+                  color={isStorageQuotaReached ? "#b45309" : "#3b82f6"} 
+                />
+                <Text style={[styles.limitInfoText, isStorageQuotaReached && styles.limitInfoTextWarning]}>
+                  Stockage: {currentStorageGB.toFixed(2)}GB / {(storageQuotaGB / 1024).toFixed(1)}TB
+                </Text>
+              </View>
+            </View>
+          )}
 
           <View style={styles.contentContainer}>
             {isAdding || isEditing ? (
@@ -499,4 +568,37 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f4f6',
   },
   emptyText: { textAlign: 'center', marginTop: 48, color: '#6b7280', fontSize: 16, paddingHorizontal: 20 },
+  limitsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    backgroundColor: 'white',
+  },
+  limitInfoBanner: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  limitInfoBannerWarning: {
+    backgroundColor: '#fffbeb',
+    borderColor: '#f59e0b',
+  },
+  limitInfoText: {
+    color: '#1e40af',
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  limitInfoTextWarning: {
+    color: '#b45309',
+  },
 });

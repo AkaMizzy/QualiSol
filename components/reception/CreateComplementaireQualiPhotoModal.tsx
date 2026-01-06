@@ -59,16 +59,14 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
   const [audioUri, setAudioUri] = useState<string | null>(null);
 
   const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
-  const [currentImagesCount, setCurrentImagesCount] = useState(0);
-  const [isLimitReached, setIsLimitReached] = useState(false);
-  const [loadingLimits, setLoadingLimits] = useState(true);
   
   // Storage quota state
   const [currentStorageGB, setCurrentStorageGB] = useState(0);
   const [storageQuotaGB, setStorageQuotaGB] = useState(0);
   const [isStorageQuotaReached, setIsStorageQuotaReached] = useState(false);
+  const [loadingLimits, setLoadingLimits] = useState(true);
 
-  const canSave = useMemo(() => !!photo && !submitting && !isGeneratingDescription && !isLimitReached && !isStorageQuotaReached, [photo, submitting, isGeneratingDescription, isLimitReached, isStorageQuotaReached]);
+  const canSave = useMemo(() => !!photo && !submitting && !isGeneratingDescription && !isStorageQuotaReached, [photo, submitting, isGeneratingDescription, isStorageQuotaReached]);
 
   useEffect(() => {
     const fetchLimitInfo = async () => {
@@ -82,13 +80,9 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
         ]);
         
         setCompanyInfo(company);
-        setCurrentImagesCount(geds.length);
-        
-        const limit = company.nbimages || 20;
-        setIsLimitReached(geds.length >= limit);
         
         // Calculate storage quota
-        const storageUsedGB = company.nbimagetaken || 0;
+        const storageUsedGB = company.nbimagetake || 0;
         const storageQuotaTB = company.sizeimages || 1;
         const storageQuotaGBValue = storageQuotaTB * 1024;
         
@@ -165,14 +159,6 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
 
   const handleSubmit = async () => {
     if (!token || !photo || !user) return;
-
-    if (isLimitReached) {
-      Alert.alert(
-        'Limite atteinte',
-        `Vous avez atteint la limite de ${companyInfo?.nbimages || 20} images. Veuillez mettre à niveau votre plan pour ajouter plus d'images.`
-      );
-      return;
-    }
 
     if (isStorageQuotaReached) {
       Alert.alert(
@@ -280,20 +266,6 @@ function CreateComplementaireQualiPhotoForm({ onClose, onSuccess, childItem, par
         )}
 
           {/* Limit Info Banner */}
-          {!loadingLimits && companyInfo && (
-            <View style={[styles.limitInfoBanner, isLimitReached && styles.limitInfoBannerWarning]}>
-              <Ionicons 
-                name={isLimitReached ? "warning" : "images"} 
-                size={16} 
-                color={isLimitReached ? "#b45309" : "#3b82f6"} 
-              />
-              <Text style={[styles.limitInfoText, isLimitReached && styles.limitInfoTextWarning]}>
-                Images: {currentImagesCount} / {companyInfo.nbimages || 20}
-                {isLimitReached && " - Nombre des images dépassé"}
-              </Text>
-            </View>
-          )}
-
           {/* Storage Quota Banner */}
           {!loadingLimits && companyInfo && (
             <View style={[styles.limitInfoBanner, isStorageQuotaReached && styles.limitInfoBannerWarning]}>
