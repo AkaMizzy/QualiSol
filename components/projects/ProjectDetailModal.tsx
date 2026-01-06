@@ -1,26 +1,26 @@
 import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { Project, updateProject } from '@/services/projectService';
+import { deleteProject, Project, updateProject } from '@/services/projectService';
 import { formatDisplayDate } from '@/utils/dateFormat';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Easing,
-  Image,
-  LayoutAnimation,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  UIManager,
-  View
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Easing,
+    Image,
+    LayoutAnimation,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    UIManager,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CreateZoneModal from '../zone/CreateZoneModal';
@@ -113,6 +113,43 @@ export default function ProjectDetailModal({ visible, onClose, project, onUpdate
       </Animated.View>
     );
   }
+
+  const handleDelete = () => {
+    if (!project || !token) return;
+
+    Alert.alert(
+      'Supprimer le projet',
+      `Êtes-vous sûr de vouloir supprimer "${project.title}" ?\n\n⚠️ Attention : Toutes les zones associées à ce projet seront également supprimées. Cette action est irréversible.`,
+      [
+        {
+          text: 'Annuler',
+          style: 'cancel',
+        },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteProject(token, project.id);
+              Alert.alert('Succès', 'Projet et zones associées supprimés avec succès', [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    onClose();
+                    if (onUpdated) {
+                      onUpdated();
+                    }
+                  },
+                },
+              ]);
+            } catch (e: any) {
+              Alert.alert('Erreur', e?.message || 'Échec de la suppression du projet');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -321,7 +358,7 @@ export default function ProjectDetailModal({ visible, onClose, project, onUpdate
               <Text style={styles.ctaText}>Modifier</Text>
             </Pressable>) : null}
             {!isEditing ? (
-            <Pressable onPress={onClose} android_ripple={{ color: '#fde7d4' }} style={styles.ctaButton}>
+            <Pressable onPress={handleDelete} android_ripple={{ color: '#fde7d4' }} style={styles.ctaButton}>
               <Ionicons name="trash-outline" size={16} color="#f87b1b" />
               <Text style={styles.ctaText}>Supprimer</Text>
             </Pressable>) : null}
