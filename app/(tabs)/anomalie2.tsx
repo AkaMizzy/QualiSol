@@ -1,26 +1,26 @@
 import { useAuth } from '@/contexts/AuthContext';
 import {
-    Anomalie2,
-    createAnomalie2,
-    deleteAnomalie2,
-    getAllAnomalies2,
-    updateAnomalie2
+  Anomalie2,
+  createAnomalie2,
+  deleteAnomalie2,
+  getAllAnomalies2,
+  updateAnomalie2
 } from '@/services/anomalie2Service';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppHeader from '../../components/AppHeader';
@@ -200,10 +200,10 @@ export default function Anomalie2Screen() {
 
             <View style={styles.modalContent}>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Description</Text>
+                <Text style={styles.label}>Nom d'anomalie</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Description de l'anomalie"
+                  placeholder="nom d'anomalie"
                   value={anomalie}
                   onChangeText={setAnomalie}
                   multiline
