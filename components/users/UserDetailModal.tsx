@@ -2,12 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import React, { useState } from 'react';
 import {
-  Alert,
-  Modal,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Modal,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import API_CONFIG from '../../app/config/api';
 import { deleteUser } from '../../services/userService';
@@ -96,7 +99,7 @@ export default function UserDetailModal({ visible, user, onClose, onUserUpdated,
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.modalContainer}>
+      <SafeAreaView style={styles.modalContainer}>
         {/* Header */}
         <View style={styles.modalHeader}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -257,7 +260,7 @@ export default function UserDetailModal({ visible, user, onClose, onUserUpdated,
           onClose={() => setShowUpdateModal(false)}
           onUserUpdated={handleUserUpdated}
         />
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -266,6 +269,7 @@ const styles = {
   modalContainer: {
     flex: 1,
     backgroundColor: 'white',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   modalHeader: {
     flexDirection: 'row' as const,

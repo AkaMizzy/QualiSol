@@ -6,7 +6,10 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
+  SafeAreaView,
   ScrollView,
+  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
@@ -14,10 +17,10 @@ import {
 } from 'react-native';
 import API_CONFIG from '../../app/config/api';
 import { useAuth } from '../../contexts/AuthContext';
-import userService from '../../services/userService';
+import * as userService from '../../services/userService';
 import { CompanyUser, UpdateUserData } from '../../types/user';
 
-interface UpdateUserCompProps {
+interface UpdateUserCompProps { 
   visible: boolean;
   user: CompanyUser | null;
   onClose: () => void;
@@ -37,7 +40,7 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
     phone1: '',
     phone2: '',
     email_second: '',
-    status: 1,
+    status_id: '1',
   });
 
   // Avatar state
@@ -54,7 +57,7 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
         phone1: user.phone1 || '',
         phone2: user.phone2 || '',
         email_second: user.email_second || '',
-        status: user.status,
+        status_id: user.status_id,
       });
       setAvatarUri(user.photo ? `${API_CONFIG.BASE_URL}${user.photo}` : null);
       setAvatarChanged(false);
@@ -129,11 +132,11 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
         phone1: formData.phone1?.trim() || undefined,
         phone2: formData.phone2?.trim() || undefined,
         email_second: formData.email_second?.trim() || undefined,
-        status: formData.status,
+        status_id: formData.status_id,
       };
 
       // Update user information
-      const response = await userService.updateUser(token, user.id, updateData, avatarChanged ? avatarUri ?? undefined : undefined);
+      const response = await userService.updateUser(user.id, updateData, avatarChanged ? avatarUri ?? undefined : undefined);
 
       // Use the updated user data from the backend response
       onUserUpdated(response.user);
@@ -156,7 +159,7 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
         phone1: user.phone1 || '',
         phone2: user.phone2 || '',
         email_second: user.email_second || '',
-        status: user.status,
+        status_id: user.status_id,
       });
       setAvatarUri(user.photo ? `${API_CONFIG.BASE_URL}${user.photo}` : null);
       setAvatarChanged(false);
@@ -173,7 +176,7 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.modalContainer}>
+      <SafeAreaView style={styles.modalContainer}>
         {/* Header */}
         <View style={styles.modalHeader}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -216,22 +219,22 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
               <TouchableOpacity
                 style={[
                   styles.statusOption,
-                  formData.status === 1 && styles.statusOptionActive
+                  formData.status_id === '1' && styles.statusOptionActive
                 ]}
-                onPress={() => setFormData({ ...formData, status: 1 })}
+                onPress={() => setFormData({ ...formData, status_id: '1' })}
                 activeOpacity={0.7}
               >
                 <View style={[
                   styles.statusIndicator,
-                  formData.status === 1 && styles.statusIndicatorActive
+                  formData.status_id === '1' && styles.statusIndicatorActive
                 ]}>
-                  {formData.status === 1 && (
+                  {formData.status_id === '1' && (
                     <Ionicons name="checkmark" size={16} color="white" />
                   )}
                 </View>
                 <Text style={[
                   styles.statusText,
-                  formData.status === 1 && styles.statusTextActive
+                  formData.status_id === '1' && styles.statusTextActive
                 ]}>
                   Actif
                 </Text>
@@ -240,22 +243,22 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
               <TouchableOpacity
                 style={[
                   styles.statusOption,
-                  formData.status === 0 && styles.statusOptionActive
+                  formData.status_id === '0' && styles.statusOptionActive
                 ]}
-                onPress={() => setFormData({ ...formData, status: 0 })}
+                onPress={() => setFormData({ ...formData, status_id: '0' })}
                 activeOpacity={0.7}
               >
                 <View style={[
                   styles.statusIndicator,
-                  formData.status === 0 && styles.statusIndicatorActive
+                  formData.status_id === '0' && styles.statusIndicatorActive
                 ]}>
-                  {formData.status === 0 && (
+                  {formData.status_id === '0' && (
                     <Ionicons name="checkmark" size={16} color="white" />
                   )}
                 </View>
                 <Text style={[
                   styles.statusText,
-                  formData.status === 0 && styles.statusTextActive
+                  formData.status_id === '0' && styles.statusTextActive
                 ]}>
                   Inactif
                 </Text>
@@ -426,7 +429,7 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
             )}
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -435,6 +438,7 @@ const styles = {
   modalContainer: {
     flex: 1,
     backgroundColor: 'white',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   modalHeader: {
     flexDirection: 'row' as const,
