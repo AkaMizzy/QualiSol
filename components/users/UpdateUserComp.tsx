@@ -1,13 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   Text,
@@ -15,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import API_CONFIG from '../../app/config/api';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 import * as userService from '../../services/userService';
 import { CompanyUser, UpdateUserData } from '../../types/user';
@@ -29,6 +26,7 @@ interface UpdateUserCompProps {
 
 export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }: UpdateUserCompProps) {
   const { token } = useAuth();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -43,10 +41,6 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
     status_id: '1',
   });
 
-  // Avatar state
-  const [avatarUri, setAvatarUri] = useState<string | null>(null);
-  const [avatarChanged, setAvatarChanged] = useState(false);
-
   // Initialize form data when user changes
   React.useEffect(() => {
     if (user) {
@@ -59,8 +53,6 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
         email_second: user.email_second || '',
         status_id: user.status_id,
       });
-      setAvatarUri(user.photo ? `${API_CONFIG.BASE_URL}${user.photo}` : null);
-      setAvatarChanged(false);
       setErrors({});
     }
   }, [user]);
@@ -96,23 +88,7 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleAvatarPick = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
 
-      if (!result.canceled && result.assets[0]) {
-        setAvatarUri(result.assets[0].uri);
-        setAvatarChanged(true);
-      }
-    } catch {
-      Alert.alert('Erreur', 'Impossible de sélectionner l&apos;image');
-    }
-  };
 
   const handleSubmit = async () => {
     if (!user || !token) return;
@@ -136,15 +112,55 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
       };
 
       // Update user information
-      const response = await userService.updateUser(user.id, updateData, avatarChanged ? avatarUri ?? undefined : undefined);
+      const response = await userService.updateUser(user.id, updateData);
 
       // Use the updated user data from the backend response
       onUserUpdated(response.user);
       Alert.alert('Succès', 'Utilisateur mis à jour avec succès');
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating user:', error);
-      Alert.alert('Erreur', error instanceof Error ? error.message : 'Impossible de mettre à jour l&apos;utilisateur');
+      
+      // Parse error message for better UX
+      let errorMessage = 'Impossible de mettre à jour l&apos;utilisateur';
+      
+      // Check if the error is from axios response
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        
+        // Check for duplicate email error
+        if (
+          error.response.status === 500 || 
+          error.response.status === 400 ||
+          error.response.status === 409
+        ) {
+          const errorText = typeof errorData === 'string' ? errorData : errorData.error || errorData.message || '';
+          
+          // Check if error message indicates duplicate email
+          if (
+            errorText.toLowerCase().includes('duplicate') || 
+            errorText.toLowerCase().includes('already exists') ||
+            errorText.toLowerCase().includes('unique') ||
+            errorText.toLowerCase().includes('email') && (
+              errorText.toLowerCase().includes('exist') ||
+              errorText.toLowerCase().includes('taken') ||
+              errorText.toLowerCase().includes('used')
+            )
+          ) {
+            errorMessage = 'Cet email est déjà utilisé par un autre utilisateur. Veuillez en choisir un autre.';
+          } else if (errorText) {
+            errorMessage = errorText;
+          }
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Erreur', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -161,8 +177,6 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
         email_second: user.email_second || '',
         status_id: user.status_id,
       });
-      setAvatarUri(user.photo ? `${API_CONFIG.BASE_URL}${user.photo}` : null);
-      setAvatarChanged(false);
       setErrors({});
     }
   };
@@ -176,7 +190,7 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={styles.modalContainer}>
+      <SafeAreaView style={styles.modalContainer} edges={['top', 'left', 'right']}>
         {/* Header */}
         <View style={styles.modalHeader}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -190,28 +204,6 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
 
         {/* Content */}
         <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
-          {/* Avatar Section */}
-          <View style={styles.avatarSection}>
-            <TouchableOpacity onPress={handleAvatarPick} style={styles.avatarContainer}>
-              {avatarUri ? (
-                <Image
-                  source={{ uri: avatarUri }}
-                  style={styles.avatarImage}
-                  contentFit="cover"
-                  transition={200}
-                />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Ionicons name="person" size={40} color="#6b7280" />
-                </View>
-              )}
-              <View style={styles.avatarOverlay}>
-                <Ionicons name="camera" size={20} color="white" />
-              </View>
-            </TouchableOpacity>
-            <Text style={styles.avatarLabel}>Appuyez pour changer la photo</Text>
-          </View>
-
           {/* Status Switch */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Statut</Text>
@@ -405,7 +397,7 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
         </ScrollView>
 
         {/* Action Buttons */}
-        <View style={styles.modalFooter}>
+        <View style={[styles.modalFooter, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           <TouchableOpacity
             style={styles.cancelButton}
             onPress={onClose}
@@ -462,51 +454,6 @@ const styles = {
   modalContent: {
     flex: 1,
     padding: 16,
-  },
-  avatarSection: {
-    alignItems: 'center' as const,
-    paddingVertical: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-    marginBottom: 24,
-  },
-  avatarContainer: {
-    position: 'relative' as const,
-    marginBottom: 12,
-  },
-  avatarImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#f3f4f6',
-  },
-  avatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#f3f4f6',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
-  },
-  avatarOverlay: {
-    position: 'absolute' as const,
-    bottom: 0,
-    right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#f87b1b',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    borderWidth: 2,
-    borderColor: 'white',
-  },
-  avatarLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-    textAlign: 'center' as const,
   },
   section: {
     marginBottom: 24,
