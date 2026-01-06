@@ -12,7 +12,13 @@ interface GalerieCardProps {
 
 export default function GalerieCard({ item, onPress, hasVoiceNote }: GalerieCardProps) {
   const GofG = API_CONFIG.BASE_URL
-  const formattedDate = new Date(item.created_at).toLocaleDateString('fr-FR');
+  const formattedDate = new Date(item.created_at).toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>

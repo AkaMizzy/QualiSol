@@ -106,7 +106,13 @@ export default function GalerieScreen() {
           file: data.voiceNote,
         });
       }
-      fetchGeds();
+      
+      // Refresh the gallery to show the newly uploaded picture
+      await fetchGeds();
+      
+      if (shouldClose) {
+        setModalVisible(false);
+      }
     } catch (error: any) {
       console.error('Failed to upload files:', error);
       // Handle 403 error specifically for limit reached
@@ -114,10 +120,6 @@ export default function GalerieScreen() {
         Alert.alert('Limite atteinte', error?.message || 'Vous avez atteint votre limite d\'images.');
       } else {
         Alert.alert('Upload Failed', 'Please try again.');
-      }
-    } finally {
-      if (shouldClose) {
-        setModalVisible(false);
       }
     }
   };

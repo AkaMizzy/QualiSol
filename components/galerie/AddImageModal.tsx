@@ -255,8 +255,8 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
   };
 
   const handleAdd = (shouldClose: boolean) => {
-    if (!title || !image) {
-      Alert.alert('Informations manquantes', 'Veuillez fournir un titre et une image.');
+    if (!image) {
+      Alert.alert('Informations manquantes', 'Veuillez fournir une image.');
       return;
     }
 
@@ -366,7 +366,7 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
               </View>
               
               <View style={styles.form}>
-                <Text style={styles.label}>Titre</Text>
+                <Text style={styles.label}>Titre (optionnel)</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="ex: 'Photo d'inspection du site'"
@@ -615,7 +615,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         marginTop: SIZES.large,
         width: '100%',
-        paddingBottom: SIZES.medium,
+        paddingBottom: 40,
+        marginBottom: 20,
     },
     button: {
         flex: 1,
