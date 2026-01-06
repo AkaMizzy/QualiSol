@@ -1,11 +1,12 @@
 import API_CONFIG from '@/app/config/api';
-import { useAuth } from '@/contexts/AuthContext';
-import { getZoneById, getZonePictures, type Zone, type Ged } from '@/services/zoneService';
 import CreateGedModal from '@/components/zone/CreateGedModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { deleteZone, getZoneById, getZonePictures, type Ged, type Zone } from '@/services/zoneService';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Modal,
   Pressable,
@@ -13,7 +14,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -30,7 +31,7 @@ type Props = {
   onUpdated?: () => void;
 };
 
-export default function ZoneDetailModal({ visible, onClose, zoneId }: Props) {
+export default function ZoneDetailModal({ visible, onClose, zoneId, onUpdated }: Props) {
   const { token } = useAuth();
   const insets = useSafeAreaInsets();
   const [zone, setZone] = useState<Zone | null>(null);
@@ -45,6 +46,48 @@ export default function ZoneDetailModal({ visible, onClose, zoneId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isCreateGedModalVisible, setIsCreateGedModalVisible] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = () => {
+    if (!zoneId || !token) return;
+
+    Alert.alert(
+      'Supprimer la zone',
+      'Êtes-vous sûr de vouloir supprimer cette zone ? Cette action est irréversible.',
+      [
+        {
+          text: 'Annuler',
+          style: 'cancel',
+        },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              await deleteZone(token, zoneId);
+              Alert.alert('Succès', 'Zone supprimée avec succès', [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    onClose();
+                    // Call onUpdated if available to refresh the parent list
+                    if (onUpdated) {
+                      onUpdated();
+                    }
+                  },
+                },
+              ]);
+            } catch (e: any) {
+              Alert.alert('Erreur', e?.message || 'Échec de la suppression de la zone');
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -250,7 +293,17 @@ export default function ZoneDetailModal({ visible, onClose, zoneId }: Props) {
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle} numberOfLines={1}>{zone?.title || 'Détail de la zone'}</Text>
           </View>
-          <View style={styles.placeholder} />
+          <TouchableOpacity 
+            onPress={handleDelete} 
+            style={styles.deleteButton}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <ActivityIndicator size="small" color="#dc2626" />
+            ) : (
+              <Ionicons name="trash-outline" size={24} color="#dc2626" />
+            )}
+          </TouchableOpacity>
         </View>
 
         {error ? (
@@ -438,7 +491,7 @@ const styles = StyleSheet.create({
   closeButton: { padding: 8 },
   headerCenter: { alignItems: 'center', flex: 1 },
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#11224e' },
-  placeholder: { width: 40 },
+  deleteButton: { padding: 8 },
   alertBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fffbeb', borderColor: '#f59e0b', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, marginHorizontal: 16, marginTop: 8, borderRadius: 10 },
   alertBannerText: { color: '#b45309', flex: 1, fontSize: 12 },
   content: { flex: 1, paddingHorizontal: 16, paddingBottom: 16 },
