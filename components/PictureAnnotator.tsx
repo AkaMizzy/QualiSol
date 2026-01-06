@@ -188,9 +188,21 @@ const styles = StyleSheet.create({
   imageContainer: { flex: 1 },
   baseImage: { width: '100%', height: '100%' },
   footer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#e5e7eb' },
-  saveButton: { backgroundColor: '#f87b1b', borderRadius: 12, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, height: 48, alignSelf: 'center', width: '92%' },
+  saveButton: { 
+    backgroundColor: '#f87b1b', 
+    borderRadius: 12, 
+    paddingVertical: 14, 
+    paddingHorizontal: 24,
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    flexDirection: 'row', 
+    gap: 8, 
+    alignSelf: 'center', 
+    width: '92%',
+    minHeight: 50,
+  },
   saveButtonDisabled: { backgroundColor: '#d1d5db' },
-  saveButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  saveButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF', includeFontPadding: false, textAlignVertical: 'center' },
 });
 
 

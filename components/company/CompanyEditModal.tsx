@@ -212,20 +212,6 @@ export default function CompanyEditModal({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Informations générales</Text>
 
-            {/* Logo Selection */}
-            <View style={styles.logoContainer}>
-              <Text style={styles.inputLabel}>Logo de l&apos;organisme</Text>
-              <TouchableOpacity onPress={handlePickLogo} style={styles.logoButton}>
-                <Ionicons name="image-outline" size={24} color="#11224e" />
-                <Text style={styles.logoButtonText}>Modifier le logo</Text>
-              </TouchableOpacity>
-              {logoUri && (
-                <View style={styles.logoPreview}>
-                  <Image source={{ uri: logoUri }} style={styles.logoImage} />
-                </View>
-              )}
-            </View>
-
             <InputField
               label="Nom de l'organisme"
               value={formData.title}

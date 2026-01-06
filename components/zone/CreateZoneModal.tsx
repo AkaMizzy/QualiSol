@@ -18,7 +18,7 @@ type Props = {
 };
 
 export default function CreateZoneModal({ visible, onClose, projectId, projectTitle, projectCode, onCreated }: Props) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [companyUsers, setCompanyUsers] = useState<{ id: string; firstname?: string; lastname?: string; email?: string }[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [ownerOpen, setOwnerOpen] = useState(false);
@@ -45,12 +45,15 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [loadingLimits, setLoadingLimits] = useState(true);
 
-  const isDisabled = useMemo(() => !title || !token || !projectId || !controlId || !technicienId || isLimitReached, [title, token, projectId, controlId, technicienId, isLimitReached]);
+  const adminUser = useMemo(() => companyUsers.find(u => u.id === ownerId), [companyUsers, ownerId]);
+
+  const controlUsers = useMemo(() => companyUsers.filter(u => u.id !== ownerId), [companyUsers, ownerId]);
+  const technicienUsers = useMemo(() => companyUsers.filter(u => u.id !== ownerId && u.id !== controlId), [companyUsers, ownerId, controlId]);
+
+  const isDisabled = useMemo(() => !title || !token || !projectId || isLimitReached, [title, token, projectId, isLimitReached]);
 
   function validate(): string | null {
     if (!title) return 'Le titre est requis';
-    if (!controlId) return 'Le contrôleur est requis';
-    if (!technicienId) return 'Le technicien est requis';
     return null;
   }
 
@@ -195,6 +198,12 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
       </html>
     `;
   }
+
+  useEffect(() => {
+    if (visible && user?.id) {
+      setOwnerId(user.id);
+    }
+  }, [visible, user]);
 
   useEffect(() => {
     const fetchLimitInfo = async () => {
@@ -367,44 +376,26 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                 </TouchableOpacity>
               </View> */}
 
+              {/* Owner (Admin) - Auto-filled, disabled */}
               <View style={{ gap: 8, marginBottom: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Propriétaire (optionnel)</Text>
-                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setOwnerOpen(v => !v)}>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Admin (optionnel)</Text>
+                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }, styles.disabledInput]} disabled>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="person-outline" size={16} color="#6b7280" />
+                    <Ionicons name="person-circle-outline" size={16} color="#6b7280" />
                     <Text style={[styles.input, { color: ownerId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {ownerId ? (companyUsers.find(u => String(u.id) === String(ownerId))?.firstname ? `${companyUsers.find(u => String(u.id) === String(ownerId))?.firstname} ${companyUsers.find(u => String(u.id) === String(ownerId))?.lastname || ''}` : ownerId) : 'Choisir un utilisateur'}
+                      {adminUser
+                        ? `${adminUser.firstname || ''} ${adminUser.lastname || ''}`.trim() || adminUser.email
+                        : (loadingUsers ? 'Chargement...' : (user?.email || 'Admin non défini'))
+                      }
                     </Text>
                   </View>
-                  <Ionicons name={ownerOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
+                  <Ionicons name="lock-closed-outline" size={16} color="#9ca3af" />
                 </TouchableOpacity>
-                {ownerOpen && (
-                  <View style={{ maxHeight: 220, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
-                    <ScrollView keyboardShouldPersistTaps="handled">
-                      {loadingUsers ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
-                      ) : companyUsers.length === 0 ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
-                      ) : (
-                        <>
-                          <TouchableOpacity onPress={() => { setOwnerId(''); setOwnerOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(ownerId) === '' ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
-                            <Text style={{ color: '#11224e' }}>Aucun</Text>
-                          </TouchableOpacity>
-                          {companyUsers.map(u => (
-                            <TouchableOpacity key={u.id} onPress={() => { setOwnerId(String(u.id)); setOwnerOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(ownerId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
-                              <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
-                              {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
-                            </TouchableOpacity>
-                          ))}
-                        </>
-                      )}
-                    </ScrollView>
-                  </View>
-                )}
               </View>
 
+              {/* Control Select - Filtered to exclude owner */}
               <View style={{ gap: 8, marginBottom: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Contrôleur</Text>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Contrôleur (optionnel)</Text>
                 <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setControlOpen(v => !v)}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                     <Ionicons name="shield-checkmark-outline" size={16} color="#6b7280" />
@@ -419,10 +410,10 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingUsers ? (
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
-                      ) : companyUsers.length === 0 ? (
+                      ) : controlUsers.length === 0 ? (
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
                       ) : (
-                        companyUsers.map(u => (
+                        controlUsers.map(u => (
                           <TouchableOpacity key={u.id} onPress={() => { setControlId(String(u.id)); setControlOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(controlId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
                             <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
                             {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
@@ -434,8 +425,9 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                 )}
               </View>
 
+              {/* Technicien Select - Filtered to exclude owner and control */}
               <View style={{ gap: 8, marginBottom: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Technicien</Text>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Technicien (optionnel)</Text>
                 <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setTechnicienOpen(v => !v)}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                     <Ionicons name="construct-outline" size={16} color="#6b7280" />
@@ -450,10 +442,10 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingUsers ? (
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
-                      ) : companyUsers.length === 0 ? (
+                      ) : technicienUsers.length === 0 ? (
                         <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
                       ) : (
-                        companyUsers.map(u => (
+                        technicienUsers.map(u => (
                           <TouchableOpacity key={u.id} onPress={() => { setTechnicienId(String(u.id)); setTechnicienOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(technicienId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
                             <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
                             {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
@@ -515,6 +507,10 @@ const styles = StyleSheet.create({
   content: { flex: 1, paddingHorizontal: 16 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, marginTop: 20, marginHorizontal: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: '#f87b1b', gap: 8 },
   inputWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderWidth: 1, borderColor: '#f87b1b', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  disabledInput: {
+    backgroundColor: '#f3f4f6',
+    borderColor: '#d1d5db',
+  },
   input: { flex: 1, color: '#111827' },
   footer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#e5e7eb', gap: 8 },
   submitButton: { 

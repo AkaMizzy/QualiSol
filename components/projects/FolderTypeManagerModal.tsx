@@ -2,11 +2,11 @@ import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import companyService from '@/services/companyService';
 import {
-  createFolderType,
-  deleteFolderType,
-  FolderType,
-  getAllFolderTypes,
-  updateFolderType,
+    createFolderType,
+    deleteFolderType,
+    FolderType,
+    getAllFolderTypes,
+    updateFolderType,
 } from '@/services/folderTypeService';
 import { createGed, getAllGeds, getGedsBySource, updateGedFile } from '@/services/gedService';
 import { Company } from '@/types/company';
@@ -15,18 +15,20 @@ import * as ImagePicker from 'expo-image-picker';
 import { ImagePickerAsset } from 'expo-image-picker';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import QuestionTypeManagerModal from './QuestionTypeManagerModal';
@@ -56,48 +58,50 @@ const FormComponent = ({
   onPickImage,
   imageUri,
 }: FormComponentProps) => (
-  <View style={styles.formCard}>
-    <Text style={styles.formTitle}>{isEditing ? 'Modifier le type' : 'Nouveau type de dossier'}</Text>
-    <TouchableOpacity onPress={onPickImage} style={styles.imagePicker}>
-      {imageUri ? (
-        <Image source={{ uri: imageUri }} style={styles.previewImage} />
-      ) : (
-        <View style={styles.imagePlaceholder}>
-          <Ionicons name="camera" size={24} color="#f87b1b" />
-          <Text style={styles.imagePickerText}>Ajouter une image</Text>
-        </View>
-      )}
-    </TouchableOpacity>
-    <View style={styles.inputWrap}>
-      <Ionicons name="text-outline" size={16} color="#f87b1b" />
-      <TextInput
-        placeholder="Titre"
-        placeholderTextColor="#f87b1b"
-        value={title}
-        onChangeText={onTitleChange}
-        style={styles.input}
-      />
-    </View>
-    <View style={[styles.inputWrap, { height: 80, alignItems: 'flex-start', paddingTop: 12 }]}>
-      <Ionicons name="document-text-outline" size={16} color="#f87b1b" />
-      <TextInput
-        placeholder="Description (optionnel)"
-        placeholderTextColor="#f87b1b"
-        value={description}
-        onChangeText={onDescriptionChange}
-        style={[styles.input, { height: '100%' }]}
-        multiline
-      />
-    </View>
-    <View style={styles.formActions}>
-      <TouchableOpacity onPress={onCancel} style={styles.cancelButton}>
-        <Text style={styles.cancelButtonText}>Annuler</Text>
+  <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <View style={styles.formCard}>
+      <Text style={styles.formTitle}>{isEditing ? 'Modifier le type' : 'Nouveau type de dossier'}</Text>
+      <TouchableOpacity onPress={onPickImage} style={styles.imagePicker}>
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.previewImage} />
+        ) : (
+          <View style={styles.imagePlaceholder}>
+            <Ionicons name="camera" size={24} color="#f87b1b" />
+            <Text style={styles.imagePickerText}>Ajouter une image</Text>
+          </View>
+        )}
       </TouchableOpacity>
-      <TouchableOpacity onPress={onSubmit} style={styles.submitButton} disabled={isSubmitting}>
-        <Text style={styles.submitButtonText}>{isEditing ? 'Enregistrer' : 'Créer'}</Text>
-      </TouchableOpacity>
+      <View style={styles.inputWrap}>
+        <Ionicons name="text-outline" size={16} color="#f87b1b" />
+        <TextInput
+          placeholder="Titre"
+          placeholderTextColor="#f87b1b"
+          value={title}
+          onChangeText={onTitleChange}
+          style={styles.input}
+        />
+      </View>
+      <View style={[styles.inputWrap, { height: 80, alignItems: 'flex-start', paddingTop: 12 }]}>
+        <Ionicons name="document-text-outline" size={16} color="#f87b1b" />
+        <TextInput
+          placeholder="Description (optionnel)"
+          placeholderTextColor="#f87b1b"
+          value={description}
+          onChangeText={onDescriptionChange}
+          style={[styles.input, { height: '100%' }]}
+          multiline
+        />
+      </View>
+      <View style={styles.formActions}>
+        <TouchableOpacity onPress={onCancel} style={styles.cancelButton}>
+          <Text style={styles.cancelButtonText}>Annuler</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onSubmit} style={styles.submitButton} disabled={isSubmitting}>
+          <Text style={styles.submitButtonText}>{isEditing ? 'Enregistrer' : 'Créer'}</Text>
+        </TouchableOpacity>
+      </View>
     </View>
-  </View>
+  </TouchableWithoutFeedback>
 );
 
 type Props = {

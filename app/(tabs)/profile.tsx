@@ -10,6 +10,8 @@ import {
     ActivityIndicator,
     Alert,
     Image,
+    RefreshControl,
+    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -25,22 +27,37 @@ export default function ProfileScreen() {
   const [isUploading, setIsUploading] = useState(false);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const [company, setCompany] = useState<Company | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Fetch company data
+  const fetchCompany = async () => {
+    try {
+      const companyData = await companyService.getCompany();
+      setCompany(companyData);
+    } catch (error) {
+      console.error('Error fetching company:', error);
+    }
+  };
 
   // Fetch company data on mount
   useEffect(() => {
-    const fetchCompany = async () => {
-      try {
-        const companyData = await companyService.getCompany();
-        setCompany(companyData);
-      } catch (error) {
-        console.error('Error fetching company:', error);
-      }
-    };
-
     if (user) {
       fetchCompany();
     }
   }, [user]);
+
+  // Pull-to-refresh handler
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchCompany();
+      // Optionally refresh user data if needed
+    } catch (error) {
+      console.error('Error refreshing:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Watch for authentication changes and navigate automatically
   useEffect(() => {
@@ -148,7 +165,18 @@ export default function ProfileScreen() {
       {/* App Header */}
       <AppHeader user={user || undefined} />
       
-      <View style={styles.content}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#f87b1b"
+            colors={['#f87b1b']}
+          />
+        }
+      >
         {/* Header Card */}
         <View style={styles.headerCard}>
           <View style={styles.headerTopRow}>
@@ -225,7 +253,7 @@ export default function ProfileScreen() {
           <Ionicons name="log-out-outline" size={20} color="#f87b1b" />
           <Text style={styles.logoutText}>Se déconnecter</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
 
       {/* Image Preview Modal */}
       <PreviewModal
@@ -245,8 +273,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F2F2F7',
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  content: {
     padding: 20,
   },
   headerCard: {
