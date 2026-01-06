@@ -369,7 +369,7 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
                 <Ionicons 
                   name={isStorageQuotaReached ? "warning" : "cloud-outline"} 
                   size={14} 
-                  color={isStorageQuotaReached ? "#b45309" : "#3b82f6"} 
+                  color={isStorageQuotaReached ? "#b45309" : "#f59e0b"} 
                 />
                 <Text style={[styles.limitInfoText, isStorageQuotaReached && styles.limitInfoTextWarning]}>
                   Stockage: {currentStorageGB.toFixed(2)}GB / {storageQuotaGB.toFixed(2)}GB
@@ -580,8 +580,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#eff6ff',
-    borderColor: '#bfdbfe',
+    backgroundColor: '#fff7ed',
+    borderColor: '#fed7aa',
     borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
     borderColor: '#f59e0b',
   },
   limitInfoText: {
-    color: '#1e40af',
+    color: '#ea580c',
     flex: 1,
     fontSize: 11,
     fontWeight: '600',
