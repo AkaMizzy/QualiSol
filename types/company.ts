@@ -23,6 +23,8 @@ export interface Company {
   nbzones?: number;
   nbchanitiers?: number;
   nbimages?: number;
+  sizeimages?: number;
+  nbimagetaken?: number;
   status?: string;
   prompt1?: string | null;
   prompt3?: string | null;
