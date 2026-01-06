@@ -172,12 +172,11 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
         
         // Calculate storage quota
         const storageUsedGB = company.nbimagetake || 0;
-        const storageQuotaTB = company.sizeimages || 1;
-        const storageQuotaGBValue = storageQuotaTB * 1024;
+        const storageQuotaGB = company.sizeimages || 1; // Quota in GB
         
         setCurrentStorageGB(storageUsedGB);
-        setStorageQuotaGB(storageQuotaGBValue);
-        setIsStorageQuotaReached(storageUsedGB >= storageQuotaGBValue);
+        setStorageQuotaGB(storageQuotaGB);
+        setIsStorageQuotaReached(storageUsedGB >= storageQuotaGB);
       } catch (error) {
         console.error('Error fetching limit info:', error);
       } finally {
@@ -230,7 +229,7 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
       if (isStorageQuotaReached) {
         Alert.alert(
           'Quota de stockage dépassé',
-          `Vous avez atteint votre quota de stockage de ${(storageQuotaGB / 1024).toFixed(1)}TB. Utilisation actuelle: ${currentStorageGB.toFixed(2)}GB.`
+          `Vous avez atteint votre quota de stockage de ${storageQuotaGB.toFixed(2)}GB. Utilisation actuelle: ${currentStorageGB.toFixed(2)}GB.`
         );
         return;
       }
@@ -373,7 +372,7 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
                   color={isStorageQuotaReached ? "#b45309" : "#3b82f6"} 
                 />
                 <Text style={[styles.limitInfoText, isStorageQuotaReached && styles.limitInfoTextWarning]}>
-                  Stockage: {currentStorageGB.toFixed(2)}GB / {(storageQuotaGB / 1024).toFixed(1)}TB
+                  Stockage: {currentStorageGB.toFixed(2)}GB / {storageQuotaGB.toFixed(2)}GB
                 </Text>
               </View>
             </View>

@@ -193,12 +193,11 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
         
         // Calculate storage quota
         const storageUsedGB = company.nbimagetake || 0;
-        const storageQuotaTB = company.sizeimages || 1;
-        const storageQuotaGBValue = storageQuotaTB * 1024; // Convert TB to GB
+        const storageQuotaGB = company.sizeimages || 1; // Quota in GB
         
         setCurrentStorageGB(storageUsedGB);
-        setStorageQuotaGB(storageQuotaGBValue);
-        setIsStorageQuotaReached(storageUsedGB >= storageQuotaGBValue);
+        setStorageQuotaGB(storageQuotaGB);
+        setIsStorageQuotaReached(storageUsedGB >= storageQuotaGB);
       } catch (error) {
         console.error('Error fetching limit info:', error);
       } finally {
@@ -264,7 +263,7 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
     if (isStorageQuotaReached) {
       Alert.alert(
         'Quota de stockage dépassé',
-        `Vous avez atteint votre quota de stockage de ${(storageQuotaGB / 1024).toFixed(1)}TB. Utilisation actuelle: ${currentStorageGB.toFixed(2)}GB. Veuillez mettre à niveau votre plan.`
+        `Vous avez atteint votre quota de stockage de ${storageQuotaGB.toFixed(2)}GB. Utilisation actuelle: ${currentStorageGB.toFixed(2)}GB. Veuillez mettre à niveau votre plan.`
       );
       return;
     }
@@ -342,7 +341,7 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
                     color={isStorageQuotaReached ? "#b45309" : "#3b82f6"} 
                   />
                   <Text style={[styles.limitInfoText, isStorageQuotaReached && styles.limitInfoTextWarning]}>
-                    Stockage: {currentStorageGB.toFixed(2)}GB / {(storageQuotaGB / 1024).toFixed(1)}TB ({storageQuotaGB.toFixed(0)}GB)
+                    Stockage: {currentStorageGB.toFixed(2)}GB / {storageQuotaGB.toFixed(2)}GB
                     {isStorageQuotaReached && " - Quota dépassé"}
                   </Text>
                 </View>
