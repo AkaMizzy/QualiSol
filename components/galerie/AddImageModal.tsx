@@ -11,6 +11,7 @@ import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
+import CustomAlert from '../CustomAlert';
 
 interface AddImageModalProps {
   visible: boolean;
@@ -33,6 +34,7 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
   const [selectedCategorie, setSelectedCategorie] = useState<string | null>(null);
   const [severitySliderWidth, setSeveritySliderWidth] = useState(0);
   const prevVisibleRef = useRef(visible);
+  const [alertInfo, setAlertInfo] = useState<{ visible: boolean; title: string; message: string; type: 'success' | 'error', buttons?: any[] }>({ visible: false, title: '', message: '', type: 'success' });
 
   const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
   
@@ -254,6 +256,16 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
     return 'Basse';
   };
 
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setImage(null);
+    setVoiceNote(null);
+    setLevel(5);
+    setSelectedType(null);
+    setSelectedCategorie(null);
+  };
+
   const handleAdd = (shouldClose: boolean) => {
     if (!image) {
       Alert.alert('Informations manquantes', 'Veuillez fournir une image.');
@@ -304,16 +316,28 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
 
     onAdd({ title, description, image, voiceNote, author: authorName, latitude, longitude, level, type: selectedType, categorie: selectedCategorie }, shouldClose);
     
-    if (!shouldClose) {
-        setTitle('');
-        setDescription('');
-        setImage(null);
-        setVoiceNote(null);
-        setLevel(5);
-        setSelectedType(null);
-        setSelectedCategorie(null);
-        showImagePickerOptions();
-    }
+    // Show success alert asking if user wants to continue
+    setAlertInfo({
+      visible: true,
+      title: "Enregistré",
+      message: "La photo a été enregistrée avec succès. Voulez-vous en ajouter une autre ?",
+      type: 'success',
+      buttons: [
+        {
+          text: "Non, Arrêter",
+          onPress: onClose,
+          style: "destructive"
+        },
+        {
+          text: "Oui",
+          onPress: () => {
+            resetForm();
+            showImagePickerOptions();
+          },
+          style: "primary"
+        }
+      ]
+    });
   };
 
   return (
@@ -330,7 +354,12 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
               keyboardDismissMode="on-drag"
               keyboardShouldPersistTaps="handled"
             >
-              <Text style={styles.headerTitle}>Ajouter une nouvelle image</Text>
+              <View style={styles.headerContainer}>
+                <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                  <Ionicons name="close" size={24} color={COLORS.secondary} />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Ajouter une nouvelle image</Text>
+              </View>
               
               {/* Storage Quota Banner */}
               {!loadingLimits && companyInfo && (
@@ -506,6 +535,14 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
           </View>
         </View>
       </KeyboardAvoidingView>
+      <CustomAlert
+        visible={alertInfo.visible}
+        title={alertInfo.title}
+        message={alertInfo.message}
+        type={alertInfo.type}
+        onClose={() => setAlertInfo({ ...alertInfo, visible: false })}
+        buttons={alertInfo.buttons}
+      />
     </Modal>
   );
 }
@@ -529,11 +566,21 @@ const styles = StyleSheet.create({
         borderTopRightRadius: SIZES.xLarge,
         padding: SIZES.large,
     },
+    headerContainer: {
+        position: 'relative',
+        marginBottom: SIZES.large,
+    },
+    closeButton: {
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        padding: SIZES.small,
+        zIndex: 10,
+    },
     headerTitle: {
         textAlign: 'center',
         fontFamily: FONT.bold,
         fontSize: SIZES.xLarge,
-        marginBottom: SIZES.large,
         color: COLORS.secondary,
     },
     labelContainer: {

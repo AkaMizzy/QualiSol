@@ -13,11 +13,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, Modal, RefreshControl, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const PAGE_SIZE = 10;
+const IMAGES_PER_PAGE = 2;
 
 export default function GalerieScreen() {
   const { token, user } = useAuth();
@@ -27,7 +27,7 @@ export default function GalerieScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
-  const [displayedCount, setDisplayedCount] = useState(PAGE_SIZE);
+  const [currentPage, setCurrentPage] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Ged | null>(null);
@@ -35,7 +35,6 @@ export default function GalerieScreen() {
   const [annotatorImageUri, setAnnotatorImageUri] = useState<string | null>(null);
 
   const isTablet = width >= 768;
-  const numColumns = isTablet ? 4 : 1;
 
   const fetchGeds = useCallback(async () => {
     if (token) {
@@ -176,9 +175,19 @@ export default function GalerieScreen() {
     return allImages.filter(img => new Date(img.created_at).toDateString() === selectedDay);
   }, [allImages, selectedDate]);
 
-  const displayedImages = useMemo(() => {
-    return filteredImages.slice(0, displayedCount);
-  }, [filteredImages, displayedCount]);
+  const totalPages = Math.ceil(filteredImages.length / IMAGES_PER_PAGE);
+
+  const paginatedData = useMemo(() => {
+    const pages = [];
+    for (let i = 0; i < filteredImages.length; i += IMAGES_PER_PAGE) {
+      pages.push(filteredImages.slice(i, i + IMAGES_PER_PAGE));
+    }
+    return pages;
+  }, [filteredImages]);
+
+  const currentPageImages = useMemo(() => {
+    return paginatedData[currentPage] || [];
+  }, [paginatedData, currentPage]);
 
   const voiceNotesBySource = useMemo(() => {
     return geds.reduce((acc, curr) => {
@@ -189,8 +198,16 @@ export default function GalerieScreen() {
     }, {} as Record<string, boolean>);
   }, [geds]);
 
-  const handleLoadMore = () => {
-    setDisplayedCount(prevCount => prevCount + PAGE_SIZE);
+  const handleNextPage = () => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(prev => prev - 1);
+    }
   };
 
   const showDatePicker = () => setDatePickerVisibility(true);
@@ -198,13 +215,13 @@ export default function GalerieScreen() {
 
   const handleConfirmDate = (date: Date) => {
     setSelectedDate(date);
-    setDisplayedCount(PAGE_SIZE);
+    setCurrentPage(0);
     hideDatePicker();
   };
   
   const handleShowAll = () => {
     setSelectedDate(null);
-    setDisplayedCount(PAGE_SIZE);
+    setCurrentPage(0);
   };
 
   const formattedDate = useMemo(() => {
@@ -239,41 +256,92 @@ export default function GalerieScreen() {
 
       {loading && !refreshing ? (
         <View style={styles.skeletonContainer}>
-          {[...Array(8)].map((_, index) => (
-            <View key={index} style={[styles.skeletonCard, { width: `${100 / numColumns - 4}%` }]} />
+          {[...Array(2)].map((_, index) => (
+            <View key={index} style={styles.skeletonCard} />
           ))}
         </View>
       ) : (
-        <FlatList
-          data={displayedImages}
-          keyExtractor={(item) => item.id}
-          numColumns={numColumns}
-          key={numColumns}
-          renderItem={({ item }) => (
-            <GalerieCard
-              item={item}
-              onPress={() => handleCardPress(item)}
-              hasVoiceNote={voiceNotesBySource[item.idsource]}
-            />
-          )}
-          columnWrapperStyle={numColumns > 1 ? styles.row : undefined}
-          ListEmptyComponent={
-            <View style={styles.centered}>
-              <Text style={styles.emptyText}>Pas d&apos;images trouvées.</Text>
-            </View>
-          }
+        <ScrollView
+          style={styles.galleryContainer}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
-          ListFooterComponent={
-            filteredImages.length > displayedCount ? (
-              <TouchableOpacity style={styles.loadMoreContainer} onPress={handleLoadMore}>
-                <Text style={styles.loadMoreText}>Voir plus</Text>
-                <View style={styles.loadMoreLine} />
+        >
+          <View style={styles.contentContainer}>
+            {currentPageImages.length === 0 ? (
+              <View style={styles.centered}>
+                <Text style={styles.emptyText}>Pas d&apos;images trouvées.</Text>
+              </View>
+            ) : (
+              currentPageImages.map((item) => (
+                <View key={item.id} style={styles.imageContainer}>
+                  <GalerieCard
+                    item={item}
+                    onPress={() => handleCardPress(item)}
+                    hasVoiceNote={voiceNotesBySource[item.idsource]}
+                  />
+                </View>
+              ))
+            )}
+          </View>
+          
+          {totalPages > 1 && (
+            <View style={styles.paginationContainer}>
+              <TouchableOpacity
+                style={[styles.pageButton, currentPage === 0 && styles.pageButtonDisabled]}
+                onPress={handlePrevPage}
+                disabled={currentPage === 0}
+              >
+                <Ionicons 
+                  name="chevron-back" 
+                  size={24} 
+                  color={currentPage === 0 ? COLORS.gray : COLORS.primary} 
+                />
               </TouchableOpacity>
-            ) : null
-          }
-        />
+              
+              <View style={styles.pageIndicator}>
+                <Text style={styles.pageText}>
+                  {currentPage + 1} / {totalPages}
+                </Text>
+                <View style={styles.dotsContainer}>
+                  {[...Array(Math.min(totalPages, 5))].map((_, index) => {
+                    let dotIndex = index;
+                    if (totalPages > 5) {
+                      if (currentPage < 3) {
+                        dotIndex = index;
+                      } else if (currentPage >= totalPages - 3) {
+                        dotIndex = totalPages - 5 + index;
+                      } else {
+                        dotIndex = currentPage - 2 + index;
+                      }
+                    }
+                    return (
+                      <View
+                        key={index}
+                        style={[
+                          styles.dot,
+                          dotIndex === currentPage && styles.activeDot,
+                        ]}
+                      />
+                    );
+                  })}
+                </View>
+              </View>
+              
+              <TouchableOpacity
+                style={[styles.pageButton, currentPage === totalPages - 1 && styles.pageButtonDisabled]}
+                onPress={handleNextPage}
+                disabled={currentPage === totalPages - 1}
+              >
+                <Ionicons 
+                  name="chevron-forward" 
+                  size={24} 
+                  color={currentPage === totalPages - 1 ? COLORS.gray : COLORS.primary} 
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+        </ScrollView>
       )}
       <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
         <Image source={ICONS.cameraPng} style={{ width: 32, height: 32 }} />
@@ -320,9 +388,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.lightWhite,
   },
-  row: {
-    justifyContent: 'space-between',
-    marginHorizontal: SIZES.medium,
+  galleryContainer: {
+    flex: 1,
+  },
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: SIZES.medium,
+    paddingTop: SIZES.medium,
+  },
+  imageContainer: {
+    marginBottom: SIZES.medium,
   },
   centered: {
     flex: 1,
@@ -377,7 +452,7 @@ const styles = StyleSheet.create({
     fontFamily: FONT.bold,
   },
   showAllButton: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: COLORS.primary,
     paddingHorizontal: SIZES.large,
     paddingVertical: SIZES.small + 2,
     borderRadius: SIZES.large,
@@ -388,9 +463,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   skeletonContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-around',
+    flex: 1,
     paddingHorizontal: SIZES.medium,
     marginTop: SIZES.medium,
   },
@@ -400,19 +473,48 @@ const styles = StyleSheet.create({
     borderRadius: SIZES.medium,
     marginBottom: SIZES.medium,
   },
-  loadMoreContainer: {
+  paginationContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: SIZES.large,
+    justifyContent: 'space-between',
+    paddingHorizontal: SIZES.large,
+    paddingVertical: SIZES.medium,
+    backgroundColor: COLORS.white,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.lightWhite,
   },
-  loadMoreText: {
-    color: COLORS.primary,
+  pageButton: {
+    padding: SIZES.small,
+    borderRadius: SIZES.small,
+    backgroundColor: COLORS.lightWhite,
+  },
+  pageButtonDisabled: {
+    opacity: 0.3,
+  },
+  pageIndicator: {
+    alignItems: 'center',
+  },
+  pageText: {
     fontFamily: FONT.bold,
     fontSize: SIZES.medium,
+    color: COLORS.primary,
     marginBottom: SIZES.small,
   },
-  loadMoreLine: {
-    height: 1,
-    width: '30%',
+  dotsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.gray2,
+    marginHorizontal: 4,
+  },
+  activeDot: {
     backgroundColor: COLORS.primary,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
 });
