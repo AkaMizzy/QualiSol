@@ -1,17 +1,24 @@
 import { OfflineRecord, OfflineRecordData } from '@/types/offlineTypes';
 import * as Crypto from 'expo-crypto';
-import * as FileSystem from 'expo-file-system';
+// Use legacy API for compatibility with expo-image-picker URIs
+import * as FileSystem from 'expo-file-system/legacy';
 import { getDatabase } from './database';
 
-const OFFLINE_IMAGES_DIR = `${(FileSystem as any).documentDirectory}offline_images/`;
+const OFFLINE_IMAGES_DIR = `${FileSystem.documentDirectory}offline_images/`;
 
 /**
  * Ensure offline images directory exists
  */
 async function ensureOfflineImagesDirExists(): Promise<void> {
-  const dirInfo = await FileSystem.getInfoAsync(OFFLINE_IMAGES_DIR);
-  if (!dirInfo.exists) {
-    await FileSystem.makeDirectoryAsync(OFFLINE_IMAGES_DIR, { intermediates: true });
+  try {
+    const dirInfo = await FileSystem.getInfoAsync(OFFLINE_IMAGES_DIR);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(OFFLINE_IMAGES_DIR, { intermediates: true });
+      console.log('[OfflineStorage] Created offline images directory');
+    }
+  } catch (error) {
+    console.error('[OfflineStorage] Failed to create directory:', error);
+    throw error;
   }
 }
 
@@ -29,12 +36,17 @@ export async function saveImageLocally(imageUri: string): Promise<string> {
   const fileName = `${uuid}_${timestamp}.${extension}`;
   const localPath = `${OFFLINE_IMAGES_DIR}${fileName}`;
   
-  await FileSystem.copyAsync({
-    from: imageUri,
-    to: localPath,
-  });
-  
-  return localPath;
+  try {
+    await FileSystem.copyAsync({
+      from: imageUri,
+      to: localPath,
+    });
+    console.log('[OfflineStorage] Image copied to:', localPath);
+    return localPath;
+  } catch (error) {
+    console.error('[OfflineStorage] Failed to copy image:', error);
+    throw error;
+  }
 }
 
 /**
@@ -51,12 +63,17 @@ export async function saveVoiceNoteLocally(voiceNoteUri: string): Promise<string
   const fileName = `voice_${uuid}_${timestamp}.${extension}`;
   const localPath = `${OFFLINE_IMAGES_DIR}${fileName}`;
   
-  await FileSystem.copyAsync({
-    from: voiceNoteUri,
-    to: localPath,
-  });
-  
-  return localPath;
+  try {
+    await FileSystem.copyAsync({
+      from: voiceNoteUri,
+      to: localPath,
+    });
+    console.log('[OfflineStorage] Voice note copied to:', localPath);
+    return localPath;
+  } catch (error) {
+    console.error('[OfflineStorage] Failed to copy voice note:', error);
+    throw error;
+  }
 }
 
 /**
@@ -65,20 +82,32 @@ export async function saveVoiceNoteLocally(voiceNoteUri: string): Promise<string
  * @returns Client-generated record ID
  */
 export async function createOfflineRecord(data: OfflineRecordData): Promise<string> {
-  const db = await getDatabase();
-  const recordId = Crypto.randomUUID();
-  const createdAt = new Date().toISOString();
-  
-  // Save image locally
-  const localImagePath = await saveImageLocally(data.imageUri);
-  
-  // Save voice note locally if provided
-  let localVoiceNotePath: string | null = null;
-  if (data.voiceNoteUri) {
-    localVoiceNotePath = await saveVoiceNoteLocally(data.voiceNoteUri);
-  }
-  
   try {
+    console.log('[OfflineStorage] Starting createOfflineRecord...');
+    console.log('[OfflineStorage] documentDirectory:', FileSystem.documentDirectory);
+    
+    const db = await getDatabase();
+    console.log('[OfflineStorage] Database initialized');
+    
+    const recordId = Crypto.randomUUID();
+    const createdAt = new Date().toISOString();
+    
+    console.log('[OfflineStorage] Generated record ID:', recordId);
+    
+    // Save image locally
+    console.log('[OfflineStorage] Saving image locally from:', data.imageUri);
+    const localImagePath = await saveImageLocally(data.imageUri);
+    console.log('[OfflineStorage] Image saved to:', localImagePath);
+    
+    // Save voice note locally if provided
+    let localVoiceNotePath: string | null = null;
+    if (data.voiceNoteUri) {
+      console.log('[OfflineStorage] Saving voice note locally');
+      localVoiceNotePath = await saveVoiceNoteLocally(data.voiceNoteUri);
+      console.log('[OfflineStorage] Voice note saved to:', localVoiceNotePath);
+    }
+    
+    console.log('[OfflineStorage] Inserting record into database...');
     // Insert offline record
     await db.runAsync(
       `INSERT INTO offline_records (
@@ -103,18 +132,22 @@ export async function createOfflineRecord(data: OfflineRecordData): Promise<stri
         createdAt,
       ]
     );
+    console.log('[OfflineStorage] Record inserted successfully');
     
     // Insert sync queue entry
+    console.log('[OfflineStorage] Adding to sync queue...');
     await db.runAsync(
       `INSERT INTO sync_queue (record_id, status, retry_count)
        VALUES (?, 'pending', 0)`,
       [recordId]
     );
+    console.log('[OfflineStorage] Sync queue entry added');
     
-    console.log(`Offline record created: ${recordId}`);
+    console.log(`[OfflineStorage] Offline record created successfully: ${recordId}`);
     return recordId;
   } catch (error) {
-    console.error('Failed to create offline record:', error);
+    console.error('[OfflineStorage] Failed to create offline record:', error);
+    console.error('[OfflineStorage] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     throw error;
   }
 }
@@ -125,22 +158,25 @@ export async function createOfflineRecord(data: OfflineRecordData): Promise<stri
  * @returns Array of offline records with sync status
  */
 export async function getOfflineRecords(limit?: number): Promise<OfflineRecord[]> {
-  const db = await getDatabase();
-  
-  const sql = `
-    SELECT 
-      r.*,
-      sq.status as sync_status,
-      sq.retry_count
-    FROM offline_records r
-    LEFT JOIN sync_queue sq ON r.id = sq.record_id
-    ORDER BY r.created_at DESC
-    ${limit ? `LIMIT ${limit}` : ''}
-  `;
-  
   try {
+    console.log('[OfflineStorage] Getting offline records, limit:', limit);
+    const db = await getDatabase();
+    
+    const sql = `
+      SELECT 
+        r.*,
+        sq.status as sync_status,
+        sq.retry_count
+      FROM offline_records r
+      LEFT JOIN sync_queue sq ON r.id = sq.record_id
+      ORDER BY r.created_at DESC
+      ${limit ? `LIMIT ${limit}` : ''}
+    `;
+    
     const result = await db.getAllAsync<OfflineRecord & { sync_status: string; retry_count: number }>(sql);
-    return result.map(row => ({
+    console.log('[OfflineStorage] Retrieved', result.length, 'offline records');
+    
+    const mapped = result.map(row => ({
       id: row.id,
       idsource: row.idsource,
       title: row.title,
@@ -158,9 +194,13 @@ export async function getOfflineRecords(limit?: number): Promise<OfflineRecord[]
       sync_status: row.sync_status as any || 'pending',
       retry_count: row.retry_count || 0,
     }));
+    
+    return mapped;
   } catch (error) {
-    console.error('Failed to get offline records:', error);
-    throw error;
+    console.error('[OfflineStorage] Failed to get offline records:', error);
+    console.error('[OfflineStorage] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    // Return empty array instead of throwing to prevent app crash
+    return [];
   }
 }
 
@@ -169,9 +209,11 @@ export async function getOfflineRecords(limit?: number): Promise<OfflineRecord[]
  * @returns Array of offline records that need to be synced
  */
 export async function getPendingSyncRecords(): Promise<OfflineRecord[]> {
-  const db = await getDatabase();
-  
   try {
+    console.log('[OfflineStorage] Getting pending sync records...');
+    const db = await getDatabase();
+    console.log('[OfflineStorage] Database ready for pending records query');
+    
     const result = await db.getAllAsync<OfflineRecord & { sync_status: string; retry_count: number }>(
       `SELECT 
         r.*,
@@ -182,6 +224,8 @@ export async function getPendingSyncRecords(): Promise<OfflineRecord[]> {
       WHERE sq.status IN ('pending', 'failed')
       ORDER BY r.created_at ASC`
     );
+    
+    console.log('[OfflineStorage] Retrieved', result.length, 'pending records');
     
     return result.map(row => ({
       id: row.id,
@@ -202,8 +246,10 @@ export async function getPendingSyncRecords(): Promise<OfflineRecord[]> {
       retry_count: row.retry_count || 0,
     }));
   } catch (error) {
-    console.error('Failed to get pending sync records:', error);
-    throw error;
+    console.error('[OfflineStorage] Failed to get pending sync records:', error);
+    console.error('[OfflineStorage] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    // Return empty array to prevent sync service from crashing
+    return [];
   }
 }
 

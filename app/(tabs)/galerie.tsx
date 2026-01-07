@@ -182,14 +182,20 @@ export default function GalerieScreen() {
         setModalVisible(false);
       }
     } catch (error: any) {
-      console.error('Failed to save/upload files:', error);
+      console.error('[Galerie] Failed to save/upload files:', error);
+      console.error('[Galerie] Error stack:', error.stack);
+      console.error('[Galerie] Error message:', error.message);
+      
       // Handle 403 error specifically for limit reached
       if (error?.message?.includes('limit') || error?.message?.includes('Image limit')) {
         Alert.alert('Limite atteinte', error?.message || 'Vous avez atteint votre limite d\'images.');
       } else {
+        const errorMsg = error?.message || 'Erreur inconnue';
         Alert.alert(
           isOnline ? 'Upload Failed' : 'Erreur hors ligne', 
-          isOnline ? 'Please try again.' : 'Impossible de sauvegarder localement.'
+          isOnline 
+            ? `Please try again. Error: ${errorMsg}` 
+            : `Impossible de sauvegarder localement. Erreur: ${errorMsg}`
         );
       }
     }

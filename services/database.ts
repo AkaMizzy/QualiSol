@@ -1,27 +1,16 @@
 import * as SQLite from 'expo-sqlite';
 
 let database: SQLite.SQLiteDatabase | null = null;
-
-/**
- * Initialize and return the SQLite database instance
- */
-export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
-  if (!database) {
-    database = await SQLite.openDatabaseAsync('galerie_offline.db');
-    await initializeDatabase();
-  }
-  return database;
-}
+let isInitializing = false;
+let initPromise: Promise<void> | null = null;
 
 /**
  * Initialize database schema
  */
-async function initializeDatabase(): Promise<void> {
-  if (!database) return;
-
+async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
   try {
     // Create offline_records table
-    await database.execAsync(`
+    await db.execAsync(`
       CREATE TABLE IF NOT EXISTS offline_records (
         id TEXT PRIMARY KEY NOT NULL,
         idsource TEXT NOT NULL,
@@ -39,10 +28,10 @@ async function initializeDatabase(): Promise<void> {
         created_at TEXT NOT NULL
       );
     `);
-    console.log('offline_records table created successfully');
+    console.log('[Database] offline_records table created successfully');
 
     // Create sync_queue table
-    await database.execAsync(`
+    await db.execAsync(`
       CREATE TABLE IF NOT EXISTS sync_queue (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         record_id TEXT NOT NULL,
@@ -53,22 +42,69 @@ async function initializeDatabase(): Promise<void> {
         FOREIGN KEY (record_id) REFERENCES offline_records (id) ON DELETE CASCADE
       );
     `);
-    console.log('sync_queue table created successfully');
+    console.log('[Database] sync_queue table created successfully');
 
     // Create index on sync_queue status for faster queries
-    await database.execAsync(`
+    await db.execAsync(`
       CREATE INDEX IF NOT EXISTS idx_sync_queue_status ON sync_queue(status);
     `);
-    console.log('sync_queue status index created successfully');
+    console.log('[Database] sync_queue status index created successfully');
 
     // Create index on offline_records created_at for sorting
-    await database.execAsync(`
+    await db.execAsync(`
       CREATE INDEX IF NOT EXISTS idx_offline_records_created_at ON offline_records(created_at);
     `);
-    console.log('offline_records created_at index created successfully');
+    console.log('[Database] offline_records created_at index created successfully');
   } catch (error) {
-    console.error('Failed to initialize database:', error);
+    console.error('[Database] Failed to initialize database schema:', error);
     throw error;
+  }
+}
+
+/**
+ * Initialize and return the SQLite database instance
+ */
+export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
+  // If database already exists and is valid, return it
+  if (database) {
+    return database;
+  }
+
+  // If already initializing, wait for that to complete
+  if (isInitializing && initPromise) {
+    await initPromise;
+    if (database) {
+      return database;
+    }
+  }
+
+  // Start initialization
+  isInitializing = true;
+  
+  try {
+    initPromise = (async () => {
+      console.log('[Database] Opening database...');
+      database = await SQLite.openDatabaseAsync('galerie_offline.db');
+      console.log('[Database] Database opened successfully');
+      
+      await initializeDatabase(database);
+      console.log('[Database] Database initialization complete');
+    })();
+    
+    await initPromise;
+    
+    if (!database) {
+      throw new Error('Database initialization failed - database is null');
+    }
+    
+    return database;
+  } catch (error) {
+    console.error('[Database] Failed to get database:', error);
+    database = null;
+    throw error;
+  } finally {
+    isInitializing = false;
+    initPromise = null;
   }
 }
 
@@ -77,8 +113,14 @@ async function initializeDatabase(): Promise<void> {
  */
 export async function closeDatabase(): Promise<void> {
   if (database) {
-    await database.closeAsync();
-    database = null;
+    try {
+      await database.closeAsync();
+      console.log('[Database] Database closed successfully');
+    } catch (error) {
+      console.error('[Database] Failed to close database:', error);
+    } finally {
+      database = null;
+    }
   }
 }
 
