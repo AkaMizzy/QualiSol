@@ -1,16 +1,20 @@
 import API_CONFIG from '@/app/config/api';
 import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { Ged } from '@/services/gedService';
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface GalerieCardProps {
   item: Ged;
   onPress: () => void;
   hasVoiceNote?: boolean;
+  isOffline?: boolean;
+  localImagePath?: string;
+  syncStatus?: 'pending' | 'syncing' | 'failed';
 }
 
-export default function GalerieCard({ item, onPress, hasVoiceNote }: GalerieCardProps) {
+export default function GalerieCard({ item, onPress, hasVoiceNote, isOffline, localImagePath, syncStatus }: GalerieCardProps) {
   const GofG = API_CONFIG.BASE_URL
   const formattedDate = new Date(item.created_at).toLocaleDateString('fr-FR', {
     day: '2-digit',
@@ -20,13 +24,32 @@ export default function GalerieCard({ item, onPress, hasVoiceNote }: GalerieCard
     minute: '2-digit'
   });
 
+  // Use local image path for offline records, otherwise use backend URL
+  const imageSource = isOffline && localImagePath 
+    ? { uri: localImagePath }
+    : { uri: `${GofG}${item.url}` };
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.imageContainer}>
         <Image 
-          source={{ uri: `${GofG}${item.url}` }}
+          source={imageSource}
           style={styles.image}
         />
+        {/* Sync status indicator */}
+        {syncStatus && (
+          <View style={styles.syncStatusBadge}>
+            {syncStatus === 'syncing' && (
+              <ActivityIndicator size="small" color={COLORS.white} />
+            )}
+            {syncStatus === 'pending' && (
+              <Ionicons name="cloud-upload-outline" size={20} color={COLORS.white} />
+            )}
+            {syncStatus === 'failed' && (
+              <Ionicons name="alert-circle-outline" size={20} color="#ff4444" />
+            )}
+          </View>
+        )}
         <View style={styles.overlay}>
           <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
           <Text style={styles.date}>{formattedDate}</Text>
@@ -121,5 +144,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderRadius: 15,
     padding: 4,
+  },
+  syncStatusBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 20,
+    padding: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });

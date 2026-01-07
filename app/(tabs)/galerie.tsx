@@ -7,7 +7,11 @@ import PreviewModal from '@/components/PreviewModal';
 import { ICONS } from '@/constants/Icons';
 import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
+import { getConnectivity } from '@/services/connectivity';
 import { Ged, createGed, getAllGeds, updateGedFile } from '@/services/gedService';
+import { createOfflineRecord, getOfflineRecords } from '@/services/offlineStorageService';
+import { startSyncMonitoring } from '@/services/syncService';
+import { OfflineRecord } from '@/types/offlineTypes';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
@@ -23,6 +27,8 @@ export default function GalerieScreen() {
   const { token, user } = useAuth();
   const { width } = useWindowDimensions();
   const [geds, setGeds] = useState<Ged[]>([]);
+  const [offlineRecords, setOfflineRecords] = useState<OfflineRecord[]>([]);
+  const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -50,9 +56,41 @@ export default function GalerieScreen() {
     }
   }, [token]);
 
+  const fetchOfflineRecords = useCallback(async () => {
+    try {
+      const records = await getOfflineRecords();
+      setOfflineRecords(records);
+    } catch (error) {
+      console.error('Failed to fetch offline records:', error);
+    }
+  }, []);
+
+  const checkNetworkStatus = useCallback(async () => {
+    const connectivity = await getConnectivity();
+    setNetworkStatus(connectivity.status);
+  }, []);
+
   useEffect(() => {
     fetchGeds();
-  }, [fetchGeds]);
+    fetchOfflineRecords();
+    checkNetworkStatus();
+  }, [fetchGeds, fetchOfflineRecords, checkNetworkStatus]);
+
+  // Start sync monitoring when token is available
+  useEffect(() => {
+    if (!token) return;
+
+    const stopSyncMonitoring = startSyncMonitoring(token, (result) => {
+      console.log(`Sync completed: ${result.synced} synced, ${result.failed} failed`);
+      // Refresh data after sync
+      void fetchGeds();
+      void fetchOfflineRecords();
+    });
+
+    return () => {
+      stopSyncMonitoring();
+    };
+  }, [token, fetchGeds, fetchOfflineRecords]);
 
   useFocusEffect(
     useCallback(() => {
@@ -65,60 +103,94 @@ export default function GalerieScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchGeds();
+    await Promise.all([fetchGeds(), fetchOfflineRecords(), checkNetworkStatus()]);
     setRefreshing(false);
-  }, [fetchGeds]);
+  }, [fetchGeds, fetchOfflineRecords, checkNetworkStatus]);
 
   const handleAddImage = async (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; latitude: number | null; longitude: number | null; level: number; type: string | null; categorie: string | null; }, shouldClose: boolean) => {
     if (!token || !user || !data.image) return;
-    const idsource = "00000000-0000-0000-0000-000000000000";
     
+    // Check network status
+    const connectivity = await getConnectivity();
+    const isOnline = connectivity.status === 'online';
+
     try {
-      const { uri } = data.image;
-      const fileName = uri.split('/').pop() || `qualiphoto_${Date.now()}.jpg`;
-      const fileType = fileName.split('.').pop() || 'jpeg';
+      if (isOnline) {
+        // ONLINE: Upload directly to backend
+        const idsource = "00000000-0000-0000-0000-000000000000";
+        const { uri } = data.image;
+        const fileName = uri.split('/').pop() || `qualiphoto_${Date.now()}.jpg`;
+        const fileType = fileName.split('.').pop() || 'jpeg';
 
-      await createGed(token, {
-        idsource,
-        title: data.title,
-        description: data.description,
-        kind: 'qualiphoto',
-        author: data.author,
-        latitude: data.latitude?.toString(),
-        longitude: data.longitude?.toString(),
-        level: data.level,
-        type: data.type || undefined,
-        categorie: data.categorie || undefined,
-        file: {
-          uri: uri,
-          type: `image/${fileType}`,
-          name: fileName,
-        },
-      });
-
-      if (data.voiceNote) {
         await createGed(token, {
           idsource,
-          title: `${data.title} - Voice Note`,
-          kind: 'voice_note',
+          title: data.title,
+          description: data.description,
+          kind: 'qualiphoto',
           author: data.author,
-          file: data.voiceNote,
+          latitude: data.latitude?.toString(),
+          longitude: data.longitude?.toString(),
+          level: data.level,
+          type: data.type || undefined,
+          categorie: data.categorie || undefined,
+          file: {
+            uri: uri,
+            type: `image/${fileType}`,
+            name: fileName,
+          },
         });
+
+        if (data.voiceNote) {
+          await createGed(token, {
+            idsource,
+            title: `${data.title} - Voice Note`,
+            kind: 'voice_note',
+            author: data.author,
+            file: data.voiceNote,
+          });
+        }
+        
+        // Refresh the gallery to show the newly uploaded picture
+        await fetchGeds();
+      } else {
+        // OFFLINE: Save to SQLite
+        await createOfflineRecord({
+          idsource: "00000000-0000-0000-0000-000000 000000",
+          title: data.title,
+          description: data.description,
+          kind: 'qualiphoto',
+          author: data.author,
+          latitude: data.latitude?.toString(),
+          longitude: data.longitude?.toString(),
+          level: data.level,
+          type: data.type || undefined,
+          categorie: data.categorie || undefined,
+          imageUri: data.image.uri,
+          voiceNoteUri: data.voiceNote?.uri,
+        });
+
+        // Refresh offline records
+        await fetchOfflineRecords();
+        
+        Alert.alert(
+          'Enregistré hors ligne', 
+          'Votre photo sera synchronisée automatiquement lorsque vous aurez une connexion Internet.'
+        );
       }
-      
-      // Refresh the gallery to show the newly uploaded picture
-      await fetchGeds();
       
       if (shouldClose) {
         setModalVisible(false);
       }
     } catch (error: any) {
-      console.error('Failed to upload files:', error);
+      console.error('Failed to save/upload files:', error);
       // Handle 403 error specifically for limit reached
       if (error?.message?.includes('limit') || error?.message?.includes('Image limit')) {
         Alert.alert('Limite atteinte', error?.message || 'Vous avez atteint votre limite d\'images.');
       } else {
-        Alert.alert('Upload Failed', 'Please try again.');
+        Alert.alert(
+          isOnline ? 'Upload Failed' : 'Erreur hors ligne', 
+          isOnline ? 'Please try again.' : 'Impossible de sauvegarder localement.'
+        );
       }
     }
   };
@@ -162,11 +234,29 @@ export default function GalerieScreen() {
     }
   };
 
+  // Merge online GEDs and offline records
   const allImages = useMemo(() => {
-    return geds
+    const onlineImages = geds
       .filter(g => g.kind === 'qualiphoto')
+      .map(g => ({ ...g, isOffline: false, localImagePath: undefined, syncStatus: undefined }));
+    
+    const offlineImages = offlineRecords.map(r => ({
+      ...r,
+      id: r.id,
+      url: null,
+      size: null,
+      status_id: '',
+      company_id: '',
+      position: null,
+      level: undefined,
+      isOffline: true,
+      localImagePath: r.local_image_path,
+      syncStatus: r.sync_status,
+    })) as any[];
+    
+    return [...onlineImages, ...offlineImages]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [geds]);
+  }, [geds, offlineRecords]);
 
   const filteredImages = useMemo(() => {
     if (!selectedDate) return allImages;
@@ -233,6 +323,18 @@ export default function GalerieScreen() {
     <SafeAreaView style={styles.container}>
       <AppHeader user={user || undefined} />
       <View style={styles.filterContainer}>
+        {/* Network status indicator - only show when offline */}
+        {networkStatus === 'offline' && (
+          <View style={styles.networkBadge}>
+            <Ionicons 
+              name="cloud-offline-outline" 
+              size={16} 
+              color={COLORS.white} 
+            />
+            <Text style={styles.networkText}>Hors ligne</Text>
+          </View>
+        )}
+        
         <TouchableOpacity style={styles.datePickerButton} onPress={showDatePicker}>
           <Ionicons name="calendar-outline" size={20} color={selectedDate ? COLORS.primary : COLORS.gray} />
           <Text style={[styles.datePickerText, selectedDate && styles.datePickerTextActive]}>
@@ -273,12 +375,15 @@ export default function GalerieScreen() {
                 <Text style={styles.emptyText}>Pas d&apos;images trouvées.</Text>
               </View>
             ) : (
-              currentPageImages.map((item) => (
+              currentPageImages.map((item: any) => (
                 <View key={item.id} style={styles.imageContainer}>
                   <GalerieCard
                     item={item}
                     onPress={() => handleCardPress(item)}
                     hasVoiceNote={voiceNotesBySource[item.idsource]}
+                    isOffline={item.isOffline}
+                    localImagePath={item.localImagePath}
+                    syncStatus={item.syncStatus}
                   />
                 </View>
               ))
@@ -516,5 +621,20 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
+  },
+  networkBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SIZES.medium,
+    paddingVertical: SIZES.small,
+    borderRadius: SIZES.large,
+    marginRight: SIZES.small,
+    backgroundColor: '#ef4444',
+  },
+  networkText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.small,
+    color: COLORS.white,
+    marginLeft: 4,
   },
 });

@@ -44,4 +44,24 @@ export function startConnectivityMonitoring(
   };
 }
 
+/**
+ * Add a listener for connectivity status changes
+ * Only triggers callback when status actually changes (online/offline)
+ * @param callback - Function to call when connectivity status changes
+ * @returns Cleanup function to remove listener
+ */
+export function addConnectivityListener(
+  callback: (status: ConnectivityStatus) => void
+): () => void {
+  let lastStatus: ConnectivityStatus | null = null;
+
+  const cleanup = startConnectivityMonitoring((response) => {
+    if (lastStatus !== response.status) {
+      lastStatus = response.status;
+      callback(response.status);
+    }
+  }, 10000); // Check every 10 seconds for status changes
+
+  return cleanup;
+}
 

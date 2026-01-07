@@ -2,6 +2,7 @@ import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
 import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import companyService from '@/services/companyService';
+import { getConnectivity } from '@/services/connectivity';
 import { getAllGeds } from '@/services/gedService';
 import { Company } from '@/types/company';
 // import { describeImage } from '@/services/gedService';
@@ -43,6 +44,7 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
   const [storageQuotaGB, setStorageQuotaGB] = useState(0);
   const [isStorageQuotaReached, setIsStorageQuotaReached] = useState(false);
   const [loadingLimits, setLoadingLimits] = useState(true);
+  const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
 
   const ANOMALY_CATEGORIES = [
     { key: 'securite', label: 'Sécurité' },
@@ -232,6 +234,20 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
     }
   }, [visible]);
 
+  // Check network status when modal opens
+  useEffect(() => {
+    const checkNetwork = async () => {
+      const connectivity = await getConnectivity();
+      setNetworkStatus(connectivity.status);
+    };
+    if (visible) {
+      checkNetwork();
+      // Recheck periodically while modal is open
+      const interval = setInterval(checkNetwork, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [visible]);
+
   const onSeverityPan = useCallback((event: PanGestureHandlerGestureEvent) => {
     if (severitySliderWidth <= 0) return;
     const x = event.nativeEvent.x;
@@ -359,7 +375,28 @@ export default function AddImageModal({ visible, onClose, onAdd, openCameraOnSho
                   <Ionicons name="close" size={24} color={COLORS.secondary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Ajouter une nouvelle image</Text>
+                {/* Network Status Indicator - only show when offline */}
+                {networkStatus === 'offline' && (
+                  <View style={styles.networkStatusBadge}>
+                    <Ionicons 
+                      name="wifi-outline" 
+                      size={12} 
+                      color={COLORS.white} 
+                    />
+                    <Text style={styles.networkStatusText}>Hors ligne</Text>
+                  </View>
+                )}
               </View>
+              
+              {/* Network Info Message */}
+              {networkStatus === 'offline' && (
+                <View style={styles.offlineInfoBanner}>
+                  <Ionicons name="information-circle-outline" size={16} color="#0369a1" />
+                  <Text style={styles.offlineInfoText}>
+                    Mode hors ligne : votre photo sera synchronisée automatiquement lors de la reconnexion.
+                  </Text>
+                </View>
+              )}
               
               {/* Storage Quota Banner */}
               {!loadingLimits && companyInfo && (
@@ -844,5 +881,41 @@ const styles = StyleSheet.create({
     addButtonDisabled: {
       backgroundColor: '#d1d5db',
       opacity: 0.6,
+    },
+    networkStatusBadge: {
+      position: 'absolute',
+      right: 0,
+      top: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 12,
+      gap: 4,
+      backgroundColor: '#ef4444',
+    },
+    networkStatusText: {
+      color: COLORS.white,
+      fontSize: 10,
+      fontWeight: '600',
+    },
+    offlineInfoBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: '#e0f2fe',
+      borderColor: '#7dd3fc',
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginTop: 12,
+      marginBottom: 8,
+      borderRadius: 10,
+    },
+    offlineInfoText: {
+      color: '#0369a1',
+      flex: 1,
+      fontSize: 12,
+      fontWeight: '500',
     },
 });
