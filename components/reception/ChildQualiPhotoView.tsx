@@ -10,6 +10,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -37,6 +38,7 @@ type ChildQualiPhotoViewProps = {
   subtitle: string;
   projectTitle: string;
   zoneTitle: string;
+  companyTitle?: string;
   onAvantPhotoUpdate: (updatedPhoto: Ged) => void;
 };
 
@@ -46,6 +48,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   subtitle,
   projectTitle,
   zoneTitle,
+  companyTitle,
   onAvantPhotoUpdate,
 }) => {
   const { token } = useAuth();
@@ -229,6 +232,58 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   const handleAfterPhotoSuccess = (createdGed: Ged) => {
     setAfterPhotos(prev => [...prev, createdGed]);
     setCreateAfterModalVisible(false);
+  };
+
+  const handleShareBothPhotos = async () => {
+    try {
+      if (afterPhotos.length === 0) {
+        Alert.alert('Information', 'Veuillez ajouter une photo "après" avant de partager.');
+        return;
+      }
+
+      const avantUrl = `${API_CONFIG.BASE_URL}${item.url}`;
+      const apresUrl = `${API_CONFIG.BASE_URL}${afterPhotos[0].url}`;
+      
+      // Build rich metadata message
+      const parts = [];
+      parts.push('📸 Situation Avant / Situation Après');
+      parts.push('');
+      
+      if (companyTitle) {
+        parts.push(`🏢 Entreprise: ${companyTitle}`);
+      }
+      
+      if (projectTitle) {
+        parts.push(`🏗️ Projet: ${projectTitle}`);
+      }
+      
+      if (zoneTitle) {
+        parts.push(`📍 Zone: ${zoneTitle}`);
+      }
+      
+      if (item.author) {
+        parts.push(`👤 Auteur: ${item.author}`);
+      }
+      
+      parts.push('');
+      parts.push('📷 Situation Avant:');
+      parts.push(avantUrl);
+      parts.push('');
+      parts.push('📷 Situation Après:');
+      parts.push(apresUrl);
+      parts.push('');
+      parts.push('━━━━━━━━━━━');
+      parts.push('📱 Qualisol | Muntadaacom');
+      
+      const message = parts.join('\n');
+      
+      await Share.share({
+        message: message,
+      });
+    } catch (error) {
+      console.error('Error sharing photos:', error);
+      Alert.alert('Erreur', 'Impossible de partager les photos.');
+    }
   };
 
   const handleOpenDescriptionEdit = (type: 'avant' | 'apres') => {
@@ -560,14 +615,25 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
 
   const header = (
     <View style={styles.header}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Fermer les détails"
-        onPress={onClose}
-        style={styles.closeBtn}
-      >
-        <Ionicons name="arrow-back" size={28} color="#f87b1b" />
-      </Pressable>
+      <View style={styles.headerLeftActions}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Fermer les détails"
+          onPress={onClose}
+          style={styles.closeBtn}
+        >
+          <Ionicons name="arrow-back" size={28} color="#f87b1b" />
+        </Pressable>
+        {afterPhotos.length > 0 && (
+          <TouchableOpacity
+            style={styles.shareIconButton}
+            onPress={handleShareBothPhotos}
+            accessibilityLabel="Partager les deux photos"
+          >
+            <Ionicons name="share-social-outline" size={24} color="#f87b1b" />
+          </TouchableOpacity>
+        )}
+      </View>
       <View style={styles.headerTitles}>
         <Text style={styles.title}>{item.title}</Text>
         <Text numberOfLines={1} style={styles.subtitle}>{subtitle}</Text>
@@ -843,6 +909,21 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'flex-end',
+      },
+      headerLeftActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+      },
+      shareIconButton: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F2F2F7',
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#f87b1b',
       },
       headerAction: {
         width: 40,
