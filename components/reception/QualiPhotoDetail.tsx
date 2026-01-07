@@ -24,10 +24,11 @@ type Props = {
   projectTitle?: string;
   zoneTitle?: string;
   folderTitle?: string;
+  companyTitle?: string;
 };
 
 // Step 1: Create the custom hook for all logic
-function useQualiPhotoDetail({ visible, item: initialItem, projects, zones, onUpdate, projectTitle: propProjectTitle, zoneTitle: propZoneTitle, folderTitle: propFolderTitle }: Props) {
+function useQualiPhotoDetail({ visible, item: initialItem, projects, zones, onUpdate, projectTitle: propProjectTitle, zoneTitle: propZoneTitle, folderTitle: propFolderTitle, companyTitle }: Props) {
   const { token, user } = useAuth();
   const insets = useSafeAreaInsets();
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -170,6 +171,7 @@ function useQualiPhotoDetail({ visible, item: initialItem, projects, zones, onUp
     handleChildCreationSuccess,
     projectTitle,
     zoneTitle,
+    companyTitle,
     childrenWithAfterPhotos
   };
 }
@@ -204,6 +206,7 @@ function QualiPhotoDetailView({
     handleChildCreationSuccess,
     projectTitle,
     zoneTitle,
+    companyTitle,
     childrenWithAfterPhotos,
     handleAvantPhotoUpdate,
   } = props;
@@ -226,6 +229,7 @@ function QualiPhotoDetailView({
           subtitle={subtitle}
           projectTitle={projectTitle}
           zoneTitle={zoneTitle}
+          companyTitle={companyTitle}
           onAvantPhotoUpdate={handleAvantPhotoUpdate}
         />
       </SafeAreaView>
@@ -256,6 +260,7 @@ function QualiPhotoDetailView({
           onItemUpdate={handleItemUpdate}
           projectTitle={projectTitle}
           zoneTitle={zoneTitle}
+          companyTitle={companyTitle}
           childrenWithAfterPhotos={childrenWithAfterPhotos}
         />
       </SafeAreaView>

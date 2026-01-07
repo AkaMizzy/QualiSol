@@ -62,6 +62,7 @@ type ParentQualiPhotoViewProps = {
     onItemUpdate: (item: Partial<Folder>) => void;
     projectTitle: string;
     zoneTitle: string;
+    companyTitle?: string;
     childrenWithAfterPhotos: Set<string>;
   };
   
@@ -87,6 +88,7 @@ type ParentQualiPhotoViewProps = {
     onItemUpdate,
     projectTitle,
     zoneTitle,
+    companyTitle,
     childrenWithAfterPhotos,
   }) => {
     const { token } = useAuth();
@@ -197,6 +199,11 @@ type ParentQualiPhotoViewProps = {
         // Build rich metadata message
         const parts = [];
         parts.push(`📸 ${ged.title}`);
+        parts.push('');
+        
+        if (companyTitle) {
+          parts.push(`🏢 Entreprise: ${companyTitle}`);
+        }
         
         if (projectTitle) {
           parts.push(`🏗️ Projet: ${projectTitle}`);
@@ -210,13 +217,16 @@ type ParentQualiPhotoViewProps = {
           parts.push(`👤 Auteur: ${ged.author}`);
         }
         
+        parts.push('');
         parts.push(`🔗 ${imageUrl}`);
+        parts.push('');
+        parts.push('━━━━━━━━━━━');
+        parts.push('📱 Qualisol | Muntadaacom');
         
         const message = parts.join('\n');
         
         await Share.share({
           message: message,
-          url: imageUrl, // iOS specific
         });
       } catch (error) {
         console.error('Error sharing photo:', error);
