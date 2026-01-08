@@ -297,12 +297,6 @@ export default function LoginScreen() {
 
               {/* Footer */}
               <View style={[styles.footer, { paddingBottom: Math.max(16, bottom) }]}>
-                <Text style={styles.footerText}>
-                  Vous n&apos;avez pas de compte?{' '}
-                  <Link href="/Register" style={styles.footerLink}>
-                    Créer un compte
-                  </Link>
-                </Text>
                 <Text style={styles.copyrightText}>
                   <Text style={styles.copyrightBrand}>QualiSol</Text> ©{new Date().getFullYear()}. Tous droits réservés.
                 </Text>

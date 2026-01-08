@@ -262,3 +262,24 @@ export async function getAssignedPhotoAvant(token: string): Promise<Ged[]> {
   });
   return response.data;
 }
+
+/**
+ * Assign a gallery photo to a folder by updating its idsource and kind
+ * @param token - Auth token
+ * @param gedId - ID of the photo (GED record) to assign
+ * @param folderId - ID of the folder to assign to
+ * @param photoType - Type of photo ('photoavant' or 'photoapres')
+ * @returns Updated GED record
+ */
+export async function assignPhotoToFolder(
+  token: string,
+  gedId: string,
+  folderId: string,
+  photoType: 'photoavant' | 'photoapres' = 'photoavant'
+): Promise<Ged> {
+  return updateGed(token, gedId, {
+    idsource: folderId,
+    kind: photoType,
+  });
+}
+

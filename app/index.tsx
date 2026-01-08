@@ -14,6 +14,10 @@ export default function Index() {
   // No redirects - let the auth context handle navigation
   if (isAuthenticated) {
     console.log('User is authenticated, redirecting to tabs...');
+    // Platform-specific redirect: web goes to webhome, mobile goes to tabs
+    if (require('react-native').Platform.OS === 'web') {
+      return <Redirect href="/webhome" />;
+    }
     return <Redirect href="/(tabs)" />;
   } else {
     console.log('User is not authenticated, redirecting to login...');

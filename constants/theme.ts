@@ -59,6 +59,7 @@ export const COLORS = {
   gray: '#8E8E93',
   gray2: '#d0d0d0',
   secondary: '#11224e',
+  tertiary: '#312651',
   deleteColor: '#dc2626',
 };
 

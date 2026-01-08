@@ -80,13 +80,22 @@ export async function saveVoiceNoteLocally(voiceNoteUri: string): Promise<string
  * Create an offline record and add to sync queue
  * @param data - Record data including image URI
  * @returns Client-generated record ID
+ * Note: Not available on web platform
  */
 export async function createOfflineRecord(data: OfflineRecordData): Promise<string> {
+  // Offline storage not available on web
+  if (require('react-native').Platform.OS === 'web') {
+    throw new Error('Offline storage is not available on web platform');
+  }
+
   try {
     console.log('[OfflineStorage] Starting createOfflineRecord...');
     console.log('[OfflineStorage] documentDirectory:', FileSystem.documentDirectory);
     
     const db = await getDatabase();
+    if (!db) {
+      throw new Error('Database not available');
+    }
     console.log('[OfflineStorage] Database initialized');
     
     const recordId = Crypto.randomUUID();
@@ -155,12 +164,20 @@ export async function createOfflineRecord(data: OfflineRecordData): Promise<stri
 /**
  * Get offline records with optional limit
  * @param limit - Maximum number of records to return
- * @returns Array of offline records with sync status
+ * @returns Array of offline records with sync status (empty on web)
  */
 export async function getOfflineRecords(limit?: number): Promise<OfflineRecord[]> {
+  // Offline storage not available on web
+  if (require('react-native').Platform.OS === 'web') {
+    return [];
+  }
+
   try {
     console.log('[OfflineStorage] Getting offline records, limit:', limit);
     const db = await getDatabase();
+    if (!db) {
+      return [];
+    }
     
     const sql = `
       SELECT 
@@ -173,10 +190,10 @@ export async function getOfflineRecords(limit?: number): Promise<OfflineRecord[]
       ${limit ? `LIMIT ${limit}` : ''}
     `;
     
-    const result = await db.getAllAsync<OfflineRecord & { sync_status: string; retry_count: number }>(sql);
+    const result = await db.getAllAsync(sql);
     console.log('[OfflineStorage] Retrieved', result.length, 'offline records');
     
-    const mapped = result.map(row => ({
+    const mapped = result.map((row: any) => ({
       id: row.id,
       idsource: row.idsource,
       title: row.title,
@@ -214,7 +231,7 @@ export async function getPendingSyncRecords(): Promise<OfflineRecord[]> {
     const db = await getDatabase();
     console.log('[OfflineStorage] Database ready for pending records query');
     
-    const result = await db.getAllAsync<OfflineRecord & { sync_status: string; retry_count: number }>(
+    const result = await db.getAllAsync(
       `SELECT 
         r.*,
         sq.status as sync_status,
@@ -227,7 +244,7 @@ export async function getPendingSyncRecords(): Promise<OfflineRecord[]> {
     
     console.log('[OfflineStorage] Retrieved', result.length, 'pending records');
     
-    return result.map(row => ({
+    return result.map((row: any) => ({
       id: row.id,
       idsource: row.idsource,
       title: row.title,
@@ -293,7 +310,7 @@ export async function deleteOfflineRecord(recordId: string): Promise<void> {
   
   try {
     // First, get the record to find file paths
-    const records = await db.getAllAsync<OfflineRecord>(
+    const records = await db.getAllAsync(
       'SELECT * FROM offline_records WHERE id = ?',
       [recordId]
     );

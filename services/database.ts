@@ -1,13 +1,24 @@
-import * as SQLite from 'expo-sqlite';
+import { Platform } from 'react-native';
 
-let database: SQLite.SQLiteDatabase | null = null;
+// Conditional import: only import SQLite on native platforms
+let SQLite: typeof import('expo-sqlite') | null = null;
+if (Platform.OS !== 'web') {
+  SQLite = require('expo-sqlite');
+}
+
+// Type definition for database (can be null on web)
+type SQLiteDatabase = typeof SQLite extends null ? null : import('expo-sqlite').SQLiteDatabase;
+
+let database: SQLiteDatabase | null = null;
 let isInitializing = false;
 let initPromise: Promise<void> | null = null;
 
 /**
  * Initialize database schema
  */
-async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
+async function initializeDatabase(db: any): Promise<void> {
+  if (!db) return;
+  
   try {
     // Create offline_records table
     await db.execAsync(`
@@ -63,8 +74,15 @@ async function initializeDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
 
 /**
  * Initialize and return the SQLite database instance
+ * Returns null on web platform (SQLite not supported)
  */
-export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
+export async function getDatabase(): Promise<any> {
+  // SQLite is not available on web
+  if (Platform.OS === 'web' || !SQLite) {
+    console.log('[Database] SQLite not available on web platform');
+    return null;
+  }
+
   // If database already exists and is valid, return it
   if (database) {
     return database;
@@ -84,7 +102,7 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   try {
     initPromise = (async () => {
       console.log('[Database] Opening database...');
-      database = await SQLite.openDatabaseAsync('galerie_offline.db');
+      database = await SQLite!.openDatabaseAsync('galerie_offline.db');
       console.log('[Database] Database opened successfully');
       
       await initializeDatabase(database);
@@ -126,11 +144,15 @@ export async function closeDatabase(): Promise<void> {
 
 /**
  * Execute a raw SQL query (for debugging/testing)
+ * Not available on web platform
  */
 export async function executeSql(
   sql: string,
   params: any[] = []
-): Promise<SQLite.SQLiteRunResult> {
+): Promise<any> {
   const db = await getDatabase();
+  if (!db) {
+    throw new Error('Database not available on web platform');
+  }
   return db.runAsync(sql, params);
 }
