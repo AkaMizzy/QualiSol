@@ -283,3 +283,26 @@ export async function assignPhotoToFolder(
   });
 }
 
+/**
+ * Check if a folder already has a photoAvant assigned
+ * @param token - Auth token
+ * @param folderId - ID of the folder to check
+ * @returns Boolean indicating if folder has photoAvant
+ */
+export async function checkFolderHasPhotoAvant(
+  token: string,
+  folderId: string
+): Promise<boolean> {
+  try {
+    const response = await api.get(`/api/geds/check-photoavant/${folderId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data.hasPhotoAvant;
+  } catch (error) {
+    console.error('Failed to check folder photoAvant status:', error);
+    return false; // Fail-safe: allow both options if check fails
+  }
+}
+

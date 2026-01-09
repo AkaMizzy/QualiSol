@@ -81,11 +81,15 @@ export function useWebGalerie() {
   const nextPage = () => goToPage(currentPage + 1);
   const prevPage = () => goToPage(currentPage - 1);
 
-  const updatePhotoAssignment = (photoId: string, folderId: string) => {
+  const updatePhotoAssignment = (
+    photoId: string, 
+    folderId: string, 
+    photoType: 'photoavant' | 'photoapres' = 'photoavant'
+  ) => {
     setPhotos(prev =>
       prev.map(photo =>
         photo.id === photoId
-          ? { ...photo, idsource: folderId, kind: 'photoavant', isAssigned: true }
+          ? { ...photo, idsource: folderId, kind: photoType, isAssigned: true }
           : photo
       )
     );

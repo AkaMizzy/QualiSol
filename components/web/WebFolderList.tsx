@@ -1,11 +1,12 @@
 import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWebFolders } from '@/hooks/useWebFolders';
-import { assignPhotoToFolder } from '@/services/gedService';
+import { assignPhotoToFolder, checkFolderHasPhotoAvant } from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import DroppableFolderCard from './DroppableFolderCard';
+import PhotoTypeSelectionModal from './PhotoTypeSelectionModal';
 
 interface WebFolderListProps {
   galerieState: ReturnType<typeof import('@/hooks/useWebGalerie').useWebGalerie>;
@@ -16,18 +17,59 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
   const { folders, loading, error, searchQuery, setSearchQuery, projectMap, zoneMap } = useWebFolders();
   const { updatePhotoAssignment, refetch: refetchGalerie } = galerieState;
 
+  // State for pending drop and modal
+  const [pendingDrop, setPendingDrop] = useState<{
+    photoId: string;
+    folderId: string;
+    folderTitle: string;
+    hasPhotoAvant: boolean;
+  } | null>(null);
+
   const handleDrop = async (photoId: string, folderId: string) => {
     if (!token) return;
 
     try {
+      // Find folder details
+      const folder = folders.find(f => f.id === folderId);
+      if (!folder) {
+        Alert.alert('Erreur', 'Dossier introuvable');
+        return;
+      }
+
+      // Check if folder has photoAvant
+      const hasPhotoAvant = await checkFolderHasPhotoAvant(token, folderId);
+
+      // Show modal for user selection
+      setPendingDrop({
+        photoId,
+        folderId,
+        folderTitle: folder.title,
+        hasPhotoAvant,
+      });
+    } catch (err) {
+      console.error('Failed to prepare photo assignment:', err);
+      Alert.alert('Erreur', 'Échec de la préparation de l\'assignation');
+    }
+  };
+
+  const handlePhotoTypeSelected = async (photoType: 'photoavant' | 'photoapres') => {
+    if (!pendingDrop || !token) return;
+
+    const { photoId, folderId } = pendingDrop;
+
+    try {
       // Update UI optimistically first for instant feedback
-      updatePhotoAssignment(photoId, folderId);
+      updatePhotoAssignment(photoId, folderId, photoType);
+      
+      // Close modal
+      setPendingDrop(null);
       
       // Then make the API call
-      await assignPhotoToFolder(token, photoId, folderId, 'photoavant');
+      await assignPhotoToFolder(token, photoId, folderId, photoType);
       
       // Show success message
-      Alert.alert('Succès', 'Photo assignée au dossier avec succès');
+      const typeLabel = photoType === 'photoavant' ? 'Situation Avant' : 'Situation Après';
+      Alert.alert('Succès', `Photo assignée comme "${typeLabel}" avec succès`);
       
       // Refetch to ensure consistency
       await refetchGalerie();
@@ -38,6 +80,10 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
       // Refetch to revert optimistic update
       await refetchGalerie();
     }
+  };
+
+  const handleCancelSelection = () => {
+    setPendingDrop(null);
   };
 
   if (loading) {
@@ -96,6 +142,15 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
           </View>
         )}
       </ScrollView>
+
+      {/* Photo Type Selection Modal */}
+      <PhotoTypeSelectionModal
+        visible={!!pendingDrop}
+        folderTitle={pendingDrop?.folderTitle || ''}
+        hasPhotoAvant={pendingDrop?.hasPhotoAvant || false}
+        onSelect={handlePhotoTypeSelected}
+        onCancel={handleCancelSelection}
+      />
     </View>
   );
 }
