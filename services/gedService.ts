@@ -306,3 +306,25 @@ export async function checkFolderHasPhotoAvant(
   }
 }
 
+/**
+ * Get all photoAvant for a specific folder
+ * @param token - Auth token
+ * @param folderId - ID of the folder
+ * @returns Array of photoAvant GED records
+ */
+export async function getPhotoAvantByFolder(
+  token: string,
+  folderId: string
+): Promise<Ged[]> {
+  try {
+    const response = await api.get(`/api/geds/photoavant-by-folder/${folderId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch photoAvant for folder:', error);
+    return [];
+  }
+}

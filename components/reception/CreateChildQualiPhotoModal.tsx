@@ -522,6 +522,7 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
               </View>
 
               <VoiceNoteRecorder
+                key={creationCount}
                 onRecordingComplete={setAudioUri}
                 onTranscriptionComplete={(text) => {
                   setComment(prev => (prev ? `${prev}\n${text}` : text));

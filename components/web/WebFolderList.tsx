@@ -1,7 +1,7 @@
 import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWebFolders } from '@/hooks/useWebFolders';
-import { assignPhotoToFolder, checkFolderHasPhotoAvant } from '@/services/gedService';
+import { assignPhotoToFolder, Ged, getPhotoAvantByFolder } from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -22,7 +22,7 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
     photoId: string;
     folderId: string;
     folderTitle: string;
-    hasPhotoAvant: boolean;
+    photoAvants: Ged[];
   } | null>(null);
 
   const handleDrop = async (photoId: string, folderId: string) => {
@@ -36,15 +36,15 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
         return;
       }
 
-      // Check if folder has photoAvant
-      const hasPhotoAvant = await checkFolderHasPhotoAvant(token, folderId);
+      // Fetch all photoAvant for this folder
+      const photoAvants = await getPhotoAvantByFolder(token, folderId);
 
-      // Show modal for user selection
+      // Show modal with photoAvants
       setPendingDrop({
         photoId,
         folderId,
         folderTitle: folder.title,
-        hasPhotoAvant,
+        photoAvants,
       });
     } catch (err) {
       console.error('Failed to prepare photo assignment:', err);
@@ -52,32 +52,42 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
     }
   };
 
-  const handlePhotoTypeSelected = async (photoType: 'photoavant' | 'photoapres') => {
+  const handlePhotoAvantSelected = async () => {
     if (!pendingDrop || !token) return;
 
     const { photoId, folderId } = pendingDrop;
 
     try {
-      // Update UI optimistically first for instant feedback
-      updatePhotoAssignment(photoId, folderId, photoType);
-      
-      // Close modal
+      // PhotoAvant uses folder ID as idsource
+      updatePhotoAssignment(photoId, folderId, 'photoavant');
       setPendingDrop(null);
       
-      // Then make the API call
-      await assignPhotoToFolder(token, photoId, folderId, photoType);
+      await assignPhotoToFolder(token, photoId, folderId, 'photoavant');
       
-      // Show success message
-      const typeLabel = photoType === 'photoavant' ? 'Situation Avant' : 'Situation Après';
-      Alert.alert('Succès', `Photo assignée comme "${typeLabel}" avec succès`);
-      
-      // Refetch to ensure consistency
+      Alert.alert('Succès', 'Photo assignée comme "Situation Avant"');
       await refetchGalerie();
     } catch (err) {
-      console.error('Failed to assign photo:', err);
-      Alert.alert('Erreur', 'Échec de l\'assignation de la photo');
+      Alert.alert('Erreur', 'Échec de l\'assignation');
+      await refetchGalerie();
+    }
+  };
+
+  const handlePhotoApresSelected = async (photoAvantId: string) => {
+    if (!pendingDrop || !token) return;
+
+    const { photoId } = pendingDrop;
+
+    try {
+      // PhotoApres uses photoAvant ID as idsource (key change!)
+      updatePhotoAssignment(photoId, photoAvantId, 'photoapres');
+      setPendingDrop(null);
       
-      // Refetch to revert optimistic update
+      await assignPhotoToFolder(token, photoId, photoAvantId, 'photoapres');
+      
+      Alert.alert('Succès', 'Photo assignée comme "Situation Après"');
+      await refetchGalerie();
+    } catch (err) {
+      Alert.alert('Erreur', 'Échec de l\'assignation');
       await refetchGalerie();
     }
   };
@@ -147,8 +157,9 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
       <PhotoTypeSelectionModal
         visible={!!pendingDrop}
         folderTitle={pendingDrop?.folderTitle || ''}
-        hasPhotoAvant={pendingDrop?.hasPhotoAvant || false}
-        onSelect={handlePhotoTypeSelected}
+        photoAvants={pendingDrop?.photoAvants || []}
+        onSelectPhotoAvant={handlePhotoAvantSelected}
+        onSelectPhotoApres={handlePhotoApresSelected}
         onCancel={handleCancelSelection}
       />
     </View>
