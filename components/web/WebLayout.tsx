@@ -2,13 +2,17 @@ import { COLORS, FONT, SIZES } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWebGalerie } from '@/hooks/useWebGalerie';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import WebFolderList from './WebFolderList';
 import WebGalerie from './WebGalerie';
+import WebMapView from './WebMapView';
+
+type ViewTab = 'galerie' | 'map';
 
 export default function WebLayout() {
   const { user, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState<ViewTab>('galerie');
   
   // Lift galerie state to parent so it's shared between WebGalerie and WebFolderList
   const galerieState = useWebGalerie();
@@ -30,6 +34,48 @@ export default function WebLayout() {
             resizeMode="contain"
           />
           
+          {/* Tab Navigation */}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[
+                styles.tab,
+                activeTab === 'galerie' && styles.tabActive,
+              ]}
+              onPress={() => setActiveTab('galerie')}
+            >
+              <Ionicons 
+                name="images-outline" 
+                size={18} 
+                color={activeTab === 'galerie' ? COLORS.primary : COLORS.gray} 
+              />
+              <Text style={[
+                styles.tabText,
+                activeTab === 'galerie' && styles.tabTextActive,
+              ]}>
+                Galerie & Dossiers
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.tab,
+                activeTab === 'map' && styles.tabActive,
+              ]}
+              onPress={() => setActiveTab('map')}
+            >
+              <Ionicons 
+                name="map-outline" 
+                size={18} 
+                color={activeTab === 'map' ? COLORS.primary : COLORS.gray} 
+              />
+              <Text style={[
+                styles.tabText,
+                activeTab === 'map' && styles.tabTextActive,
+              ]}>
+                Carte
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.headerRight}>
@@ -49,16 +95,24 @@ export default function WebLayout() {
         </View>
       </View>
 
-      {/* Main Content - Split View */}
-      <div style={styles.mainContent as any}>
-        <div style={styles.galerieSection as any}>
-          <WebGalerie galerieState={galerieState} />
+      {/* Main Content */}
+      {activeTab === 'galerie' ? (
+        // Split View: Galerie + Folders
+        <div style={styles.mainContent as any}>
+          <div style={styles.galerieSection as any}>
+            <WebGalerie galerieState={galerieState} />
+          </div>
+          
+          <div style={styles.folderSection as any}>
+            <WebFolderList galerieState={galerieState} />
+          </div>
         </div>
-        
-        <div style={styles.folderSection as any}>
-          <WebFolderList galerieState={galerieState} />
+      ) : (
+        // Map View
+        <div style={styles.mapContent as any}>
+          <WebMapView />
         </div>
-      </div>
+      )}
     </View>
   );
 }
@@ -87,13 +141,43 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 24,
   },
   logo: {
     width: 100,
     height: 100,
-    
-    
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.lightWhite,
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+  },
+  tab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  tabActive: {
+    backgroundColor: COLORS.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  tabText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.medium,
+    color: COLORS.gray,
+  },
+  tabTextActive: {
+    color: COLORS.primary,
+    fontFamily: FONT.bold,
   },
   appTitle: {
     fontFamily: FONT.bold,
@@ -152,6 +236,11 @@ const styles = StyleSheet.create({
   } as any,
   folderSection: {
     overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+  } as any,
+  mapContent: {
+    height: 'calc(100vh - 80px)',
     display: 'flex',
     flexDirection: 'column',
   } as any,

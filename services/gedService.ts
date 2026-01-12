@@ -328,3 +328,22 @@ export async function getPhotoAvantByFolder(
     return [];
   }
 }
+
+/**
+ * Get all photos with GPS coordinates for map view
+ * @param token - Auth token
+ * @returns Array of GED records with latitude and longitude
+ */
+export async function getMapData(token: string): Promise<Ged[]> {
+  try {
+    const response = await api.get('/api/geds/map-data', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch map data:', error);
+    return [];
+  }
+}
