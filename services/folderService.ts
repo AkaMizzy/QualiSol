@@ -81,6 +81,18 @@ async function getAllFolders(token: string, folderTypeId?: string): Promise<Fold
   return response.data;
 }
 
+async function getFolderById(folderId: string, token: string): Promise<Folder | null> {
+  try {
+    const response = await api.get(`api/folders/${folderId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch folder:', error);
+    return null;
+  }
+}
+
 async function createFolder(payload: CreateFolderPayload, token: string): Promise<Folder> {
   const response = await api.post('api/folders', payload, {
     headers: { Authorization: `Bearer ${token}` },
@@ -130,6 +142,7 @@ async function getAllZones(token: string): Promise<Zone[]> {
 
 const folderService = {
   getAllFolders,
+  getFolderById,
   createFolder,
   updateFolder,
   enhanceText,
