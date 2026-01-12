@@ -4,7 +4,7 @@ import { useWebFolders } from '@/hooks/useWebFolders';
 import { assignPhotoToFolder, Ged, getPhotoAvantByFolder } from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import DroppableFolderCard from './DroppableFolderCard';
 import PhotoTypeSelectionModal from './PhotoTypeSelectionModal';
 
@@ -14,7 +14,22 @@ interface WebFolderListProps {
 
 export default function WebFolderList({ galerieState }: WebFolderListProps) {
   const { token } = useAuth();
-  const { folders, loading, error, searchQuery, setSearchQuery, projectMap, zoneMap } = useWebFolders();
+  const { 
+    folders, 
+    loading, 
+    error, 
+    searchQuery, 
+    setSearchQuery, 
+    projectMap, 
+    zoneMap,
+    projects,
+    zones,
+    filters,
+    setProjectFilter,
+    setZoneFilter,
+    clearAllFilters,
+    hasActiveFilters,
+  } = useWebFolders();
   const { updatePhotoAssignment, refetch: refetchGalerie } = galerieState;
 
   // State for pending drop and modal
@@ -116,12 +131,59 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Dossiers</Text>
-        <Text style={styles.headerSubtitle}>
-          {folders.length} dossier{folders.length !== 1 ? 's' : ''}
-        </Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.headerTitle}>📁 Dossiers</Text>
+            <Text style={styles.headerSubtitle}>
+              {folders.length} dossier{folders.length !== 1 ? 's' : ''} affiché{folders.length !== 1 ? 's' : ''}
+            </Text>
+          </View>
+          
+          {/* Clear Filters Button */}
+          {hasActiveFilters && (
+            <TouchableOpacity style={styles.clearFiltersButton} onPress={clearAllFilters}>
+              <Ionicons name="close-circle" size={16} color={COLORS.white} />
+              <Text style={styles.clearFiltersText}>Effacer</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
+      {/* Filter Dropdowns */}
+      <View style={styles.filtersContainer}>
+        {/* Project Filter */}
+        <View style={styles.filterDropdownContainer}>
+          <Ionicons name="business-outline" size={14} color={COLORS.gray} />
+          <select
+            style={styles.filterDropdown as any}
+            value={filters.projectId || ''}
+            onChange={(e: any) => setProjectFilter(e.target.value || null)}
+          >
+            <option value="">Tous les projets</option>
+            {projects.map(project => (
+              <option key={project.id} value={project.id}>{project.title}</option>
+            ))}
+          </select>
+        </View>
+
+        {/* Zone Filter */}
+        <View style={styles.filterDropdownContainer}>
+          <Ionicons name="layers-outline" size={14} color={COLORS.gray} />
+          <select
+            style={styles.filterDropdown as any}
+            value={filters.zoneId || ''}
+            onChange={(e: any) => setZoneFilter(e.target.value || null)}
+            disabled={zones.length === 0}
+          >
+            <option value="">Toutes les zones</option>
+            {zones.map(zone => (
+              <option key={zone.id} value={zone.id}>{zone.title}</option>
+            ))}
+          </select>
+        </View>
+      </View>
+
+      {/* Search Input */}
       <View style={styles.searchContainer}>
         <Ionicons name="search-outline" size={20} color={COLORS.gray} style={styles.searchIcon} />
         <TextInput
@@ -146,9 +208,15 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
 
         {folders.length === 0 && (
           <View style={styles.emptyContainer}>
+            <Ionicons name="folder-open-outline" size={48} color={COLORS.gray} />
             <Text style={styles.emptyText}>
-              {searchQuery ? 'Aucun dossier trouvé' : 'Aucun dossier disponible'}
+              {hasActiveFilters ? 'Aucun dossier trouvé' : 'Aucun dossier disponible'}
             </Text>
+            {hasActiveFilters && (
+              <TouchableOpacity style={styles.emptyResetButton} onPress={clearAllFilters}>
+                <Text style={styles.emptyResetText}>Réinitialiser les filtres</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>
@@ -172,51 +240,103 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.lightWhite,
   },
   header: {
-    padding: 20,
+    padding: 16,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
   headerTitle: {
     fontFamily: FONT.bold,
-    fontSize: 24,
+    fontSize: 20,
     color: COLORS.tertiary,
     marginBottom: 4,
   },
   headerSubtitle: {
     fontFamily: FONT.medium,
-    fontSize: SIZES.medium,
+    fontSize: SIZES.small,
     color: COLORS.gray,
   },
+  clearFiltersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ef4444',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  clearFiltersText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.small,
+    color: COLORS.white,
+  },
+  filtersContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    padding: 12,
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    flexWrap: 'wrap',
+  },
+  filterDropdownContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: COLORS.lightWhite,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    flex: 1,
+    minWidth: 120,
+  },
+  filterDropdown: {
+    border: 'none',
+    background: 'transparent',
+    fontFamily: FONT.medium,
+    fontSize: SIZES.small,
+    color: COLORS.tertiary,
+    cursor: 'pointer',
+    outline: 'none',
+    flex: 1,
+    minWidth: 80,
+  } as any,
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 12,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },
   searchIcon: {
     position: 'absolute',
-    left: 28,
+    left: 24,
     zIndex: 1,
   },
   searchInput: {
     flex: 1,
-    height: 44,
+    height: 40,
     backgroundColor: COLORS.lightWhite,
-    borderRadius: 12,
-    paddingLeft: 44,
+    borderRadius: 10,
+    paddingLeft: 40,
     paddingRight: 16,
     fontFamily: FONT.medium,
-    fontSize: SIZES.medium,
+    fontSize: SIZES.small,
     color: COLORS.tertiary,
   },
   folderList: {
     flex: 1,
   },
   folderListContent: {
-    padding: 16,
+    padding: 12,
   },
   centerContainer: {
     flex: 1,
@@ -238,10 +358,23 @@ const styles = StyleSheet.create({
   emptyContainer: {
     paddingVertical: 40,
     alignItems: 'center',
+    gap: 12,
   },
   emptyText: {
     fontFamily: FONT.medium,
     fontSize: SIZES.medium,
     color: COLORS.gray,
+  },
+  emptyResetButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  emptyResetText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.small,
+    color: COLORS.white,
   },
 });
