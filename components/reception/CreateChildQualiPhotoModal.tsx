@@ -1,6 +1,8 @@
 import API_CONFIG from '@/app/config/api';
 import PictureAnnotator from '@/components/PictureAnnotator';
 import { useAuth } from '@/contexts/AuthContext';
+import { Anomalie1, getAllAnomalies1 } from '@/services/anomalie1Service';
+import { Anomalie2, getAllAnomalies2 } from '@/services/anomalie2Service';
 import companyService from '@/services/companyService';
 import { Folder } from '@/services/folderService';
 import { CreateGedInput, Ged, createGed, describeImage, getAllGeds } from '@/services/gedService';
@@ -46,6 +48,9 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
   const [assignedOpen, setAssignedOpen] = useState(false);
   const [companyUsers, setCompanyUsers] = useState<{ id: string; firstname?: string; lastname?: string; email?: string }[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [anomalieTypes, setAnomalieTypes] = useState<Anomalie1[]>([]);
+  const [anomalieCategories, setAnomalieCategories] = useState<Anomalie2[]>([]);
+  const [loadingAnomalies, setLoadingAnomalies] = useState(true);
 
   const [isAnnotatorVisible, setAnnotatorVisible] = useState(false);
   const [annotatorBaseUri, setAnnotatorBaseUri] = useState<string | null>(null);
@@ -382,21 +387,26 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
     return 'Basse';
   };
 
-  const ANOMALY_CATEGORIES = [
-    { key: 'securite', label: 'Sécurité' },
-    { key: 'conformite', label: 'Conformité' },
-    { key: 'technique', label: 'Technique' },
-    { key: 'observation', label: 'Observation' },
-  ] as const;
-
-  const ANOMALY_TYPES = [
-    { key: 'Incendie', label: 'Incendie', icon: 'flame-outline' },
-    { key: 'Inondation', label: 'Inondation', icon: 'water-outline' },
-    { key: 'Structure', label: 'Structure', icon: 'business-outline' },
-    { key: 'Électrique', label: 'Électrique', icon: 'flash-outline' },
-    { key: 'CVC', label: 'CVC', icon: 'snow-outline' },
-    { key: 'Autre', label: 'Autre', icon: 'ellipsis-horizontal-outline' },
-  ] as const;
+  // Fetch anomalie types and categories dynamically
+  useEffect(() => {
+    async function loadAnomalies() {
+      if (!token) return;
+      setLoadingAnomalies(true);
+      try {
+        const [types, categories] = await Promise.all([
+          getAllAnomalies1(token),
+          getAllAnomalies2(token)
+        ]);
+        setAnomalieTypes(types);
+        setAnomalieCategories(categories);
+      } catch (e) {
+        console.error('Failed to load anomalies', e);
+      } finally {
+        setLoadingAnomalies(false);
+      }
+    }
+    loadAnomalies();
+  }, [token]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -530,53 +540,65 @@ export function CreateChildQualiPhotoForm({ onClose, onSuccess, parentItem, proj
               />
             </View>
 
-            {/* Anomaly Type Selection */}
+            {/* Anomaly Type Selection (from anomalie1) */}
             <View style={styles.sectionContainer}>
               <Text style={styles.sectionTitle}>Type d&apos;anomalie</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeScrollView}>
-                {ANOMALY_TYPES.map(type => (
-                  <TouchableOpacity
-                    key={type.key}
-                    style={[styles.typeButton, selectedType === type.key && styles.typeButtonSelected]}
-                    onPress={() => setSelectedType(type.key)}
-                  >
-                    <Ionicons
-                      name={type.icon as any}
-                      size={20}
-                      color={selectedType === type.key ? '#FFFFFF' : '#11224e'}
-                    />
-                    <Text style={[styles.typeButtonText, selectedType === type.key && styles.typeButtonTextSelected]}>
-                      {type.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              {loadingAnomalies ? (
+                <ActivityIndicator size="small" color="#f59e0b" />
+              ) : anomalieTypes.length === 0 ? (
+                <Text style={{ color: '#6b7280', fontSize: 12 }}>Aucun type disponible</Text>
+              ) : (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeScrollView}>
+                  {anomalieTypes.map(type => (
+                    <TouchableOpacity
+                      key={type.id}
+                      style={[styles.typeButton, selectedType === type.anomalie && styles.typeButtonSelected]}
+                      onPress={() => setSelectedType(type.anomalie || null)}
+                    >
+                      <Ionicons
+                        name="alert-circle-outline"
+                        size={20}
+                        color={selectedType === type.anomalie ? '#FFFFFF' : '#11224e'}
+                      />
+                      <Text style={[styles.typeButtonText, selectedType === type.anomalie && styles.typeButtonTextSelected]}>
+                        {type.anomalie || 'Sans nom'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
             </View>
 
-            {/* Anomaly Category Selection */}
+            {/* Anomaly Category Selection (from anomalie2) */}
             <View style={styles.sectionContainer}>
               <Text style={styles.sectionTitle}>Catégorie d&apos;anomalie</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScrollView}>
-                {ANOMALY_CATEGORIES.map(category => (
-                  <TouchableOpacity
-                    key={category.key}
-                    style={[
-                      styles.categoryButton,
-                      selectedCategorie === category.key && styles.categoryButtonSelected,
-                    ]}
-                    onPress={() => setSelectedCategorie(category.key)}
-                  >
-                    <Text
+              {loadingAnomalies ? (
+                <ActivityIndicator size="small" color="#ef4444" />
+              ) : anomalieCategories.length === 0 ? (
+                <Text style={{ color: '#6b7280', fontSize: 12 }}>Aucune catégorie disponible</Text>
+              ) : (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScrollView}>
+                  {anomalieCategories.map(category => (
+                    <TouchableOpacity
+                      key={category.id}
                       style={[
-                        styles.categoryButtonText,
-                        selectedCategorie === category.key && styles.categoryButtonTextSelected,
+                        styles.categoryButton,
+                        selectedCategorie === category.anomalie && styles.categoryButtonSelected,
                       ]}
+                      onPress={() => setSelectedCategorie(category.anomalie || null)}
                     >
-                      {category.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+                      <Text
+                        style={[
+                          styles.categoryButtonText,
+                          selectedCategorie === category.anomalie && styles.categoryButtonTextSelected,
+                        ]}
+                      >
+                        {category.anomalie || 'Sans nom'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
             </View>
 
             {/* Severity Slider */}

@@ -1,31 +1,31 @@
 import API_CONFIG from '@/app/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-    Anomalie1,
-    createAnomalie1,
-    deleteAnomalie1,
-    getAllAnomalies1,
-    updateAnomalie1
+  Anomalie1,
+  createAnomalie1,
+  deleteAnomalie1,
+  getAllAnomalies1,
+  updateAnomalie1
 } from '@/services/anomalie1Service';
 import { createGed, Ged, getGedsBySource } from '@/services/gedService';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppHeader from '../../components/AppHeader';
@@ -40,9 +40,15 @@ export default function Anomalie1Screen() {
   const [anomalie, setAnomalie] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [anomalieImages, setAnomalieImages] = useState<Record<string, Ged[]>>({});
-  const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+  
+  // Modal image state
+  const [modalImages, setModalImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
+  const [existingImages, setExistingImages] = useState<Ged[]>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  
+  // Image preview modal
   const [imageModalVisible, setImageModalVisible] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<Ged | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const fetchAnomalies = useCallback(async () => {
     if (!token) return;
@@ -80,14 +86,25 @@ export default function Anomalie1Screen() {
     fetchAnomalies();
   }, [fetchAnomalies]);
 
-  const handleOpenModal = (anomalie?: Anomalie1) => {
-    if (anomalie) {
-      setEditingAnomalie(anomalie);
-      setAnomalie(anomalie.anomalie || '');
+  const handleOpenModal = async (anomalieItem?: Anomalie1) => {
+    if (anomalieItem) {
+      setEditingAnomalie(anomalieItem);
+      setAnomalie(anomalieItem.anomalie || '');
+      // Load existing images for this anomalie
+      if (token) {
+        try {
+          const images = await getGedsBySource(token, anomalieItem.id, 'anomalie1');
+          setExistingImages(images);
+        } catch (e) {
+          setExistingImages([]);
+        }
+      }
     } else {
       setEditingAnomalie(null);
       setAnomalie('');
+      setExistingImages([]);
     }
+    setModalImages([]);
     setModalVisible(true);
   };
 
@@ -95,17 +112,108 @@ export default function Anomalie1Screen() {
     setModalVisible(false);
     setEditingAnomalie(null);
     setAnomalie('');
+    setModalImages([]);
+    setExistingImages([]);
+  };
+
+  const handleTakePhoto = useCallback(async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission refusée', 'Nous avons besoin des autorisations de l\'appareil photo.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setModalImages(prev => [...prev, result.assets[0]]);
+    }
+  }, []);
+
+  const handlePickFromGallery = useCallback(async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission refusée', 'Nous avons besoin des autorisations de la galerie.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 0.8,
+      allowsMultipleSelection: true,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      setModalImages(prev => [...prev, ...result.assets]);
+    }
+  }, []);
+
+  const showImagePickerOptions = () => {
+    Alert.alert(
+      'Ajouter une image',
+      'Choisissez une option',
+      [
+        { text: 'Prendre une photo', onPress: handleTakePhoto },
+        { text: 'Choisir depuis la galerie', onPress: handlePickFromGallery },
+        { text: 'Annuler', style: 'cancel' },
+      ]
+    );
+  };
+
+  const removeModalImage = (index: number) => {
+    setModalImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadImages = async (anomalieId: string) => {
+    if (!token || !user || modalImages.length === 0) return;
+
+    const authorName = [user.firstname, user.lastname].filter(Boolean).join(' ') || user.email || 'Unknown';
+
+    for (const asset of modalImages) {
+      try {
+        await createGed(token, {
+          idsource: anomalieId,
+          kind: 'anomalie1',
+          title: `Image Anomalie 1`,
+          author: authorName,
+          file: {
+            uri: asset.uri,
+            type: asset.type || 'image/jpeg',
+            name: asset.fileName || `anomalie1_${Date.now()}.jpg`,
+          },
+        });
+      } catch (error: any) {
+        console.error('Failed to upload image:', error);
+      }
+    }
   };
 
   const handleSubmit = async () => {
     if (!token) return;
     setSubmitting(true);
     try {
+      let anomalieId: string;
+      
       if (editingAnomalie) {
         await updateAnomalie1(editingAnomalie.id, { anomalie }, token);
+        anomalieId = editingAnomalie.id;
       } else {
-        await createAnomalie1({ anomalie }, token);
+        const created = await createAnomalie1({ anomalie }, token);
+        anomalieId = created.id;
       }
+
+      // Upload any new images
+      if (modalImages.length > 0) {
+        setUploadingImages(true);
+        await uploadImages(anomalieId);
+        setUploadingImages(false);
+      }
+
       handleCloseModal();
       fetchAnomalies();
     } catch (error) {
@@ -113,6 +221,7 @@ export default function Anomalie1Screen() {
       Alert.alert('Erreur', 'Impossible d\'enregistrer l\'anomalie');
     } finally {
       setSubmitting(false);
+      setUploadingImages(false);
     }
   };
 
@@ -140,93 +249,13 @@ export default function Anomalie1Screen() {
     );
   };
 
-  const handleTakePhoto = useCallback(async (anomalieId: string) => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission refusée', 'Nous avons besoin des autorisations de l\'appareil photo.');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      await uploadImage(anomalieId, result.assets[0]);
-    }
-  }, [token, user]);
-
-  const handlePickFromGallery = useCallback(async (anomalieId: string) => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission refusée', 'Nous avons besoin des autorisations de la galerie.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      await uploadImage(anomalieId, result.assets[0]);
-    }
-  }, [token, user]);
-
-  const uploadImage = async (anomalieId: string, asset: ImagePicker.ImagePickerAsset) => {
-    if (!token || !user) return;
-
-    setUploadingImage(anomalieId);
-    try {
-      const authorName = [user.firstname, user.lastname].filter(Boolean).join(' ') || user.email || 'Unknown';
-      
-      await createGed(token, {
-        idsource: anomalieId,
-        kind: 'anomalie1',
-        title: `Image Anomalie 1`,
-        author: authorName,
-        file: {
-          uri: asset.uri,
-          type: asset.type || 'image/jpeg',
-          name: asset.fileName || `anomalie1_${Date.now()}.jpg`,
-        },
-      });
-
-      // Refresh images for this anomalie
-      const images = await getGedsBySource(token, anomalieId, 'anomalie1');
-      setAnomalieImages(prev => ({ ...prev, [anomalieId]: images }));
-      Alert.alert('Succès', 'Image ajoutée avec succès');
-    } catch (error: any) {
-      console.error('Failed to upload image:', error);
-      Alert.alert('Erreur', error.message || 'Impossible d\'ajouter l\'image');
-    } finally {
-      setUploadingImage(null);
-    }
-  };
-
-  const showImagePickerOptions = (anomalieId: string) => {
-    Alert.alert(
-      'Ajouter une image',
-      'Choisissez une option',
-      [
-        { text: 'Prendre une photo', onPress: () => handleTakePhoto(anomalieId) },
-        { text: 'Choisir depuis la galerie', onPress: () => handlePickFromGallery(anomalieId) },
-        { text: 'Annuler', style: 'cancel' },
-      ]
-    );
-  };
-
-  const handleImagePress = (image: Ged) => {
-    setSelectedImage(image);
+  const handleImagePress = (imageUrl: string) => {
+    setSelectedImage(imageUrl);
     setImageModalVisible(true);
   };
 
   const renderItem = ({ item }: { item: Anomalie1 }) => {
     const images = anomalieImages[item.id] || [];
-    const isUploading = uploadingImage === item.id;
 
     return (
       <View style={styles.card}>
@@ -246,7 +275,7 @@ export default function Anomalie1Screen() {
               contentContainerStyle={styles.imagesContent}
             >
               {images.map((img) => (
-                <TouchableOpacity key={img.id} onPress={() => handleImagePress(img)}>
+                <TouchableOpacity key={img.id} onPress={() => handleImagePress(`${API_CONFIG.BASE_URL}${img.url}`)}>
                   <Image
                     source={{ uri: `${API_CONFIG.BASE_URL}${img.url}` }}
                     style={styles.thumbnail}
@@ -258,17 +287,6 @@ export default function Anomalie1Screen() {
         </View>
         
         <View style={styles.cardActions}>
-          <TouchableOpacity 
-            onPress={() => showImagePickerOptions(item.id)} 
-            style={styles.iconButton}
-            disabled={isUploading}
-          >
-            {isUploading ? (
-              <ActivityIndicator size="small" color="#f59e0b" />
-            ) : (
-              <Ionicons name="camera" size={20} color="#10b981" />
-            )}
-          </TouchableOpacity>
           <TouchableOpacity onPress={() => handleOpenModal(item)} style={styles.iconButton}>
             <Ionicons name="pencil" size={20} color="#f87b1b" />
           </TouchableOpacity>
@@ -341,7 +359,7 @@ export default function Anomalie1Screen() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.modalContent}>
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Nom d'anomalie</Text>
                 <TextInput
@@ -354,16 +372,69 @@ export default function Anomalie1Screen() {
                   textAlignVertical="top"
                 />
               </View>
-            </View>
+
+              {/* Image Upload Section */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Images</Text>
+                
+                {/* Existing images (when editing) */}
+                {existingImages.length > 0 && (
+                  <View style={styles.existingImagesSection}>
+                    <Text style={styles.subLabel}>Images existantes</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesRow}>
+                      {existingImages.map((img) => (
+                        <TouchableOpacity key={img.id} onPress={() => handleImagePress(`${API_CONFIG.BASE_URL}${img.url}`)}>
+                          <Image
+                            source={{ uri: `${API_CONFIG.BASE_URL}${img.url}` }}
+                            style={styles.modalThumbnail}
+                          />
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+
+                {/* New images to upload */}
+                {modalImages.length > 0 && (
+                  <View style={styles.newImagesSection}>
+                    <Text style={styles.subLabel}>Nouvelles images</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesRow}>
+                      {modalImages.map((asset, index) => (
+                        <View key={index} style={styles.newImageContainer}>
+                          <Image source={{ uri: asset.uri }} style={styles.modalThumbnail} />
+                          <TouchableOpacity 
+                            style={styles.removeImageButton}
+                            onPress={() => removeModalImage(index)}
+                          >
+                            <Ionicons name="close-circle" size={24} color="#ef4444" />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+
+                {/* Add image button */}
+                <TouchableOpacity style={styles.addImageButton} onPress={showImagePickerOptions}>
+                  <Ionicons name="camera-outline" size={24} color="#f59e0b" />
+                  <Text style={styles.addImageButtonText}>Ajouter une image</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
 
             <View style={styles.modalFooter}>
               <TouchableOpacity 
-                style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+                style={[styles.submitButton, (submitting || uploadingImages) && styles.submitButtonDisabled]}
                 onPress={handleSubmit}
-                disabled={submitting}
+                disabled={submitting || uploadingImages}
               >
-                {submitting ? (
-                  <ActivityIndicator color="#FFFFFF" />
+                {submitting || uploadingImages ? (
+                  <>
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                    <Text style={styles.submitButtonText}>
+                      {uploadingImages ? 'Upload des images...' : 'Enregistrement...'}
+                    </Text>
+                  </>
                 ) : (
                   <>
                     <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
@@ -389,7 +460,7 @@ export default function Anomalie1Screen() {
             {selectedImage && (
               <>
                 <Image
-                  source={{ uri: `${API_CONFIG.BASE_URL}${selectedImage.url}` }}
+                  source={{ uri: selectedImage }}
                   style={styles.fullImage}
                   resizeMode="contain"
                 />
@@ -461,6 +532,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+    marginBottom: 12,
   },
   cardContent: {
     flex: 1,
@@ -493,17 +565,16 @@ const styles = StyleSheet.create({
   },
   imagesContainer: {
     marginTop: 12,
-    marginRight: -16,
   },
   imagesContent: {
     gap: 8,
-    paddingRight: 16,
   },
   thumbnail: {
     width: 60,
     height: 60,
     borderRadius: 8,
     backgroundColor: '#e5e7eb',
+    marginRight: 8,
   },
   emptyContainer: {
     flex: 1,
@@ -549,15 +620,20 @@ const styles = StyleSheet.create({
   modalContent: {
     flex: 1,
     padding: 16,
-    gap: 16,
   },
   inputGroup: {
-    gap: 8,
+    marginBottom: 20,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
     color: '#374151',
+    marginBottom: 8,
+  },
+  subLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 8,
   },
   input: {
     backgroundColor: 'white',
@@ -567,7 +643,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     color: '#11224e',
-    minHeight: 48,
+    minHeight: 100,
   },
   modalFooter: {
     padding: 16,
@@ -589,6 +665,50 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  existingImagesSection: {
+    marginBottom: 12,
+  },
+  newImagesSection: {
+    marginBottom: 12,
+  },
+  imagesRow: {
+    flexDirection: 'row',
+  },
+  modalThumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#e5e7eb',
+    marginRight: 8,
+  },
+  newImageContainer: {
+    position: 'relative',
+    marginRight: 8,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: 0,
+    backgroundColor: 'white',
+    borderRadius: 12,
+  },
+  addImageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    borderWidth: 2,
+    borderColor: '#f59e0b',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    backgroundColor: '#fffbeb',
+  },
+  addImageButtonText: {
+    color: '#f59e0b',
     fontSize: 16,
     fontWeight: '600',
   },
