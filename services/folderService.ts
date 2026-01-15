@@ -139,6 +139,12 @@ async function getAllZones(token: string): Promise<Zone[]> {
   return response.data;
 }
 
+async function deleteFolder(folderId: string, token: string): Promise<void> {
+  await api.delete(`api/folders/${folderId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 
 const folderService = {
   getAllFolders,
@@ -150,6 +156,7 @@ const folderService = {
   getZonesByProjectId,
   getAllZones,
   generateGedParallelePdf,
+  deleteFolder,
 };
 
 

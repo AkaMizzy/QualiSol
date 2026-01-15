@@ -361,6 +361,7 @@ export default function FolderListScreen({ folderTypeTitle, folderTypeIcon }: Fo
         visible={isQuestionsModalVisible}
         onClose={() => setIsQuestionsModalVisible(false)}
         folderId={selectedFolderId}
+        onDelete={fetchFolders}
       />
     </SafeAreaView>
   );

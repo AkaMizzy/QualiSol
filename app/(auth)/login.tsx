@@ -7,7 +7,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Linking from 'expo-linking';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
 import {
@@ -291,6 +291,16 @@ export default function LoginScreen() {
                         <Text style={styles.googleButtonText}>Se connecter avec Google</Text>
                       </View>
                     </LinearGradient>
+                  </TouchableOpacity>
+
+                  {/* Register Button */}
+                  <TouchableOpacity
+                    style={styles.registerButton}
+                    onPress={() => router.push('/(auth)/Register')}
+                    accessibilityRole="button"
+                    accessibilityLabel="S'inscrire"
+                  >
+                    <Text style={styles.registerButtonText}>Pas encore de compte ? <Text style={styles.registerButtonLink}>S'inscrire</Text></Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -661,5 +671,18 @@ const styles = StyleSheet.create({
     color: '#f87b1b',
     fontWeight: '600',
     marginTop: 4,
-  }
+  },
+  registerButton: {
+    alignItems: 'center',
+    marginTop: 16,
+    paddingVertical: 8,
+  },
+  registerButtonText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  registerButtonLink: {
+    color: '#f87b1b',
+    fontWeight: '700',
+  },
 });

@@ -1,17 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Linking,
-  Modal,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Linking,
+    Modal,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import API_CONFIG from '@/app/config/api';
 import { ICONS } from '@/constants/Icons';
 import { useAuth, User } from '@/contexts/AuthContext';
+import folderService from '@/services/folderService';
 import * as gedService from '@/services/gedService';
 import { CreateGedInput, Ged } from '@/services/gedService';
 import { Audio } from 'expo-av';
@@ -33,6 +34,7 @@ interface FolderQuestionsModalProps {
   folderId: string | null;
   visible: boolean;
   onClose: () => void;
+  onDelete?: () => void;
 }
 
 function QuestionInput({
@@ -596,13 +598,14 @@ function QuestionInput({
   );
 }
 
-export default function FolderQuestionsModal({ folderId, visible, onClose }: FolderQuestionsModalProps) {
+export default function FolderQuestionsModal({ folderId, visible, onClose, onDelete }: FolderQuestionsModalProps) {
   const { token, user } = useAuth();
   const [geds, setGeds] = useState<Ged[]>([]);
   const [answers, setAnswers] = useState<Map<string, Ged>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -678,6 +681,37 @@ export default function FolderQuestionsModal({ folderId, visible, onClose }: Fol
     }
   };
 
+  const handleDeleteFolder = () => {
+    Alert.alert(
+      'Supprimer le dossier',
+      'Êtes-vous sûr de vouloir supprimer ce dossier ? Cette action est irréversible.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            if (!token || !folderId) return;
+            setIsDeleting(true);
+            try {
+              await folderService.deleteFolder(folderId, token);
+              Alert.alert('Succès', 'Le dossier a été supprimé avec succès.');
+              onClose();
+              if (onDelete) {
+                onDelete();
+              }
+            } catch (error) {
+              console.error('Failed to delete folder:', error);
+              Alert.alert('Erreur', 'Impossible de supprimer le dossier.');
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <Modal animationType="slide" transparent={false} visible={visible} onRequestClose={onClose}>
       <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
@@ -686,13 +720,22 @@ export default function FolderQuestionsModal({ folderId, visible, onClose }: Fol
             <Ionicons name="close-circle" size={32} color="#f87b1b" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Questions du Dossier</Text>
-          <TouchableOpacity onPress={handleGeneratePdf} style={styles.pdfIcon} disabled={isGeneratingPdf}>
-            {isGeneratingPdf ? (
-              <ActivityIndicator color="#f87b1b" />
-            ) : (
-              <Image source={ICONS.pdf} style={{ width: 28, height: 28 }} />
-            )}
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={handleGeneratePdf} style={styles.headerActionButton} disabled={isGeneratingPdf}>
+              {isGeneratingPdf ? (
+                <ActivityIndicator color="#f87b1b" />
+              ) : (
+                <Image source={ICONS.pdf} style={{ width: 28, height: 28 }} />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleDeleteFolder} style={styles.headerActionButton} disabled={isDeleting}>
+              {isDeleting ? (
+                <ActivityIndicator color="#ef4444" />
+              ) : (
+                <Ionicons name="trash-outline" size={26} color="#ef4444" />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {isLoading ? (
@@ -753,11 +796,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#11224e',
   },
-  pdfIcon: {
+  headerActions: {
     position: 'absolute',
     right: 16,
     top: '50%',
     transform: [{ translateY: -4 }],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerActionButton: {
+    padding: 4,
   },
   closeIcon: {
     position: 'absolute',
