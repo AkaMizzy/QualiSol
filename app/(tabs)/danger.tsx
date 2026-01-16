@@ -198,6 +198,7 @@ export default function DangerScreen() {
               projectTitle=""
               zoneTitle=""
               onAvantPhotoUpdate={handleAvantPhotoUpdate}
+              readOnly={true}
             />
           )}
         </SafeAreaView>

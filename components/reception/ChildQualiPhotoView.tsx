@@ -3,19 +3,19 @@ import { Audio } from 'expo-av';
 import * as Linking from 'expo-linking';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View
 } from 'react-native';
 
 import API_CONFIG from '@/app/config/api';
@@ -40,6 +40,7 @@ type ChildQualiPhotoViewProps = {
   zoneTitle: string;
   companyTitle?: string;
   onAvantPhotoUpdate: (updatedPhoto: Ged) => void;
+  readOnly?: boolean; // For technician read-only access
 };
 
 export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
@@ -50,6 +51,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   zoneTitle,
   companyTitle,
   onAvantPhotoUpdate,
+  readOnly = false,
 }) => {
   const { token } = useAuth();
   const { width } = useWindowDimensions();
@@ -639,14 +641,16 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
         <Text numberOfLines={1} style={styles.subtitle}>{subtitle}</Text>
       </View>
       <View style={styles.headerActionsContainer}>
-        <TouchableOpacity
-          style={[styles.headerAction, (isLoadingAfter || afterPhotos.length > 0) && styles.disabledHeaderAction]}
-          onPress={handleAddAfterPhoto}
-          disabled={isLoadingAfter || afterPhotos.length > 0}
-          accessibilityLabel="Ajouter une photo complémentaire"
-        >
-          <Image source={ICONS.cameraPng} style={styles.headerActionIcon} />
-        </TouchableOpacity>
+        {!readOnly && (
+          <TouchableOpacity
+            style={[styles.headerAction, (isLoadingAfter || afterPhotos.length > 0) && styles.disabledHeaderAction]}
+            onPress={handleAddAfterPhoto}
+            disabled={isLoadingAfter || afterPhotos.length > 0}
+            accessibilityLabel="Ajouter une photo complémentaire"
+          >
+            <Image source={ICONS.cameraPng} style={styles.headerActionIcon} />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -796,14 +800,14 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                   : {},
             ]}
             onPress={handleValidate}
-            disabled={isUpdatingStatus || !canValidate || isValidated}
+            disabled={isUpdatingStatus || !canValidate || isValidated || readOnly}
             accessibilityLabel="Valider le dossier"
           >
             {isUpdatingStatus ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.validateButtonText}>
-                {isValidated ? 'Dossier Validé' : 'Valider le Dossier'}
+                {isValidated ? 'Dossier Validé' : (readOnly ? 'Lecture seule' : 'Valider le Dossier')}
               </Text>
             )}
           </TouchableOpacity>

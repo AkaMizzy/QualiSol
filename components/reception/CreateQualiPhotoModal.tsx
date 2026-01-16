@@ -20,6 +20,8 @@ type Props = {
 
 export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, projectId, zoneId }: Props) {
   const { token, user } = useAuth();
+  const isAdmin = user?.role === 'Admin';
+  const isController = user?.role === 'Controller' || user?.role === 'Contrôleur';
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
@@ -48,8 +50,12 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
   useEffect(() => {
     if (visible && user?.id) {
       setOwnerId(user.id);
+      // If user is a Controller, also auto-assign them as the controller
+      if (isController) {
+        setControlId(user.id);
+      }
     }
-  }, [visible, user]);
+  }, [visible, user, isController]);
 
   useEffect(() => {
     const fetchLimitInfo = async () => {
@@ -243,19 +249,26 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
                 </TouchableOpacity>
               </View>
 
-              {/* Control Select */}
+              {/* Control Select - Locked for Controllers, selectable for Admins */}
               <View style={{ gap: 8, marginTop: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Contrôleur</Text>
-                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setControlOpen(v => !v)}>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Contrôleur {isController ? '(vous)' : ''}</Text>
+                <TouchableOpacity 
+                  style={[styles.inputWrap, { justifyContent: 'space-between' }, isController && styles.disabledInput]} 
+                  onPress={() => !isController && setControlOpen(v => !v)}
+                  disabled={isController}
+                >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="shield-checkmark-outline" size={16} color="#f87b1b" />
+                    <Ionicons name="shield-checkmark-outline" size={16} color={isController ? '#3b82f6' : '#f87b1b'} />
                     <Text style={[styles.input, { color: controlId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {controlId ? (companyUsers.find(u => String(u.id) === String(controlId))?.firstname ? `${companyUsers.find(u => String(controlId) === String(u.id))?.firstname} ${companyUsers.find(u => String(controlId) === String(u.id))?.lastname || ''}` : controlId) : 'Choisir un contrôleur'}
+                      {isController 
+                        ? `${user?.firstname || ''} ${user?.lastname || ''}`.trim() || user?.email || 'Vous'
+                        : (controlId ? (companyUsers.find(u => String(u.id) === String(controlId))?.firstname ? `${companyUsers.find(u => String(controlId) === String(u.id))?.firstname} ${companyUsers.find(u => String(controlId) === String(u.id))?.lastname || ''}` : controlId) : 'Choisir un contrôleur')
+                      }
                     </Text>
                   </View>
-                  <Ionicons name={controlOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#f87b1b" />
+                  <Ionicons name={isController ? 'lock-closed-outline' : (controlOpen ? 'chevron-up' : 'chevron-down')} size={16} color={isController ? '#9ca3af' : '#f87b1b'} />
                 </TouchableOpacity>
-                {controlOpen && (
+                {controlOpen && !isController && (
                   <View style={{ maxHeight: 200, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingUsers ? (

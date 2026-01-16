@@ -181,10 +181,25 @@ export default function QualiPhotoGalleryScreen() {
       ? allZones.find(z => z.id === item.zone_id)?.title 
       : null;
 
+    // Check if current user is assigned as the technician for this folder
+    const isAssignedAsTechnician = item.technicien_id && user?.id && String(item.technicien_id) === String(user.id);
+
     return (
       <Pressable
-          style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.card, 
+            pressed && styles.pressed,
+            isAssignedAsTechnician && styles.technicianCard
+          ]}
           onPress={() => { 
+            if (isAssignedAsTechnician) {
+              Alert.alert(
+                'Accès limité',
+                'Vous êtes assigné comme technicien sur ce dossier. Vous pouvez consulter les photos via l\'écran "Danger".',
+                [{ text: 'Compris', style: 'default' }]
+              );
+              return;
+            }
             setSelectedItem(item); 
             setDetailProjectTitle(projectTitle || undefined);
             setDetailZoneTitle(zoneTitle || undefined);
@@ -196,6 +211,12 @@ export default function QualiPhotoGalleryScreen() {
           <Text style={styles.cardTitle} numberOfLines={2}>
               {item.title}
           </Text>
+          {isAssignedAsTechnician && (
+            <View style={styles.technicianBadge}>
+              <Ionicons name="lock-closed" size={12} color="#6b7280" />
+              <Text style={styles.technicianBadgeText}>Assigné comme technicien</Text>
+            </View>
+          )}
           <View style={styles.infoRow}>
               <Image source={ICONS.chantierPng} style={{ width: 14, height: 14 }} />
               <Text style={styles.infoText} numberOfLines={1}>{projectTitle || 'N/A'}</Text>
@@ -211,7 +232,7 @@ export default function QualiPhotoGalleryScreen() {
         </View>
       </Pressable>
     );
-  }, [projects, allZones]);
+  }, [projects, allZones, user?.id]);
 
   const keyExtractor = useCallback((item: Folder) => item.id, []);
 
@@ -679,6 +700,26 @@ const styles = StyleSheet.create({
     color: '#f87b1b',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  technicianCard: {
+    borderColor: '#9ca3af',
+    backgroundColor: '#f9fafb',
+  },
+  technicianBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  technicianBadgeText: {
+    fontSize: 10,
+    color: '#6b7280',
+    fontWeight: '600',
   },
 });
 
