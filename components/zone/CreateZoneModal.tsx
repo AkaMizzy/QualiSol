@@ -19,6 +19,7 @@ type Props = {
 
 export default function CreateZoneModal({ visible, onClose, projectId, projectTitle, projectCode, onCreated }: Props) {
   const { token, user } = useAuth();
+  const isAdmin = user?.role === 'Admin';
   const [companyUsers, setCompanyUsers] = useState<{ id: string; firstname?: string; lastname?: string; email?: string }[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [ownerOpen, setOwnerOpen] = useState(false);
@@ -81,7 +82,7 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
         project_id: projectId,
         owner_id: ownerId || undefined,
         control_id: controlId,
-        technicien_id: technicienId,
+        technicien_id: isAdmin ? undefined : technicienId, // Admin cannot assign technicians
         zonetype_id: zonetypeId || undefined,
       });
       setTitle(''); setDescription(''); setZonetypeId(''); setLatitude(''); setLongitude(''); setError(null); setOwnerId(''); setControlId(''); setTechnicienId('');
@@ -199,7 +200,13 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
     `;
   }
 
-  // Owner is now manually selected, not auto-assigned
+  // Owner is now manually selected, not auto-assigned (except for Admin who is auto-assigned)
+  useEffect(() => {
+    // Auto-assign Admin as owner when modal becomes visible
+    if (visible && isAdmin && user?.id) {
+      setOwnerId(user.id);
+    }
+  }, [visible, isAdmin, user?.id]);
 
   useEffect(() => {
     const fetchLimitInfo = async () => {
@@ -372,19 +379,23 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                 </TouchableOpacity>
               </View> */}
 
-              {/* Owner (Admin) Select */}
+              {/* Owner (Admin) Select - Disabled for Admin users */}
               <View style={{ gap: 8, marginBottom: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Admin (optionnel)</Text>
-                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setOwnerOpen(v => !v)}>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Admin {isAdmin ? '(vous)' : '(optionnel)'}</Text>
+                <TouchableOpacity 
+                  style={[styles.inputWrap, { justifyContent: 'space-between' }, isAdmin && { opacity: 0.7, backgroundColor: '#f3f4f6', borderColor: '#d1d5db' }]} 
+                  onPress={() => !isAdmin && setOwnerOpen(v => !v)}
+                  disabled={isAdmin}
+                >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="person-circle-outline" size={16} color="#6b7280" />
+                    <Ionicons name="person-circle-outline" size={16} color={isAdmin ? '#3b82f6' : '#6b7280'} />
                     <Text style={[styles.input, { color: ownerId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {ownerId ? (companyUsers.find(u => String(u.id) === String(ownerId))?.firstname ? `${companyUsers.find(u => String(u.id) === String(ownerId))?.firstname} ${companyUsers.find(u => String(u.id) === String(ownerId))?.lastname || ''}` : ownerId) : 'Choisir un admin'}
+                      {isAdmin ? `${user?.firstname || ''} ${user?.lastname || ''}`.trim() || user?.email || 'Vous' : (ownerId ? (companyUsers.find(u => String(u.id) === String(ownerId))?.firstname ? `${companyUsers.find(u => String(u.id) === String(ownerId))?.firstname} ${companyUsers.find(u => String(u.id) === String(ownerId))?.lastname || ''}` : ownerId) : 'Choisir un admin')}
                     </Text>
                   </View>
-                  <Ionicons name={ownerOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
+                  <Ionicons name={isAdmin ? 'lock-closed-outline' : (ownerOpen ? 'chevron-up' : 'chevron-down')} size={16} color="#9ca3af" />
                 </TouchableOpacity>
-                {ownerOpen && (
+                {ownerOpen && !isAdmin && (
                   <View style={{ maxHeight: 220, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingUsers ? (
@@ -436,19 +447,23 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                 )}
               </View>
 
-              {/* Technicien Select - Filtered to exclude owner and control */}
+              {/* Technicien Select - Disabled for Admin users */}
               <View style={{ gap: 8, marginBottom: 12 }}>
                 <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Technicien (optionnel)</Text>
-                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setTechnicienOpen(v => !v)}>
+                <TouchableOpacity 
+                  style={[styles.inputWrap, { justifyContent: 'space-between' }, isAdmin && { opacity: 0.5, backgroundColor: '#f3f4f6', borderColor: '#d1d5db' }]} 
+                  onPress={() => !isAdmin && setTechnicienOpen(v => !v)}
+                  disabled={isAdmin}
+                >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="construct-outline" size={16} color="#6b7280" />
-                    <Text style={[styles.input, { color: technicienId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {technicienId ? (companyUsers.find(u => String(u.id) === String(technicienId))?.firstname ? `${companyUsers.find(u => String(u.id) === String(technicienId))?.firstname} ${companyUsers.find(u => String(u.id) === String(technicienId))?.lastname || ''}` : technicienId) : 'Choisir un technicien'}
+                    <Ionicons name="construct-outline" size={16} color={isAdmin ? '#9ca3af' : '#6b7280'} />
+                    <Text style={[styles.input, { color: isAdmin ? '#9ca3af' : (technicienId ? '#111827' : '#9ca3af') }]} numberOfLines={1}>
+                      {isAdmin ? 'Non autorisé' : (technicienId ? (companyUsers.find(u => String(u.id) === String(technicienId))?.firstname ? `${companyUsers.find(u => String(u.id) === String(technicienId))?.firstname} ${companyUsers.find(u => String(u.id) === String(technicienId))?.lastname || ''}` : technicienId) : 'Choisir un technicien')}
                     </Text>
                   </View>
-                  <Ionicons name={technicienOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
+                  <Ionicons name={isAdmin ? 'lock-closed-outline' : (technicienOpen ? 'chevron-up' : 'chevron-down')} size={16} color="#9ca3af" />
                 </TouchableOpacity>
-                {technicienOpen && (
+                {technicienOpen && !isAdmin && (
                   <View style={{ maxHeight: 220, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingUsers ? (
