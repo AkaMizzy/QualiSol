@@ -1,14 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Modal,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
@@ -43,6 +43,8 @@ export default function CreateUserModal({ visible, onClose, onUserCreated }: Cre
     role_id: '',
     status_id: '',
     company_id: user?.company_id || '',
+    interne: 1, // Default to internal
+    represent: '',
   });
 
   useEffect(() => {
@@ -58,6 +60,8 @@ export default function CreateUserModal({ visible, onClose, onUserCreated }: Cre
         role_id: '', // Backend will set default to "User"
         status_id: '', // Backend will set default to "pending"
         company_id: user?.company_id || '',
+        interne: 1, // Default to internal
+        represent: '',
       });
       setErrors({});
       fetchLimitInfo();
@@ -107,6 +111,11 @@ export default function CreateUserModal({ visible, onClose, onUserCreated }: Cre
       }
     }
     
+    // Validate represent field for external users
+    if (formData.interne === 0 && !formData.represent?.trim()) {
+      newErrors.represent = 'La société représentée est obligatoire pour les utilisateurs externes';
+    }
+    
     // role_id and status_id will be set by backend defaults
 
     setErrors(newErrors);
@@ -136,6 +145,8 @@ export default function CreateUserModal({ visible, onClose, onUserCreated }: Cre
         phone1: formData.phone1?.trim() || undefined,
         phone2: formData.phone2?.trim() || undefined,
         email_second: formData.email_second?.trim().toLowerCase() || undefined,
+        interne: formData.interne,
+        represent: formData.interne === 0 ? formData.represent?.trim() : undefined,
       };
 
       // Omit company_id if not available (backend will read from token)
@@ -321,16 +332,66 @@ export default function CreateUserModal({ visible, onClose, onUserCreated }: Cre
                 {errors.email_second && <Text style={styles.errorText}>{errors.email_second}</Text>}
               </View>
 
-              <View style={styles.infoCard}>
-                <View style={styles.infoHeader}>
-                  <Ionicons name="information-circle" size={20} color="#3b82f6" />
-                  <Text style={styles.infoTitle}>Rôle et Statut</Text>
+              {/* Internal/External User Toggle */}
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Type d'utilisateur</Text>
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      formData.interne === 1 && styles.toggleButtonActive
+                    ]}
+                    onPress={() => setFormData({ ...formData, interne: 1, represent: '' })}
+                    disabled={loading}
+                  >
+                    <Ionicons 
+                      name="business" 
+                      size={18} 
+                      color={formData.interne === 1 ? '#fff' : '#6b7280'} 
+                    />
+                    <Text style={[
+                      styles.toggleButtonText,
+                      formData.interne === 1 && styles.toggleButtonTextActive
+                    ]}>Interne</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      formData.interne === 0 && styles.toggleButtonActive
+                    ]}
+                    onPress={() => setFormData({ ...formData, interne: 0 })}
+                    disabled={loading}
+                  >
+                    <Ionicons 
+                      name="globe" 
+                      size={18} 
+                      color={formData.interne === 0 ? '#fff' : '#6b7280'} 
+                    />
+                    <Text style={[
+                      styles.toggleButtonText,
+                      formData.interne === 0 && styles.toggleButtonTextActive
+                    ]}>Externe</Text>
+                  </TouchableOpacity>
                 </View>
-                <Text style={styles.infoText}>
-                  Le nouvel utilisateur sera créé avec le rôle &quot;Utilisateur&quot; et le statut &quot;Actif&quot; par défaut.
-                  Vous pourrez modifier ces informations ultérieurement.
-                </Text>
               </View>
+
+              {/* Represent field - only shown for external users */}
+              {formData.interne === 0 && (
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Société représentée <Text style={styles.required}>*</Text></Text>
+                  <TextInput
+                    style={[styles.input, errors.represent && styles.inputError]}
+                    value={formData.represent}
+                    onChangeText={(text) => {
+                      setFormData({ ...formData, represent: text });
+                      if (errors.represent) setErrors({ ...errors, represent: '' });
+                    }}
+                    placeholder="Nom de la société représentée"
+                    editable={!loading}
+                  />
+                  {errors.represent && <Text style={styles.errorText}>{errors.represent}</Text>}
+                </View>
+              )}
             </View>
           </ScrollView>
 
@@ -546,5 +607,30 @@ const styles = {
     color: '#dc2626',
     marginTop: 8,
     lineHeight: 20,
+  },
+  toggleButton: {
+    flex: 1,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    backgroundColor: 'white',
+    gap: 8,
+  },
+  toggleButtonActive: {
+    backgroundColor: '#f87b1b',
+    borderColor: '#f87b1b',
+  },
+  toggleButtonText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#6b7280',
+  },
+  toggleButtonTextActive: {
+    color: 'white',
   },
 } as const;

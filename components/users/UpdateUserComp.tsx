@@ -1,16 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  Platform,
-  ScrollView,
-  StatusBar,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Modal,
+    Platform,
+    ScrollView,
+    StatusBar,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
@@ -39,6 +39,8 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
     phone2: '',
     email_second: '',
     status_id: '1',
+    interne: 1,
+    represent: '',
   });
 
   // Initialize form data when user changes
@@ -52,6 +54,8 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
         phone2: user.phone2 || '',
         email_second: user.email_second || '',
         status_id: user.status_id,
+        interne: user.interne ?? 1,
+        represent: user.represent || '',
       });
       setErrors({});
     }
@@ -84,6 +88,11 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
       }
     }
 
+    // Validate represent field for external users
+    if (formData.interne === 0 && !formData.represent?.trim()) {
+      newErrors.represent = 'La société représentée est obligatoire pour les utilisateurs externes';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -109,6 +118,8 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
         phone2: formData.phone2?.trim() || undefined,
         email_second: formData.email_second?.trim() || undefined,
         status_id: formData.status_id,
+        interne: formData.interne,
+        represent: formData.interne === 0 ? formData.represent?.trim() : undefined,
       };
 
       // Update user information
@@ -176,6 +187,8 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
         phone2: user.phone2 || '',
         email_second: user.email_second || '',
         status_id: user.status_id,
+        interne: user.interne ?? 1,
+        represent: user.represent || '',
       });
       setErrors({});
     }
@@ -393,6 +406,84 @@ export default function UpdateUserComp({ visible, user, onClose, onUserUpdated }
                 />
               </View>
             </View>
+          </View>
+
+          {/* User Type Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Type d'utilisateur</Text>
+            <View style={styles.statusSwitchContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.statusOption,
+                  formData.interne === 1 && styles.statusOptionActive
+                ]}
+                onPress={() => setFormData({ ...formData, interne: 1, represent: '' })}
+                activeOpacity={0.7}
+                disabled={loading}
+              >
+                <View style={[
+                  styles.statusIndicator,
+                  formData.interne === 1 && { backgroundColor: '#3b82f6' }
+                ]}>
+                  <Ionicons name="business" size={14} color={formData.interne === 1 ? 'white' : '#6b7280'} />
+                </View>
+                <Text style={[
+                  styles.statusText,
+                  formData.interne === 1 && styles.statusTextActive
+                ]}>
+                  Interne
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.statusOption,
+                  formData.interne === 0 && styles.statusOptionActive
+                ]}
+                onPress={() => setFormData({ ...formData, interne: 0 })}
+                activeOpacity={0.7}
+                disabled={loading}
+              >
+                <View style={[
+                  styles.statusIndicator,
+                  formData.interne === 0 && { backgroundColor: '#f87b1b' }
+                ]}>
+                  <Ionicons name="globe" size={14} color={formData.interne === 0 ? 'white' : '#6b7280'} />
+                </View>
+                <Text style={[
+                  styles.statusText,
+                  formData.interne === 0 && styles.statusTextActive
+                ]}>
+                  Externe
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Represent field - only shown for external users */}
+            {formData.interne === 0 && (
+              <View style={[styles.formContainer, { marginTop: 12 }]}>
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>
+                    Société représentée <Text style={styles.required}>*</Text>
+                  </Text>
+                  <TextInput
+                    style={[styles.input, errors.represent && styles.inputError]}
+                    value={formData.represent}
+                    onChangeText={(text) => {
+                      setFormData({ ...formData, represent: text });
+                      if (errors.represent) {
+                        setErrors({ ...errors, represent: '' });
+                      }
+                    }}
+                    placeholder="Nom de la société représentée"
+                    editable={!loading}
+                  />
+                  {errors.represent && (
+                    <Text style={styles.errorText}>{errors.represent}</Text>
+                  )}
+                </View>
+              </View>
+            )}
           </View>
         </ScrollView>
 

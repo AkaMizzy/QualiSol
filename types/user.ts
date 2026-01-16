@@ -11,6 +11,8 @@ export interface CompanyUser {
   status_id: string;
   photo?: string;
   company_id: string;
+  interne?: number; // 0 = external, 1 = internal
+  represent?: string; // Company represented (for external users)
   // Optional relations that might be included
   role?: { id: string; name: string };
   status?: { id: string; name: string };
@@ -28,6 +30,8 @@ export interface CreateUserData {
   role_id: string;
   status_id: string;
   company_id: string;
+  interne?: number; // 0 = external, 1 = internal
+  represent?: string; // Company represented (for external users)
 }
 
 export interface CreateUserResponse {
@@ -47,4 +51,6 @@ export interface UpdateUserData {
   email_second?: string;
   role_id?: string;
   status_id?: string;
+  interne?: number; // 0 = external, 1 = internal
+  represent?: string; // Company represented (for external users)
 }

@@ -24,7 +24,7 @@ export default function CaptchaModal({ visible, captcha, onClose, onVerify, onRe
       setError('Code incorrect, veuillez réessayer.');
       setInput('');
     }
-  };
+  };                                                
 
   const handleRefresh = () => {
     onRefresh();

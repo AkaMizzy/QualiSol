@@ -8,14 +8,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  RefreshControl,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    RefreshControl,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import API_CONFIG from '../config/api';
@@ -90,6 +90,12 @@ export default function UsersScreen() {
       : { bg: '#f4f5f7', color: '#6b7280', border: '#e5e7eb', label: 'Inactif' };
   };
 
+  const getInterneStyle = (interne?: number) => {
+    return interne === 1 || interne === undefined
+      ? { bg: '#eff6ff', color: '#3b82f6', border: '#bfdbfe', label: 'Interne', icon: 'business' as const }
+      : { bg: '#fff7ed', color: '#f87b1b', border: '#fed7aa', label: 'Externe', icon: 'globe' as const };
+  };
+
   const filteredUsers = React.useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return users.filter((u) => {
@@ -103,6 +109,7 @@ export default function UsersScreen() {
   const renderUserCard = ({ item }: { item: CompanyUser }) => {
     const roleStyle = getRoleStyle(item.role?.name);
     const statusStyle = getStatusStyle(item.status?.name);
+    const interneStyle = getInterneStyle(item.interne);
     
     // Build avatar URL if photo exists
     const avatarUrl = item.photo 
@@ -161,6 +168,19 @@ export default function UsersScreen() {
                   {statusStyle.label}
                 </Text>
               </View>
+            )}
+            {/* Internal/External indicator */}
+            <View style={[styles.badge, { backgroundColor: interneStyle.bg, borderColor: interneStyle.border, marginTop: 4, flexDirection: 'row', gap: 4 }]}>
+              <Ionicons name={interneStyle.icon} size={10} color={interneStyle.color} />
+              <Text style={[styles.badgeText, { color: interneStyle.color }]}>
+                {interneStyle.label}
+              </Text>
+            </View>
+            {/* Show represented company for external users */}
+            {item.interne === 0 && item.represent && (
+              <Text style={{ fontSize: 10, color: '#f87b1b', marginTop: 4, textAlign: 'right' as const }}>
+                {item.represent}
+              </Text>
             )}
           </View>
         </View>

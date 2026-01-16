@@ -18,6 +18,7 @@ type Props = {
 
 export default function CreateProjectModal({ visible, onClose, onCreated }: Props) {
   const { token, user } = useAuth();
+  const isSuperAdmin = user?.role === 'Super Admin';
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -350,16 +351,20 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
               {/* Control User Select */}
               <View style={{ gap: 8 }}>
                 <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Contrôleur (optionnel)</Text>
-                <TouchableOpacity style={[stylesFS.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setControlOpen(v => !v)}>
+                <TouchableOpacity 
+                  style={[stylesFS.inputWrap, { justifyContent: 'space-between' }, isSuperAdmin && { opacity: 0.5, backgroundColor: '#f3f4f6', borderColor: '#d1d5db' }]} 
+                  onPress={() => !isSuperAdmin && setControlOpen(v => !v)}
+                  disabled={isSuperAdmin}
+                >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="shield-checkmark-outline" size={16} color="#6b7280" />
-                    <Text style={[stylesFS.input, { color: controlId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {controlId ? (controlUsers.find(u => String(u.id) === String(controlId))?.firstname ? `${controlUsers.find(u => String(u.id) === String(controlId))?.firstname} ${controlUsers.find(u => String(u.id) === String(controlId))?.lastname || ''}` : controlId) : 'Choisir un contrôleur'}
+                    <Ionicons name="shield-checkmark-outline" size={16} color={isSuperAdmin ? '#9ca3af' : '#6b7280'} />
+                    <Text style={[stylesFS.input, { color: isSuperAdmin ? '#9ca3af' : (controlId ? '#111827' : '#9ca3af') }]} numberOfLines={1}>
+                      {isSuperAdmin ? 'Non autorisé' : (controlId ? (controlUsers.find(u => String(u.id) === String(controlId))?.firstname ? `${controlUsers.find(u => String(u.id) === String(controlId))?.firstname} ${controlUsers.find(u => String(u.id) === String(controlId))?.lastname || ''}` : controlId) : 'Choisir un contrôleur')}
                     </Text>
                   </View>
-                  <Ionicons name={controlOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
+                  <Ionicons name={isSuperAdmin ? 'lock-closed-outline' : (controlOpen ? 'chevron-up' : 'chevron-down')} size={16} color="#9ca3af" />
                 </TouchableOpacity>
-                {controlOpen && (
+                {controlOpen && !isSuperAdmin && (
                   <View style={{ maxHeight: 200, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingUsers ? (
@@ -381,16 +386,20 @@ export default function CreateProjectModal({ visible, onClose, onCreated }: Prop
               {/* Technicien User Select */}
               <View style={{ gap: 8 }}>
                 <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Technicien (optionnel)</Text>
-                <TouchableOpacity style={[stylesFS.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setTechnicienOpen(v => !v)}>
+                <TouchableOpacity 
+                  style={[stylesFS.inputWrap, { justifyContent: 'space-between' }, isSuperAdmin && { opacity: 0.5, backgroundColor: '#f3f4f6', borderColor: '#d1d5db' }]} 
+                  onPress={() => !isSuperAdmin && setTechnicienOpen(v => !v)}
+                  disabled={isSuperAdmin}
+                >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="construct-outline" size={16} color="#6b7280" />
-                    <Text style={[stylesFS.input, { color: technicienId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {technicienId ? (technicienUsers.find(u => String(u.id) === String(technicienId))?.firstname ? `${technicienUsers.find(u => String(u.id) === String(technicienId))?.firstname} ${technicienUsers.find(u => String(u.id) === String(technicienId))?.lastname || ''}` : technicienId) : 'Choisir un technicien'}
+                    <Ionicons name="construct-outline" size={16} color={isSuperAdmin ? '#9ca3af' : '#6b7280'} />
+                    <Text style={[stylesFS.input, { color: isSuperAdmin ? '#9ca3af' : (technicienId ? '#111827' : '#9ca3af') }]} numberOfLines={1}>
+                      {isSuperAdmin ? 'Non autorisé' : (technicienId ? (technicienUsers.find(u => String(u.id) === String(technicienId))?.firstname ? `${technicienUsers.find(u => String(u.id) === String(technicienId))?.firstname} ${technicienUsers.find(u => String(u.id) === String(technicienId))?.lastname || ''}` : technicienId) : 'Choisir un technicien')}
                     </Text>
                   </View>
-                  <Ionicons name={technicienOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
+                  <Ionicons name={isSuperAdmin ? 'lock-closed-outline' : (technicienOpen ? 'chevron-up' : 'chevron-down')} size={16} color="#9ca3af" />
                 </TouchableOpacity>
-                {technicienOpen && (
+                {technicienOpen && !isSuperAdmin && (
                   <View style={{ maxHeight: 200, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingUsers ? (
