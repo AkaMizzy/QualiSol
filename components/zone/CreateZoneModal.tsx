@@ -199,11 +199,7 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
     `;
   }
 
-  useEffect(() => {
-    if (visible && user?.id) {
-      setOwnerId(user.id);
-    }
-  }, [visible, user]);
+  // Owner is now manually selected, not auto-assigned
 
   useEffect(() => {
     const fetchLimitInfo = async () => {
@@ -376,21 +372,36 @@ export default function CreateZoneModal({ visible, onClose, projectId, projectTi
                 </TouchableOpacity>
               </View> */}
 
-              {/* Owner (Admin) - Auto-filled, disabled */}
+              {/* Owner (Admin) Select */}
               <View style={{ gap: 8, marginBottom: 12 }}>
                 <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Admin (optionnel)</Text>
-                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }, styles.disabledInput]} disabled>
+                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setOwnerOpen(v => !v)}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                     <Ionicons name="person-circle-outline" size={16} color="#6b7280" />
                     <Text style={[styles.input, { color: ownerId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {adminUser
-                        ? `${adminUser.firstname || ''} ${adminUser.lastname || ''}`.trim() || adminUser.email
-                        : (loadingUsers ? 'Chargement...' : (user?.email || 'Admin non défini'))
-                      }
+                      {ownerId ? (companyUsers.find(u => String(u.id) === String(ownerId))?.firstname ? `${companyUsers.find(u => String(u.id) === String(ownerId))?.firstname} ${companyUsers.find(u => String(u.id) === String(ownerId))?.lastname || ''}` : ownerId) : 'Choisir un admin'}
                     </Text>
                   </View>
-                  <Ionicons name="lock-closed-outline" size={16} color="#9ca3af" />
+                  <Ionicons name={ownerOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9ca3af" />
                 </TouchableOpacity>
+                {ownerOpen && (
+                  <View style={{ maxHeight: 220, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+                    <ScrollView keyboardShouldPersistTaps="handled">
+                      {loadingUsers ? (
+                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
+                      ) : companyUsers.length === 0 ? (
+                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
+                      ) : (
+                        companyUsers.map(u => (
+                          <TouchableOpacity key={u.id} onPress={() => { setOwnerId(String(u.id)); setOwnerOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(ownerId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
+                            <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
+                            {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
+                          </TouchableOpacity>
+                        ))
+                      )}
+                    </ScrollView>
+                  </View>
+                )}
               </View>
 
               {/* Control Select - Filtered to exclude owner */}

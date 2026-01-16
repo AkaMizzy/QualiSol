@@ -40,7 +40,8 @@ type Control = { id: string; firstname?: string; lastname?: string; email?: stri
 type Technicien = { id: string; firstname?: string; lastname?: string; email?: string } | null;
 
 export default function ProjectDetailModal({ visible, onClose, project, onUpdated }: Props) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const isSuperAdmin = user?.role === 'Super Admin';                            
   const [company, setCompany] = useState<Company>(null);
   const [owner, setOwner] = useState<Owner>(null);
   const [control, setControl] = useState<Control>(null);
@@ -48,7 +49,7 @@ export default function ProjectDetailModal({ visible, onClose, project, onUpdate
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [zones, setZones] = useState<{
-    id: string;
+    id: string;                                                                                             
     title: string;
     code?: string | null;
     logo?: string | null;
@@ -547,9 +548,13 @@ export default function ProjectDetailModal({ visible, onClose, project, onUpdate
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>Zones du projet</Text>
-              <TouchableOpacity onPress={() => setIsCreateZoneOpen(true)} style={[styles.ctaButton, { paddingVertical: 6, paddingHorizontal: 10 }]}> 
-                <Ionicons name="add" size={16} color="#f87b1b" />
-                <Text style={styles.ctaText}>Ajouter</Text>
+              <TouchableOpacity 
+                onPress={() => !isSuperAdmin && setIsCreateZoneOpen(true)} 
+                disabled={isSuperAdmin}
+                style={[styles.ctaButton, { paddingVertical: 6, paddingHorizontal: 10 }, isSuperAdmin && { opacity: 0.5, borderColor: '#d1d5db' }]}
+              > 
+                <Ionicons name="add" size={16} color={isSuperAdmin ? '#9ca3af' : '#f87b1b'} />
+                <Text style={[styles.ctaText, isSuperAdmin && { color: '#9ca3af' }]}>{isSuperAdmin ? 'Non autorisé' : 'Ajouter'}</Text>
               </TouchableOpacity>
             </View>
             <View style={{ marginTop: 8, gap: 8 }}>
