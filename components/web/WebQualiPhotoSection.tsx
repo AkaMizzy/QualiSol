@@ -194,7 +194,7 @@ export default function WebQualiPhotoSection({
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.headerTitle}>Photo libre 📸</Text>
+              <Text style={styles.headerTitle}>Photo libre</Text>
               <Text style={styles.headerSubtitle}>
                 {galerieState.allPhotos.length} photo
                 {galerieState.allPhotos.length !== 1 ? "s" : ""}
