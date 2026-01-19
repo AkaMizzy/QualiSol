@@ -1,11 +1,12 @@
 import API_CONFIG from "@/app/config/api";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
-import { Ged, getAssociatedPhotosByFolder } from "@/services/gedService";
+import { assignPhotoToFolder, Ged, getAssociatedPhotosByFolder } from "@/services/gedService";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -14,6 +15,8 @@ import {
   View,
 } from "react-native";
 import ImagePreviewModal from "./ImagePreviewModal";
+import DropZone from "./DropZone";
+import PhotoAvantSelectionModal from "./PhotoAvantSelectionModal";
 
 interface WebAssociatedPhotosSectionProps {
   selectedFolderId: string | null;
@@ -29,6 +32,8 @@ export default function WebAssociatedPhotosSection({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<Ged | null>(null);
+  const [showPhotoAvantModal, setShowPhotoAvantModal] = useState(false);
+  const [pendingPhotoId, setPendingPhotoId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedFolderId || !token) {
@@ -71,6 +76,94 @@ export default function WebAssociatedPhotosSection({
   const orphanedApres = photoApres.filter(
     (ap) => !photoAvants.some((av) => av.id === ap.idsource),
   );
+
+  // Handle drop into Situation Avant zone
+  const handleDropPhotoAvant = async (photoId: string) => {
+    if (!selectedFolderId || !token) return;
+
+    try {
+      await assignPhotoToFolder(token, photoId, selectedFolderId, "photoavant");
+
+      // Refresh photos
+      const updatedPhotos = await getAssociatedPhotosByFolder(
+        token,
+        selectedFolderId,
+      );
+      setPhotos(updatedPhotos);
+
+      // Show success alert
+      Alert.alert(
+        "✅ Photo assignée",
+        "La photo a été assignée comme Situation Avant",
+        [{ text: "OK" }],
+      );
+    } catch (err) {
+      console.error("Failed to assign photo avant:", err);
+      Alert.alert("Erreur", "Échec de l'assignation de la photo", [
+        { text: "OK" },
+      ]);
+    }
+  };
+
+  // Handle drop into Situation Après zone
+  const handleDropPhotoApres = async (photoId: string) => {
+    if (!selectedFolderId || !token) return;
+
+    // Check if there are any photoAvants available
+    if (photoAvants.length === 0) {
+      Alert.alert(
+        "Aucune photo avant",
+        "Vous devez d'abord créer une photo avant pour pouvoir assigner une photo après",
+        [{ text: "OK" }],
+      );
+      return;
+    }
+
+    // Store the photo ID and show selection modal
+    setPendingPhotoId(photoId);
+    setShowPhotoAvantModal(true);
+  };
+
+  // Handle photo avant selection from modal
+  const handlePhotoAvantSelect = async (photoAvantId: string) => {
+    if (!pendingPhotoId || !token) return;
+
+    try {
+      setShowPhotoAvantModal(false);
+
+      // Assign as photoApres with idsource pointing to photoAvant
+      await assignPhotoToFolder(
+        token,
+        pendingPhotoId,
+        photoAvantId,
+        "photoapres",
+      );
+
+      // Refresh photos
+      if (selectedFolderId) {
+        const updatedPhotos = await getAssociatedPhotosByFolder(
+          token,
+          selectedFolderId,
+        );
+        setPhotos(updatedPhotos);
+      }
+
+      // Show success alert
+      Alert.alert(
+        "✅ Photo assignée",
+        "La photo a été assignée comme Situation Après",
+        [{ text: "OK" }],
+      );
+
+      setPendingPhotoId(null);
+    } catch (err) {
+      console.error("Failed to assign photo apres:", err);
+      Alert.alert("Erreur", "Échec de l'assignation de la photo", [
+        { text: "OK" },
+      ]);
+      setPendingPhotoId(null);
+    }
+  };
 
   if (!selectedFolderId) {
     return (
@@ -125,81 +218,38 @@ export default function WebAssociatedPhotosSection({
         >
           {photoPairs.map((pair) => (
             <View key={pair.avant.id} style={styles.pairRow}>
-              {/* Left: Photo Avant */}
-              <TouchableOpacity
-                style={styles.pairCard}
-                onPress={() => setPreviewPhoto(pair.avant)}
+              {/* Left: Photo Avant - with drop zone */}
+              <DropZone
+                onDrop={handleDropPhotoAvant}
+                highlightColor={COLORS.primary}
               >
-                {pair.avant.url && (
-                  <Image
-                    source={{ uri: `${API_CONFIG.BASE_URL}${pair.avant.url}` }}
-                    style={styles.pairImage}
-                    resizeMode="cover"
-                  />
-                )}
-                <View style={styles.pairOverlay}>
-                  <View style={styles.pairBadge}>
-                    <Ionicons
-                      name="camera-outline"
-                      size={14}
-                      color={COLORS.white}
-                    />
-                    <Text style={styles.pairBadgeText}>Avant</Text>
-                  </View>
-                  <Text style={styles.pairTitle} numberOfLines={2}>
-                    {pair.avant.title || "Sans titre"}
-                  </Text>
-                  <Text style={styles.pairDate}>
-                    {new Date(pair.avant.created_at).toLocaleDateString(
-                      "fr-FR",
-                      {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      },
-                    )}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* Separator */}
-              <View style={styles.pairSeparator}>
-                <Ionicons
-                  name="arrow-forward"
-                  size={24}
-                  color={COLORS.primary}
-                />
-              </View>
-
-              {/* Right: Photo Après (or placeholder) */}
-              {pair.apres ? (
                 <TouchableOpacity
                   style={styles.pairCard}
-                  onPress={() => setPreviewPhoto(pair.apres!)}
+                  onPress={() => setPreviewPhoto(pair.avant)}
                 >
-                  {pair.apres.url && (
+                  {pair.avant.url && (
                     <Image
                       source={{
-                        uri: `${API_CONFIG.BASE_URL}${pair.apres.url}`,
+                        uri: `${API_CONFIG.BASE_URL}${pair.avant.url}`,
                       }}
                       style={styles.pairImage}
                       resizeMode="cover"
                     />
                   )}
                   <View style={styles.pairOverlay}>
-                    <View style={[styles.pairBadge, styles.pairBadgeGreen]}>
+                    <View style={styles.pairBadge}>
                       <Ionicons
-                        name="checkmark-circle-outline"
+                        name="camera-outline"
                         size={14}
                         color={COLORS.white}
                       />
-                      <Text style={styles.pairBadgeText}>Après</Text>
+                      <Text style={styles.pairBadgeText}>Avant</Text>
                     </View>
                     <Text style={styles.pairTitle} numberOfLines={2}>
-                      {pair.apres.title || "Sans titre"}
+                      {pair.avant.title || "Sans titre"}
                     </Text>
                     <Text style={styles.pairDate}>
-                      {new Date(pair.apres.created_at).toLocaleDateString(
+                      {new Date(pair.avant.created_at).toLocaleDateString(
                         "fr-FR",
                         {
                           day: "2-digit",
@@ -210,16 +260,70 @@ export default function WebAssociatedPhotosSection({
                     </Text>
                   </View>
                 </TouchableOpacity>
-              ) : (
-                <View style={styles.pairCardPlaceholder}>
-                  <Ionicons
-                    name="image-outline"
-                    size={48}
-                    color={COLORS.gray}
-                  />
-                  <Text style={styles.placeholderText}>Aucune photo après</Text>
-                </View>
-              )}
+              </DropZone>
+
+              {/* Separator */}
+              <View style={styles.pairSeparator}>
+                <Ionicons
+                  name="arrow-forward"
+                  size={24}
+                  color={COLORS.primary}
+                />
+              </View>
+
+              {/* Right: Photo Après (or placeholder) - with drop zone */}
+              <DropZone onDrop={handleDropPhotoApres} highlightColor="#10b981">
+                {pair.apres ? (
+                  <TouchableOpacity
+                    style={styles.pairCard}
+                    onPress={() => setPreviewPhoto(pair.apres!)}
+                  >
+                    {pair.apres.url && (
+                      <Image
+                        source={{
+                          uri: `${API_CONFIG.BASE_URL}${pair.apres.url}`,
+                        }}
+                        style={styles.pairImage}
+                        resizeMode="cover"
+                      />
+                    )}
+                    <View style={styles.pairOverlay}>
+                      <View style={[styles.pairBadge, styles.pairBadgeGreen]}>
+                        <Ionicons
+                          name="checkmark-circle-outline"
+                          size={14}
+                          color={COLORS.white}
+                        />
+                        <Text style={styles.pairBadgeText}>Après</Text>
+                      </View>
+                      <Text style={styles.pairTitle} numberOfLines={2}>
+                        {pair.apres.title || "Sans titre"}
+                      </Text>
+                      <Text style={styles.pairDate}>
+                        {new Date(pair.apres.created_at).toLocaleDateString(
+                          "fr-FR",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          },
+                        )}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.pairCardPlaceholder}>
+                    <Ionicons
+                      name="image-outline"
+                      size={48}
+                      color={COLORS.gray}
+                    />
+                    <Text style={styles.placeholderText}>
+                      Aucune photo après
+                    </Text>
+                  </View>
+                )}
+              </DropZone>
             </View>
           ))}
 
@@ -276,6 +380,16 @@ export default function WebAssociatedPhotosSection({
         visible={!!previewPhoto}
         photo={previewPhoto}
         onClose={() => setPreviewPhoto(null)}
+      />
+
+      <PhotoAvantSelectionModal
+        visible={showPhotoAvantModal}
+        photoAvants={photoAvants}
+        onSelect={handlePhotoAvantSelect}
+        onClose={() => {
+          setShowPhotoAvantModal(false);
+          setPendingPhotoId(null);
+        }}
       />
     </>
   );
