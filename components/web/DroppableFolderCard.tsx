@@ -56,6 +56,8 @@ export default function DroppableFolderCard({
       onDrop={handleDrop}
       onClick={handleClick}
       style={{
+        width: "100%",
+        boxSizing: "border-box",
         borderColor: isDragOver
           ? COLORS.primary
           : isSelected

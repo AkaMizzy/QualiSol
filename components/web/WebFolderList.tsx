@@ -2,21 +2,21 @@ import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWebFolders } from "@/hooks/useWebFolders";
 import {
-    assignPhotoToFolder,
-    Ged,
-    getPhotoAvantByFolder,
+  assignPhotoToFolder,
+  Ged,
+  getPhotoAvantByFolder,
 } from "@/services/gedService";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import DroppableFolderCard from "./DroppableFolderCard";
 import PhotoTypeSelectionModal from "./PhotoTypeSelectionModal";
@@ -330,11 +330,11 @@ const styles = StyleSheet.create({
   filtersContainer: {
     flexDirection: "row",
     gap: 8,
-    padding: 12,
+    padding: 16, // Match header padding
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
-    flexWrap: "wrap",
+    flexWrap: "nowrap",
   },
   filterDropdownContainer: {
     flexDirection: "row",
@@ -347,7 +347,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e5e7eb",
     flex: 1,
-    minWidth: 120,
+    flexBasis: 0,
+    minWidth: 0,
   },
   filterDropdown: {
     border: "none",
@@ -358,37 +359,40 @@ const styles = StyleSheet.create({
     cursor: "pointer",
     outline: "none",
     flex: 1,
-    minWidth: 80,
+    width: "100%",
   } as any,
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
+    padding: 16, // Match header padding
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
   },
   searchIcon: {
     position: "absolute",
-    left: 24,
+    left: 28, // 16 (padding) + 12 (offset)
     zIndex: 1,
   },
   searchInput: {
     flex: 1,
-    height: 40,
+    height: 36,
     backgroundColor: COLORS.lightWhite,
     borderRadius: 10,
-    paddingLeft: 40,
-    paddingRight: 16,
+    paddingLeft: 36,
+    paddingRight: 12,
     fontFamily: FONT.medium,
     fontSize: SIZES.small,
     color: COLORS.tertiary,
-  },
+    outline: "none",
+  } as any,
   folderList: {
     flex: 1,
   },
   folderListContent: {
-    padding: 12,
+    paddingHorizontal: 16, // Match header padding
+    paddingTop: 8,
+    paddingBottom: 16,
   },
   centerContainer: {
     flex: 1,

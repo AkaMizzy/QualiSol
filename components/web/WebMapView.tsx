@@ -1,12 +1,21 @@
-import API_CONFIG from '@/app/config/api';
-import { COLORS, FONT, SIZES } from '@/constants/theme';
-import { useAuth } from '@/contexts/AuthContext';
-import { MapPhoto, useMapData } from '@/hooks/useMapData';
-import folderService from '@/services/folderService';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapFolderDetailModal from './MapFolderDetailModal';
+import API_CONFIG from "@/app/config/api";
+import { COLORS, FONT, SIZES } from "@/constants/theme";
+import { useAuth } from "@/contexts/AuthContext";
+import { MapPhoto, useMapData } from "@/hooks/useMapData";
+import folderService from "@/services/folderService";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import MapFolderDetailModal from "./MapFolderDetailModal";
 
 // Type declarations for Leaflet (will be dynamically imported on web)
 declare const L: any;
@@ -23,13 +32,13 @@ interface PopupFolderInfo {
 
 export default function WebMapView({}: WebMapViewProps) {
   const { token } = useAuth();
-  const { 
-    photos, 
-    loading, 
-    error, 
-    mapCenter, 
-    selectedPhotoTypes, 
-    togglePhotoType, 
+  const {
+    photos,
+    loading,
+    error,
+    mapCenter,
+    selectedPhotoTypes,
+    togglePhotoType,
     allPhotos,
     projects,
     zones,
@@ -46,17 +55,20 @@ export default function WebMapView({}: WebMapViewProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<MapPhoto | null>(null);
   const [leafletLoaded, setLeafletLoaded] = useState(false);
   const [mapReady, setMapReady] = useState(false);
-  const [popupFolderInfo, setPopupFolderInfo] = useState<PopupFolderInfo | null>(null);
+  const [popupFolderInfo, setPopupFolderInfo] =
+    useState<PopupFolderInfo | null>(null);
   const [loadingFolderInfo, setLoadingFolderInfo] = useState(false);
-  
+
   // Folder detail modal state
   const [folderModalVisible, setFolderModalVisible] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [selectedPhotoId, setSelectedPhotoId] = useState<string | undefined>(undefined);
+  const [selectedPhotoId, setSelectedPhotoId] = useState<string | undefined>(
+    undefined,
+  );
 
   // Load Leaflet CSS and JS dynamically
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
 
     // Check if already loaded
     if ((window as any).L) {
@@ -67,11 +79,11 @@ export default function WebMapView({}: WebMapViewProps) {
     // Check if CSS already exists
     const existingCss = document.querySelector('link[href*="leaflet"]');
     if (!existingCss) {
-      const cssLink = document.createElement('link');
-      cssLink.rel = 'stylesheet';
-      cssLink.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      cssLink.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
-      cssLink.crossOrigin = '';
+      const cssLink = document.createElement("link");
+      cssLink.rel = "stylesheet";
+      cssLink.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      cssLink.integrity = "sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=";
+      cssLink.crossOrigin = "";
       document.head.appendChild(cssLink);
     }
 
@@ -89,10 +101,10 @@ export default function WebMapView({}: WebMapViewProps) {
     }
 
     // Load JS
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
-    script.crossOrigin = '';
+    const script = document.createElement("script");
+    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    script.integrity = "sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=";
+    script.crossOrigin = "";
     script.onload = () => {
       setLeafletLoaded(true);
     };
@@ -102,7 +114,7 @@ export default function WebMapView({}: WebMapViewProps) {
   // Initialize map when container is ready
   const initializeMap = useCallback(() => {
     if (!leafletLoaded || !mapContainerRef.current) return;
-    
+
     // Clean up existing map if any
     if (mapRef.current) {
       try {
@@ -120,17 +132,18 @@ export default function WebMapView({}: WebMapViewProps) {
       // Create map
       mapRef.current = L.map(mapContainerRef.current).setView(
         [mapCenter.lat, mapCenter.lng],
-        6 // Default zoom level for France
+        6, // Default zoom level for France
       );
 
       // Add OpenStreetMap tiles
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(mapRef.current);
 
       setMapReady(true);
     } catch (e) {
-      console.error('Error initializing map:', e);
+      console.error("Error initializing map:", e);
     }
   }, [leafletLoaded, mapCenter.lat, mapCenter.lng]);
 
@@ -166,7 +179,7 @@ export default function WebMapView({}: WebMapViewProps) {
     const L = (window as any).L;
 
     // Clear existing markers
-    markersRef.current.forEach(marker => {
+    markersRef.current.forEach((marker) => {
       mapRef.current.removeLayer(marker);
     });
     markersRef.current = [];
@@ -177,15 +190,15 @@ export default function WebMapView({}: WebMapViewProps) {
 
       const lat = parseFloat(photo.latitude);
       const lng = parseFloat(photo.longitude);
-      
+
       if (isNaN(lat) || isNaN(lng)) return;
 
       // Create custom icon with photo thumbnail
       const iconColor = getIconColor(photo.kind);
-      const imageUrl = photo.url ? `${API_CONFIG.BASE_URL}${photo.url}` : '';
-      
+      const imageUrl = photo.url ? `${API_CONFIG.BASE_URL}${photo.url}` : "";
+
       const icon = L.divIcon({
-        className: 'photo-marker',
+        className: "photo-marker",
         html: `
           <div style="
             position: relative;
@@ -203,7 +216,9 @@ export default function WebMapView({}: WebMapViewProps) {
               box-shadow: 0 4px 12px rgba(0,0,0,0.3);
               transition: transform 0.2s ease;
             ">
-              ${imageUrl ? `
+              ${
+                imageUrl
+                  ? `
                 <img 
                   src="${imageUrl}" 
                   style="
@@ -213,7 +228,8 @@ export default function WebMapView({}: WebMapViewProps) {
                   "
                   onerror="this.style.display='none'; this.parentElement.innerHTML='📷';"
                 />
-              ` : `
+              `
+                  : `
                 <div style="
                   width: 100%;
                   height: 100%;
@@ -223,7 +239,8 @@ export default function WebMapView({}: WebMapViewProps) {
                   font-size: 24px;
                   background: ${iconColor};
                 ">📷</div>
-              `}
+              `
+              }
             </div>
             <div style="
               position: absolute;
@@ -243,9 +260,9 @@ export default function WebMapView({}: WebMapViewProps) {
       });
 
       const marker = L.marker([lat, lng], { icon }).addTo(mapRef.current);
-      
+
       // Add click handler
-      marker.on('click', () => {
+      marker.on("click", () => {
         setSelectedPhoto(photo);
       });
 
@@ -255,9 +272,9 @@ export default function WebMapView({}: WebMapViewProps) {
     // Fit bounds if we have photos
     if (photos.length > 0) {
       const bounds = photos
-        .filter(p => p.latitude && p.longitude)
-        .map(p => [parseFloat(p.latitude!), parseFloat(p.longitude!)]);
-      
+        .filter((p) => p.latitude && p.longitude)
+        .map((p) => [parseFloat(p.latitude!), parseFloat(p.longitude!)]);
+
       if (bounds.length > 0) {
         mapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
       }
@@ -266,25 +283,25 @@ export default function WebMapView({}: WebMapViewProps) {
 
   const getIconColor = (kind: string): string => {
     switch (kind) {
-      case 'qualiphoto':
-        return '#3b82f6'; // Blue
-      case 'photoavant':
-        return '#22c55e'; // Green
-      case 'photoapres':
-        return '#eab308'; // Yellow
+      case "qualiphoto":
+        return "#3b82f6"; // Blue
+      case "photoavant":
+        return "#22c55e"; // Green
+      case "photoapres":
+        return "#eab308"; // Yellow
       default:
-        return '#3b82f6';
+        return "#3b82f6";
     }
   };
 
   const getPhotoTypeLabel = (kind: string): string => {
     switch (kind) {
-      case 'qualiphoto':
-        return 'QualiPhoto';
-      case 'photoavant':
-        return 'Situation Avant';
-      case 'photoapres':
-        return 'Situation Après';
+      case "qualiphoto":
+        return "QualiPhoto";
+      case "photoavant":
+        return "Situation Avant";
+      case "photoapres":
+        return "Situation Après";
       default:
         return kind;
     }
@@ -299,7 +316,10 @@ export default function WebMapView({}: WebMapViewProps) {
 
     const fetchFolderInfo = async () => {
       // Only fetch for folder-related photos
-      if (selectedPhoto.kind !== 'photoavant' && selectedPhoto.kind !== 'photoapres') {
+      if (
+        selectedPhoto.kind !== "photoavant" &&
+        selectedPhoto.kind !== "photoapres"
+      ) {
         setPopupFolderInfo(null);
         return;
       }
@@ -308,11 +328,13 @@ export default function WebMapView({}: WebMapViewProps) {
       try {
         let folderId: string | null = null;
 
-        if (selectedPhoto.kind === 'photoavant') {
+        if (selectedPhoto.kind === "photoavant") {
           folderId = selectedPhoto.idsource;
-        } else if (selectedPhoto.kind === 'photoapres') {
+        } else if (selectedPhoto.kind === "photoapres") {
           // PhotoApres: idsource is photoAvant ID, need to find folder
-          const photoAvant = allPhotos.find(p => p.id === selectedPhoto.idsource);
+          const photoAvant = allPhotos.find(
+            (p) => p.id === selectedPhoto.idsource,
+          );
           folderId = photoAvant?.idsource || null;
         }
 
@@ -327,19 +349,19 @@ export default function WebMapView({}: WebMapViewProps) {
           return;
         }
 
-        let projectName = '';
-        let zoneName = '';
+        let projectName = "";
+        let zoneName = "";
 
         if (folder.project_id) {
           const projects = await folderService.getAllProjects(token);
-          const project = projects.find(p => p.id === folder.project_id);
-          projectName = project?.title || '';
+          const project = projects.find((p) => p.id === folder.project_id);
+          projectName = project?.title || "";
         }
 
         if (folder.zone_id) {
           const zones = await folderService.getAllZones(token);
-          const zone = zones.find(z => z.id === folder.zone_id);
-          zoneName = zone?.title || '';
+          const zone = zones.find((z) => z.id === folder.zone_id);
+          zoneName = zone?.title || "";
         }
 
         setPopupFolderInfo({
@@ -348,7 +370,7 @@ export default function WebMapView({}: WebMapViewProps) {
           zoneName,
         });
       } catch (error) {
-        console.error('Error fetching folder info:', error);
+        console.error("Error fetching folder info:", error);
         setPopupFolderInfo(null);
       } finally {
         setLoadingFolderInfo(false);
@@ -361,13 +383,13 @@ export default function WebMapView({}: WebMapViewProps) {
   const handleViewFolder = () => {
     if (!selectedPhoto) return;
 
-    if (selectedPhoto.kind === 'photoavant') {
+    if (selectedPhoto.kind === "photoavant") {
       // PhotoAvant: idsource is folder ID
       setSelectedFolderId(selectedPhoto.idsource);
       setSelectedPhotoId(selectedPhoto.id);
-    } else if (selectedPhoto.kind === 'photoapres') {
+    } else if (selectedPhoto.kind === "photoapres") {
       // PhotoApres: idsource is photoAvant ID - we need to find the folder
-      const photoAvant = allPhotos.find(p => p.id === selectedPhoto.idsource);
+      const photoAvant = allPhotos.find((p) => p.id === selectedPhoto.idsource);
       if (photoAvant) {
         setSelectedFolderId(photoAvant.idsource);
         setSelectedPhotoId(photoAvant.id);
@@ -388,7 +410,7 @@ export default function WebMapView({}: WebMapViewProps) {
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={styles.loadingText}>
-          {loading ? 'Chargement des photos...' : 'Chargement de la carte...'}
+          {loading ? "Chargement des photos..." : "Chargement de la carte..."}
         </Text>
       </View>
     );
@@ -411,10 +433,80 @@ export default function WebMapView({}: WebMapViewProps) {
           <View style={styles.headerLeft}>
             <Text style={styles.headerTitle}>🗺️ Carte des Photos</Text>
             <Text style={styles.headerSubtitle}>
-              {photos.length} photo{photos.length !== 1 ? 's' : ''} affichée{photos.length !== 1 ? 's' : ''}
+              {photos.length} photo{photos.length !== 1 ? "s" : ""} affichée
+              {photos.length !== 1 ? "s" : ""}
             </Text>
           </View>
-          
+
+          {/* Center: Photo Type Filters */}
+          <View style={styles.photoTypeFilters}>
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                selectedPhotoTypes.has("qualiphoto") &&
+                  styles.filterButtonActiveBlue,
+              ]}
+              onPress={() => togglePhotoType("qualiphoto")}
+            >
+              <View
+                style={[styles.filterDot, { backgroundColor: "#3b82f6" }]}
+              />
+              <Text
+                style={[
+                  styles.filterText,
+                  selectedPhotoTypes.has("qualiphoto") &&
+                    styles.filterTextActive,
+                ]}
+              >
+                QualiPhoto
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                selectedPhotoTypes.has("photoavant") &&
+                  styles.filterButtonActiveGreen,
+              ]}
+              onPress={() => togglePhotoType("photoavant")}
+            >
+              <View
+                style={[styles.filterDot, { backgroundColor: "#22c55e" }]}
+              />
+              <Text
+                style={[
+                  styles.filterText,
+                  selectedPhotoTypes.has("photoavant") &&
+                    styles.filterTextActive,
+                ]}
+              >
+                Avant
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                selectedPhotoTypes.has("photoapres") &&
+                  styles.filterButtonActiveYellow,
+              ]}
+              onPress={() => togglePhotoType("photoapres")}
+            >
+              <View
+                style={[styles.filterDot, { backgroundColor: "#eab308" }]}
+              />
+              <Text
+                style={[
+                  styles.filterText,
+                  selectedPhotoTypes.has("photoapres") &&
+                    styles.filterTextActive,
+                ]}
+              >
+                Après
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Right: Entity Filters */}
           <View style={styles.entityFilters}>
             {/* Project Filter */}
@@ -422,12 +514,14 @@ export default function WebMapView({}: WebMapViewProps) {
               <Ionicons name="business-outline" size={16} color={COLORS.gray} />
               <select
                 style={styles.filterDropdown as any}
-                value={filters.projectId || ''}
+                value={filters.projectId || ""}
                 onChange={(e: any) => setProjectFilter(e.target.value || null)}
               >
                 <option value="">Tous les projets</option>
-                {projects.map(project => (
-                  <option key={project.id} value={project.id}>{project.title}</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.title}
+                  </option>
                 ))}
               </select>
             </View>
@@ -437,13 +531,15 @@ export default function WebMapView({}: WebMapViewProps) {
               <Ionicons name="layers-outline" size={16} color={COLORS.gray} />
               <select
                 style={styles.filterDropdown as any}
-                value={filters.zoneId || ''}
+                value={filters.zoneId || ""}
                 onChange={(e: any) => setZoneFilter(e.target.value || null)}
                 disabled={zones.length === 0}
               >
                 <option value="">Toutes les zones</option>
-                {zones.map(zone => (
-                  <option key={zone.id} value={zone.id}>{zone.title}</option>
+                {zones.map((zone) => (
+                  <option key={zone.id} value={zone.id}>
+                    {zone.title}
+                  </option>
                 ))}
               </select>
             </View>
@@ -453,88 +549,42 @@ export default function WebMapView({}: WebMapViewProps) {
               <Ionicons name="folder-outline" size={16} color={COLORS.gray} />
               <select
                 style={styles.filterDropdown as any}
-                value={filters.folderId || ''}
+                value={filters.folderId || ""}
                 onChange={(e: any) => setFolderFilter(e.target.value || null)}
                 disabled={folders.length === 0}
               >
                 <option value="">Tous les dossiers</option>
-                {folders.map(folder => (
-                  <option key={folder.id} value={folder.id}>{folder.title}</option>
+                {folders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.title}
+                  </option>
                 ))}
               </select>
             </View>
 
             {/* Clear Filters Button */}
             {(filters.projectId || filters.zoneId || filters.folderId) && (
-              <TouchableOpacity style={styles.clearFiltersButton} onPress={clearAllFilters}>
+              <TouchableOpacity
+                style={styles.clearFiltersButton}
+                onPress={clearAllFilters}
+              >
                 <Ionicons name="close-circle" size={18} color={COLORS.white} />
                 <Text style={styles.clearFiltersText}>Effacer filtres</Text>
               </TouchableOpacity>
             )}
           </View>
         </View>
-
-        {/* Photo Type Filters */}
-        <View style={styles.filterContainer}>
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              selectedPhotoTypes.has('qualiphoto') && styles.filterButtonActiveBlue,
-            ]}
-            onPress={() => togglePhotoType('qualiphoto')}
-          >
-            <View style={[styles.filterDot, { backgroundColor: '#3b82f6' }]} />
-            <Text style={[
-              styles.filterText,
-              selectedPhotoTypes.has('qualiphoto') && styles.filterTextActive,
-            ]}>
-              QualiPhoto
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              selectedPhotoTypes.has('photoavant') && styles.filterButtonActiveGreen,
-            ]}
-            onPress={() => togglePhotoType('photoavant')}
-          >
-            <View style={[styles.filterDot, { backgroundColor: '#22c55e' }]} />
-            <Text style={[
-              styles.filterText,
-              selectedPhotoTypes.has('photoavant') && styles.filterTextActive,
-            ]}>
-              Avant
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              selectedPhotoTypes.has('photoapres') && styles.filterButtonActiveYellow,
-            ]}
-            onPress={() => togglePhotoType('photoapres')}
-          >
-            <View style={[styles.filterDot, { backgroundColor: '#eab308' }]} />
-            <Text style={[
-              styles.filterText,
-              selectedPhotoTypes.has('photoapres') && styles.filterTextActive,
-            ]}>
-              Après
-            </Text>
-          </TouchableOpacity>
-        </View>
       </View>
 
       {/* Map Container */}
-      <div 
-        ref={mapContainerRef} 
-        style={{ 
-          flex: 1, 
-          width: '100%', 
-          height: '100%',
+      <div
+        ref={mapContainerRef}
+        style={{
+          flex: 1,
+          width: "100%",
+          height: "100%",
           minHeight: 400,
-        }} 
+        }}
       />
 
       {/* Photo Detail Modal */}
@@ -544,14 +594,24 @@ export default function WebMapView({}: WebMapViewProps) {
         animationType="fade"
         onRequestClose={() => setSelectedPhoto(null)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setSelectedPhoto(null)}>
-          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setSelectedPhoto(null)}
+        >
+          <View
+            style={styles.modalContent}
+            onStartShouldSetResponder={() => true}
+          >
             {selectedPhoto && (
               <>
                 {/* Photo Preview */}
                 <View style={styles.photoPreviewContainer}>
                   <Image
-                    source={{ uri: selectedPhoto.url ? `${API_CONFIG.BASE_URL}${selectedPhoto.url}` : '' }}
+                    source={{
+                      uri: selectedPhoto.url
+                        ? `${API_CONFIG.BASE_URL}${selectedPhoto.url}`
+                        : "",
+                    }}
                     style={styles.photoPreview}
                     resizeMode="cover"
                   />
@@ -565,10 +625,17 @@ export default function WebMapView({}: WebMapViewProps) {
 
                 {/* Photo Info */}
                 <View style={styles.photoInfo}>
-                  <Text style={styles.photoTitle}>{selectedPhoto.title || 'Sans titre'}</Text>
-                  
+                  <Text style={styles.photoTitle}>
+                    {selectedPhoto.title || "Sans titre"}
+                  </Text>
+
                   <View style={styles.infoRow}>
-                    <View style={[styles.typeBadge, { backgroundColor: getIconColor(selectedPhoto.kind) }]}>
+                    <View
+                      style={[
+                        styles.typeBadge,
+                        { backgroundColor: getIconColor(selectedPhoto.kind) },
+                      ]}
+                    >
                       <Text style={styles.typeBadgeText}>
                         {getPhotoTypeLabel(selectedPhoto.kind)}
                       </Text>
@@ -582,22 +649,34 @@ export default function WebMapView({}: WebMapViewProps) {
                   )}
 
                   <View style={styles.infoRow}>
-                    <Ionicons name="location-outline" size={16} color={COLORS.gray} />
+                    <Ionicons
+                      name="location-outline"
+                      size={16}
+                      color={COLORS.gray}
+                    />
                     <Text style={styles.infoText}>
-                      {parseFloat(selectedPhoto.latitude!).toFixed(6)}, {parseFloat(selectedPhoto.longitude!).toFixed(6)}
+                      {parseFloat(selectedPhoto.latitude!).toFixed(6)},{" "}
+                      {parseFloat(selectedPhoto.longitude!).toFixed(6)}
                     </Text>
                   </View>
 
                   <View style={styles.infoRow}>
-                    <Ionicons name="calendar-outline" size={16} color={COLORS.gray} />
+                    <Ionicons
+                      name="calendar-outline"
+                      size={16}
+                      color={COLORS.gray}
+                    />
                     <Text style={styles.infoText}>
-                      {new Date(selectedPhoto.created_at).toLocaleDateString('fr-FR', {
-                        day: '2-digit',
-                        month: 'long',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {new Date(selectedPhoto.created_at).toLocaleDateString(
+                        "fr-FR",
+                        {
+                          day: "2-digit",
+                          month: "long",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        },
+                      )}
                     </Text>
                   </View>
 
@@ -607,38 +686,63 @@ export default function WebMapView({}: WebMapViewProps) {
                       <ActivityIndicator size="small" color={COLORS.primary} />
                       <Text style={styles.infoText}>Chargement...</Text>
                     </View>
-                  ) : popupFolderInfo && (
-                    <>
-                      <View style={styles.folderInfoSection}>
-                        {popupFolderInfo.folderTitle && (
-                          <View style={styles.infoRow}>
-                            <Ionicons name="folder-outline" size={16} color={COLORS.primary} />
-                            <Text style={styles.infoTextBold}>{popupFolderInfo.folderTitle}</Text>
-                          </View>
-                        )}
-                        {popupFolderInfo.projectName && (
-                          <View style={styles.infoRow}>
-                            <Ionicons name="business-outline" size={16} color={COLORS.gray} />
-                            <Text style={styles.infoText}>Projet: {popupFolderInfo.projectName}</Text>
-                          </View>
-                        )}
-                        {popupFolderInfo.zoneName && (
-                          <View style={styles.infoRow}>
-                            <Ionicons name="layers-outline" size={16} color={COLORS.gray} />
-                            <Text style={styles.infoText}>Zone: {popupFolderInfo.zoneName}</Text>
-                          </View>
-                        )}
-                      </View>
-                    </>
+                  ) : (
+                    popupFolderInfo && (
+                      <>
+                        <View style={styles.folderInfoSection}>
+                          {popupFolderInfo.folderTitle && (
+                            <View style={styles.infoRow}>
+                              <Ionicons
+                                name="folder-outline"
+                                size={16}
+                                color={COLORS.primary}
+                              />
+                              <Text style={styles.infoTextBold}>
+                                {popupFolderInfo.folderTitle}
+                              </Text>
+                            </View>
+                          )}
+                          {popupFolderInfo.projectName && (
+                            <View style={styles.infoRow}>
+                              <Ionicons
+                                name="business-outline"
+                                size={16}
+                                color={COLORS.gray}
+                              />
+                              <Text style={styles.infoText}>
+                                Projet: {popupFolderInfo.projectName}
+                              </Text>
+                            </View>
+                          )}
+                          {popupFolderInfo.zoneName && (
+                            <View style={styles.infoRow}>
+                              <Ionicons
+                                name="layers-outline"
+                                size={16}
+                                color={COLORS.gray}
+                              />
+                              <Text style={styles.infoText}>
+                                Zone: {popupFolderInfo.zoneName}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      </>
+                    )
                   )}
 
                   {/* Action Buttons */}
-                  {(selectedPhoto.kind === 'photoavant' || selectedPhoto.kind === 'photoapres') && (
+                  {(selectedPhoto.kind === "photoavant" ||
+                    selectedPhoto.kind === "photoapres") && (
                     <TouchableOpacity
                       style={styles.viewFolderButton}
                       onPress={handleViewFolder}
                     >
-                      <Ionicons name="folder-outline" size={20} color={COLORS.white} />
+                      <Ionicons
+                        name="folder-outline"
+                        size={20}
+                        color={COLORS.white}
+                      />
                       <Text style={styles.viewFolderButtonText}>
                         Voir le dossier et photos associées
                       </Text>
@@ -682,8 +786,8 @@ const styles = StyleSheet.create({
   },
   centerContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   loadingText: {
@@ -695,25 +799,30 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: FONT.medium,
     fontSize: SIZES.medium,
-    color: '#ef4444',
+    color: "#ef4444",
   },
   header: {
     backgroundColor: COLORS.white,
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: "#e5e7eb",
   },
   headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-    flexWrap: 'wrap',
-    gap: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 16,
   },
   headerLeft: {
-    flex: 1,
+    flex: 0,
     minWidth: 200,
+  },
+  photoTypeFilters: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 0,
   },
   headerTop: {
     marginBottom: 12,
@@ -730,37 +839,37 @@ const styles = StyleSheet.create({
     color: COLORS.gray,
   },
   entityFilters: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   filterDropdownContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     backgroundColor: COLORS.lightWhite,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: "#e5e7eb",
   },
   filterDropdown: {
-    border: 'none',
-    background: 'transparent',
+    border: "none",
+    background: "transparent",
     fontFamily: FONT.medium,
     fontSize: SIZES.small,
     color: COLORS.tertiary,
-    cursor: 'pointer',
-    outline: 'none',
+    cursor: "pointer",
+    outline: "none",
     minWidth: 120,
   } as any,
   clearFiltersButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
-    backgroundColor: '#ef4444',
+    backgroundColor: "#ef4444",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -771,31 +880,31 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   filterContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: COLORS.lightWhite,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: "#e5e7eb",
     gap: 6,
   },
   filterButtonActiveBlue: {
-    backgroundColor: '#dbeafe',
-    borderColor: '#3b82f6',
+    backgroundColor: "#dbeafe",
+    borderColor: "#3b82f6",
   },
   filterButtonActiveGreen: {
-    backgroundColor: '#dcfce7',
-    borderColor: '#22c55e',
+    backgroundColor: "#dcfce7",
+    borderColor: "#22c55e",
   },
   filterButtonActiveYellow: {
-    backgroundColor: '#fef9c3',
-    borderColor: '#eab308',
+    backgroundColor: "#fef9c3",
+    borderColor: "#eab308",
   },
   filterDot: {
     width: 10,
@@ -812,42 +921,42 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   modalContent: {
     backgroundColor: COLORS.white,
     borderRadius: 16,
     maxWidth: 400,
-    width: '100%',
-    overflow: 'hidden',
-    shadowColor: '#000',
+    width: "100%",
+    overflow: "hidden",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
     shadowRadius: 20,
     elevation: 10,
   },
   photoPreviewContainer: {
-    position: 'relative',
+    position: "relative",
     aspectRatio: 4 / 3,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: "#f3f4f6",
   },
   photoPreview: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   closeButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 12,
     right: 12,
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   photoInfo: {
     padding: 16,
@@ -865,8 +974,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginBottom: 8,
   },
@@ -899,9 +1008,9 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   viewFolderButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: COLORS.primary,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -915,14 +1024,14 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   emptyOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     zIndex: 10,
   },
   emptyText: {
@@ -936,7 +1045,7 @@ const styles = StyleSheet.create({
     fontSize: SIZES.medium,
     color: COLORS.gray,
     marginTop: 8,
-    textAlign: 'center',
+    textAlign: "center",
     paddingHorizontal: 40,
   },
 });
