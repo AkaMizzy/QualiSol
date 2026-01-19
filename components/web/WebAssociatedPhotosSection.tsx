@@ -25,11 +25,13 @@ import PhotoAvantSelectionModal from "./PhotoAvantSelectionModal";
 interface WebAssociatedPhotosSectionProps {
   selectedFolderId: string | null;
   folderTitle?: string;
+  onPhotoAssigned?: () => void; // Callback to refresh galerie after assignment
 }
 
 export default function WebAssociatedPhotosSection({
   selectedFolderId,
   folderTitle,
+  onPhotoAssigned,
 }: WebAssociatedPhotosSectionProps) {
   const { token } = useAuth();
   const [photos, setPhotos] = useState<Ged[]>([]);
@@ -95,6 +97,9 @@ export default function WebAssociatedPhotosSection({
       );
       setPhotos(updatedPhotos);
 
+      // Refresh galerie to remove assigned photo from qualiphoto list
+      onPhotoAssigned?.();
+
       // Show success alert
       Alert.alert(
         "✅ Photo assignée",
@@ -126,6 +131,9 @@ export default function WebAssociatedPhotosSection({
         selectedFolderId,
       );
       setPhotos(updatedPhotos);
+
+      // Refresh galerie to remove assigned photo from qualiphoto list
+      onPhotoAssigned?.();
 
       // Show success alert
       Alert.alert(
@@ -293,6 +301,7 @@ export default function WebAssociatedPhotosSection({
                 onDrop={handleDropPhotoApres}
                 highlightColor="#10b981"
                 data={pair.avant.id}
+                disabled={!!pair.apres} // Disable if photoApres already exists
               >
                 {pair.apres ? (
                   <TouchableOpacity

@@ -50,11 +50,16 @@ export default function DropZone({
     position: "relative" as const,
     flex: 1,
     transition: "all 0.2s ease",
-    ...(isDraggingOver && {
-      backgroundColor: `${highlightColor}15`,
-      border: `3px dashed ${highlightColor}`,
-      borderRadius: 8,
+    ...(disabled && {
+      opacity: 0.6,
+      cursor: "not-allowed",
     }),
+    ...(isDraggingOver &&
+      !disabled && {
+        backgroundColor: `${highlightColor}15`,
+        border: `3px dashed ${highlightColor}`,
+        borderRadius: 8,
+      }),
   };
 
   return (

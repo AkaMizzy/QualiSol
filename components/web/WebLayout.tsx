@@ -125,6 +125,7 @@ export default function WebLayout() {
             <WebAssociatedPhotosSection
               selectedFolderId={selectedFolderId}
               folderTitle={selectedFolderTitle}
+              onPhotoAssigned={galerieState.refetch}
             />
           </div>
         </div>
