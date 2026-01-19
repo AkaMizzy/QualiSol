@@ -126,7 +126,7 @@ export default function ImagePreviewModal({
                 </View>
               )}
 
-              {photo.anomalie1 && (
+              {photo.type && (
                 <View style={styles.metadataRow}>
                   <Ionicons
                     name="warning-outline"
@@ -134,11 +134,11 @@ export default function ImagePreviewModal({
                     color={COLORS.primary}
                   />
                   <Text style={styles.metadataLabel}>Type anomalie:</Text>
-                  <Text style={styles.metadataValue}>{photo.anomalie1}</Text>
+                  <Text style={styles.metadataValue}>{photo.type}</Text>
                 </View>
               )}
 
-              {photo.anomalie2 && (
+              {photo.categorie && (
                 <View style={styles.metadataRow}>
                   <Ionicons
                     name="list-outline"
@@ -146,7 +146,7 @@ export default function ImagePreviewModal({
                     color={COLORS.primary}
                   />
                   <Text style={styles.metadataLabel}>Catégorie:</Text>
-                  <Text style={styles.metadataValue}>{photo.anomalie2}</Text>
+                  <Text style={styles.metadataValue}>{photo.categorie}</Text>
                 </View>
               )}
             </View>
