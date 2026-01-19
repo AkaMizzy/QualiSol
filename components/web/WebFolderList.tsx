@@ -151,126 +151,145 @@ export default function WebFolderList({
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.headerTitle}>📁 Dossiers</Text>
-            <Text style={styles.headerSubtitle}>
-              {folders.length} dossier{folders.length !== 1 ? "s" : ""} affiché
-              {folders.length !== 1 ? "s" : ""}
-            </Text>
+      {/* Header Section */}
+      <View style={styles.headerSection}>
+        <View style={styles.contentWrapper}>
+          <View style={styles.headerRow}>
+            <View>
+              <Text style={styles.headerTitle}>📁 Dossiers</Text>
+              <Text style={styles.headerSubtitle}>
+                {folders.length} dossier{folders.length !== 1 ? "s" : ""}{" "}
+                affiché
+                {folders.length !== 1 ? "s" : ""}
+              </Text>
+            </View>
+
+            {/* Clear Filters Button */}
+            {hasActiveFilters && (
+              <TouchableOpacity
+                style={styles.clearFiltersButton}
+                onPress={clearAllFilters}
+              >
+                <Ionicons name="close-circle" size={16} color={COLORS.white} />
+                <Text style={styles.clearFiltersText}>Effacer</Text>
+              </TouchableOpacity>
+            )}
           </View>
-
-          {/* Clear Filters Button */}
-          {hasActiveFilters && (
-            <TouchableOpacity
-              style={styles.clearFiltersButton}
-              onPress={clearAllFilters}
-            >
-              <Ionicons name="close-circle" size={16} color={COLORS.white} />
-              <Text style={styles.clearFiltersText}>Effacer</Text>
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 
-      {/* Filter Dropdowns */}
-      <View style={styles.filtersContainer}>
-        {/* Project Filter */}
-        <View style={styles.filterDropdownContainer}>
-          <Ionicons name="business-outline" size={14} color={COLORS.gray} />
-          <select
-            style={styles.filterDropdown as any}
-            value={filters.projectId || ""}
-            onChange={(e: any) => setProjectFilter(e.target.value || null)}
-          >
-            <option value="">Tous les projets</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.title}
-              </option>
-            ))}
-          </select>
-        </View>
+      {/* Filters Section */}
+      <View style={styles.filtersSection}>
+        <View style={styles.contentWrapper}>
+          <View style={styles.filtersRow}>
+            {/* Project Filter */}
+            <View style={styles.filterDropdownContainer}>
+              <Ionicons name="business-outline" size={14} color={COLORS.gray} />
+              <select
+                style={styles.filterDropdown as any}
+                value={filters.projectId || ""}
+                onChange={(e: any) => setProjectFilter(e.target.value || null)}
+              >
+                <option value="">Tous les projets</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.title}
+                  </option>
+                ))}
+              </select>
+            </View>
 
-        {/* Zone Filter */}
-        <View style={styles.filterDropdownContainer}>
-          <Ionicons name="layers-outline" size={14} color={COLORS.gray} />
-          <select
-            style={styles.filterDropdown as any}
-            value={filters.zoneId || ""}
-            onChange={(e: any) => setZoneFilter(e.target.value || null)}
-            disabled={zones.length === 0}
-          >
-            <option value="">Toutes les zones</option>
-            {zones.map((zone) => (
-              <option key={zone.id} value={zone.id}>
-                {zone.title}
-              </option>
-            ))}
-          </select>
+            {/* Zone Filter */}
+            <View style={styles.filterDropdownContainer}>
+              <Ionicons name="layers-outline" size={14} color={COLORS.gray} />
+              <select
+                style={styles.filterDropdown as any}
+                value={filters.zoneId || ""}
+                onChange={(e: any) => setZoneFilter(e.target.value || null)}
+                disabled={zones.length === 0}
+              >
+                <option value="">Toutes les zones</option>
+                {zones.map((zone) => (
+                  <option key={zone.id} value={zone.id}>
+                    {zone.title}
+                  </option>
+                ))}
+              </select>
+            </View>
+          </View>
         </View>
       </View>
 
-      {/* Search Input */}
-      <View style={styles.searchContainer}>
-        <Ionicons
-          name="search-outline"
-          size={20}
-          color={COLORS.gray}
-          style={styles.searchIcon}
-        />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Rechercher un dossier..."
-          placeholderTextColor={COLORS.gray}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+      {/* Search Section */}
+      <View style={styles.searchSection}>
+        <View style={styles.contentWrapper}>
+          <View style={styles.searchInputWrapper}>
+            <Ionicons
+              name="search-outline"
+              size={20}
+              color={COLORS.gray}
+              style={styles.searchIcon}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Rechercher un dossier..."
+              placeholderTextColor={COLORS.gray}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+        </View>
       </View>
 
+      {/* Folder List */}
       <ScrollView
         style={styles.folderList}
         contentContainerStyle={styles.folderListContent}
       >
-        {folders.map((folder) => (
-          <DroppableFolderCard
-            key={folder.id}
-            folder={folder}
-            onDrop={handleDrop}
-            projectName={
-              folder.project_id ? projectMap.get(folder.project_id) : undefined
-            }
-            zoneName={folder.zone_id ? zoneMap.get(folder.zone_id) : undefined}
-            isSelected={selectedFolderId === folder.id}
-            onSelect={onFolderSelect}
-          />
-        ))}
-
-        {folders.length === 0 && (
-          <View style={styles.emptyContainer}>
-            <Ionicons
-              name="folder-open-outline"
-              size={48}
-              color={COLORS.gray}
+        <View style={styles.contentWrapper}>
+          {folders.map((folder) => (
+            <DroppableFolderCard
+              key={folder.id}
+              folder={folder}
+              onDrop={handleDrop}
+              projectName={
+                folder.project_id
+                  ? projectMap.get(folder.project_id)
+                  : undefined
+              }
+              zoneName={
+                folder.zone_id ? zoneMap.get(folder.zone_id) : undefined
+              }
+              isSelected={selectedFolderId === folder.id}
+              onSelect={onFolderSelect}
             />
-            <Text style={styles.emptyText}>
-              {hasActiveFilters
-                ? "Aucun dossier trouvé"
-                : "Aucun dossier disponible"}
-            </Text>
-            {hasActiveFilters && (
-              <TouchableOpacity
-                style={styles.emptyResetButton}
-                onPress={clearAllFilters}
-              >
-                <Text style={styles.emptyResetText}>
-                  Réinitialiser les filtres
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
+          ))}
+
+          {folders.length === 0 && (
+            <View style={styles.emptyContainer}>
+              <Ionicons
+                name="folder-open-outline"
+                size={48}
+                color={COLORS.gray}
+              />
+              <Text style={styles.emptyText}>
+                {hasActiveFilters
+                  ? "Aucun dossier trouvé"
+                  : "Aucun dossier disponible"}
+              </Text>
+              {hasActiveFilters && (
+                <TouchableOpacity
+                  style={styles.emptyResetButton}
+                  onPress={clearAllFilters}
+                >
+                  <Text style={styles.emptyResetText}>
+                    Réinitialiser les filtres
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       {/* Photo Type Selection Modal */}
@@ -291,11 +310,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.lightWhite,
   },
-  header: {
-    padding: 16,
+  // Shared content wrapper for consistent horizontal constraints
+  contentWrapper: {
+    paddingHorizontal: 16,
+    width: "100%",
+  },
+  // Header section
+  headerSection: {
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
+    paddingVertical: 16,
   },
   headerRow: {
     flexDirection: "row",
@@ -327,13 +352,16 @@ const styles = StyleSheet.create({
     fontSize: SIZES.small,
     color: COLORS.white,
   },
-  filtersContainer: {
-    flexDirection: "row",
-    gap: 8,
-    padding: 16, // Match header padding
+  // Filters section
+  filtersSection: {
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
+    paddingVertical: 12,
+  },
+  filtersRow: {
+    flexDirection: "row",
+    gap: 8,
     flexWrap: "nowrap",
   },
   filterDropdownContainer: {
@@ -361,21 +389,23 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
   } as any,
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16, // Match header padding
+  // Search section
+  searchSection: {
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
+    paddingVertical: 12,
+  },
+  searchInputWrapper: {
+    position: "relative",
   },
   searchIcon: {
     position: "absolute",
-    left: 28, // 16 (padding) + 12 (offset)
+    left: 12,
+    top: 8,
     zIndex: 1,
   },
   searchInput: {
-    flex: 1,
     height: 36,
     backgroundColor: COLORS.lightWhite,
     borderRadius: 10,
@@ -385,12 +415,13 @@ const styles = StyleSheet.create({
     fontSize: SIZES.small,
     color: COLORS.tertiary,
     outline: "none",
+    width: "100%",
   } as any,
+  // Folder list
   folderList: {
     flex: 1,
   },
   folderListContent: {
-    paddingHorizontal: 16, // Match header padding
     paddingTop: 8,
     paddingBottom: 16,
   },

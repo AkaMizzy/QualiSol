@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   assignPhotoToFolder,
   Ged,
+  generateFolderReport,
   getAssociatedPhotosByFolder,
 } from "@/services/gedService";
 import { Ionicons } from "@expo/vector-icons";
@@ -40,6 +41,8 @@ export default function WebAssociatedPhotosSection({
   const [previewPhoto, setPreviewPhoto] = useState<Ged | null>(null);
   const [showPhotoAvantModal, setShowPhotoAvantModal] = useState(false);
   const [pendingPhotoId, setPendingPhotoId] = useState<string | null>(null);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedFolderId || !token) {
@@ -190,6 +193,30 @@ export default function WebAssociatedPhotosSection({
     }
   };
 
+  const handleGeneratePdf = async () => {
+    if (!selectedFolderId || !token) return;
+
+    setGeneratingPdf(true);
+    setPdfError(null);
+
+    try {
+      const result = await generateFolderReport(token, selectedFolderId);
+
+      // Open PDF in new tab
+      if (result.data && result.data.url) {
+        const pdfUrl = `${API_CONFIG.BASE_URL}${result.data.url}`;
+        window.open(pdfUrl, "_blank");
+      } else {
+        setPdfError("URL du PDF non disponible");
+      }
+    } catch (error: any) {
+      console.error("Error generating PDF:", error);
+      setPdfError(error.message || "Erreur lors de la génération du PDF");
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
   if (!selectedFolderId) {
     return (
       <View style={styles.emptyContainer}>
@@ -228,11 +255,31 @@ export default function WebAssociatedPhotosSection({
             {folderTitle && (
               <Text style={styles.headerSubtitle}>Dossier: {folderTitle}</Text>
             )}
+            {pdfError && <Text style={styles.headerError}>⚠️ {pdfError}</Text>}
           </View>
-          <View style={styles.photoCount}>
-            <Text style={styles.photoCountText}>
-              {photos.length} photo{photos.length !== 1 ? "s" : ""}
-            </Text>
+          <View style={styles.headerActions}>
+            <View style={styles.photoCount}>
+              <Text style={styles.photoCountText}>
+                {photos.length} photo{photos.length !== 1 ? "s" : ""}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.pdfButton,
+                generatingPdf && styles.pdfButtonDisabled,
+              ]}
+              onPress={handleGeneratePdf}
+              disabled={generatingPdf || !selectedFolderId}
+            >
+              {generatingPdf ? (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              ) : (
+                <Ionicons name="document-text" size={18} color={COLORS.white} />
+              )}
+              <Text style={styles.pdfButtonText}>
+                {generatingPdf ? "Génération..." : "PDF"}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -457,6 +504,34 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   photoCountText: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.small,
+    color: COLORS.white,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  } as any,
+  headerError: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.small,
+    color: "#ef4444",
+    marginTop: 4,
+  },
+  pdfButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  } as any,
+  pdfButtonDisabled: {
+    opacity: 0.6,
+  },
+  pdfButtonText: {
     fontFamily: FONT.bold,
     fontSize: SIZES.small,
     color: COLORS.white,

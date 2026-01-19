@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 import MapFolderDetailModal from "./MapFolderDetailModal";
+import ZonePhotosPanel from "./ZonePhotosPanel";
 
 // Type declarations for Leaflet (will be dynamically imported on web)
 declare const L: any;
@@ -405,6 +406,30 @@ export default function WebMapView({}: WebMapViewProps) {
     setSelectedPhotoId(undefined);
   };
 
+  // Get selected zone name for panel header
+  const getSelectedZoneName = (): string => {
+    if (!filters.zoneId) return "";
+    const zone = zones.find((z) => z.id === filters.zoneId);
+    return zone?.title || "Zone";
+  };
+
+  // Clear zone filter (called from panel close button)
+  const clearZoneFilter = () => {
+    setZoneFilter(null);
+  };
+
+  // Helper function to safely toggle photo type filters
+  // Prevents unselecting all filters (at least one must remain active)
+  const handleTogglePhotoType = (type: string) => {
+    // If this type is currently selected and it's the only one selected, don't allow unselecting
+    if (selectedPhotoTypes.has(type) && selectedPhotoTypes.size === 1) {
+      // Do nothing - keep at least one filter active
+      return;
+    }
+    // Otherwise, toggle normally
+    togglePhotoType(type);
+  };
+
   if (loading || !leafletLoaded) {
     return (
       <View style={styles.centerContainer}>
@@ -446,7 +471,7 @@ export default function WebMapView({}: WebMapViewProps) {
                 selectedPhotoTypes.has("qualiphoto") &&
                   styles.filterButtonActiveBlue,
               ]}
-              onPress={() => togglePhotoType("qualiphoto")}
+              onPress={() => handleTogglePhotoType("qualiphoto")}
             >
               <View
                 style={[styles.filterDot, { backgroundColor: "#3b82f6" }]}
@@ -468,7 +493,7 @@ export default function WebMapView({}: WebMapViewProps) {
                 selectedPhotoTypes.has("photoavant") &&
                   styles.filterButtonActiveGreen,
               ]}
-              onPress={() => togglePhotoType("photoavant")}
+              onPress={() => handleTogglePhotoType("photoavant")}
             >
               <View
                 style={[styles.filterDot, { backgroundColor: "#22c55e" }]}
@@ -490,7 +515,7 @@ export default function WebMapView({}: WebMapViewProps) {
                 selectedPhotoTypes.has("photoapres") &&
                   styles.filterButtonActiveYellow,
               ]}
-              onPress={() => togglePhotoType("photoapres")}
+              onPress={() => handleTogglePhotoType("photoapres")}
             >
               <View
                 style={[styles.filterDot, { backgroundColor: "#eab308" }]}
@@ -576,16 +601,41 @@ export default function WebMapView({}: WebMapViewProps) {
         </View>
       </View>
 
-      {/* Map Container */}
+      {/* Content Container - Map + Panel */}
       <div
-        ref={mapContainerRef}
-        style={{
-          flex: 1,
-          width: "100%",
-          height: "100%",
-          minHeight: 400,
-        }}
-      />
+        style={
+          {
+            flex: 1,
+            position: "relative",
+            display: "flex",
+            overflow: "hidden",
+          } as any
+        }
+      >
+        {/* Map Container */}
+        <div
+          ref={mapContainerRef}
+          style={
+            {
+              flex: 1,
+              width: "100%",
+              height: "100%",
+              minHeight: 400,
+              transition: "margin-right 300ms ease-in-out",
+              marginRight: filters.zoneId ? "350px" : "0",
+            } as any
+          }
+        />
+
+        {/* Zone Photos Panel */}
+        <ZonePhotosPanel
+          photos={photos}
+          zoneName={getSelectedZoneName()}
+          isVisible={!!filters.zoneId}
+          onClose={clearZoneFilter}
+          onPhotoClick={setSelectedPhoto}
+        />
+      </div>
 
       {/* Photo Detail Modal */}
       <Modal
@@ -756,7 +806,7 @@ export default function WebMapView({}: WebMapViewProps) {
       </Modal>
 
       {/* Empty State */}
-      {photos.length === 0 && (
+      {allPhotos.length === 0 && (
         <View style={styles.emptyOverlay}>
           <Ionicons name="map-outline" size={48} color={COLORS.gray} />
           <Text style={styles.emptyText}>
