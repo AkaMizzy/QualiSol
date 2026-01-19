@@ -1,3 +1,4 @@
+import API_CONFIG from "@/app/config/api";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { Ged, getAssociatedPhotosByFolder } from "@/services/gedService";
@@ -55,9 +56,21 @@ export default function WebAssociatedPhotosSection({
     void fetchAssociatedPhotos();
   }, [selectedFolderId, token]);
 
-  // Group photos by type
+  // Create photo pairs based on idsource relationship
+  // Each photoApres has idsource pointing to its photoAvant
   const photoAvants = photos.filter((p) => p.kind === "photoavant");
   const photoApres = photos.filter((p) => p.kind === "photoapres");
+
+  // Create pairs: { avant: Ged, apres?: Ged }
+  const photoPairs = photoAvants.map((avant) => {
+    const apres = photoApres.find((ap) => ap.idsource === avant.id);
+    return { avant, apres };
+  });
+
+  // Also include orphaned photoApres (those without a matching photoAvant)
+  const orphanedApres = photoApres.filter(
+    (ap) => !photoAvants.some((av) => av.id === ap.idsource),
+  );
 
   if (!selectedFolderId) {
     return (
@@ -93,7 +106,7 @@ export default function WebAssociatedPhotosSection({
       <View style={styles.container}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.headerTitle}>🖼️ Photos Associées</Text>
+            <Text style={styles.headerTitle}>Photos Associées</Text>
             {folderTitle && (
               <Text style={styles.headerSubtitle}>Dossier: {folderTitle}</Text>
             )}
@@ -105,128 +118,154 @@ export default function WebAssociatedPhotosSection({
           </View>
         </View>
 
+        {/* Paired before/after photos */}
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
         >
-          {/* Situation Avant Section */}
-          {photoAvants.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
+          {photoPairs.map((pair) => (
+            <View key={pair.avant.id} style={styles.pairRow}>
+              {/* Left: Photo Avant */}
+              <TouchableOpacity
+                style={styles.pairCard}
+                onPress={() => setPreviewPhoto(pair.avant)}
+              >
+                {pair.avant.url && (
+                  <Image
+                    source={{ uri: `${API_CONFIG.BASE_URL}${pair.avant.url}` }}
+                    style={styles.pairImage}
+                    resizeMode="cover"
+                  />
+                )}
+                <View style={styles.pairOverlay}>
+                  <View style={styles.pairBadge}>
+                    <Ionicons
+                      name="camera-outline"
+                      size={14}
+                      color={COLORS.white}
+                    />
+                    <Text style={styles.pairBadgeText}>Avant</Text>
+                  </View>
+                  <Text style={styles.pairTitle} numberOfLines={2}>
+                    {pair.avant.title || "Sans titre"}
+                  </Text>
+                  <Text style={styles.pairDate}>
+                    {new Date(pair.avant.created_at).toLocaleDateString(
+                      "fr-FR",
+                      {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      },
+                    )}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Separator */}
+              <View style={styles.pairSeparator}>
                 <Ionicons
-                  name="image-outline"
-                  size={20}
+                  name="arrow-forward"
+                  size={24}
                   color={COLORS.primary}
                 />
-                <Text style={styles.sectionTitle}>Situation Avant</Text>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{photoAvants.length}</Text>
-                </View>
               </View>
 
-              <View style={styles.photoGrid}>
-                {photoAvants.map((photo) => (
-                  <TouchableOpacity
-                    key={photo.id}
-                    style={styles.photoCard}
-                    onPress={() => setPreviewPhoto(photo)}
-                  >
-                    {photo.url && (
-                      <Image
-                        source={{ uri: photo.url }}
-                        style={styles.photoImage}
-                        resizeMode="cover"
+              {/* Right: Photo Après (or placeholder) */}
+              {pair.apres ? (
+                <TouchableOpacity
+                  style={styles.pairCard}
+                  onPress={() => setPreviewPhoto(pair.apres!)}
+                >
+                  {pair.apres.url && (
+                    <Image
+                      source={{
+                        uri: `${API_CONFIG.BASE_URL}${pair.apres.url}`,
+                      }}
+                      style={styles.pairImage}
+                      resizeMode="cover"
+                    />
+                  )}
+                  <View style={styles.pairOverlay}>
+                    <View style={[styles.pairBadge, styles.pairBadgeGreen]}>
+                      <Ionicons
+                        name="checkmark-circle-outline"
+                        size={14}
+                        color={COLORS.white}
                       />
-                    )}
-                    <View style={styles.photoOverlay}>
-                      <Text style={styles.photoTitle} numberOfLines={2}>
-                        {photo.title || "Sans titre"}
-                      </Text>
-                      <Text style={styles.photoDate}>
-                        {new Date(photo.created_at).toLocaleDateString(
-                          "fr-FR",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          },
-                        )}
-                      </Text>
+                      <Text style={styles.pairBadgeText}>Après</Text>
                     </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Situation Après Section */}
-          {photoApres.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Ionicons
-                  name="checkmark-circle-outline"
-                  size={20}
-                  color="#10b981"
-                />
-                <Text style={[styles.sectionTitle, { color: "#10b981" }]}>
-                  Situation Après
-                </Text>
-                <View style={[styles.badge, { backgroundColor: "#10b981" }]}>
-                  <Text style={styles.badgeText}>{photoApres.length}</Text>
+                    <Text style={styles.pairTitle} numberOfLines={2}>
+                      {pair.apres.title || "Sans titre"}
+                    </Text>
+                    <Text style={styles.pairDate}>
+                      {new Date(pair.apres.created_at).toLocaleDateString(
+                        "fr-FR",
+                        {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        },
+                      )}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.pairCardPlaceholder}>
+                  <Ionicons
+                    name="image-outline"
+                    size={48}
+                    color={COLORS.gray}
+                  />
+                  <Text style={styles.placeholderText}>Aucune photo après</Text>
                 </View>
-              </View>
-
-              <View style={styles.photoGrid}>
-                {photoApres.map((photo) => (
-                  <TouchableOpacity
-                    key={photo.id}
-                    style={styles.photoCard}
-                    onPress={() => setPreviewPhoto(photo)}
-                  >
-                    {photo.url && (
-                      <Image
-                        source={{ uri: photo.url }}
-                        style={styles.photoImage}
-                        resizeMode="cover"
-                      />
-                    )}
-                    <View style={styles.photoOverlay}>
-                      <Text style={styles.photoTitle} numberOfLines={2}>
-                        {photo.title || "Sans titre"}
-                      </Text>
-                      <Text style={styles.photoDate}>
-                        {new Date(photo.created_at).toLocaleDateString(
-                          "fr-FR",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          },
-                        )}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              )}
             </View>
-          )}
+          ))}
 
-          {photos.length === 0 && (
-            <View style={styles.emptyStateInner}>
-              <Ionicons
-                name="folder-open-outline"
-                size={48}
-                color={COLORS.gray}
-              />
-              <Text style={styles.emptyStateText}>
-                Aucune photo associée à ce dossier
+          {/* Show orphaned photoApres if any */}
+          {orphanedApres.length > 0 && (
+            <View style={styles.orphanedSection}>
+              <Text style={styles.orphanedTitle}>
+                Photos après sans correspondance
               </Text>
+              {orphanedApres.map((photo) => (
+                <TouchableOpacity
+                  key={photo.id}
+                  style={styles.photoCard}
+                  onPress={() => setPreviewPhoto(photo)}
+                >
+                  {photo.url && (
+                    <Image
+                      source={{ uri: `${API_CONFIG.BASE_URL}${photo.url}` }}
+                      style={styles.photoImage}
+                      resizeMode="cover"
+                    />
+                  )}
+                  <View style={styles.photoOverlay}>
+                    <Text style={styles.photoTitle} numberOfLines={2}>
+                      {photo.title || "Sans titre"}
+                    </Text>
+                    <Text style={styles.photoDate}>
+                      {new Date(photo.created_at).toLocaleDateString("fr-FR", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Empty state */}
+          {photoPairs.length === 0 && (
+            <View style={styles.emptyStateInner}>
+              <Ionicons name="images-outline" size={64} color={COLORS.gray} />
+              <Text style={styles.emptyStateText}>Aucune photo associée</Text>
               <Text style={styles.emptyStateSubtext}>
-                Glissez-déposez des qualiphotos pour les assigner
+                Ce dossier n'a pas encore de photos avant/après
               </Text>
             </View>
           )}
@@ -403,5 +442,99 @@ const styles = StyleSheet.create({
     fontSize: SIZES.small,
     color: COLORS.gray,
     textAlign: "center",
+  },
+  pairRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  } as any,
+  pairCard: {
+    flex: 1,
+    backgroundColor: COLORS.lightWhite,
+    borderRadius: 8,
+    overflow: "hidden",
+    position: "relative",
+  },
+  pairImage: {
+    width: "100%",
+    height: 200,
+    backgroundColor: COLORS.gray2,
+  },
+  pairOverlay: {
+    padding: 12,
+    backgroundColor: COLORS.white,
+  },
+  pairBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+    marginBottom: 8,
+  } as any,
+  pairBadgeGreen: {
+    backgroundColor: "#10b981",
+  },
+  pairBadgeText: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.small - 2,
+    color: COLORS.white,
+  },
+  pairTitle: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.medium,
+    color: COLORS.tertiary,
+    marginBottom: 4,
+  },
+  pairDate: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.small,
+    color: COLORS.gray,
+  },
+  pairSeparator: {
+    width: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pairCardPlaceholder: {
+    flex: 1,
+    height: 200,
+    backgroundColor: COLORS.lightWhite,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: COLORS.gray2,
+    borderStyle: "dashed",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  } as any,
+  placeholderText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.small,
+    color: COLORS.gray,
+  },
+  orphanedSection: {
+    marginTop: 24,
+    paddingTop: 24,
+    borderTopWidth: 2,
+    borderTopColor: COLORS.gray2,
+  },
+  orphanedTitle: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.large,
+    color: COLORS.tertiary,
+    marginBottom: 16,
   },
 });
