@@ -1,14 +1,16 @@
-import { COLORS, FONT, SIZES } from '@/constants/theme';
-import { Folder } from '@/services/folderService';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { COLORS, FONT, SIZES } from "@/constants/theme";
+import { Folder } from "@/services/folderService";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import React, { useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 interface DroppableFolderCardProps {
   folder: Folder;
   onDrop: (photoId: string, folderId: string) => Promise<void>;
   projectName?: string;
   zoneName?: string;
+  isSelected?: boolean;
+  onSelect?: (folderId: string, folderTitle: string) => void;
 }
 
 export default function DroppableFolderCard({
@@ -16,12 +18,14 @@ export default function DroppableFolderCard({
   onDrop,
   projectName,
   zoneName,
+  isSelected = false,
+  onSelect,
 }: DroppableFolderCardProps) {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    e.dataTransfer.dropEffect = "move";
     setIsDragOver(true);
   };
 
@@ -33,9 +37,15 @@ export default function DroppableFolderCard({
     e.preventDefault();
     setIsDragOver(false);
 
-    const photoId = e.dataTransfer.getData('photoId');
+    const photoId = e.dataTransfer.getData("photoId");
     if (photoId && folder.id) {
       await onDrop(photoId, folder.id);
+    }
+  };
+
+  const handleClick = () => {
+    if (onSelect && folder.id) {
+      onSelect(folder.id, folder.title);
     }
   };
 
@@ -44,22 +54,34 @@ export default function DroppableFolderCard({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onClick={handleClick}
       style={{
-        borderColor: isDragOver ? COLORS.primary : 'transparent',
-        borderWidth: isDragOver ? 3 : 2,
-        borderStyle: 'dashed',
+        borderColor: isDragOver
+          ? COLORS.primary
+          : isSelected
+            ? COLORS.primary
+            : "transparent",
+        borderWidth: isDragOver || isSelected ? 3 : 2,
+        borderStyle: isDragOver ? "dashed" : isSelected ? "solid" : "dashed",
+        cursor: "pointer",
       }}
       className="droppable-folder-card"
     >
-      <View style={[styles.card, isDragOver && styles.cardDragOver]}>
+      <View
+        style={[
+          styles.card,
+          isDragOver && styles.cardDragOver,
+          isSelected && styles.cardSelected,
+        ]}
+      >
         <View style={styles.header}>
           <Text style={styles.code}>{folder.code}</Text>
         </View>
-        
+
         <Text style={styles.title} numberOfLines={2}>
           {folder.title}
         </Text>
-        
+
         {folder.description && (
           <Text style={styles.description} numberOfLines={3}>
             {folder.description}
@@ -69,20 +91,24 @@ export default function DroppableFolderCard({
         <View style={styles.metadataContainer}>
           {(projectName || zoneName) && (
             <View style={styles.metadataRow}>
-              <Ionicons name="folder-open-outline" size={14} color={COLORS.gray} />
+              <Ionicons
+                name="folder-open-outline"
+                size={14}
+                color={COLORS.gray}
+              />
               <Text style={styles.metadataText} numberOfLines={1}>
-                {[projectName, zoneName].filter(Boolean).join(' • ')}
+                {[projectName, zoneName].filter(Boolean).join(" • ")}
               </Text>
             </View>
           )}
-          
+
           <View style={styles.metadataRow}>
             <Ionicons name="calendar-outline" size={14} color={COLORS.gray} />
             <Text style={styles.metadataText}>
-              {new Date(folder.created_at).toLocaleDateString('fr-FR', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
+              {new Date(folder.created_at).toLocaleDateString("fr-FR", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
               })}
             </Text>
           </View>
@@ -104,7 +130,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
@@ -112,12 +138,15 @@ const styles = StyleSheet.create({
     minHeight: 120,
   },
   cardDragOver: {
-    backgroundColor: '#E6F4FE',
+    backgroundColor: "#E6F4FE",
+  },
+  cardSelected: {
+    backgroundColor: "#FFF4E6",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
   code: {
@@ -150,8 +179,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   metadataRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   metadataText: {
@@ -161,15 +190,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dropHint: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(79, 172, 254, 0.1)',
+    backgroundColor: "rgba(79, 172, 254, 0.1)",
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   dropHintText: {
     fontFamily: FONT.bold,

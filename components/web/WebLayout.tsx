@@ -1,26 +1,34 @@
-import { COLORS, FONT, SIZES } from '@/constants/theme';
-import { useAuth } from '@/contexts/AuthContext';
-import { useWebGalerie } from '@/hooks/useWebGalerie';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import WebFolderList from './WebFolderList';
-import WebGalerie from './WebGalerie';
-import WebMapView from './WebMapView';
+import { COLORS, FONT, SIZES } from "@/constants/theme";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWebGalerie } from "@/hooks/useWebGalerie";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import WebAssociatedPhotosSection from "./WebAssociatedPhotosSection";
+import WebFolderList from "./WebFolderList";
+import WebMapView from "./WebMapView";
+import WebQualiPhotoSection from "./WebQualiPhotoSection";
 
-type ViewTab = 'galerie' | 'map';
+type ViewTab = "galerie" | "map";
 
 export default function WebLayout() {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<ViewTab>('galerie');
-  
-  // Lift galerie state to parent so it's shared between WebGalerie and WebFolderList
+  const [activeTab, setActiveTab] = useState<ViewTab>("galerie");
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [selectedFolderTitle, setSelectedFolderTitle] = useState<string>("");
+
+  // Lift galerie state to parent so it's shared between components
   const galerieState = useWebGalerie();
 
   const handleLogout = async () => {
-    if (confirm('Voulez-vous vraiment vous déconnecter?')) {
+    if (confirm("Voulez-vous vraiment vous déconnecter?")) {
       await logout();
     }
+  };
+
+  const handleFolderSelect = (folderId: string, folderTitle: string) => {
+    setSelectedFolderId(folderId);
+    setSelectedFolderTitle(folderTitle);
   };
 
   return (
@@ -29,49 +37,47 @@ export default function WebLayout() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Image
-            source={require('@/assets/icons/new_icon.png')}
+            source={require("@/assets/icons/new_icon.png")}
             style={styles.logo}
             resizeMode="contain"
           />
-          
+
           {/* Tab Navigation */}
           <View style={styles.tabContainer}>
             <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === 'galerie' && styles.tabActive,
-              ]}
-              onPress={() => setActiveTab('galerie')}
+              style={[styles.tab, activeTab === "galerie" && styles.tabActive]}
+              onPress={() => setActiveTab("galerie")}
             >
-              <Ionicons 
-                name="images-outline" 
-                size={18} 
-                color={activeTab === 'galerie' ? COLORS.primary : COLORS.gray} 
+              <Ionicons
+                name="images-outline"
+                size={18}
+                color={activeTab === "galerie" ? COLORS.primary : COLORS.gray}
               />
-              <Text style={[
-                styles.tabText,
-                activeTab === 'galerie' && styles.tabTextActive,
-              ]}>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === "galerie" && styles.tabTextActive,
+                ]}
+              >
                 Galerie & Dossiers
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === 'map' && styles.tabActive,
-              ]}
-              onPress={() => setActiveTab('map')}
+              style={[styles.tab, activeTab === "map" && styles.tabActive]}
+              onPress={() => setActiveTab("map")}
             >
-              <Ionicons 
-                name="map-outline" 
-                size={18} 
-                color={activeTab === 'map' ? COLORS.primary : COLORS.gray} 
+              <Ionicons
+                name="map-outline"
+                size={18}
+                color={activeTab === "map" ? COLORS.primary : COLORS.gray}
               />
-              <Text style={[
-                styles.tabText,
-                activeTab === 'map' && styles.tabTextActive,
-              ]}>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === "map" && styles.tabTextActive,
+                ]}
+              >
                 Carte
               </Text>
             </TouchableOpacity>
@@ -81,13 +87,17 @@ export default function WebLayout() {
         <View style={styles.headerRight}>
           {user && (
             <View style={styles.userInfo}>
-              <Ionicons name="person-circle-outline" size={24} color={COLORS.primary} />
+              <Ionicons
+                name="person-circle-outline"
+                size={24}
+                color={COLORS.primary}
+              />
               <Text style={styles.userName}>
                 {user.firstname} {user.lastname}
               </Text>
             </View>
           )}
-          
+
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
             <Text style={styles.logoutText}>Déconnexion</Text>
@@ -96,15 +106,26 @@ export default function WebLayout() {
       </View>
 
       {/* Main Content */}
-      {activeTab === 'galerie' ? (
-        // Split View: Galerie + Folders
+      {activeTab === "galerie" ? (
+        // Three-section Split View: Qualiphotos + Folders + Associated Photos
         <div style={styles.mainContent as any}>
-          <div style={styles.galerieSection as any}>
-            <WebGalerie galerieState={galerieState} />
+          <div style={styles.qualiPhotoSection as any}>
+            <WebQualiPhotoSection galerieState={galerieState} />
           </div>
-          
+
           <div style={styles.folderSection as any}>
-            <WebFolderList galerieState={galerieState} />
+            <WebFolderList
+              galerieState={galerieState}
+              selectedFolderId={selectedFolderId}
+              onFolderSelect={handleFolderSelect}
+            />
+          </div>
+
+          <div style={styles.associatedPhotosSection as any}>
+            <WebAssociatedPhotosSection
+              selectedFolderId={selectedFolderId}
+              folderTitle={selectedFolderTitle}
+            />
           </div>
         </div>
       ) : (
@@ -121,26 +142,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.lightWhite,
-    height: '100vh' as any,
+    height: "100vh" as any,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     height: 80,
     paddingHorizontal: 24,
     backgroundColor: COLORS.white,
     borderBottomWidth: 2,
     borderBottomColor: COLORS.primary,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 24,
   },
   logo: {
@@ -148,15 +169,15 @@ const styles = StyleSheet.create({
     height: 100,
   },
   tabContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     backgroundColor: COLORS.lightWhite,
     borderRadius: 12,
     padding: 4,
     gap: 4,
   },
   tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
@@ -164,7 +185,7 @@ const styles = StyleSheet.create({
   },
   tabActive: {
     backgroundColor: COLORS.white,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -190,13 +211,13 @@ const styles = StyleSheet.create({
     color: COLORS.gray,
   },
   headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -209,8 +230,8 @@ const styles = StyleSheet.create({
     color: COLORS.tertiary,
   },
   logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -223,25 +244,31 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   mainContent: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 400px',
-    height: 'calc(100vh - 80px)',
+    display: "grid",
+    gridTemplateColumns: "450px 350px 1fr",
+    height: "calc(100vh - 80px)",
     gap: 0,
   } as any,
-  galerieSection: {
+  qualiPhotoSection: {
     borderRight: `2px solid ${COLORS.gray2}`,
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
   } as any,
   folderSection: {
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
+    borderRight: `2px solid ${COLORS.gray2}`,
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
+  } as any,
+  associatedPhotosSection: {
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
   } as any,
   mapContent: {
-    height: 'calc(100vh - 80px)',
-    display: 'flex',
-    flexDirection: 'column',
+    height: "calc(100vh - 80px)",
+    display: "flex",
+    flexDirection: "column",
   } as any,
 });

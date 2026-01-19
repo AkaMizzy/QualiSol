@@ -1,6 +1,6 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { Ged, getAllGeds } from '@/services/gedService';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAuth } from "@/contexts/AuthContext";
+import { Ged, getAllGeds } from "@/services/gedService";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export interface WebGaleriePhoto extends Ged {
   isAssigned: boolean;
@@ -12,7 +12,7 @@ export function useWebGalerie() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
-  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>("");
 
   const PHOTOS_PER_PAGE = 10;
 
@@ -23,21 +23,24 @@ export function useWebGalerie() {
       setLoading(true);
       setError(null);
       const allGeds = await getAllGeds(token);
-      
-      // Filter for qualiphotos and previously assigned photos
+
+      // Filter for qualiphotos ONLY (exclude photoavant and photoapres)
       const galeriePhotos = allGeds
-        .filter(g => g.kind === 'qualiphoto' || g.kind === 'photoavant' || g.kind === 'photoapres')
-        .map(g => ({
+        .filter((g) => g.kind === "qualiphoto")
+        .map((g) => ({
           ...g,
-          isAssigned: g.kind !== 'qualiphoto', // Assigned if not qualiphoto
+          isAssigned: false, // qualiphotos are never assigned
         }))
         // Sort by date only (newest first)
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
 
       setPhotos(galeriePhotos);
     } catch (err) {
-      console.error('Failed to fetch galerie photos:', err);
-      setError('Failed to load photos');
+      console.error("Failed to fetch galerie photos:", err);
+      setError("Failed to load photos");
     } finally {
       setLoading(false);
     }
@@ -50,25 +53,25 @@ export function useWebGalerie() {
   // Filter photos by selected date if specified
   const filteredPhotos = useMemo(() => {
     if (!selectedDate) return photos;
-    
+
     const selected = new Date(selectedDate);
     selected.setHours(0, 0, 0, 0);
     const nextDay = new Date(selected);
     nextDay.setDate(nextDay.getDate() + 1);
-    
-    return photos.filter(p => {
+
+    return photos.filter((p) => {
       const photoDate = new Date(p.created_at);
       return photoDate >= selected && photoDate < nextDay;
     });
   }, [photos, selectedDate]);
 
   const totalPages = Math.ceil(filteredPhotos.length / PHOTOS_PER_PAGE);
-  
+
   // Use useMemo to ensure paginatedPhotos recalculates when photos array changes
   const paginatedPhotos = useMemo(() => {
     return filteredPhotos.slice(
       currentPage * PHOTOS_PER_PAGE,
-      (currentPage + 1) * PHOTOS_PER_PAGE
+      (currentPage + 1) * PHOTOS_PER_PAGE,
     );
   }, [filteredPhotos, currentPage, PHOTOS_PER_PAGE]);
 
@@ -82,21 +85,21 @@ export function useWebGalerie() {
   const prevPage = () => goToPage(currentPage - 1);
 
   const updatePhotoAssignment = (
-    photoId: string, 
-    folderId: string, 
-    photoType: 'photoavant' | 'photoapres' = 'photoavant'
+    photoId: string,
+    folderId: string,
+    photoType: "photoavant" | "photoapres" = "photoavant",
   ) => {
-    setPhotos(prev =>
-      prev.map(photo =>
+    setPhotos((prev) =>
+      prev.map((photo) =>
         photo.id === photoId
           ? { ...photo, idsource: folderId, kind: photoType, isAssigned: true }
-          : photo
-      )
+          : photo,
+      ),
     );
   };
 
   const clearDateFilter = () => {
-    setSelectedDate('');
+    setSelectedDate("");
     setCurrentPage(0);
   };
 

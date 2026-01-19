@@ -1,26 +1,47 @@
-import { COLORS, FONT, SIZES } from '@/constants/theme';
-import { useAuth } from '@/contexts/AuthContext';
-import { useWebFolders } from '@/hooks/useWebFolders';
-import { assignPhotoToFolder, Ged, getPhotoAvantByFolder } from '@/services/gedService';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import DroppableFolderCard from './DroppableFolderCard';
-import PhotoTypeSelectionModal from './PhotoTypeSelectionModal';
+import { COLORS, FONT, SIZES } from "@/constants/theme";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWebFolders } from "@/hooks/useWebFolders";
+import {
+    assignPhotoToFolder,
+    Ged,
+    getPhotoAvantByFolder,
+} from "@/services/gedService";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import DroppableFolderCard from "./DroppableFolderCard";
+import PhotoTypeSelectionModal from "./PhotoTypeSelectionModal";
 
 interface WebFolderListProps {
-  galerieState: ReturnType<typeof import('@/hooks/useWebGalerie').useWebGalerie>;
+  galerieState: ReturnType<
+    typeof import("@/hooks/useWebGalerie").useWebGalerie
+  >;
+  selectedFolderId: string | null;
+  onFolderSelect: (folderId: string, folderTitle: string) => void;
 }
 
-export default function WebFolderList({ galerieState }: WebFolderListProps) {
+export default function WebFolderList({
+  galerieState,
+  selectedFolderId,
+  onFolderSelect,
+}: WebFolderListProps) {
   const { token } = useAuth();
-  const { 
-    folders, 
-    loading, 
-    error, 
-    searchQuery, 
-    setSearchQuery, 
-    projectMap, 
+  const {
+    folders,
+    loading,
+    error,
+    searchQuery,
+    setSearchQuery,
+    projectMap,
     zoneMap,
     projects,
     zones,
@@ -45,9 +66,9 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
 
     try {
       // Find folder details
-      const folder = folders.find(f => f.id === folderId);
+      const folder = folders.find((f) => f.id === folderId);
       if (!folder) {
-        Alert.alert('Erreur', 'Dossier introuvable');
+        Alert.alert("Erreur", "Dossier introuvable");
         return;
       }
 
@@ -62,8 +83,8 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
         photoAvants,
       });
     } catch (err) {
-      console.error('Failed to prepare photo assignment:', err);
-      Alert.alert('Erreur', 'Échec de la préparation de l\'assignation');
+      console.error("Failed to prepare photo assignment:", err);
+      Alert.alert("Erreur", "Échec de la préparation de l'assignation");
     }
   };
 
@@ -74,15 +95,15 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
 
     try {
       // PhotoAvant uses folder ID as idsource
-      updatePhotoAssignment(photoId, folderId, 'photoavant');
+      updatePhotoAssignment(photoId, folderId, "photoavant");
       setPendingDrop(null);
-      
-      await assignPhotoToFolder(token, photoId, folderId, 'photoavant');
-      
-      Alert.alert('Succès', 'Photo assignée comme "Situation Avant"');
+
+      await assignPhotoToFolder(token, photoId, folderId, "photoavant");
+
+      Alert.alert("Succès", 'Photo assignée comme "Situation Avant"');
       await refetchGalerie();
     } catch (err) {
-      Alert.alert('Erreur', 'Échec de l\'assignation');
+      Alert.alert("Erreur", "Échec de l'assignation");
       await refetchGalerie();
     }
   };
@@ -94,15 +115,15 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
 
     try {
       // PhotoApres uses photoAvant ID as idsource (key change!)
-      updatePhotoAssignment(photoId, photoAvantId, 'photoapres');
+      updatePhotoAssignment(photoId, photoAvantId, "photoapres");
       setPendingDrop(null);
-      
-      await assignPhotoToFolder(token, photoId, photoAvantId, 'photoapres');
-      
-      Alert.alert('Succès', 'Photo assignée comme "Situation Après"');
+
+      await assignPhotoToFolder(token, photoId, photoAvantId, "photoapres");
+
+      Alert.alert("Succès", 'Photo assignée comme "Situation Après"');
       await refetchGalerie();
     } catch (err) {
-      Alert.alert('Erreur', 'Échec de l\'assignation');
+      Alert.alert("Erreur", "Échec de l'assignation");
       await refetchGalerie();
     }
   };
@@ -135,13 +156,17 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
           <View>
             <Text style={styles.headerTitle}>📁 Dossiers</Text>
             <Text style={styles.headerSubtitle}>
-              {folders.length} dossier{folders.length !== 1 ? 's' : ''} affiché{folders.length !== 1 ? 's' : ''}
+              {folders.length} dossier{folders.length !== 1 ? "s" : ""} affiché
+              {folders.length !== 1 ? "s" : ""}
             </Text>
           </View>
-          
+
           {/* Clear Filters Button */}
           {hasActiveFilters && (
-            <TouchableOpacity style={styles.clearFiltersButton} onPress={clearAllFilters}>
+            <TouchableOpacity
+              style={styles.clearFiltersButton}
+              onPress={clearAllFilters}
+            >
               <Ionicons name="close-circle" size={16} color={COLORS.white} />
               <Text style={styles.clearFiltersText}>Effacer</Text>
             </TouchableOpacity>
@@ -156,12 +181,14 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
           <Ionicons name="business-outline" size={14} color={COLORS.gray} />
           <select
             style={styles.filterDropdown as any}
-            value={filters.projectId || ''}
+            value={filters.projectId || ""}
             onChange={(e: any) => setProjectFilter(e.target.value || null)}
           >
             <option value="">Tous les projets</option>
-            {projects.map(project => (
-              <option key={project.id} value={project.id}>{project.title}</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.title}
+              </option>
             ))}
           </select>
         </View>
@@ -171,13 +198,15 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
           <Ionicons name="layers-outline" size={14} color={COLORS.gray} />
           <select
             style={styles.filterDropdown as any}
-            value={filters.zoneId || ''}
+            value={filters.zoneId || ""}
             onChange={(e: any) => setZoneFilter(e.target.value || null)}
             disabled={zones.length === 0}
           >
             <option value="">Toutes les zones</option>
-            {zones.map(zone => (
-              <option key={zone.id} value={zone.id}>{zone.title}</option>
+            {zones.map((zone) => (
+              <option key={zone.id} value={zone.id}>
+                {zone.title}
+              </option>
             ))}
           </select>
         </View>
@@ -185,7 +214,12 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
 
       {/* Search Input */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search-outline" size={20} color={COLORS.gray} style={styles.searchIcon} />
+        <Ionicons
+          name="search-outline"
+          size={20}
+          color={COLORS.gray}
+          style={styles.searchIcon}
+        />
         <TextInput
           style={styles.searchInput}
           placeholder="Rechercher un dossier..."
@@ -195,26 +229,44 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
         />
       </View>
 
-      <ScrollView style={styles.folderList} contentContainerStyle={styles.folderListContent}>
+      <ScrollView
+        style={styles.folderList}
+        contentContainerStyle={styles.folderListContent}
+      >
         {folders.map((folder) => (
           <DroppableFolderCard
             key={folder.id}
             folder={folder}
             onDrop={handleDrop}
-            projectName={folder.project_id ? projectMap.get(folder.project_id) : undefined}
+            projectName={
+              folder.project_id ? projectMap.get(folder.project_id) : undefined
+            }
             zoneName={folder.zone_id ? zoneMap.get(folder.zone_id) : undefined}
+            isSelected={selectedFolderId === folder.id}
+            onSelect={onFolderSelect}
           />
         ))}
 
         {folders.length === 0 && (
           <View style={styles.emptyContainer}>
-            <Ionicons name="folder-open-outline" size={48} color={COLORS.gray} />
+            <Ionicons
+              name="folder-open-outline"
+              size={48}
+              color={COLORS.gray}
+            />
             <Text style={styles.emptyText}>
-              {hasActiveFilters ? 'Aucun dossier trouvé' : 'Aucun dossier disponible'}
+              {hasActiveFilters
+                ? "Aucun dossier trouvé"
+                : "Aucun dossier disponible"}
             </Text>
             {hasActiveFilters && (
-              <TouchableOpacity style={styles.emptyResetButton} onPress={clearAllFilters}>
-                <Text style={styles.emptyResetText}>Réinitialiser les filtres</Text>
+              <TouchableOpacity
+                style={styles.emptyResetButton}
+                onPress={clearAllFilters}
+              >
+                <Text style={styles.emptyResetText}>
+                  Réinitialiser les filtres
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -224,7 +276,7 @@ export default function WebFolderList({ galerieState }: WebFolderListProps) {
       {/* Photo Type Selection Modal */}
       <PhotoTypeSelectionModal
         visible={!!pendingDrop}
-        folderTitle={pendingDrop?.folderTitle || ''}
+        folderTitle={pendingDrop?.folderTitle || ""}
         photoAvants={pendingDrop?.photoAvants || []}
         onSelectPhotoAvant={handlePhotoAvantSelected}
         onSelectPhotoApres={handlePhotoApresSelected}
@@ -243,12 +295,12 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: "#e5e7eb",
   },
   headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
   headerTitle: {
     fontFamily: FONT.bold,
@@ -262,10 +314,10 @@ const styles = StyleSheet.create({
     color: COLORS.gray,
   },
   clearFiltersButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
-    backgroundColor: '#ef4444',
+    backgroundColor: "#ef4444",
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -276,48 +328,48 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   filtersContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     padding: 12,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    flexWrap: 'wrap',
+    borderBottomColor: "#e5e7eb",
+    flexWrap: "wrap",
   },
   filterDropdownContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     backgroundColor: COLORS.lightWhite,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: "#e5e7eb",
     flex: 1,
     minWidth: 120,
   },
   filterDropdown: {
-    border: 'none',
-    background: 'transparent',
+    border: "none",
+    background: "transparent",
     fontFamily: FONT.medium,
     fontSize: SIZES.small,
     color: COLORS.tertiary,
-    cursor: 'pointer',
-    outline: 'none',
+    cursor: "pointer",
+    outline: "none",
     flex: 1,
     minWidth: 80,
   } as any,
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 12,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: "#e5e7eb",
   },
   searchIcon: {
-    position: 'absolute',
+    position: "absolute",
     left: 24,
     zIndex: 1,
   },
@@ -340,8 +392,8 @@ const styles = StyleSheet.create({
   },
   centerContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   loadingText: {
@@ -353,11 +405,11 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: FONT.medium,
     fontSize: SIZES.medium,
-    color: '#ef4444',
+    color: "#ef4444",
   },
   emptyContainer: {
     paddingVertical: 40,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 12,
   },
   emptyText: {
