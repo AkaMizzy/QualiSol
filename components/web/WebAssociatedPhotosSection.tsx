@@ -1,7 +1,11 @@
 import API_CONFIG from "@/app/config/api";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
-import { assignPhotoToFolder, Ged, getAssociatedPhotosByFolder } from "@/services/gedService";
+import {
+  assignPhotoToFolder,
+  Ged,
+  getAssociatedPhotosByFolder,
+} from "@/services/gedService";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
@@ -14,8 +18,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import ImagePreviewModal from "./ImagePreviewModal";
 import DropZone from "./DropZone";
+import ImagePreviewModal from "./ImagePreviewModal";
 import PhotoAvantSelectionModal from "./PhotoAvantSelectionModal";
 
 interface WebAssociatedPhotosSectionProps {
@@ -106,22 +110,35 @@ export default function WebAssociatedPhotosSection({
   };
 
   // Handle drop into Situation Après zone
-  const handleDropPhotoApres = async (photoId: string) => {
+  const handleDropPhotoApres = async (
+    photoId: string,
+    photoAvantId: string,
+  ) => {
     if (!selectedFolderId || !token) return;
 
-    // Check if there are any photoAvants available
-    if (photoAvants.length === 0) {
+    try {
+      // Assign as photoApres with idsource pointing to the specific photoAvant from this row
+      await assignPhotoToFolder(token, photoId, photoAvantId, "photoapres");
+
+      // Refresh photos
+      const updatedPhotos = await getAssociatedPhotosByFolder(
+        token,
+        selectedFolderId,
+      );
+      setPhotos(updatedPhotos);
+
+      // Show success alert
       Alert.alert(
-        "Aucune photo avant",
-        "Vous devez d'abord créer une photo avant pour pouvoir assigner une photo après",
+        "✅ Photo assignée",
+        "La photo a été assignée comme Situation Après",
         [{ text: "OK" }],
       );
-      return;
+    } catch (err) {
+      console.error("Failed to assign photo apres:", err);
+      Alert.alert("Erreur", "Échec de l'assignation de la photo", [
+        { text: "OK" },
+      ]);
     }
-
-    // Store the photo ID and show selection modal
-    setPendingPhotoId(photoId);
-    setShowPhotoAvantModal(true);
   };
 
   // Handle photo avant selection from modal
@@ -272,7 +289,11 @@ export default function WebAssociatedPhotosSection({
               </View>
 
               {/* Right: Photo Après (or placeholder) - with drop zone */}
-              <DropZone onDrop={handleDropPhotoApres} highlightColor="#10b981">
+              <DropZone
+                onDrop={handleDropPhotoApres}
+                highlightColor="#10b981"
+                data={pair.avant.id}
+              >
                 {pair.apres ? (
                   <TouchableOpacity
                     style={styles.pairCard}

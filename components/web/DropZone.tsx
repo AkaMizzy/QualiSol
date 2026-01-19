@@ -3,11 +3,12 @@ import React, { useState } from "react";
 import { StyleSheet } from "react-native";
 
 interface DropZoneProps {
-  onDrop: (photoId: string) => void | Promise<void>;
+  onDrop: (photoId: string, data?: any) => void | Promise<void>;
   children: React.ReactNode;
   label?: string;
   highlightColor?: string;
   disabled?: boolean;
+  data?: any; // Additional data to pass to onDrop (e.g., photoAvantId)
 }
 
 export default function DropZone({
@@ -15,6 +16,7 @@ export default function DropZone({
   children,
   highlightColor = COLORS.primary,
   disabled = false,
+  data,
 }: DropZoneProps) {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
@@ -40,7 +42,7 @@ export default function DropZone({
 
     const photoId = e.dataTransfer.getData("photoId");
     if (photoId) {
-      await onDrop(photoId);
+      await onDrop(photoId, data);
     }
   };
 
