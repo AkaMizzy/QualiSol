@@ -406,3 +406,22 @@ export async function getAssociatedPhotosByFolder(
     return [];
   }
 }
+
+/**
+ * Get all PDF reports for the current user's company
+ * @param token - Auth token
+ * @returns Array of PDF report GED records with folder, project, and zone information
+ */
+export async function getPdfReports(token: string): Promise<Ged[]> {
+  try {
+    const response = await api.get("/api/geds/pdf-reports", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch PDF reports:", error);
+    return [];
+  }
+}

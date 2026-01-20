@@ -1,34 +1,35 @@
 import API_CONFIG from "@/app/config/api";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-    deleteProject,
-    Project,
-    updateProject,
+  deleteProject,
+  Project,
+  updateProject,
 } from "@/services/projectService";
 import { formatDisplayDate } from "@/utils/dateFormat";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Easing,
-    Image,
-    LayoutAnimation,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    Share,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    UIManager,
-    View,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Easing,
+  Image,
+  LayoutAnimation,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  UIManager,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CreateZoneModal from "../zone/CreateZoneModal";
 import ZoneDetailModal from "../zone/ZoneDetailModal";
+import ReportsModal from "../reports/ReportsModal";
 
 type Props = {
   visible: boolean;
@@ -88,6 +89,7 @@ export default function ProjectDetailModal({
   const [isCreateZoneOpen, setIsCreateZoneOpen] = useState(false);
   const [isZoneDetailOpen, setIsZoneDetailOpen] = useState(false);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
+  const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
 
   // Enable smooth layout animations on Android
   if (
@@ -459,27 +461,6 @@ export default function ProjectDetailModal({
           <View style={styles.ctaRow}>
             {!isEditing ? (
               <Pressable
-                onPress={() => {
-                  if (!project) return;
-                  try {
-                    Share.share({
-                      message: `${project.title} (${project.code || "—"})`,
-                    });
-                  } catch {}
-                }}
-                android_ripple={{ color: "#fde7d4" }}
-                style={styles.ctaButton}
-              >
-                <Ionicons
-                  name="share-social-outline"
-                  size={16}
-                  color="#f87b1b"
-                />
-                <Text style={styles.ctaText}>Partager</Text>
-              </Pressable>
-            ) : null}
-            {!isEditing ? (
-              <Pressable
                 onPress={() => setIsEditing(true)}
                 android_ripple={{ color: "#fde7d4" }}
                 style={styles.ctaButton}
@@ -496,6 +477,20 @@ export default function ProjectDetailModal({
               >
                 <Ionicons name="trash-outline" size={16} color="#f87b1b" />
                 <Text style={styles.ctaText}>Supprimer</Text>
+              </Pressable>
+            ) : null}
+            {!isEditing ? (
+              <Pressable
+                onPress={() => setIsReportsModalOpen(true)}
+                android_ripple={{ color: "#fde7d4" }}
+                style={styles.ctaButton}
+              >
+                <Ionicons
+                  name="document-text-outline"
+                  size={16}
+                  color="#f87b1b"
+                />
+                <Text style={styles.ctaText}>Rapports PDF</Text>
               </Pressable>
             ) : null}
 
@@ -1110,6 +1105,12 @@ export default function ProjectDetailModal({
               setZonesLoading(false);
             }
           }}
+        />
+
+        {/* Reports Modal */}
+        <ReportsModal
+          visible={isReportsModalOpen}
+          onClose={() => setIsReportsModalOpen(false)}
         />
         <ZoneDetailModal
           visible={isZoneDetailOpen}

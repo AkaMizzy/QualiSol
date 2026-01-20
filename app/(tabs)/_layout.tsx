@@ -1,5 +1,5 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Tabs } from "expo-router";
+import React from "react";
 
 export default function TabLayout() {
   return (
@@ -8,14 +8,14 @@ export default function TabLayout() {
         headerShown: false,
         freezeOnBlur: true,
         tabBarStyle: {
-          display: 'none',
+          display: "none",
           height: 0,
           padding: 0,
           margin: 0,
         },
         tabBarShowLabel: false,
-        tabBarActiveTintColor: 'transparent',
-        tabBarInactiveTintColor: 'transparent',
+        tabBarActiveTintColor: "transparent",
+        tabBarInactiveTintColor: "transparent",
       }}
     >
       <Tabs.Screen name="index" />
