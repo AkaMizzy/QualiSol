@@ -1,4 +1,4 @@
-import API_CONFIG from '@/app/config/api';
+import API_CONFIG from "@/app/config/api";
 
 export type Project = {
   id: string;
@@ -14,6 +14,7 @@ export type Project = {
   technicien_id: string | null;
   projecttype_id: string | null;
   project_type_title?: string | null; // This might need to be fetched separately
+  company_title?: string | null; // Company name for display
   createdAt: string;
   updatedAt: string;
 };
@@ -44,46 +45,52 @@ type UpdateProjectInput = Partial<{
 
 export async function getAllProjects(token: string): Promise<Project[]> {
   const res = await fetch(`${API_CONFIG.BASE_URL}/api/projets`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || 'Failed to fetch projects');
+    throw new Error(data.error || "Failed to fetch projects");
   }
   return res.json();
 }
 
-export async function getProjectById(token: string, id: string): Promise<Project> {
+export async function getProjectById(
+  token: string,
+  id: string,
+): Promise<Project> {
   const res = await fetch(`${API_CONFIG.BASE_URL}/api/projets/${id}`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || 'Failed to fetch project');
+    throw new Error(data.error || "Failed to fetch project");
   }
   return res.json();
 }
 
-export async function createProject(token: string, body: CreateProjectInput): Promise<{ message: string; data: Project }> {
+export async function createProject(
+  token: string,
+  body: CreateProjectInput,
+): Promise<{ message: string; data: Project }> {
   const res = await fetch(`${API_CONFIG.BASE_URL}/api/projets`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data.error || 'Failed to create project');
+    throw new Error(data.error || "Failed to create project");
   }
   return data;
 }
@@ -91,36 +98,37 @@ export async function createProject(token: string, body: CreateProjectInput): Pr
 export async function updateProject(
   token: string,
   id: string | number,
-  body: UpdateProjectInput
+  body: UpdateProjectInput,
 ): Promise<{ message: string; data: Project }> {
   const res = await fetch(`${API_CONFIG.BASE_URL}/api/projets/${id}`, {
-    method: 'PUT',
+    method: "PUT",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data.error || 'Failed to update project');
+    throw new Error(data.error || "Failed to update project");
   }
   return data;
 }
 
-export async function deleteProject(token: string, id: string | number): Promise<{ message: string }> {
+export async function deleteProject(
+  token: string,
+  id: string | number,
+): Promise<{ message: string }> {
   const res = await fetch(`${API_CONFIG.BASE_URL}/api/projets/${id}`, {
-    method: 'DELETE',
+    method: "DELETE",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data.error || 'Failed to delete project');
+    throw new Error(data.error || "Failed to delete project");
   }
   return data;
 }
-
-
