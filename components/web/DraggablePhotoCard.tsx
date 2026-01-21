@@ -11,6 +11,8 @@ interface DraggablePhotoCardProps {
   onDragStart: (photoId: string) => void;
   onDragEnd: () => void;
   onPress?: (photo: WebGaleriePhoto) => void;
+  onDeactivate?: (photoId: string) => void;
+  isInactive?: boolean;
 }
 
 export default function DraggablePhotoCard({
@@ -18,6 +20,8 @@ export default function DraggablePhotoCard({
   onDragStart,
   onDragEnd,
   onPress,
+  onDeactivate,
+  isInactive = false,
 }: DraggablePhotoCardProps) {
   const imageUrl = photo.url ? `${API_CONFIG.BASE_URL}${photo.url}` : "";
 
@@ -29,14 +33,19 @@ export default function DraggablePhotoCard({
 
   return (
     <div
-      draggable={!photo.isAssigned}
+      draggable={!photo.isAssigned && !isInactive}
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}
       onClick={() => onPress?.(photo)}
       style={{
-        cursor: photo.isAssigned ? "pointer" : "grab",
-        opacity: photo.isAssigned ? 0.7 : 1,
+        cursor: isInactive
+          ? "not-allowed"
+          : photo.isAssigned
+            ? "pointer"
+            : "grab",
+        opacity: isInactive ? 0.5 : photo.isAssigned ? 0.7 : 1,
         position: "relative",
+        filter: isInactive ? "grayscale(100%)" : "none",
       }}
       className="draggable-photo-card"
     >
@@ -130,7 +139,53 @@ export default function DraggablePhotoCard({
           <Ionicons name="download-outline" size={20} color={COLORS.white} />
         </button>
 
-        {photo.isAssigned && (
+        {/* Deactivate Button */}
+        {!isInactive && onDeactivate && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm("Voulez-vous vraiment désactiver cette photo ?")) {
+                onDeactivate(photo.id);
+              }
+            }}
+            style={{
+              position: "absolute",
+              bottom: "12px",
+              right: "60px",
+              backgroundColor: "#ef4444",
+              border: "none",
+              borderRadius: "50%",
+              width: "40px",
+              height: "40px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+              transition: "all 0.2s",
+            }}
+            title="Désactiver la photo"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "scale(1.1)";
+              e.currentTarget.style.backgroundColor = "#dc2626";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.backgroundColor = "#ef4444";
+            }}
+          >
+            <Ionicons name="eye-off-outline" size={20} color={COLORS.white} />
+          </button>
+        )}
+
+        {/* Inactive Badge */}
+        {isInactive && (
+          <View style={[styles.assignedBadge, { backgroundColor: "#6b7280" }]}>
+            <Text style={styles.assignedText}>Inactive</Text>
+          </View>
+        )}
+
+        {photo.isAssigned && !isInactive && (
           <View style={styles.assignedBadge}>
             <Text style={styles.assignedText}>✓ Assigné</Text>
           </View>

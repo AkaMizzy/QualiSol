@@ -49,12 +49,7 @@ export default function WebSettings() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.tab, styles.tabDisabled]} disabled>
-          <Text style={[styles.tabText, styles.tabTextDisabled]}>Rôles</Text>
-          <View style={styles.comingSoonBadge}>
-            <Text style={styles.comingSoonText}>Bientôt</Text>
-          </View>
-        </TouchableOpacity>
+       
       </View>
 
       {/* Main Content */}

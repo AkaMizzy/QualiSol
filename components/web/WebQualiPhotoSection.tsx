@@ -1,9 +1,11 @@
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { WebGaleriePhoto } from "@/hooks/useWebGalerie";
+import { updateGed } from "@/services/gedService";
+import { getInactiveStatusId } from "@/services/statusService";
 import { Ionicons } from "@expo/vector-icons";
 import { fr } from "date-fns/locale";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
@@ -179,6 +181,50 @@ export default function WebQualiPhotoSection({
     }
   };
 
+  // State for inactive status ID
+  const [inactiveStatusId, setInactiveStatusId] = useState<string | null>(null);
+
+  // Fetch inactive status ID on mount
+  useEffect(() => {
+    const fetchInactiveStatus = async () => {
+      if (token) {
+        const statusId = await getInactiveStatusId(token);
+        setInactiveStatusId(statusId);
+      }
+    };
+    fetchInactiveStatus();
+  }, [token]);
+
+  // Handle photo deactivation
+  const handleDeactivate = useCallback(
+    async (photoId: string) => {
+      if (!token || !inactiveStatusId) {
+        alert("Impossible de désactiver la photo. Statut introuvable.");
+        return;
+      }
+
+      try {
+        await updateGed(token, photoId, { status_id: inactiveStatusId });
+        // Refresh the gallery to reflect the change
+        if (galerieState.refetch) {
+          galerieState.refetch();
+        }
+      } catch (error) {
+        console.error("Failed to deactivate photo:", error);
+        alert("Échec de la désactivation de la photo.");
+      }
+    },
+    [token, inactiveStatusId, galerieState],
+  );
+
+  // Check if a photo is inactive
+  const isPhotoInactive = useCallback(
+    (photo: WebGaleriePhoto): boolean => {
+      return inactiveStatusId !== null && photo.status_id === inactiveStatusId;
+    },
+    [inactiveStatusId],
+  );
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -353,6 +399,8 @@ export default function WebQualiPhotoSection({
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
               onPress={handlePhotoClick}
+              onDeactivate={handleDeactivate}
+              isInactive={isPhotoInactive(photo)}
             />
           ))}
         </div>
