@@ -234,6 +234,19 @@ export default function WebQualiPhotoSection({
                 </span>
               </button>
 
+              {/* Refresh Button */}
+              <button
+                onClick={() => galerieState.refetch?.()}
+                style={refreshButtonStyle}
+                title="Actualiser les photos"
+              >
+                <Ionicons
+                  name="refresh-outline"
+                  size={18}
+                  color={COLORS.primary}
+                />
+              </button>
+
               {/* Date Filter */}
               <View style={styles.dateFilter}>
                 <button
@@ -427,6 +440,19 @@ const uploadButtonStyle = {
   boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
   fontSize: "13px",
   whiteSpace: "nowrap" as const,
+};
+
+const refreshButtonStyle = {
+  padding: "8px",
+  backgroundColor: COLORS.white,
+  border: `2px solid ${COLORS.primary}`,
+  borderRadius: "8px",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  transition: "all 0.2s",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
 };
 
 const calendarButtonStyle = {
