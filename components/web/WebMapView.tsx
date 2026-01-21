@@ -6,14 +6,14 @@ import folderService from "@/services/folderService";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    Modal,
+    Pressable,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import MapFolderDetailModal from "./MapFolderDetailModal";
 import ZonePhotosPanel from "./ZonePhotosPanel";
@@ -195,7 +195,7 @@ export default function WebMapView({}: WebMapViewProps) {
       if (isNaN(lat) || isNaN(lng)) return;
 
       // Create custom icon with photo thumbnail
-      const iconColor = getIconColor(photo.kind);
+      const iconColor = getIconColor(photo);
       const imageUrl = photo.url ? `${API_CONFIG.BASE_URL}${photo.url}` : "";
 
       const icon = L.divIcon({
@@ -282,17 +282,22 @@ export default function WebMapView({}: WebMapViewProps) {
     }
   }, [photos, leafletLoaded, mapReady]);
 
-  const getIconColor = (kind: string): string => {
-    switch (kind) {
-      case "qualiphoto":
-        return "#3b82f6"; // Blue
-      case "photoavant":
-        return "#22c55e"; // Green
-      case "photoapres":
-        return "#eab308"; // Yellow
-      default:
-        return "#3b82f6";
-    }
+  // Severity-based color mapping:
+  // 0-2: Low (Green) - Minor or no issue
+  // 3-5: Medium (Yellow) - Moderate concern
+  // 6-8: High (Orange) - Significant issue
+  // 9-10: Critical (Red) - Urgent attention needed
+  const getSeverityColor = (level: number | undefined): string => {
+    if (level === undefined || level === null) return "#6b7280"; // Gray for unknown
+
+    if (level <= 2) return "#22c55e"; // Green - Low
+    if (level <= 5) return "#eab308"; // Yellow - Medium
+    if (level <= 8) return "#f97316"; // Orange - High
+    return "#ef4444"; // Red - Critical
+  };
+
+  const getIconColor = (photo: MapPhoto): string => {
+    return getSeverityColor(photo.level);
   };
 
   const getPhotoTypeLabel = (kind: string): string => {
@@ -683,7 +688,17 @@ export default function WebMapView({}: WebMapViewProps) {
                     <View
                       style={[
                         styles.typeBadge,
-                        { backgroundColor: getIconColor(selectedPhoto.kind) },
+                        { backgroundColor: getIconColor(selectedPhoto) },
+                      ]}
+                    >
+                      <Text style={styles.typeBadgeText}>
+                        Sévérité: {selectedPhoto.level ?? "N/A"}/10
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.typeBadge,
+                        { backgroundColor: "#6b7280", marginLeft: 8 },
                       ]}
                     >
                       <Text style={styles.typeBadgeText}>
