@@ -19,17 +19,18 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   UIManager,
   View,
 } from "react-native";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
+import ReportsModal from "../reports/ReportsModal";
 import CreateZoneModal from "../zone/CreateZoneModal";
 import ZoneDetailModal from "../zone/ZoneDetailModal";
-import ReportsModal from "../reports/ReportsModal";
 
 type Props = {
   visible: boolean;
@@ -107,6 +108,10 @@ export default function ProjectDetailModal({
   const [editOwner, setEditOwner] = useState<string>("");
   const [editControl, setEditControl] = useState<string>("");
   const [editTechnicien, setEditTechnicien] = useState<string>("");
+  const [editTitle, setEditTitle] = useState<string>("");
+  const [editDescription, setEditDescription] = useState<string>("");
+  const [editDd, setEditDd] = useState<string>("");
+  const [editDf, setEditDf] = useState<string>("");
   const [ownerOpen, setOwnerOpen] = useState(false);
   const [controlOpen, setControlOpen] = useState(false);
   const [technicienOpen, setTechnicienOpen] = useState(false);
@@ -114,6 +119,8 @@ export default function ProjectDetailModal({
     { id: string; firstname?: string; lastname?: string; email?: string }[]
   >([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDdPickerVisible, setDdPickerVisible] = useState(false);
+  const [isDfPickerVisible, setDfPickerVisible] = useState(false);
 
   // Rotate chevrons
   const rotateAnim = useRef({
@@ -291,6 +298,10 @@ export default function ProjectDetailModal({
       setEditTechnicien(
         project.technicien_id ? String(project.technicien_id) : "",
       );
+      setEditTitle(project.title || "");
+      setEditDescription(project.description || "");
+      setEditDd(project.dd || "");
+      setEditDf(project.df || "");
     }
   }, [project]);
 
@@ -499,9 +510,50 @@ export default function ProjectDetailModal({
                 disabled={isSaving}
                 onPress={async () => {
                   if (!project || !token) return;
+
+                  // Validation
+                  if (!editTitle.trim()) {
+                    Alert.alert("Erreur", "Le titre est requis");
+                    return;
+                  }
+
+                  // Check for duplicate role assignments
+                  const roles = [editOwner, editControl, editTechnicien].filter(
+                    Boolean,
+                  );
+                  const uniqueRoles = new Set(roles);
+                  if (roles.length !== uniqueRoles.size) {
+                    Alert.alert(
+                      "Erreur",
+                      "Un utilisateur ne peut pas être assigné à plusieurs rôles (Admin, Contrôleur, Technicien).",
+                    );
+                    return;
+                  }
+
+                  // Date validation
+                  if (editDd && editDf) {
+                    const start = new Date(editDd);
+                    const end = new Date(editDf);
+                    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+                      Alert.alert("Erreur", "Dates invalides");
+                      return;
+                    }
+                    if (start >= end) {
+                      Alert.alert(
+                        "Erreur",
+                        "La date de fin doit être postérieure à la date de début",
+                      );
+                      return;
+                    }
+                  }
+
                   try {
                     setIsSaving(true);
                     await updateProject(token, project.id, {
+                      title: editTitle,
+                      description: editDescription || undefined,
+                      dd: editDd,
+                      df: editDf,
                       owner_id: editOwner || null,
                       control_id: editControl || null,
                       technicien_id: editTechnicien || null,
@@ -527,6 +579,7 @@ export default function ProjectDetailModal({
                         ) || technicien,
                       );
                     if (onUpdated) onUpdated();
+                    Alert.alert("Succès", "Projet mis à jour avec succès");
                   } catch (e: any) {
                     Alert.alert("Erreur", e?.message || "Mise à jour échouée");
                   } finally {
@@ -561,6 +614,10 @@ export default function ProjectDetailModal({
                         ? String(project.technicien_id)
                         : "",
                     );
+                    setEditTitle(project.title || "");
+                    setEditDescription(project.description || "");
+                    setEditDd(project.dd || "");
+                    setEditDf(project.df || "");
                   }
                 }}
                 android_ripple={{ color: "#fde7d4" }}
@@ -592,6 +649,93 @@ export default function ProjectDetailModal({
             </Pressable>
             {openOverview && (
               <View style={{ marginTop: 8, gap: 6 }}>
+                {/* Title - editable or view-only */}
+                {!isEditing ? (
+                  <Pressable
+                    android_ripple={{ color: "#f3f4f6" }}
+                    style={styles.itemRow}
+                  >
+                    <Ionicons name="text-outline" size={16} color="#6b7280" />
+                    <Text style={styles.meta}>
+                      Titre · {project.title || "—"}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <View
+                    style={{
+                      borderWidth: 1,
+                      borderColor: "#e5e7eb",
+                      borderRadius: 12,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <Ionicons name="text-outline" size={16} color="#6b7280" />
+                    <TextInput
+                      placeholder="Titre du projet"
+                      placeholderTextColor="#9ca3af"
+                      value={editTitle}
+                      onChangeText={setEditTitle}
+                      style={{ flex: 1, color: "#111827", fontSize: 14 }}
+                    />
+                  </View>
+                )}
+
+                {/* Description - editable or view-only */}
+                {!isEditing ? (
+                  <Pressable
+                    android_ripple={{ color: "#f3f4f6" }}
+                    style={styles.itemRow}
+                  >
+                    <Ionicons
+                      name="document-text-outline"
+                      size={16}
+                      color="#6b7280"
+                    />
+                    <Text style={styles.meta}>
+                      Description · {project.description || "—"}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <View
+                    style={{
+                      borderWidth: 1,
+                      borderColor: "#e5e7eb",
+                      borderRadius: 12,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      flexDirection: "row",
+                      alignItems: "flex-start",
+                      gap: 8,
+                      minHeight: 60,
+                    }}
+                  >
+                    <Ionicons
+                      name="document-text-outline"
+                      size={16}
+                      color="#6b7280"
+                      style={{ marginTop: 2 }}
+                    />
+                    <TextInput
+                      placeholder="Description (optionnel)"
+                      placeholderTextColor="#9ca3af"
+                      value={editDescription}
+                      onChangeText={setEditDescription}
+                      style={{
+                        flex: 1,
+                        color: "#111827",
+                        fontSize: 14,
+                        textAlignVertical: "top",
+                      }}
+                      multiline
+                      numberOfLines={3}
+                    />
+                  </View>
+                )}
+
                 <Pressable
                   android_ripple={{ color: "#f3f4f6" }}
                   style={styles.itemRow}
@@ -599,16 +743,83 @@ export default function ProjectDetailModal({
                   <Ionicons name="barcode-outline" size={16} color="#6b7280" />
                   <Text style={styles.meta}>Code · {project.code || "—"}</Text>
                 </Pressable>
-                <Pressable
-                  android_ripple={{ color: "#f3f4f6" }}
-                  style={styles.itemRow}
-                >
-                  <Ionicons name="calendar-outline" size={16} color="#6b7280" />
-                  <Text style={styles.meta}>
-                    Période · {formatDisplayDate(project.dd)} →{" "}
-                    {formatDisplayDate(project.df)}
-                  </Text>
-                </Pressable>
+
+                {/* Period dates - editable or view-only */}
+                {!isEditing ? (
+                  <Pressable
+                    android_ripple={{ color: "#f3f4f6" }}
+                    style={styles.itemRow}
+                  >
+                    <Ionicons
+                      name="calendar-outline"
+                      size={16}
+                      color="#6b7280"
+                    />
+                    <Text style={styles.meta}>
+                      Période · {formatDisplayDate(project.dd)} →{" "}
+                      {formatDisplayDate(project.df)}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <View style={{ gap: 8 }}>
+                    <TouchableOpacity
+                      onPress={() => setDdPickerVisible(true)}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: "#e5e7eb",
+                        borderRadius: 12,
+                        paddingHorizontal: 12,
+                        paddingVertical: 10,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
+                      <Ionicons
+                        name="calendar-outline"
+                        size={16}
+                        color="#6b7280"
+                      />
+                      <Text
+                        style={{
+                          color: editDd ? "#111827" : "#9ca3af",
+                          fontSize: 14,
+                        }}
+                      >
+                        {editDd || "Date de début (YYYY-MM-DD)"}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setDfPickerVisible(true)}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: "#e5e7eb",
+                        borderRadius: 12,
+                        paddingHorizontal: 12,
+                        paddingVertical: 10,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
+                      <Ionicons
+                        name="calendar-outline"
+                        size={16}
+                        color="#6b7280"
+                      />
+                      <Text
+                        style={{
+                          color: editDf ? "#111827" : "#9ca3af",
+                          fontSize: 14,
+                        }}
+                      >
+                        {editDf || "Date de fin (YYYY-MM-DD)"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Project type - view-only */}
                 <Pressable
                   android_ripple={{ color: "#f3f4f6" }}
                   style={styles.itemRow}
@@ -1119,6 +1330,36 @@ export default function ProjectDetailModal({
             setSelectedZoneId(null);
           }}
           zoneId={selectedZoneId || undefined}
+        />
+
+        {/* Date Pickers */}
+        <DateTimePickerModal
+          isVisible={isDdPickerVisible}
+          mode="date"
+          onConfirm={(date) => {
+            const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+            const y = date.getFullYear();
+            const m = pad(date.getMonth() + 1);
+            const d = pad(date.getDate());
+            setEditDd(`${y}-${m}-${d}`);
+            setDdPickerVisible(false);
+          }}
+          onCancel={() => setDdPickerVisible(false)}
+          date={editDd ? new Date(editDd) : new Date()}
+        />
+        <DateTimePickerModal
+          isVisible={isDfPickerVisible}
+          mode="date"
+          onConfirm={(date) => {
+            const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+            const y = date.getFullYear();
+            const m = pad(date.getMonth() + 1);
+            const d = pad(date.getDate());
+            setEditDf(`${y}-${m}-${d}`);
+            setDfPickerVisible(false);
+          }}
+          onCancel={() => setDfPickerVisible(false)}
+          date={editDf ? new Date(editDf) : new Date()}
         />
       </SafeAreaView>
     </Modal>

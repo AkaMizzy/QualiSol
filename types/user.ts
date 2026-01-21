@@ -14,8 +14,8 @@ export interface CompanyUser {
   interne?: number; // 0 = external, 1 = internal
   represent?: string; // Company represented (for external users)
   // Optional relations that might be included
-  role?: { id: string; name: string };
-  status?: { id: string; name: string };
+  role?: { id: string; role: string }; // Field is 'role' not 'name'
+  status?: { id: string; status: string }; // Field is 'status' not 'name'
 }
 
 export interface CreateUserData {

@@ -8,8 +8,9 @@ import WebAssociatedPhotosSection from "./WebAssociatedPhotosSection";
 import WebFolderList from "./WebFolderList";
 import WebMapView from "./WebMapView";
 import WebQualiPhotoSection from "./WebQualiPhotoSection";
+import WebSettings from "./WebSettings";
 
-type ViewTab = "galerie" | "map";
+type ViewTab = "galerie" | "map" | "settings";
 
 export default function WebLayout() {
   const { user, logout } = useAuth();
@@ -81,6 +82,25 @@ export default function WebLayout() {
                 Carte
               </Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tab, activeTab === "settings" && styles.tabActive]}
+              onPress={() => setActiveTab("settings")}
+            >
+              <Ionicons
+                name="settings-outline"
+                size={18}
+                color={activeTab === "settings" ? COLORS.primary : COLORS.gray}
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === "settings" && styles.tabTextActive,
+                ]}
+              >
+                Paramètres
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -129,10 +149,15 @@ export default function WebLayout() {
             />
           </div>
         </div>
-      ) : (
+      ) : activeTab === "map" ? (
         // Map View
         <div style={styles.mapContent as any}>
           <WebMapView />
+        </div>
+      ) : (
+        // Settings View
+        <div style={styles.settingsContent as any}>
+          <WebSettings />
         </div>
       )}
     </View>
@@ -268,6 +293,11 @@ const styles = StyleSheet.create({
     flexDirection: "column",
   } as any,
   mapContent: {
+    height: "calc(100vh - 80px)",
+    display: "flex",
+    flexDirection: "column",
+  } as any,
+  settingsContent: {
     height: "calc(100vh - 80px)",
     display: "flex",
     flexDirection: "column",
