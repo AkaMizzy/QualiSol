@@ -14,7 +14,7 @@ export type CreateGedInput = {
   categorie?: string;
   assigned?: string;
   file?: {
-    uri: string;
+    uri: string | File; // Can be a string (React Native) or File object (Web)
     type: string;
     name: string;
   };
@@ -84,11 +84,18 @@ export async function createGed(
 
   // Append file if provided
   if (input.file) {
-    formData.append("file", {
-      uri: input.file.uri,
-      type: input.file.type,
-      name: input.file.name,
-    } as any);
+    // Check if this is a browser File object (for web uploads)
+    if (typeof input.file.uri === "object" && input.file.uri instanceof File) {
+      // Web: Append the actual File object
+      formData.append("file", input.file.uri);
+    } else {
+      // React Native: Append as object with uri, type, name
+      formData.append("file", {
+        uri: input.file.uri,
+        type: input.file.type,
+        name: input.file.name,
+      } as any);
+    }
   }
 
   const res = await fetch(`${API_CONFIG.BASE_URL}/api/geds/upload`, {

@@ -9,6 +9,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import DraggablePhotoCard from "./DraggablePhotoCard";
 import ImagePreviewModal from "./ImagePreviewModal";
+import WebAddImageModal from "./WebAddImageModal";
 
 // Register French locale
 registerLocale("fr", fr);
@@ -157,6 +158,7 @@ export default function WebQualiPhotoSection({
   const [previewPhoto, setPreviewPhoto] = useState<WebGaleriePhoto | null>(
     null,
   );
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const handlePhotoClick = (photo: WebGaleriePhoto) => {
     setPreviewPhoto(photo);
@@ -168,6 +170,13 @@ export default function WebQualiPhotoSection({
 
   const handleDragEnd = () => {
     setDraggingPhotoId(null);
+  };
+
+  const handleUploadSuccess = () => {
+    // Refresh the gallery to show the new photo
+    if (galerieState.refetch) {
+      galerieState.refetch();
+    }
   };
 
   if (loading) {
@@ -192,7 +201,7 @@ export default function WebQualiPhotoSection({
       <style dangerouslySetInnerHTML={{ __html: datepickerCustomStyles }} />
       <View style={styles.container}>
         <View style={styles.header}>
-          <View style={styles.headerTop}>
+          <View style={styles.headerContent}>
             <View>
               <Text style={styles.headerTitle}>Photo libre</Text>
               <Text style={styles.headerSubtitle}>
@@ -201,45 +210,68 @@ export default function WebQualiPhotoSection({
               </Text>
             </View>
 
-            {/* Date Filter */}
-            <View style={styles.dateFilter}>
+            <View style={styles.headerActions}>
+              {/* Upload Button */}
               <button
-                onClick={() => setShowCalendar(!showCalendar)}
-                style={calendarButtonStyle}
+                onClick={() => setShowUploadModal(true)}
+                style={uploadButtonStyle}
+                title="Ajouter une photo"
               >
                 <Ionicons
-                  name="calendar-outline"
-                  size={20}
-                  color={COLORS.primary}
+                  name="cloud-upload-outline"
+                  size={18}
+                  color={COLORS.white}
                 />
-                <Text style={styles.calendarButtonText}>
-                  {galerieState.selectedDate
-                    ? new Date(galerieState.selectedDate).toLocaleDateString(
-                        "fr-FR",
-                        {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        },
-                      )
-                    : "Sélectionner une date"}
-                </Text>
+                <span
+                  style={{
+                    marginLeft: "6px",
+                    color: COLORS.white,
+                    fontFamily: FONT.medium,
+                    fontSize: "13px",
+                  }}
+                >
+                  Ajouter
+                </span>
               </button>
 
-              {galerieState.selectedDate && (
+              {/* Date Filter */}
+              <View style={styles.dateFilter}>
                 <button
-                  onClick={galerieState.clearDateFilter}
-                  style={clearButtonStyle}
-                  title="Effacer le filtre"
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  style={calendarButtonStyle}
                 >
                   <Ionicons
-                    name="close-circle"
-                    size={20}
-                    color={COLORS.white}
+                    name="calendar-outline"
+                    size={18}
+                    color={COLORS.primary}
                   />
+                  <Text style={styles.calendarButtonText}>
+                    {galerieState.selectedDate
+                      ? new Date(galerieState.selectedDate).toLocaleDateString(
+                          "fr-FR",
+                          {
+                            day: "2-digit",
+                            month: "2-digit",
+                          },
+                        )
+                      : "Date"}
+                  </Text>
                 </button>
-              )}
+
+                {galerieState.selectedDate && (
+                  <button
+                    onClick={galerieState.clearDateFilter}
+                    style={clearButtonStyle}
+                    title="Effacer le filtre"
+                  >
+                    <Ionicons
+                      name="close-circle"
+                      size={18}
+                      color={COLORS.white}
+                    />
+                  </button>
+                )}
+              </View>
             </View>
 
             {/* Calendar Dropdown */}
@@ -361,6 +393,12 @@ export default function WebQualiPhotoSection({
         photo={previewPhoto}
         onClose={() => setPreviewPhoto(null)}
       />
+
+      <WebAddImageModal
+        visible={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onSuccess={handleUploadSuccess}
+      />
     </>
   );
 }
@@ -375,21 +413,38 @@ const paginationButtonStyle = {
   justifyContent: "center",
 };
 
-const calendarButtonStyle = {
-  padding: "12px 20px",
-  backgroundColor: COLORS.white,
-  border: `2px solid ${COLORS.primary}`,
-  borderRadius: "10px",
+const uploadButtonStyle = {
+  padding: "8px 12px",
+  backgroundColor: COLORS.primary,
+  border: "none",
+  borderRadius: "8px",
   cursor: "pointer",
   display: "flex",
   flexDirection: "row" as const,
   alignItems: "center",
-  gap: "10px",
+  gap: "6px",
+  transition: "all 0.2s",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+  fontSize: "13px",
+  whiteSpace: "nowrap" as const,
+};
+
+const calendarButtonStyle = {
+  padding: "8px 12px",
+  backgroundColor: COLORS.white,
+  border: `2px solid ${COLORS.primary}`,
+  borderRadius: "8px",
+  cursor: "pointer",
+  display: "flex",
+  flexDirection: "row" as const,
+  alignItems: "center",
+  gap: "6px",
   fontFamily: FONT.medium,
-  fontSize: "15px",
+  fontSize: "13px",
   color: COLORS.primary,
   transition: "all 0.2s",
-  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+  whiteSpace: "nowrap" as const,
 };
 
 const calendarDropdownStyle = {
@@ -419,7 +474,7 @@ const secondaryButtonStyle = {
 };
 
 const clearButtonStyle = {
-  padding: "10px 12px",
+  padding: "8px",
   backgroundColor: COLORS.deleteColor,
   border: "none",
   borderRadius: "8px",
@@ -436,12 +491,16 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.lightWhite,
   },
   header: {
-    padding: 20,
+    padding: 16,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
     zIndex: 100,
     position: "relative",
+  },
+  headerContent: {
+    flexDirection: "column",
+    gap: 12,
   },
   headerTop: {
     flexDirection: "row",
@@ -450,14 +509,20 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: FONT.bold,
-    fontSize: 24,
+    fontSize: 20,
     color: COLORS.tertiary,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   headerSubtitle: {
     fontFamily: FONT.medium,
-    fontSize: SIZES.medium,
+    fontSize: SIZES.small,
     color: COLORS.gray,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap" as any,
   },
   dateFilter: {
     flexDirection: "row",

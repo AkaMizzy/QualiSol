@@ -1,17 +1,18 @@
-import { COLORS, FONT, SIZES } from '@/constants/theme';
-import { useAuth } from '@/contexts/AuthContext';
-import { WebGaleriePhoto } from '@/hooks/useWebGalerie';
-import { Ionicons } from '@expo/vector-icons';
-import { fr } from 'date-fns/locale';
-import React, { useState } from 'react';
-import DatePicker, { registerLocale } from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import DraggablePhotoCard from './DraggablePhotoCard';
-import ImagePreviewModal from './ImagePreviewModal';
+import { COLORS, FONT, SIZES } from "@/constants/theme";
+import { useAuth } from "@/contexts/AuthContext";
+import { WebGaleriePhoto } from "@/hooks/useWebGalerie";
+import { Ionicons } from "@expo/vector-icons";
+import { fr } from "date-fns/locale";
+import React, { useState } from "react";
+import DatePicker, { registerLocale } from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import DraggablePhotoCard from "./DraggablePhotoCard";
+import ImagePreviewModal from "./ImagePreviewModal";
+import WebAddImageModal from "./WebAddImageModal";
 
 // Register French locale
-registerLocale('fr', fr);
+registerLocale("fr", fr);
 
 // Custom styles for the datepicker
 const datepickerCustomStyles = `
@@ -133,7 +134,9 @@ const datepickerCustomStyles = `
 `;
 
 interface WebGalerieProps {
-  galerieState: ReturnType<typeof import('@/hooks/useWebGalerie').useWebGalerie>;
+  galerieState: ReturnType<
+    typeof import("@/hooks/useWebGalerie").useWebGalerie
+  >;
 }
 
 export default function WebGalerie({ galerieState }: WebGalerieProps) {
@@ -150,7 +153,10 @@ export default function WebGalerie({ galerieState }: WebGalerieProps) {
 
   const [draggingPhotoId, setDraggingPhotoId] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [previewPhoto, setPreviewPhoto] = useState<WebGaleriePhoto | null>(null);
+  const [previewPhoto, setPreviewPhoto] = useState<WebGaleriePhoto | null>(
+    null,
+  );
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const handlePhotoClick = (photo: WebGaleriePhoto) => {
     setPreviewPhoto(photo);
@@ -162,6 +168,13 @@ export default function WebGalerie({ galerieState }: WebGalerieProps) {
 
   const handleDragEnd = () => {
     setDraggingPhotoId(null);
+  };
+
+  const handleUploadSuccess = () => {
+    // Refresh the gallery to show the new photo
+    if (galerieState.refetch) {
+      galerieState.refetch();
+    }
   };
 
   if (loading) {
@@ -185,146 +198,193 @@ export default function WebGalerie({ galerieState }: WebGalerieProps) {
     <>
       <style dangerouslySetInnerHTML={{ __html: datepickerCustomStyles }} />
       <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.headerTitle}>Galerie</Text>
-            <Text style={styles.headerSubtitle}>
-              {galerieState.allPhotos.length} photo{galerieState.allPhotos.length !== 1 ? 's' : ''}
-            </Text>
-          </View>
-          
-          {/* Date Filter */}
-          <View style={styles.dateFilter}>
-            <button
-              onClick={() => setShowCalendar(!showCalendar)}
-              style={calendarButtonStyle}
-            >
-              <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
-              <Text style={styles.calendarButtonText}>
-                {galerieState.selectedDate
-                  ? new Date(galerieState.selectedDate).toLocaleDateString('fr-FR', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })
-                  : 'Sélectionner une date'}
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <View>
+              <Text style={styles.headerTitle}>Galerie</Text>
+              <Text style={styles.headerSubtitle}>
+                {galerieState.allPhotos.length} photo
+                {galerieState.allPhotos.length !== 1 ? "s" : ""}
               </Text>
-            </button>
-            
-            {galerieState.selectedDate && (
+            </View>
+
+            <View style={styles.headerActions}>
+              {/* Upload Button */}
               <button
-                onClick={galerieState.clearDateFilter}
-                style={clearButtonStyle}
-                title="Effacer le filtre"
+                onClick={() => setShowUploadModal(true)}
+                style={uploadButtonStyle}
               >
-                <Ionicons name="close-circle" size={20} color={COLORS.white} />
+                <Ionicons
+                  name="cloud-upload-outline"
+                  size={20}
+                  color={COLORS.white}
+                />
+                <span
+                  style={{
+                    marginLeft: "8px",
+                    color: COLORS.white,
+                    fontFamily: FONT.medium,
+                    fontSize: "15px",
+                  }}
+                >
+                  Ajouter une photo
+                </span>
               </button>
+
+              {/* Date Filter */}
+              <View style={styles.dateFilter}>
+                <button
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  style={calendarButtonStyle}
+                >
+                  <Ionicons
+                    name="calendar-outline"
+                    size={20}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.calendarButtonText}>
+                    {galerieState.selectedDate
+                      ? new Date(galerieState.selectedDate).toLocaleDateString(
+                          "fr-FR",
+                          {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          },
+                        )
+                      : "Sélectionner une date"}
+                  </Text>
+                </button>
+
+                {galerieState.selectedDate && (
+                  <button
+                    onClick={galerieState.clearDateFilter}
+                    style={clearButtonStyle}
+                    title="Effacer le filtre"
+                  >
+                    <Ionicons
+                      name="close-circle"
+                      size={20}
+                      color={COLORS.white}
+                    />
+                  </button>
+                )}
+              </View>
+            </View>
+
+            {/* Calendar Dropdown */}
+            {showCalendar && (
+              <div style={calendarDropdownStyle}>
+                <View style={styles.calendarContent}>
+                  <Text style={styles.calendarTitle}>Filtrer par date</Text>
+
+                  <DatePicker
+                    selected={
+                      galerieState.selectedDate
+                        ? new Date(galerieState.selectedDate)
+                        : null
+                    }
+                    onChange={(date: Date | null) => {
+                      if (date) {
+                        // Format date as YYYY-MM-DD for the filter
+                        const formattedDate = date.toISOString().split("T")[0];
+                        galerieState.setSelectedDate(formattedDate);
+                        setShowCalendar(false);
+                      }
+                    }}
+                    locale="fr"
+                    dateFormat="dd/MM/yyyy"
+                    inline
+                    calendarClassName="custom-datepicker"
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
+                    maxDate={new Date()}
+                  />
+
+                  <View style={styles.calendarActions}>
+                    <button
+                      onClick={() => {
+                        galerieState.clearDateFilter();
+                        setShowCalendar(false);
+                      }}
+                      style={secondaryButtonStyle}
+                    >
+                      Annuler
+                    </button>
+                  </View>
+                </View>
+              </div>
             )}
           </View>
-          
-          {/* Calendar Dropdown */}
-          {showCalendar && (
-            <div style={calendarDropdownStyle}>
-              <View style={styles.calendarContent}>
-                <Text style={styles.calendarTitle}>Filtrer par date</Text>
-                
-                <DatePicker
-                  selected={galerieState.selectedDate ? new Date(galerieState.selectedDate) : null}
-                  onChange={(date: Date | null) => {
-                    if (date) {
-                      // Format date as YYYY-MM-DD for the filter
-                      const formattedDate = date.toISOString().split('T')[0];
-                      galerieState.setSelectedDate(formattedDate);
-                      setShowCalendar(false);
-                    }
-                  }}
-                  locale="fr"
-                  dateFormat="dd/MM/yyyy"
-                  inline
-                  calendarClassName="custom-datepicker"
-                  showMonthDropdown
-                  showYearDropdown
-                  dropdownMode="select"
-                  maxDate={new Date()}
-                />
-                
-                <View style={styles.calendarActions}>
-                  <button
-                    onClick={() => {
-                      galerieState.clearDateFilter();
-                      setShowCalendar(false);
-                    }}
-                    style={secondaryButtonStyle}
-                  >
-                    Annuler
-                  </button>
-                </View>
-              </View>
-            </div>
-          )}
         </View>
-      </View>
 
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-        gap: '16px',
-        padding: '16px',
-        overflowY: 'auto',
-        flex: 1,
-        position: 'relative',
-        zIndex: 1,
-      }}>
-        {photos.map((photo) => (
-          <DraggablePhotoCard
-            key={photo.id}
-            photo={photo}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onPress={handlePhotoClick}
-          />
-        ))}
-      </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+            gap: "16px",
+            padding: "16px",
+            overflowY: "auto",
+            flex: 1,
+            position: "relative",
+            zIndex: 1,
+          }}
+        >
+          {photos.map((photo) => (
+            <DraggablePhotoCard
+              key={photo.id}
+              photo={photo}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onPress={handlePhotoClick}
+            />
+          ))}
+        </div>
 
-      {photos.length === 0 && (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Aucune photo disponible</Text>
-        </View>
-      )}
+        {photos.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Aucune photo disponible</Text>
+          </View>
+        )}
 
-      {totalPages > 1 && (
-        <View style={styles.pagination}>
-          <button
-            onClick={prevPage}
-            disabled={currentPage === 0}
-            style={{
-              ...paginationButtonStyle,
-              opacity: currentPage === 0 ? 0.5 : 1,
-              cursor: currentPage === 0 ? 'not-allowed' : 'pointer',
-            }}
-          >
-            <Ionicons name="chevron-back" size={20} color={COLORS.primary} />
-          </button>
+        {totalPages > 1 && (
+          <View style={styles.pagination}>
+            <button
+              onClick={prevPage}
+              disabled={currentPage === 0}
+              style={{
+                ...paginationButtonStyle,
+                opacity: currentPage === 0 ? 0.5 : 1,
+                cursor: currentPage === 0 ? "not-allowed" : "pointer",
+              }}
+            >
+              <Ionicons name="chevron-back" size={20} color={COLORS.primary} />
+            </button>
 
-          <Text style={styles.pageInfo}>
-            Page {currentPage + 1} / {totalPages}
-          </Text>
+            <Text style={styles.pageInfo}>
+              Page {currentPage + 1} / {totalPages}
+            </Text>
 
-          <button
-            onClick={nextPage}
-            disabled={currentPage === totalPages - 1}
-            style={{
-              ...paginationButtonStyle,
-              opacity: currentPage === totalPages - 1 ? 0.5 : 1,
-              cursor: currentPage === totalPages - 1 ? 'not-allowed' : 'pointer',
-            }}
-          >
-            <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
-          </button>
-        </View>
-      )}
+            <button
+              onClick={nextPage}
+              disabled={currentPage === totalPages - 1}
+              style={{
+                ...paginationButtonStyle,
+                opacity: currentPage === totalPages - 1 ? 0.5 : 1,
+                cursor:
+                  currentPage === totalPages - 1 ? "not-allowed" : "pointer",
+              }}
+            >
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={COLORS.primary}
+              />
+            </button>
+          </View>
+        )}
       </View>
 
       <ImagePreviewModal
@@ -332,87 +392,107 @@ export default function WebGalerie({ galerieState }: WebGalerieProps) {
         photo={previewPhoto}
         onClose={() => setPreviewPhoto(null)}
       />
+
+      <WebAddImageModal
+        visible={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onSuccess={handleUploadSuccess}
+      />
     </>
   );
 }
 
 const paginationButtonStyle = {
-  padding: '8px 16px',
+  padding: "8px 16px",
   backgroundColor: COLORS.lightWhite,
-  border: 'none',
-  borderRadius: '8px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
+  border: "none",
+  borderRadius: "8px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const uploadButtonStyle = {
+  padding: "12px 20px",
+  backgroundColor: COLORS.primary,
+  border: "none",
+  borderRadius: "10px",
+  cursor: "pointer",
+  display: "flex",
+  flexDirection: "row" as const,
+  alignItems: "center",
+  gap: "10px",
+  transition: "all 0.2s",
+  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
 };
 
 const datePickerStyle = {
-  padding: '12px',
-  borderRadius: '8px',
+  padding: "12px",
+  borderRadius: "8px",
   border: `2px solid ${COLORS.gray2}`,
-  fontSize: '16px',
+  fontSize: "16px",
   fontFamily: FONT.medium,
   color: COLORS.tertiary,
   backgroundColor: COLORS.white,
-  width: '100%',
-  cursor: 'pointer',
-  outline: 'none',
-  transition: 'border-color 0.2s',
+  width: "100%",
+  cursor: "pointer",
+  outline: "none",
+  transition: "border-color 0.2s",
 };
 
 const calendarButtonStyle = {
-  padding: '12px 20px',
+  padding: "12px 20px",
   backgroundColor: COLORS.white,
   border: `2px solid ${COLORS.primary}`,
-  borderRadius: '10px',
-  cursor: 'pointer',
-  display: 'flex',
-  flexDirection: 'row' as const,
-  alignItems: 'center',
-  gap: '10px',
+  borderRadius: "10px",
+  cursor: "pointer",
+  display: "flex",
+  flexDirection: "row" as const,
+  alignItems: "center",
+  gap: "10px",
   fontFamily: FONT.medium,
-  fontSize: '15px',
+  fontSize: "15px",
   color: COLORS.primary,
-  transition: 'all 0.2s',
-  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+  transition: "all 0.2s",
+  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
 };
 
 const calendarDropdownStyle = {
-  position: 'absolute' as const,
-  top: '100%',
+  position: "absolute" as const,
+  top: "100%",
   right: 0,
-  marginTop: '10px',
+  marginTop: "10px",
   backgroundColor: COLORS.white,
-  borderRadius: '12px',
-  boxShadow: '0 12px 32px rgba(0, 0, 0, 0.25)',
-  padding: '20px',
+  borderRadius: "12px",
+  boxShadow: "0 12px 32px rgba(0, 0, 0, 0.25)",
+  padding: "20px",
   zIndex: 9999,
-  minWidth: '320px',
+  minWidth: "320px",
   border: `1px solid ${COLORS.gray2}`,
 };
 
 const secondaryButtonStyle = {
-  padding: '10px 20px',
+  padding: "10px 20px",
   backgroundColor: COLORS.lightWhite,
   border: `1px solid ${COLORS.gray2}`,
-  borderRadius: '8px',
-  cursor: 'pointer',
+  borderRadius: "8px",
+  cursor: "pointer",
   fontFamily: FONT.medium,
-  fontSize: '14px',
+  fontSize: "14px",
   color: COLORS.tertiary,
-  width: '100%',
+  width: "100%",
 };
 
 const clearButtonStyle = {
-  padding: '10px 12px',
+  padding: "10px 12px",
   backgroundColor: COLORS.deleteColor,
-  border: 'none',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  transition: 'opacity 0.2s',
+  border: "none",
+  borderRadius: "8px",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  transition: "opacity 0.2s",
 };
 
 const styles = StyleSheet.create({
@@ -424,14 +504,14 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: "#e5e7eb",
     zIndex: 100,
-    position: 'relative',
+    position: "relative",
   },
   headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   headerTitle: {
     fontFamily: FONT.bold,
@@ -444,11 +524,16 @@ const styles = StyleSheet.create({
     fontSize: SIZES.medium,
     color: COLORS.gray,
   },
-  dateFilter: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
-    position: 'relative',
+  },
+  dateFilter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    position: "relative",
   },
   calendarButtonText: {
     fontFamily: FONT.medium,
@@ -460,7 +545,7 @@ const styles = StyleSheet.create({
     fontSize: SIZES.large,
     color: COLORS.tertiary,
     marginBottom: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   calendarContent: {
     gap: 16,
@@ -470,8 +555,8 @@ const styles = StyleSheet.create({
   },
   centerContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   loadingText: {
@@ -483,12 +568,12 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: FONT.medium,
     fontSize: SIZES.medium,
-    color: '#ef4444',
+    color: "#ef4444",
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   emptyText: {
     fontFamily: FONT.medium,
@@ -496,14 +581,14 @@ const styles = StyleSheet.create({
     color: COLORS.gray,
   },
   pagination: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     gap: 16,
     padding: 16,
     backgroundColor: COLORS.white,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: "#e5e7eb",
   },
   pageInfo: {
     fontFamily: FONT.bold,
