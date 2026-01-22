@@ -46,7 +46,7 @@ export default function ZonePhotosPanel({
   const getKindLabel = (kind: string): string => {
     switch (kind) {
       case "qualiphoto":
-        return "QualiPhoto";
+        return "Photo libre";
       case "photoavant":
         return "Avant";
       case "photoapres":

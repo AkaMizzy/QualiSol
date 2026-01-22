@@ -446,3 +446,68 @@ export async function getPdfReports(token: string): Promise<Ged[]> {
     return [];
   }
 }
+
+/**
+ * Get all company images (qualiphoto, photoavant, photoapres)
+ * @param token - Auth token
+ * @returns Array of GED records
+ */
+export async function getCompanyImages(token: string): Promise<Ged[]> {
+  try {
+    const response = await api.get("/api/geds/filter/company-images", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch company images:", error);
+    return [];
+  }
+}
+
+/**
+ * Download selected images as a ZIP archive
+ * @param token - Auth token
+ * @param ids - Array of image IDs to download (max 10)
+ */
+export async function downloadImagesZip(
+  token: string,
+  ids: string[],
+): Promise<void> {
+  if (ids.length === 0) return;
+  if (ids.length > 10) throw new Error("Maximum 10 images allowed");
+
+  try {
+    const response = await fetch(
+      `${API_CONFIG.BASE_URL}/api/geds/action/download-zip`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ids }),
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Download failed");
+    }
+
+    // Handle Blob download
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "images.zip"; // Default filename
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch (error) {
+    console.error("Failed to download ZIP:", error);
+    throw error;
+  }
+}

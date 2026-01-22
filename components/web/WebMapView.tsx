@@ -305,11 +305,11 @@ export default function WebMapView({}: WebMapViewProps) {
   const getPhotoTypeLabel = (kind: string): string => {
     switch (kind) {
       case "qualiphoto":
-        return "QualiPhoto";
+        return "Photo libre";
       case "photoavant":
-        return "Situation Avant";
+        return "Avant";
       case "photoapres":
-        return "Situation Après";
+        return "Après";
       default:
         return kind;
     }
@@ -493,7 +493,7 @@ export default function WebMapView({}: WebMapViewProps) {
                       styles.filterTextActive,
                   ]}
                 >
-                  QualiPhoto
+                  Photo libre
                 </Text>
               </TouchableOpacity>
 

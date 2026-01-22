@@ -4,7 +4,9 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import WebProjectsTable from "./WebProjectsTable";
 import WebUsersTable from "./WebUsersTable";
 
-type SettingsTab = "projects" | "users" | "roles";
+import WebCompanyGallery from "./WebCompanyGallery";
+
+type SettingsTab = "projects" | "users" | "roles" | "galerie";
 
 export default function WebSettings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("projects");
@@ -15,7 +17,7 @@ export default function WebSettings() {
       <View style={styles.header}>
         <Text style={styles.title}>Paramètres</Text>
         <Text style={styles.subtitle}>
-          Gérez vos chantiers, utilisateurs et rôles
+          Gérez vos chantiers, utilisateurs, rôles et galerie
         </Text>
       </View>
 
@@ -49,13 +51,26 @@ export default function WebSettings() {
           </Text>
         </TouchableOpacity>
 
-       
+        <TouchableOpacity
+          style={[styles.tab, activeTab === "galerie" && styles.tabActive]}
+          onPress={() => setActiveTab("galerie")}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === "galerie" && styles.tabTextActive,
+            ]}
+          >
+            Galerie
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Main Content */}
       <View style={styles.content}>
         {activeTab === "projects" && <WebProjectsTable />}
         {activeTab === "users" && <WebUsersTable />}
+        {activeTab === "galerie" && <WebCompanyGallery />}
         {activeTab === "roles" && <PlaceholderTab title="Rôles" />}
       </View>
     </View>
