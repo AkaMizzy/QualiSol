@@ -182,6 +182,20 @@ export async function enhanceText(
   return response.data;
 }
 
+export async function getGedById(token: string, gedId: string): Promise<Ged> {
+  try {
+    const response = await api.get(`/api/geds/${gedId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data.data;
+  } catch (error) {
+    console.error(`Failed to fetch GED with id ${gedId}:`, error);
+    throw error;
+  }
+}
+
 export const updateGed = async (
   token: string,
   gedId: string,

@@ -1,20 +1,33 @@
 import API_CONFIG from "@/app/config/api";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
+import { useAuth } from "@/contexts/AuthContext";
+import { getGedById } from "@/services/gedService";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import WebGedUpdateModal from "./WebGedUpdateModal";
 
 interface ImagePreviewModalProps {
   visible: boolean;
   photo: any; // Using any for now, ideally should share Photo interface
   onClose: () => void;
+  onUpdate?: () => void; // Callback after successful update
 }
 
 export default function ImagePreviewModal({
   visible,
   photo,
   onClose,
+  onUpdate,
 }: ImagePreviewModalProps) {
+  const { token } = useAuth();
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [displayedPhoto, setDisplayedPhoto] = useState(photo);
+
+  // Update displayed photo when photo prop changes
+  useEffect(() => {
+    setDisplayedPhoto(photo);
+  }, [photo]);
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -31,7 +44,22 @@ export default function ImagePreviewModal({
     };
   }, [visible, onClose]);
 
-  if (!visible || !photo) return null;
+  const handleUpdateSuccess = async () => {
+    // Fetch fresh data to update the preview
+    if (token && photo?.id) {
+      try {
+        const updatedPhoto = await getGedById(token, photo.id);
+        setDisplayedPhoto(updatedPhoto);
+        onUpdate?.();
+      } catch (error) {
+        console.error("Failed to refresh photo data:", error);
+        // Still call onUpdate even if refresh fails
+        onUpdate?.();
+      }
+    }
+  };
+
+  if (!visible || !photo || !displayedPhoto) return null;
 
   return (
     <div style={styles.overlay}>
@@ -40,17 +68,28 @@ export default function ImagePreviewModal({
       <View style={styles.modalContainer}>
         <View style={styles.header}>
           <Text style={styles.title} numberOfLines={1}>
-            {photo.title || "Sans titre"}
+            {displayedPhoto.title || "Sans titre"}
           </Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={COLORS.white} />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => setShowUpdateModal(true)}
+              style={styles.editButton}
+            >
+              <Ionicons name="create-outline" size={20} color={COLORS.white} />
+              <Text style={styles.editButtonText}>Modifier</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={24} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.imageContainer}>
           <Image
             source={{
-              uri: photo.url ? `${API_CONFIG.BASE_URL}${photo.url}` : "",
+              uri: displayedPhoto.url
+                ? `${API_CONFIG.BASE_URL}${displayedPhoto.url}`
+                : "",
             }}
             style={styles.image}
             resizeMode="contain"
@@ -69,17 +108,20 @@ export default function ImagePreviewModal({
                 />
                 <Text style={styles.metadataLabel}>Date:</Text>
                 <Text style={styles.metadataValue}>
-                  {new Date(photo.created_at).toLocaleDateString("fr-FR", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {new Date(displayedPhoto.created_at).toLocaleDateString(
+                    "fr-FR",
+                    {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    },
+                  )}
                 </Text>
               </View>
 
-              {photo.kind && (
+              {displayedPhoto.kind && (
                 <View style={styles.metadataRow}>
                   <Ionicons
                     name="pricetag-outline"
@@ -88,18 +130,18 @@ export default function ImagePreviewModal({
                   />
                   <Text style={styles.metadataLabel}>Type:</Text>
                   <Text style={styles.metadataValue}>
-                    {photo.kind === "qualiphoto"
+                    {displayedPhoto.kind === "qualiphoto"
                       ? "Photo libre"
-                      : photo.kind === "photoavant"
+                      : displayedPhoto.kind === "photoavant"
                         ? "Situation Avant"
-                        : photo.kind === "photoapres"
+                        : displayedPhoto.kind === "photoapres"
                           ? "Situation Après"
-                          : photo.kind}
+                          : displayedPhoto.kind}
                   </Text>
                 </View>
               )}
 
-              {photo.level && (
+              {displayedPhoto.level && (
                 <View style={styles.metadataRow}>
                   <Ionicons
                     name="layers-outline"
@@ -107,14 +149,16 @@ export default function ImagePreviewModal({
                     color={COLORS.primary}
                   />
                   <Text style={styles.metadataLabel}>Sévérité:</Text>
-                  <Text style={styles.metadataValue}>{photo.level}</Text>
+                  <Text style={styles.metadataValue}>
+                    {displayedPhoto.level}
+                  </Text>
                 </View>
               )}
             </View>
 
             {/* Right Column */}
             <View style={styles.metadataColumn}>
-              {photo.author && (
+              {displayedPhoto.author && (
                 <View style={styles.metadataRow}>
                   <Ionicons
                     name="person-outline"
@@ -122,11 +166,13 @@ export default function ImagePreviewModal({
                     color={COLORS.primary}
                   />
                   <Text style={styles.metadataLabel}>Auteur:</Text>
-                  <Text style={styles.metadataValue}>{photo.author}</Text>
+                  <Text style={styles.metadataValue}>
+                    {displayedPhoto.author}
+                  </Text>
                 </View>
               )}
 
-              {photo.type && (
+              {displayedPhoto.type && (
                 <View style={styles.metadataRow}>
                   <Ionicons
                     name="warning-outline"
@@ -134,11 +180,13 @@ export default function ImagePreviewModal({
                     color={COLORS.primary}
                   />
                   <Text style={styles.metadataLabel}>Type anomalie:</Text>
-                  <Text style={styles.metadataValue}>{photo.type}</Text>
+                  <Text style={styles.metadataValue}>
+                    {displayedPhoto.type}
+                  </Text>
                 </View>
               )}
 
-              {photo.categorie && (
+              {displayedPhoto.categorie && (
                 <View style={styles.metadataRow}>
                   <Ionicons
                     name="list-outline"
@@ -146,14 +194,16 @@ export default function ImagePreviewModal({
                     color={COLORS.primary}
                   />
                   <Text style={styles.metadataLabel}>Catégorie:</Text>
-                  <Text style={styles.metadataValue}>{photo.categorie}</Text>
+                  <Text style={styles.metadataValue}>
+                    {displayedPhoto.categorie}
+                  </Text>
                 </View>
               )}
             </View>
           </View>
 
           {/* Description at the bottom if available */}
-          {photo.description && (
+          {displayedPhoto.description && (
             <View style={styles.descriptionContainer}>
               <Text style={styles.descriptionLabel}>
                 <Ionicons
@@ -163,11 +213,24 @@ export default function ImagePreviewModal({
                 />{" "}
                 Description:
               </Text>
-              <Text style={styles.descriptionText}>{photo.description}</Text>
+              <Text style={styles.descriptionText}>
+                {displayedPhoto.description}
+              </Text>
             </View>
           )}
         </View>
       </View>
+
+      {/* Update Modal */}
+      {token && (
+        <WebGedUpdateModal
+          visible={showUpdateModal}
+          ged={displayedPhoto}
+          token={token}
+          onClose={() => setShowUpdateModal(false)}
+          onSuccess={handleUpdateSuccess}
+        />
+      )}
     </div>
   );
 }
@@ -175,11 +238,11 @@ export default function ImagePreviewModal({
 const styles = Object.assign(
   StyleSheet.create({
     modalContainer: {
-      width: "90%",
-      height: "90%",
-      maxWidth: 1200,
+      width: "95%",
+      height: "95%",
+      maxWidth: 1400,
       backgroundColor: "transparent",
-      borderRadius: 12,
+      borderRadius: 0,
       overflow: "hidden",
       display: "flex",
       flexDirection: "column",
@@ -189,89 +252,114 @@ const styles = Object.assign(
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      padding: 16,
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      padding: 20,
+      backgroundColor: "#1a1a1a",
+      borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
       position: "absolute",
       top: 0,
       left: 0,
       right: 0,
       zIndex: 10,
-    },
+    } as any,
     title: {
       fontFamily: FONT.bold,
-      fontSize: SIZES.large,
+      fontSize: SIZES.xLarge,
       color: COLORS.white,
       flex: 1,
       marginRight: 16,
     },
-    closeButton: {
-      padding: 8,
-      backgroundColor: "rgba(255, 255, 255, 0.2)",
-      borderRadius: 20,
+    headerActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    } as any,
+    editButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      padding: 10,
+      backgroundColor: "rgba(255, 255, 255, 0.15)",
+      borderRadius: 8,
+      transition: "all 0.2s",
+    } as any,
+    editButtonText: {
+      fontFamily: FONT.bold,
+      fontSize: SIZES.small,
+      color: COLORS.white,
     },
+    closeButton: {
+      padding: 12,
+      backgroundColor: "rgba(255, 255, 255, 0.1)",
+      borderRadius: 8,
+      transition: "all 0.2s",
+    } as any,
     imageContainer: {
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
-      backgroundColor: "transparent",
-    },
+      backgroundColor: "#0a0a0a",
+      padding: 80,
+    } as any,
     image: {
       width: "100%",
       height: "100%",
-    },
+      maxHeight: "100%",
+      objectFit: "contain",
+    } as any,
     footer: {
-      padding: 20,
-      backgroundColor: "rgba(0, 0, 0, 0.8)",
+      padding: 24,
+      backgroundColor: "#1a1a1a",
+      borderTop: "1px solid rgba(255, 255, 255, 0.1)",
       position: "absolute",
       bottom: 0,
       left: 0,
       right: 0,
-      maxHeight: "40%",
+      maxHeight: "35%",
       overflowY: "auto",
     } as any,
     metadataGrid: {
       flexDirection: "row",
-      gap: 20,
+      gap: 32,
       marginBottom: 12,
     } as any,
     metadataColumn: {
       flex: 1,
-      gap: 10,
+      gap: 12,
     } as any,
     metadataRow: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 8,
+      gap: 10,
     } as any,
     metadataLabel: {
       fontFamily: FONT.bold,
-      fontSize: SIZES.small,
-      color: "rgba(255, 255, 255, 0.7)",
-      minWidth: 80,
+      fontSize: SIZES.medium,
+      color: "rgba(255, 255, 255, 0.6)",
+      minWidth: 110,
     },
     metadataValue: {
       fontFamily: FONT.medium,
-      fontSize: SIZES.small,
+      fontSize: SIZES.medium,
       color: COLORS.white,
       flex: 1,
     },
     descriptionContainer: {
-      marginTop: 12,
-      paddingTop: 12,
+      marginTop: 16,
+      paddingTop: 16,
       borderTopWidth: 1,
-      borderTopColor: "rgba(255, 255, 255, 0.2)",
-      gap: 6,
+      borderTopColor: "rgba(255, 255, 255, 0.15)",
+      gap: 8,
     } as any,
     descriptionLabel: {
       fontFamily: FONT.bold,
-      fontSize: SIZES.small,
-      color: "rgba(255, 255, 255, 0.7)",
+      fontSize: SIZES.medium,
+      color: "rgba(255, 255, 255, 0.6)",
     },
     descriptionText: {
       fontFamily: FONT.medium,
-      fontSize: SIZES.small,
+      fontSize: SIZES.medium,
       color: COLORS.white,
-      lineHeight: 20,
+      lineHeight: 22,
     },
   }),
   {
@@ -285,6 +373,7 @@ const styles = Object.assign(
       justifyContent: "center",
       alignItems: "center",
       zIndex: 10000,
+      backgroundColor: "#000000",
     },
     backdrop: {
       position: "absolute" as const,
@@ -292,7 +381,7 @@ const styles = Object.assign(
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.85)",
+      backgroundColor: "#000000",
       cursor: "pointer",
     },
   },
