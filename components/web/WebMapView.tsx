@@ -40,6 +40,8 @@ export default function WebMapView({}: WebMapViewProps) {
     mapCenter,
     selectedPhotoTypes,
     togglePhotoType,
+    selectedSeverityLevels,
+    toggleSeverityLevel,
     allPhotos,
     projects,
     zones,
@@ -426,13 +428,22 @@ export default function WebMapView({}: WebMapViewProps) {
   // Helper function to safely toggle photo type filters
   // Prevents unselecting all filters (at least one must remain active)
   const handleTogglePhotoType = (type: string) => {
-    // If this type is currently selected and it's the only one selected, don't allow unselecting
     if (selectedPhotoTypes.has(type) && selectedPhotoTypes.size === 1) {
-      // Do nothing - keep at least one filter active
-      return;
+      return; // Keep at least one filter active
     }
-    // Otherwise, toggle normally
     togglePhotoType(type);
+  };
+
+  // Helper function to safely toggle severity level filters
+  // Prevents unselecting all filters (at least one must remain active)
+  const handleToggleSeverityLevel = (level: string) => {
+    if (
+      selectedSeverityLevels.has(level) &&
+      selectedSeverityLevels.size === 1
+    ) {
+      return; // Keep at least one severity filter active
+    }
+    toggleSeverityLevel(level);
   };
 
   if (loading || !leafletLoaded) {
@@ -456,88 +467,197 @@ export default function WebMapView({}: WebMapViewProps) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Redesigned Filter Header */}
       <View style={styles.header}>
-        <View style={styles.headerRow}>
-          {/* Left: Title and Count */}
-          <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle}>🗺️ Carte des Photos</Text>
-            <Text style={styles.headerSubtitle}>
-              {photos.length} photo{photos.length !== 1 ? "s" : ""} affichée
-              {photos.length !== 1 ? "s" : ""}
+        {/* Row 1: Photo Type and Severity Filters */}
+        <View style={styles.filterRow}>
+          {/* Photo Type Section */}
+          <View style={styles.filterSection}>
+            <Text style={styles.filterLabel}>Type:</Text>
+            <View style={styles.filterButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.filterButton,
+                  selectedPhotoTypes.has("qualiphoto") &&
+                    styles.filterButtonActiveBlue,
+                ]}
+                onPress={() => handleTogglePhotoType("qualiphoto")}
+              >
+                <View
+                  style={[styles.filterDot, { backgroundColor: "#3b82f6" }]}
+                />
+                <Text
+                  style={[
+                    styles.filterText,
+                    selectedPhotoTypes.has("qualiphoto") &&
+                      styles.filterTextActive,
+                  ]}
+                >
+                  QualiPhoto
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.filterButton,
+                  selectedPhotoTypes.has("photoavant") &&
+                    styles.filterButtonActiveGreen,
+                ]}
+                onPress={() => handleTogglePhotoType("photoavant")}
+              >
+                <View
+                  style={[styles.filterDot, { backgroundColor: "#22c55e" }]}
+                />
+                <Text
+                  style={[
+                    styles.filterText,
+                    selectedPhotoTypes.has("photoavant") &&
+                      styles.filterTextActive,
+                  ]}
+                >
+                  Avant
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.filterButton,
+                  selectedPhotoTypes.has("photoapres") &&
+                    styles.filterButtonActiveYellow,
+                ]}
+                onPress={() => handleTogglePhotoType("photoapres")}
+              >
+                <View
+                  style={[styles.filterDot, { backgroundColor: "#eab308" }]}
+                />
+                <Text
+                  style={[
+                    styles.filterText,
+                    selectedPhotoTypes.has("photoapres") &&
+                      styles.filterTextActive,
+                  ]}
+                >
+                  Après
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Vertical Separator */}
+          <View style={styles.verticalSeparator} />
+
+          {/* Severity Section */}
+          <View style={styles.filterSection}>
+            <Text style={styles.filterLabel}>Sévérité:</Text>
+            <View style={styles.filterButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.filterButton,
+                  selectedSeverityLevels.has("low") && {
+                    backgroundColor: "#22c55e",
+                    borderColor: "#22c55e",
+                  },
+                ]}
+                onPress={() => handleToggleSeverityLevel("low")}
+              >
+                <View
+                  style={[styles.filterDot, { backgroundColor: "#22c55e" }]}
+                />
+                <Text
+                  style={[
+                    styles.filterText,
+                    selectedSeverityLevels.has("low") &&
+                      styles.filterTextActive,
+                  ]}
+                >
+                  Faible (0-2)
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.filterButton,
+                  selectedSeverityLevels.has("medium") && {
+                    backgroundColor: "#eab308",
+                    borderColor: "#eab308",
+                  },
+                ]}
+                onPress={() => handleToggleSeverityLevel("medium")}
+              >
+                <View
+                  style={[styles.filterDot, { backgroundColor: "#eab308" }]}
+                />
+                <Text
+                  style={[
+                    styles.filterText,
+                    selectedSeverityLevels.has("medium") &&
+                      styles.filterTextActive,
+                  ]}
+                >
+                  Moyen (3-5)
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.filterButton,
+                  selectedSeverityLevels.has("high") && {
+                    backgroundColor: "#f97316",
+                    borderColor: "#f97316",
+                  },
+                ]}
+                onPress={() => handleToggleSeverityLevel("high")}
+              >
+                <View
+                  style={[styles.filterDot, { backgroundColor: "#f97316" }]}
+                />
+                <Text
+                  style={[
+                    styles.filterText,
+                    selectedSeverityLevels.has("high") &&
+                      styles.filterTextActive,
+                  ]}
+                >
+                  Élevé (6-8)
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.filterButton,
+                  selectedSeverityLevels.has("critical") && {
+                    backgroundColor: "#ef4444",
+                    borderColor: "#ef4444",
+                  },
+                ]}
+                onPress={() => handleToggleSeverityLevel("critical")}
+              >
+                <View
+                  style={[styles.filterDot, { backgroundColor: "#ef4444" }]}
+                />
+                <Text
+                  style={[
+                    styles.filterText,
+                    selectedSeverityLevels.has("critical") &&
+                      styles.filterTextActive,
+                  ]}
+                >
+                  Critique (9-10)
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Photo Count Badge */}
+          <View style={styles.photoCountBadge}>
+            <Text style={styles.photoCountText}>
+              {photos.length} photo{photos.length !== 1 ? "s" : ""}
             </Text>
           </View>
+        </View>
 
-          {/* Center: Photo Type Filters */}
-          <View style={styles.photoTypeFilters}>
-            <TouchableOpacity
-              style={[
-                styles.filterButton,
-                selectedPhotoTypes.has("qualiphoto") &&
-                  styles.filterButtonActiveBlue,
-              ]}
-              onPress={() => handleTogglePhotoType("qualiphoto")}
-            >
-              <View
-                style={[styles.filterDot, { backgroundColor: "#3b82f6" }]}
-              />
-              <Text
-                style={[
-                  styles.filterText,
-                  selectedPhotoTypes.has("qualiphoto") &&
-                    styles.filterTextActive,
-                ]}
-              >
-                QualiPhoto
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.filterButton,
-                selectedPhotoTypes.has("photoavant") &&
-                  styles.filterButtonActiveGreen,
-              ]}
-              onPress={() => handleTogglePhotoType("photoavant")}
-            >
-              <View
-                style={[styles.filterDot, { backgroundColor: "#22c55e" }]}
-              />
-              <Text
-                style={[
-                  styles.filterText,
-                  selectedPhotoTypes.has("photoavant") &&
-                    styles.filterTextActive,
-                ]}
-              >
-                Avant
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.filterButton,
-                selectedPhotoTypes.has("photoapres") &&
-                  styles.filterButtonActiveYellow,
-              ]}
-              onPress={() => handleTogglePhotoType("photoapres")}
-            >
-              <View
-                style={[styles.filterDot, { backgroundColor: "#eab308" }]}
-              />
-              <Text
-                style={[
-                  styles.filterText,
-                  selectedPhotoTypes.has("photoapres") &&
-                    styles.filterTextActive,
-                ]}
-              >
-                Après
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Right: Entity Filters */}
+        {/* Row 2: Entity Hierarchy Filters */}
+        <View style={styles.entityRow}>
           <View style={styles.entityFilters}>
             {/* Project Filter */}
             <View style={styles.filterDropdownContainer}>
@@ -599,7 +719,7 @@ export default function WebMapView({}: WebMapViewProps) {
                 onPress={clearAllFilters}
               >
                 <Ionicons name="close-circle" size={18} color={COLORS.white} />
-                <Text style={styles.clearFiltersText}>Effacer filtres</Text>
+                <Text style={styles.clearFiltersText}>Effacer</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -947,6 +1067,51 @@ const styles = StyleSheet.create({
   filterContainer: {
     flexDirection: "row",
     gap: 8,
+  },
+  filterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 20,
+    marginBottom: 12,
+    flexWrap: "wrap",
+  },
+  filterSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  filterLabel: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.medium,
+    color: COLORS.tertiary,
+    minWidth: 70,
+  },
+  filterButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  verticalSeparator: {
+    width: 1,
+    height: 32,
+    backgroundColor: "#d1d5db",
+  },
+  photoCountBadge: {
+    marginLeft: "auto",
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  photoCountText: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.small,
+    color: COLORS.white,
+  },
+  entityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   filterButton: {
     flexDirection: "row",

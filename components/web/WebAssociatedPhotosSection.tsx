@@ -2,22 +2,24 @@ import API_CONFIG from "@/app/config/api";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  assignPhotoToFolder,
-  Ged,
-  generateFolderReport,
-  getAssociatedPhotosByFolder,
+    assignPhotoToFolder,
+    Ged,
+    generateFolderReport,
+    getAssociatedPhotosByFolder,
+    updateGed,
 } from "@/services/gedService";
+import { getInactiveStatusId } from "@/services/statusService";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import DropZone from "./DropZone";
 import ImagePreviewModal from "./ImagePreviewModal";
@@ -43,6 +45,7 @@ export default function WebAssociatedPhotosSection({
   const [pendingPhotoId, setPendingPhotoId] = useState<string | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [inactiveStatusId, setInactiveStatusId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedFolderId || !token) {
@@ -69,6 +72,51 @@ export default function WebAssociatedPhotosSection({
 
     void fetchAssociatedPhotos();
   }, [selectedFolderId, token]);
+
+  // Fetch inactive status ID on mount
+  useEffect(() => {
+    const fetchInactiveStatus = async () => {
+      if (token) {
+        const statusId = await getInactiveStatusId(token);
+        setInactiveStatusId(statusId);
+      }
+    };
+    fetchInactiveStatus();
+  }, [token]);
+
+  // Handle photo deactivation
+  const handleDeactivate = useCallback(
+    async (photoId: string) => {
+      if (!token || !inactiveStatusId) {
+        alert("Impossible de désactiver la photo. Statut introuvable.");
+        return;
+      }
+
+      try {
+        await updateGed(token, photoId, { status_id: inactiveStatusId });
+        // Refresh photos to reflect the change
+        if (selectedFolderId) {
+          const updatedPhotos = await getAssociatedPhotosByFolder(
+            token,
+            selectedFolderId,
+          );
+          setPhotos(updatedPhotos);
+        }
+      } catch (error) {
+        console.error("Failed to deactivate photo:", error);
+        alert("Échec de la désactivation de la photo.");
+      }
+    },
+    [token, inactiveStatusId, selectedFolderId],
+  );
+
+  // Check if a photo is inactive
+  const isPhotoInactive = useCallback(
+    (photo: Ged): boolean => {
+      return inactiveStatusId !== null && photo.status_id === inactiveStatusId;
+    },
+    [inactiveStatusId],
+  );
 
   // Create photo pairs based on idsource relationship
   // Each photoApres has idsource pointing to its photoAvant
@@ -295,43 +343,120 @@ export default function WebAssociatedPhotosSection({
                 onDrop={handleDropPhotoAvant}
                 highlightColor={COLORS.primary}
               >
-                <TouchableOpacity
-                  style={styles.pairCard}
-                  onPress={() => setPreviewPhoto(pair.avant)}
+                <div
+                  style={{
+                    cursor: isPhotoInactive(pair.avant)
+                      ? "not-allowed"
+                      : "pointer",
+                    opacity: isPhotoInactive(pair.avant) ? 0.5 : 1,
+                    filter: isPhotoInactive(pair.avant)
+                      ? "grayscale(100%)"
+                      : "none",
+                  }}
                 >
-                  {pair.avant.url && (
-                    <Image
-                      source={{
-                        uri: `${API_CONFIG.BASE_URL}${pair.avant.url}`,
-                      }}
-                      style={styles.pairImage}
-                      resizeMode="cover"
-                    />
-                  )}
-                  <View style={styles.pairOverlay}>
-                    <View style={styles.pairBadge}>
-                      <Ionicons
-                        name="camera-outline"
-                        size={14}
-                        color={COLORS.white}
+                  <TouchableOpacity
+                    style={styles.pairCard}
+                    onPress={() => setPreviewPhoto(pair.avant)}
+                    disabled={isPhotoInactive(pair.avant)}
+                  >
+                    {pair.avant.url && (
+                      <Image
+                        source={{
+                          uri: `${API_CONFIG.BASE_URL}${pair.avant.url}`,
+                        }}
+                        style={styles.pairImage}
+                        resizeMode="cover"
                       />
-                      <Text style={styles.pairBadgeText}>Avant</Text>
+                    )}
+                    <View style={styles.pairOverlay}>
+                      <View style={styles.pairBadge}>
+                        <Ionicons
+                          name="camera-outline"
+                          size={14}
+                          color={COLORS.white}
+                        />
+                        <Text style={styles.pairBadgeText}>Avant</Text>
+                      </View>
+                      <Text style={styles.pairTitle} numberOfLines={2}>
+                        {pair.avant.title || "Sans titre"}
+                      </Text>
+                      <Text style={styles.pairDate}>
+                        {new Date(pair.avant.created_at).toLocaleDateString(
+                          "fr-FR",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          },
+                        )}
+                      </Text>
                     </View>
-                    <Text style={styles.pairTitle} numberOfLines={2}>
-                      {pair.avant.title || "Sans titre"}
-                    </Text>
-                    <Text style={styles.pairDate}>
-                      {new Date(pair.avant.created_at).toLocaleDateString(
-                        "fr-FR",
-                        {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        },
-                      )}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+
+                    {/* Deactivate Button for Photo Avant */}
+                    {!isPhotoInactive(pair.avant) && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (
+                            confirm(
+                              "Voulez-vous vraiment désactiver cette photo ?",
+                            )
+                          ) {
+                            handleDeactivate(pair.avant.id);
+                          }
+                        }}
+                        style={{
+                          position: "absolute",
+                          bottom: "12px",
+                          right: "12px",
+                          backgroundColor: "#ef4444",
+                          border: "none",
+                          borderRadius: "50%",
+                          width: "36px",
+                          height: "36px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                          transition: "all 0.2s",
+                        }}
+                        title="Désactiver la photo"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = "scale(1.1)";
+                          e.currentTarget.style.backgroundColor = "#dc2626";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = "scale(1)";
+                          e.currentTarget.style.backgroundColor = "#ef4444";
+                        }}
+                      >
+                        <Ionicons
+                          name="eye-off-outline"
+                          size={18}
+                          color={COLORS.white}
+                        />
+                      </button>
+                    )}
+
+                    {/* Inactive Badge for Photo Avant */}
+                    {isPhotoInactive(pair.avant) && (
+                      <View
+                        style={{
+                          position: "absolute",
+                          top: 8,
+                          left: 8,
+                          backgroundColor: "#6b7280",
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 16,
+                        }}
+                      >
+                        <Text style={styles.pairBadgeText}>Inactive</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </div>
               </DropZone>
 
               {/* Separator */}
@@ -351,43 +476,120 @@ export default function WebAssociatedPhotosSection({
                 disabled={!!pair.apres} // Disable if photoApres already exists
               >
                 {pair.apres ? (
-                  <TouchableOpacity
-                    style={styles.pairCard}
-                    onPress={() => setPreviewPhoto(pair.apres!)}
+                  <div
+                    style={{
+                      cursor: isPhotoInactive(pair.apres)
+                        ? "not-allowed"
+                        : "pointer",
+                      opacity: isPhotoInactive(pair.apres) ? 0.5 : 1,
+                      filter: isPhotoInactive(pair.apres)
+                        ? "grayscale(100%)"
+                        : "none",
+                    }}
                   >
-                    {pair.apres.url && (
-                      <Image
-                        source={{
-                          uri: `${API_CONFIG.BASE_URL}${pair.apres.url}`,
-                        }}
-                        style={styles.pairImage}
-                        resizeMode="cover"
-                      />
-                    )}
-                    <View style={styles.pairOverlay}>
-                      <View style={[styles.pairBadge, styles.pairBadgeGreen]}>
-                        <Ionicons
-                          name="checkmark-circle-outline"
-                          size={14}
-                          color={COLORS.white}
+                    <TouchableOpacity
+                      style={styles.pairCard}
+                      onPress={() => setPreviewPhoto(pair.apres!)}
+                      disabled={isPhotoInactive(pair.apres)}
+                    >
+                      {pair.apres.url && (
+                        <Image
+                          source={{
+                            uri: `${API_CONFIG.BASE_URL}${pair.apres.url}`,
+                          }}
+                          style={styles.pairImage}
+                          resizeMode="cover"
                         />
-                        <Text style={styles.pairBadgeText}>Après</Text>
+                      )}
+                      <View style={styles.pairOverlay}>
+                        <View style={[styles.pairBadge, styles.pairBadgeGreen]}>
+                          <Ionicons
+                            name="checkmark-circle-outline"
+                            size={14}
+                            color={COLORS.white}
+                          />
+                          <Text style={styles.pairBadgeText}>Après</Text>
+                        </View>
+                        <Text style={styles.pairTitle} numberOfLines={2}>
+                          {pair.apres.title || "Sans titre"}
+                        </Text>
+                        <Text style={styles.pairDate}>
+                          {new Date(pair.apres.created_at).toLocaleDateString(
+                            "fr-FR",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            },
+                          )}
+                        </Text>
                       </View>
-                      <Text style={styles.pairTitle} numberOfLines={2}>
-                        {pair.apres.title || "Sans titre"}
-                      </Text>
-                      <Text style={styles.pairDate}>
-                        {new Date(pair.apres.created_at).toLocaleDateString(
-                          "fr-FR",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          },
-                        )}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
+
+                      {/* Deactivate Button for Photo Après */}
+                      {!isPhotoInactive(pair.apres) && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (
+                              confirm(
+                                "Voulez-vous vraiment désactiver cette photo ?",
+                              )
+                            ) {
+                              handleDeactivate(pair.apres!.id);
+                            }
+                          }}
+                          style={{
+                            position: "absolute",
+                            bottom: "12px",
+                            right: "12px",
+                            backgroundColor: "#ef4444",
+                            border: "none",
+                            borderRadius: "50%",
+                            width: "36px",
+                            height: "36px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                            transition: "all 0.2s",
+                          }}
+                          title="Désactiver la photo"
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "scale(1.1)";
+                            e.currentTarget.style.backgroundColor = "#dc2626";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "scale(1)";
+                            e.currentTarget.style.backgroundColor = "#ef4444";
+                          }}
+                        >
+                          <Ionicons
+                            name="eye-off-outline"
+                            size={18}
+                            color={COLORS.white}
+                          />
+                        </button>
+                      )}
+
+                      {/* Inactive Badge for Photo Après */}
+                      {isPhotoInactive(pair.apres) && (
+                        <View
+                          style={{
+                            position: "absolute",
+                            top: 8,
+                            left: 8,
+                            backgroundColor: "#6b7280",
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 16,
+                          }}
+                        >
+                          <Text style={styles.pairBadgeText}>Inactive</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  </div>
                 ) : (
                   <View style={styles.pairCardPlaceholder}>
                     <Ionicons
@@ -411,31 +613,107 @@ export default function WebAssociatedPhotosSection({
                 Photos après sans correspondance
               </Text>
               {orphanedApres.map((photo) => (
-                <TouchableOpacity
+                <div
                   key={photo.id}
-                  style={styles.photoCard}
-                  onPress={() => setPreviewPhoto(photo)}
+                  style={{
+                    cursor: isPhotoInactive(photo) ? "not-allowed" : "pointer",
+                    opacity: isPhotoInactive(photo) ? 0.5 : 1,
+                    filter: isPhotoInactive(photo) ? "grayscale(100%)" : "none",
+                  }}
                 >
-                  {photo.url && (
-                    <Image
-                      source={{ uri: `${API_CONFIG.BASE_URL}${photo.url}` }}
-                      style={styles.photoImage}
-                      resizeMode="cover"
-                    />
-                  )}
-                  <View style={styles.photoOverlay}>
-                    <Text style={styles.photoTitle} numberOfLines={2}>
-                      {photo.title || "Sans titre"}
-                    </Text>
-                    <Text style={styles.photoDate}>
-                      {new Date(photo.created_at).toLocaleDateString("fr-FR", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.photoCard}
+                    onPress={() => setPreviewPhoto(photo)}
+                    disabled={isPhotoInactive(photo)}
+                  >
+                    {photo.url && (
+                      <Image
+                        source={{ uri: `${API_CONFIG.BASE_URL}${photo.url}` }}
+                        style={styles.photoImage}
+                        resizeMode="cover"
+                      />
+                    )}
+                    <View style={styles.photoOverlay}>
+                      <Text style={styles.photoTitle} numberOfLines={2}>
+                        {photo.title || "Sans titre"}
+                      </Text>
+                      <Text style={styles.photoDate}>
+                        {new Date(photo.created_at).toLocaleDateString(
+                          "fr-FR",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          },
+                        )}
+                      </Text>
+                    </View>
+
+                    {/* Deactivate Button for Orphaned Photo */}
+                    {!isPhotoInactive(photo) && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (
+                            confirm(
+                              "Voulez-vous vraiment désactiver cette photo ?",
+                            )
+                          ) {
+                            handleDeactivate(photo.id);
+                          }
+                        }}
+                        style={{
+                          position: "absolute",
+                          bottom: "12px",
+                          right: "12px",
+                          backgroundColor: "#ef4444",
+                          border: "none",
+                          borderRadius: "50%",
+                          width: "36px",
+                          height: "36px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                          transition: "all 0.2s",
+                        }}
+                        title="Désactiver la photo"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = "scale(1.1)";
+                          e.currentTarget.style.backgroundColor = "#dc2626";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = "scale(1)";
+                          e.currentTarget.style.backgroundColor = "#ef4444";
+                        }}
+                      >
+                        <Ionicons
+                          name="eye-off-outline"
+                          size={18}
+                          color={COLORS.white}
+                        />
+                      </button>
+                    )}
+
+                    {/* Inactive Badge for Orphaned Photo */}
+                    {isPhotoInactive(photo) && (
+                      <View
+                        style={{
+                          position: "absolute",
+                          top: 8,
+                          left: 8,
+                          backgroundColor: "#6b7280",
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 16,
+                        }}
+                      >
+                        <Text style={styles.pairBadgeText}>Inactive</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </div>
               ))}
             </View>
           )}
