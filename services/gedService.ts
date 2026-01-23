@@ -184,7 +184,9 @@ export async function enhanceText(
 
 export async function getGedById(token: string, gedId: string): Promise<Ged> {
   try {
-    const response = await api.get(`/api/geds/${gedId}`, {
+    // Add timestamp to prevent caching
+    const timestamp = new Date().getTime();
+    const response = await api.get(`/api/geds/${gedId}?t=${timestamp}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
