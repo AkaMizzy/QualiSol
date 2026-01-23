@@ -6,14 +6,14 @@ import folderService from "@/services/folderService";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    Pressable,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import MapFolderDetailModal from "./MapFolderDetailModal";
 import ZonePhotosPanel from "./ZonePhotosPanel";
@@ -51,10 +51,17 @@ export default function WebMapView({}: WebMapViewProps) {
     setZoneFilter,
     setFolderFilter,
     clearAllFilters,
+    radiusSearchPoint,
+    searchRadius,
+    setRadiusSearch,
+    clearRadiusSearch,
+    updateSearchRadius,
   } = useMapData();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const radiusCircleRef = useRef<any>(null);
+  const radiusMarkerRef = useRef<any>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<MapPhoto | null>(null);
   const [leafletLoaded, setLeafletLoaded] = useState(false);
   const [mapReady, setMapReady] = useState(false);
@@ -175,6 +182,24 @@ export default function WebMapView({}: WebMapViewProps) {
     };
   }, []);
 
+  // Add map click handler for radius search
+  useEffect(() => {
+    if (!mapRef.current || !leafletLoaded || !mapReady) return;
+
+    const handleMapClick = (e: any) => {
+      const { lat, lng } = e.latlng;
+      setRadiusSearch({ lat, lng }, searchRadius);
+    };
+
+    mapRef.current.on("click", handleMapClick);
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.off("click", handleMapClick);
+      }
+    };
+  }, [mapRef.current, leafletLoaded, mapReady, searchRadius, setRadiusSearch]);
+
   // Update markers when photos change
   useEffect(() => {
     if (!mapRef.current || !leafletLoaded || !mapReady) return;
@@ -283,6 +308,71 @@ export default function WebMapView({}: WebMapViewProps) {
       }
     }
   }, [photos, leafletLoaded, mapReady]);
+
+  // Update radius circle and marker when radiusSearchPoint changes
+  useEffect(() => {
+    if (!mapRef.current || !leafletLoaded || !mapReady) return;
+
+    const L = (window as any).L;
+
+    // Remove existing radius circle and marker
+    if (radiusCircleRef.current) {
+      mapRef.current.removeLayer(radiusCircleRef.current);
+      radiusCircleRef.current = null;
+    }
+    if (radiusMarkerRef.current) {
+      mapRef.current.removeLayer(radiusMarkerRef.current);
+      radiusMarkerRef.current = null;
+    }
+
+    // Add new radius circle and marker if search point is set
+    if (radiusSearchPoint) {
+      // Create circle overlay showing search radius
+      radiusCircleRef.current = L.circle(
+        [radiusSearchPoint.lat, radiusSearchPoint.lng],
+        {
+          radius: searchRadius * 1000, // Convert km to meters
+          color: "#3b82f6",
+          fillColor: "#3b82f6",
+          fillOpacity: 0.1,
+          weight: 2,
+        },
+      ).addTo(mapRef.current);
+
+      // Create pin marker at clicked location
+      const markerIcon = L.divIcon({
+        className: "radius-search-marker",
+        html: `
+          <div style="
+            position: relative;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+          ">
+            <div style="
+              width: 30px;
+              height: 30px;
+              border-radius: 50%;
+              background: #3b82f6;
+              border: 3px solid white;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 16px;
+            ">📍</div>
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+
+      radiusMarkerRef.current = L.marker(
+        [radiusSearchPoint.lat, radiusSearchPoint.lng],
+        { icon: markerIcon },
+      ).addTo(mapRef.current);
+    }
+  }, [radiusSearchPoint, searchRadius, leafletLoaded, mapReady]);
 
   // Severity-based color mapping:
   // 0-2: Low (Green) - Minor or no issue
@@ -712,8 +802,36 @@ export default function WebMapView({}: WebMapViewProps) {
               </select>
             </View>
 
+            {/* Radius Search Slider (only visible when radius search is active) */}
+            {radiusSearchPoint && (
+              <View style={styles.radiusSliderContainer}>
+                <Ionicons
+                  name="locate-outline"
+                  size={16}
+                  color={COLORS.primary}
+                />
+                <Text style={styles.radiusLabel}>
+                  Rayon: {searchRadius.toFixed(1)} km
+                </Text>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="5"
+                  step="0.1"
+                  value={searchRadius}
+                  onChange={(e: any) => {
+                    updateSearchRadius(parseFloat(e.target.value));
+                  }}
+                  style={styles.radiusSlider as any}
+                />
+              </View>
+            )}
+
             {/* Clear Filters Button */}
-            {(filters.projectId || filters.zoneId || filters.folderId) && (
+            {(filters.projectId ||
+              filters.zoneId ||
+              filters.folderId ||
+              radiusSearchPoint) && (
               <TouchableOpacity
                 style={styles.clearFiltersButton}
                 onPress={clearAllFilters}
@@ -747,7 +865,7 @@ export default function WebMapView({}: WebMapViewProps) {
               height: "100%",
               minHeight: 400,
               transition: "margin-right 300ms ease-in-out",
-              marginRight: filters.zoneId ? "350px" : "0",
+              marginRight: filters.zoneId || radiusSearchPoint ? "350px" : "0",
             } as any
           }
         />
@@ -755,9 +873,11 @@ export default function WebMapView({}: WebMapViewProps) {
         {/* Zone Photos Panel */}
         <ZonePhotosPanel
           photos={photos}
-          zoneName={getSelectedZoneName()}
-          isVisible={!!filters.zoneId}
-          onClose={clearZoneFilter}
+          zoneName={
+            radiusSearchPoint ? "Photos à proximité" : getSelectedZoneName()
+          }
+          isVisible={!!filters.zoneId || !!radiusSearchPoint}
+          onClose={radiusSearchPoint ? clearRadiusSearch : clearZoneFilter}
           onPhotoClick={setSelectedPhoto}
         />
       </div>
@@ -1278,4 +1398,26 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: 40,
   },
+  radiusSliderContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: COLORS.lightWhite,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "#3b82f6",
+  },
+  radiusLabel: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.small,
+    color: COLORS.primary,
+    minWidth: 90,
+  },
+  radiusSlider: {
+    width: 150,
+    height: 6,
+    cursor: "pointer",
+  } as any,
 });

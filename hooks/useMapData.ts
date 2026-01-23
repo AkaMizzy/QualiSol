@@ -16,6 +16,11 @@ export interface MapFilters {
   folderId: string | null;
 }
 
+export interface RadiusSearchPoint {
+  lat: number;
+  lng: number;
+}
+
 export function useMapData() {
   const { token } = useAuth();
   const [photos, setPhotos] = useState<MapPhoto[]>([]);
@@ -39,6 +44,11 @@ export function useMapData() {
     zoneId: null,
     folderId: null,
   });
+
+  // Radius search state
+  const [radiusSearchPoint, setRadiusSearchPoint] =
+    useState<RadiusSearchPoint | null>(null);
+  const [searchRadius, setSearchRadius] = useState<number>(0.5); // Default 0.5 km
 
   const fetchMapData = useCallback(async () => {
     if (!token) return;
@@ -128,8 +138,25 @@ export function useMapData() {
       return true;
     });
 
-    // Filter by folder (includes photoavant and photoapres of that folder)
-    if (filters.folderId) {
+    // Priority 1: Radius search (if active)
+    if (radiusSearchPoint) {
+      result = result.filter((p) => {
+        if (!p.latitude || !p.longitude) return false;
+        const photoLat = parseFloat(p.latitude);
+        const photoLng = parseFloat(p.longitude);
+        if (isNaN(photoLat) || isNaN(photoLng)) return false;
+
+        const distance = calculateDistance(
+          radiusSearchPoint.lat,
+          radiusSearchPoint.lng,
+          photoLat,
+          photoLng,
+        );
+        return distance <= searchRadius;
+      });
+    }
+    // Priority 2: Entity hierarchy filters (only if radius search is not active)
+    else if (filters.folderId) {
       result = result.filter((p) => p.folderId === filters.folderId);
     } else if (filters.zoneId) {
       // Filter by zone - need to get folders of this zone
@@ -152,7 +179,15 @@ export function useMapData() {
     }
 
     return result;
-  }, [photos, selectedPhotoTypes, selectedSeverityLevels, filters, folders]);
+  }, [
+    photos,
+    selectedPhotoTypes,
+    selectedSeverityLevels,
+    filters,
+    folders,
+    radiusSearchPoint,
+    searchRadius,
+  ]);
 
   // Calculate map center based on photos
   const mapCenter = useMemo(() => {
@@ -224,6 +259,10 @@ export function useMapData() {
       // Reset folder when zone changes
       folderId: null,
     }));
+    // Clear radius search when zone is selected (mutual exclusivity)
+    if (zoneId) {
+      setRadiusSearchPoint(null);
+    }
   };
 
   const setFolderFilter = (folderId: string | null) => {
@@ -239,6 +278,26 @@ export function useMapData() {
       zoneId: null,
       folderId: null,
     });
+    setRadiusSearchPoint(null);
+  };
+
+  const setRadiusSearch = (point: RadiusSearchPoint, radius: number) => {
+    setRadiusSearchPoint(point);
+    setSearchRadius(radius);
+    // Clear zone filter when radius search is activated (mutual exclusivity)
+    setFilters((prev) => ({
+      ...prev,
+      zoneId: null,
+      folderId: null,
+    }));
+  };
+
+  const clearRadiusSearch = () => {
+    setRadiusSearchPoint(null);
+  };
+
+  const updateSearchRadius = (radius: number) => {
+    setSearchRadius(radius);
   };
 
   return {
@@ -261,6 +320,12 @@ export function useMapData() {
     setZoneFilter,
     setFolderFilter,
     clearAllFilters,
+    // Radius search
+    radiusSearchPoint,
+    searchRadius,
+    setRadiusSearch,
+    clearRadiusSearch,
+    updateSearchRadius,
   };
 }
 
@@ -285,4 +350,36 @@ function getSeverityCategory(level: number | undefined): string {
   if (level <= 5) return "medium";
   if (level <= 8) return "high";
   return "critical";
+}
+
+// Helper function to convert degrees to radians
+function toRadians(degrees: number): number {
+  return degrees * (Math.PI / 180);
+}
+
+/**
+ * Calculate distance between two GPS coordinates using Haversine formula
+ * @param lat1 Latitude of first point
+ * @param lon1 Longitude of first point
+ * @param lat2 Latitude of second point
+ * @param lon2 Longitude of second point
+ * @returns Distance in kilometers
+ */
+function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in kilometers
 }
