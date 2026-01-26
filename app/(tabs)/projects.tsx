@@ -37,11 +37,20 @@ export default function ProjectsScreen() {
     setIsLoading(true);
     try {
       const refreshed = await getAllProjects(token);
-      setProjects(refreshed);
+      if (user?.company_id) {
+        // Strict filtering: only show projects matching the user's company_id
+        const filtered = refreshed.filter(
+          (p) => String(p.company_id) === String(user.company_id),
+        );
+        setProjects(filtered);
+      } else {
+        // If user has no company assigned, show no projects
+        setProjects([]);
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [token, user?.company_id]);
 
   useEffect(() => {
     refreshProjects();

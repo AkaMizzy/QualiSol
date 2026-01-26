@@ -31,6 +31,7 @@ export default function AppHeader({
   const [imageError, setImageError] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+  const [companyTitle, setCompanyTitle] = useState<string | null>(null);
   const [logoError, setLogoError] = useState(false);
 
   // Fetch company logo on mount
@@ -38,8 +39,9 @@ export default function AppHeader({
     const fetchCompanyLogo = async () => {
       try {
         const company = await companyService.getCompany();
-        if (company?.logo) {
-          setCompanyLogo(company.logo);
+        if (company) {
+          if (company.logo) setCompanyLogo(company.logo);
+          if (company.title) setCompanyTitle(company.title);
         }
       } catch (error) {
         console.error("Error fetching company logo:", error);
@@ -110,8 +112,13 @@ export default function AppHeader({
           />
         </TouchableOpacity>
 
-        {/* Center - Date/Time */}
+        {/* Center - Company Name & Date/Time */}
         <View style={styles.headerCenter}>
+          {companyTitle && (
+            <Text style={styles.companyName} numberOfLines={1}>
+              {companyTitle}
+            </Text>
+          )}
           <Text style={styles.dateTime}>{formatDateTime(currentDate)}</Text>
         </View>
 
@@ -187,8 +194,15 @@ const styles = StyleSheet.create({
     color: "#11224e",
     textAlign: "center",
   },
+  companyName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#11224e",
+    textAlign: "center",
+    marginBottom: 2,
+  },
   dateTime: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: "600",
     color: "#11224e",
     textAlign: "center",
