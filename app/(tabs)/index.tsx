@@ -173,15 +173,27 @@ export default function DashboardScreen() {
       }));
 
       // Merge system items with folder type items
-      setGridItems([...SYSTEM_GRID_ITEMS, ...folderTypeItems]);
+      // Filter out Paramètres first if user is not Super Admin
+      const filteredSystemItems =
+        user?.role === "Super Admin"
+          ? SYSTEM_GRID_ITEMS
+          : SYSTEM_GRID_ITEMS.filter((item) => item.title !== "Paramètres");
+
+      setGridItems([...filteredSystemItems, ...folderTypeItems]);
     } catch (error) {
       console.error("Failed to load folder types:", error);
       // On error, still show system items
-      setGridItems(SYSTEM_GRID_ITEMS);
+      // Filter out Paramètres if not Super Admin
+      const filteredSystemItems =
+        user?.role === "Super Admin"
+          ? SYSTEM_GRID_ITEMS
+          : SYSTEM_GRID_ITEMS.filter((item) => item.title !== "Paramètres");
+
+      setGridItems(filteredSystemItems);
     } finally {
       setLoadingFolderTypes(false);
     }
-  }, [token]);
+  }, [token, user]);
 
   // Auto-refresh folder types when screen comes into focus
   useFocusEffect(
@@ -227,6 +239,11 @@ export default function DashboardScreen() {
       );
 
       // Update grid items
+      const filteredSystemItems =
+        user?.role === "Super Admin"
+          ? SYSTEM_GRID_ITEMS
+          : SYSTEM_GRID_ITEMS.filter((item) => item.title !== "Paramètres");
+
       const folderTypeItems: GridItem[] = typesWithImages.map((ft) => ({
         title: ft.title,
         image: ft.imageUrl
@@ -236,13 +253,13 @@ export default function DashboardScreen() {
         type: "folderType" as const,
       }));
 
-      setGridItems([...SYSTEM_GRID_ITEMS, ...folderTypeItems]);
+      setGridItems([...filteredSystemItems, ...folderTypeItems]);
     } catch (error) {
       console.error("Failed to refresh folder types:", error);
     } finally {
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, user]);
 
   useEffect(() => {
     (async () => {
@@ -735,16 +752,18 @@ export default function DashboardScreen() {
             © 2025 Qualisol. Tous droits réservés.
           </Text>
         </View>
-        <Pressable
-          onPress={() => router.push("/parameters")}
-          style={{ padding: 8 }}
-        >
-          <Image
-            source={ICONS.settings}
-            style={{ width: 24, height: 24 }}
-            contentFit="contain"
-          />
-        </Pressable>
+        {user?.role === "Super Admin" && (
+          <Pressable
+            onPress={() => router.push("/parameters")}
+            style={{ padding: 8 }}
+          >
+            <Image
+              source={ICONS.settings}
+              style={{ width: 24, height: 24 }}
+              contentFit="contain"
+            />
+          </Pressable>
+        )}
       </View>
       <CreateCalendarEventModal
         visible={eventModalVisible}

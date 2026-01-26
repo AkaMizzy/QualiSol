@@ -7,6 +7,7 @@ import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Modal,
@@ -33,7 +34,7 @@ export default function CreateProjectModal({
   onCreated,
 }: Props) {
   const { token, user } = useAuth();
-  const isSuperAdmin = user?.role === "Super Admin";
+  // const isSuperAdmin = user?.role === "Super Admin"; // No longer needed
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -325,7 +326,7 @@ export default function CreateProjectModal({
                 >
                   Chantiers: {currentChantiersCount} /{" "}
                   {companyInfo.nbchanitiers || 2}
-                  {isLimitReached && " - Nombre des chantiers dépassé"}
+                  {isLimitReached && " - Limite atteinte"}
                 </Text>
               </View>
             )}
@@ -333,27 +334,19 @@ export default function CreateProjectModal({
             {/* Content */}
             <ScrollView
               style={stylesFS.content}
+              contentContainerStyle={{ paddingBottom: 24 }}
               showsVerticalScrollIndicator={false}
             >
-              <View style={stylesFS.card}>
-                {/* Info Banner for Super Admin */}
-                {isSuperAdmin && (
-                  <View style={stylesFS.superAdminInfoBanner}>
-                    <Ionicons
-                      name="information-circle"
-                      size={16}
-                      color="#3b82f6"
-                    />
-                    <Text style={stylesFS.superAdminInfoText}>
-                      En tant que Super Admin, seul le titre est requis.
-                    </Text>
-                  </View>
-                )}
+              {/* SECTION: Informations Générales */}
+              <View style={stylesFS.section}>
+                <Text style={stylesFS.sectionTitle}>
+                  INFORMATIONS GÉNÉRALES
+                </Text>
 
                 <View style={[stylesFS.inputWrap, { marginBottom: 16 }]}>
-                  <Ionicons name="text-outline" size={16} color="#6b7280" />
+                  <Ionicons name="text-outline" size={20} color="#9ca3af" />
                   <TextInput
-                    placeholder="Titre"
+                    placeholder="Titre du chantier *"
                     placeholderTextColor="#9ca3af"
                     value={title}
                     onChangeText={setTitle}
@@ -361,380 +354,361 @@ export default function CreateProjectModal({
                   />
                 </View>
 
-                {/* Hide dates for Super Admin */}
-                {!isSuperAdmin && (
-                  <View
-                    style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}
-                  >
-                    <TouchableOpacity
-                      style={[stylesFS.inputWrap, { flex: 1 }]}
-                      onPress={() => setDdPickerVisible(true)}
-                    >
-                      <Ionicons
-                        name="calendar-outline"
-                        size={16}
-                        color="#6b7280"
-                      />
-                      <Text
-                        style={[
-                          stylesFS.input,
-                          { color: dd ? "#111827" : "#9ca3af" },
-                        ]}
-                      >
-                        {dd || "Début (YYYY-MM-DD)"}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[stylesFS.inputWrap, { flex: 1 }]}
-                      onPress={() => setDfPickerVisible(true)}
-                    >
-                      <Ionicons
-                        name="calendar-outline"
-                        size={16}
-                        color="#6b7280"
-                      />
-                      <Text
-                        style={[
-                          stylesFS.input,
-                          { color: df ? "#111827" : "#9ca3af" },
-                        ]}
-                      >
-                        {df || "Fin (YYYY-MM-DD)"}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-
-                {/* Hide description for Super Admin */}
-                {!isSuperAdmin && (
-                  <View
+                <View
+                  style={[
+                    stylesFS.inputWrap,
+                    {
+                      marginBottom: 16,
+                      height: 100,
+                      alignItems: "flex-start",
+                      paddingTop: 12,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="document-text-outline"
+                    size={20}
+                    color="#9ca3af"
+                  />
+                  <TextInput
+                    placeholder="Description (optionnel)"
+                    placeholderTextColor="#9ca3af"
+                    value={description}
+                    onChangeText={setDescription}
                     style={[
-                      stylesFS.inputWrap,
-                      {
-                        marginBottom: 16,
-                        height: 80,
-                        alignItems: "flex-start",
-                        paddingTop: 12,
-                      },
+                      stylesFS.input,
+                      { height: "100%", textAlignVertical: "top" },
                     ]}
-                  >
-                    <Ionicons
-                      name="document-text-outline"
-                      size={16}
-                      color="#6b7280"
-                    />
-                    <TextInput
-                      placeholder="Description "
-                      placeholderTextColor="#9ca3af"
-                      value={description}
-                      onChangeText={setDescription}
-                      style={[stylesFS.input, { height: "100%" }]}
-                      multiline
-                    />
-                  </View>
-                )}
+                    multiline
+                  />
+                </View>
 
-                {/* Hide Project Type for Super Admin */}
-                {!isSuperAdmin && (
-                  <View style={{ gap: 8 }}>
-                    <Text
-                      style={{ fontSize: 12, color: "#6b7280", marginLeft: 2 }}
-                    >
-                      Type de chantier
-                    </Text>
-                    <TouchableOpacity
-                      style={[
-                        stylesFS.inputWrap,
-                        { justifyContent: "space-between" },
-                      ]}
-                      onPress={() => setProjectTypeOpen((v) => !v)}
-                    >
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 8,
-                          flex: 1,
-                        }}
-                      >
-                        <Ionicons
-                          name="albums-outline"
-                          size={16}
-                          color="#6b7280"
-                        />
-                        <Text
-                          style={[
-                            stylesFS.input,
-                            { color: projectTypeId ? "#111827" : "#9ca3af" },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {projectTypeId
-                            ? projectTypes.find(
-                                (pt) => String(pt.id) === String(projectTypeId),
-                              )?.title || projectTypeId
-                            : "Choisir un type (optionnel)"}
-                        </Text>
-                      </View>
-                      <Ionicons
-                        name={projectTypeOpen ? "chevron-up" : "chevron-down"}
-                        size={16}
-                        color="#9ca3af"
-                      />
-                    </TouchableOpacity>
-                    {projectTypeOpen && (
-                      <View
-                        style={{
-                          maxHeight: 200,
-                          borderWidth: 1,
-                          borderColor: "#e5e7eb",
-                          borderRadius: 10,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <ScrollView keyboardShouldPersistTaps="handled">
-                          {loadingTypes ? (
-                            <View style={{ padding: 12 }}>
-                              <Text style={{ color: "#6b7280" }}>
-                                Chargement...
-                              </Text>
-                            </View>
-                          ) : projectTypes.length === 0 ? (
-                            <View style={{ padding: 12 }}>
-                              <Text style={{ color: "#6b7280" }}>
-                                Aucun type
-                              </Text>
-                            </View>
-                          ) : (
-                            projectTypes.map((pt) => (
-                              <TouchableOpacity
-                                key={pt.id}
-                                onPress={() => {
-                                  setProjectTypeId(String(pt.id));
-                                  setProjectTypeOpen(false);
-                                }}
-                                style={{
-                                  paddingHorizontal: 12,
-                                  paddingVertical: 10,
-                                  backgroundColor:
-                                    String(projectTypeId) === String(pt.id)
-                                      ? "#f1f5f9"
-                                      : "#FFFFFF",
-                                  borderBottomWidth: 1,
-                                  borderBottomColor: "#f3f4f6",
-                                }}
-                              >
-                                <Text style={{ color: "#11224e" }}>
-                                  {pt.title}
-                                </Text>
-                              </TouchableOpacity>
-                            ))
-                          )}
-                        </ScrollView>
-                      </View>
-                    )}
-                  </View>
-                )}
-
-                {/* Hide Owner/Admin for Super Admin */}
-                {!isSuperAdmin && (
-                  <View style={{ gap: 8 }}>
-                    <Text
-                      style={{ fontSize: 12, color: "#6b7280", marginLeft: 2 }}
-                    >
-                      Admin (optionnel)
-                    </Text>
-                    <TouchableOpacity
-                      style={[
-                        stylesFS.inputWrap,
-                        { justifyContent: "space-between" },
-                      ]}
-                      onPress={() => setOwnerOpen((v) => !v)}
-                    >
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 8,
-                          flex: 1,
-                        }}
-                      >
-                        <Ionicons
-                          name="person-circle-outline"
-                          size={16}
-                          color="#6b7280"
-                        />
-                        <Text
-                          style={[
-                            stylesFS.input,
-                            { color: ownerId ? "#111827" : "#9ca3af" },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {ownerId
-                            ? companyUsers.find(
-                                (u) => String(u.id) === String(ownerId),
-                              )?.firstname
-                              ? `${companyUsers.find((u) => String(u.id) === String(ownerId))?.firstname} ${companyUsers.find((u) => String(u.id) === String(ownerId))?.lastname || ""}`
-                              : ownerId
-                            : "Choisir un admin"}
-                        </Text>
-                      </View>
-                      <Ionicons
-                        name={ownerOpen ? "chevron-up" : "chevron-down"}
-                        size={16}
-                        color="#9ca3af"
-                      />
-                    </TouchableOpacity>
-                    {ownerOpen && (
-                      <View
-                        style={{
-                          maxHeight: 200,
-                          borderWidth: 1,
-                          borderColor: "#e5e7eb",
-                          borderRadius: 10,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <ScrollView keyboardShouldPersistTaps="handled">
-                          {loadingUsers ? (
-                            <View style={{ padding: 12 }}>
-                              <Text style={{ color: "#6b7280" }}>
-                                Chargement...
-                              </Text>
-                            </View>
-                          ) : companyUsers.length === 0 ? (
-                            <View style={{ padding: 12 }}>
-                              <Text style={{ color: "#6b7280" }}>
-                                Aucun utilisateur
-                              </Text>
-                            </View>
-                          ) : (
-                            companyUsers.map((u) => (
-                              <TouchableOpacity
-                                key={u.id}
-                                onPress={() => {
-                                  setOwnerId(String(u.id));
-                                  setOwnerOpen(false);
-                                }}
-                                style={{
-                                  paddingHorizontal: 12,
-                                  paddingVertical: 10,
-                                  backgroundColor:
-                                    String(ownerId) === String(u.id)
-                                      ? "#f1f5f9"
-                                      : "#FFFFFF",
-                                  borderBottomWidth: 1,
-                                  borderBottomColor: "#f3f4f6",
-                                }}
-                              >
-                                <Text style={{ color: "#11224e" }}>
-                                  {u.firstname || ""} {u.lastname || ""}
-                                </Text>
-                                {u.email ? (
-                                  <Text
-                                    style={{ color: "#6b7280", fontSize: 12 }}
-                                  >
-                                    {u.email}
-                                  </Text>
-                                ) : null}
-                              </TouchableOpacity>
-                            ))
-                          )}
-                        </ScrollView>
-                      </View>
-                    )}
-                  </View>
-                )}
-                {/* Control User Select */}
-                <View style={{ gap: 8 }}>
-                  <Text
-                    style={{ fontSize: 12, color: "#6b7280", marginLeft: 2 }}
-                  >
-                    Contrôleur (optionnel)
-                  </Text>
+                {/* Project Type */}
+                <View style={{ marginBottom: 8 }}>
+                  <Text style={stylesFS.label}>Type de chantier</Text>
                   <TouchableOpacity
                     style={[
                       stylesFS.inputWrap,
                       { justifyContent: "space-between" },
-                      isSuperAdmin && {
-                        opacity: 0.5,
-                        backgroundColor: "#f3f4f6",
-                        borderColor: "#d1d5db",
-                      },
                     ]}
-                    onPress={() => !isSuperAdmin && setControlOpen((v) => !v)}
-                    disabled={isSuperAdmin}
+                    onPress={() => setProjectTypeOpen((v) => !v)}
                   >
                     <View
                       style={{
                         flexDirection: "row",
                         alignItems: "center",
-                        gap: 8,
+                        gap: 10,
+                        flex: 1,
+                      }}
+                    >
+                      <Ionicons
+                        name="albums-outline"
+                        size={20}
+                        color="#9ca3af"
+                      />
+                      <Text
+                        style={[
+                          stylesFS.input,
+                          { color: projectTypeId ? "#111827" : "#9ca3af" },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {projectTypeId
+                          ? projectTypes.find(
+                              (pt) => String(pt.id) === String(projectTypeId),
+                            )?.title || projectTypeId
+                          : "Sélectionner un type"}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={projectTypeOpen ? "chevron-up" : "chevron-down"}
+                      size={20}
+                      color="#9ca3af"
+                    />
+                  </TouchableOpacity>
+
+                  {projectTypeOpen && (
+                    <View style={stylesFS.dropdownList}>
+                      <ScrollView
+                        nestedScrollEnabled
+                        keyboardShouldPersistTaps="handled"
+                        style={{ maxHeight: 200 }}
+                      >
+                        {loadingTypes ? (
+                          <View style={{ padding: 12 }}>
+                            <Text style={stylesFS.placeholderText}>
+                              Chargement...
+                            </Text>
+                          </View>
+                        ) : projectTypes.length === 0 ? (
+                          <View style={{ padding: 12 }}>
+                            <Text style={stylesFS.placeholderText}>
+                              Aucun type disponible
+                            </Text>
+                          </View>
+                        ) : (
+                          projectTypes.map((pt) => (
+                            <TouchableOpacity
+                              key={pt.id}
+                              onPress={() => {
+                                setProjectTypeId(String(pt.id));
+                                setProjectTypeOpen(false);
+                              }}
+                              style={[
+                                stylesFS.dropdownItem,
+                                String(projectTypeId) === String(pt.id) &&
+                                  stylesFS.dropdownItemSelected,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  stylesFS.dropdownItemText,
+                                  String(projectTypeId) === String(pt.id) &&
+                                    stylesFS.dropdownItemTextSelected,
+                                ]}
+                              >
+                                {pt.title}
+                              </Text>
+                              {String(projectTypeId) === String(pt.id) && (
+                                <Ionicons
+                                  name="checkmark"
+                                  size={16}
+                                  color="#f87b1b"
+                                />
+                              )}
+                            </TouchableOpacity>
+                          ))
+                        )}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* SECTION: Période */}
+              <View style={stylesFS.section}>
+                <Text style={stylesFS.sectionTitle}>PÉRIODE</Text>
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <TouchableOpacity
+                    style={[stylesFS.inputWrap, { flex: 1 }]}
+                    onPress={() => setDdPickerVisible(true)}
+                  >
+                    <Ionicons
+                      name="calendar-outline"
+                      size={20}
+                      color="#9ca3af"
+                    />
+                    <View>
+                      <Text style={stylesFS.labelSmall}>Début</Text>
+                      <Text
+                        style={[stylesFS.dateText, !dd && { color: "#9ca3af" }]}
+                      >
+                        {dd || "--/--/----"}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[stylesFS.inputWrap, { flex: 1 }]}
+                    onPress={() => setDfPickerVisible(true)}
+                  >
+                    <Ionicons
+                      name="calendar-outline"
+                      size={20}
+                      color="#9ca3af"
+                    />
+                    <View>
+                      <Text style={stylesFS.labelSmall}>Fin</Text>
+                      <Text
+                        style={[stylesFS.dateText, !df && { color: "#9ca3af" }]}
+                      >
+                        {df || "--/--/----"}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* SECTION: Équipe */}
+              <View style={stylesFS.section}>
+                <Text style={stylesFS.sectionTitle}>ÉQUIPE</Text>
+
+                {/* Admin */}
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={stylesFS.label}>
+                    Administrateur (Chef de projet)
+                  </Text>
+                  <TouchableOpacity
+                    style={[
+                      stylesFS.inputWrap,
+                      { justifyContent: "space-between" },
+                    ]}
+                    onPress={() => setOwnerOpen((v) => !v)}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 10,
+                        flex: 1,
+                      }}
+                    >
+                      <Ionicons
+                        name="person-circle-outline"
+                        size={20}
+                        color="#9ca3af"
+                      />
+                      <Text
+                        style={[
+                          stylesFS.input,
+                          { color: ownerId ? "#111827" : "#9ca3af" },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {ownerId
+                          ? companyUsers.find(
+                              (u) => String(u.id) === String(ownerId),
+                            )
+                            ? `${companyUsers.find((u) => String(u.id) === String(ownerId))?.firstname} ${companyUsers.find((u) => String(u.id) === String(ownerId))?.lastname || ""}`
+                            : ownerId
+                          : "Assigner un administrateur"}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={ownerOpen ? "chevron-up" : "chevron-down"}
+                      size={20}
+                      color="#9ca3af"
+                    />
+                  </TouchableOpacity>
+
+                  {ownerOpen && (
+                    <View style={stylesFS.dropdownList}>
+                      <ScrollView
+                        nestedScrollEnabled
+                        keyboardShouldPersistTaps="handled"
+                        style={{ maxHeight: 200 }}
+                      >
+                        {loadingUsers ? (
+                          <View style={{ padding: 12 }}>
+                            <Text style={stylesFS.placeholderText}>
+                              Chargement...
+                            </Text>
+                          </View>
+                        ) : companyUsers.length === 0 ? (
+                          <View style={{ padding: 12 }}>
+                            <Text style={stylesFS.placeholderText}>
+                              Aucun utilisateur
+                            </Text>
+                          </View>
+                        ) : (
+                          companyUsers.map((u) => (
+                            <TouchableOpacity
+                              key={u.id}
+                              onPress={() => {
+                                setOwnerId(String(u.id));
+                                setOwnerOpen(false);
+                              }}
+                              style={[
+                                stylesFS.dropdownItem,
+                                String(ownerId) === String(u.id) &&
+                                  stylesFS.dropdownItemSelected,
+                              ]}
+                            >
+                              <View>
+                                <Text
+                                  style={[
+                                    stylesFS.dropdownItemText,
+                                    String(ownerId) === String(u.id) &&
+                                      stylesFS.dropdownItemTextSelected,
+                                  ]}
+                                >
+                                  {u.firstname} {u.lastname}
+                                </Text>
+                                {u.email && (
+                                  <Text
+                                    style={{ fontSize: 11, color: "#9ca3af" }}
+                                  >
+                                    {u.email}
+                                  </Text>
+                                )}
+                              </View>
+                              {String(ownerId) === String(u.id) && (
+                                <Ionicons
+                                  name="checkmark"
+                                  size={16}
+                                  color="#f87b1b"
+                                />
+                              )}
+                            </TouchableOpacity>
+                          ))
+                        )}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+
+                {/* Controller */}
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={stylesFS.label}>Contrôleur</Text>
+                  <TouchableOpacity
+                    style={[
+                      stylesFS.inputWrap,
+                      { justifyContent: "space-between" },
+                    ]}
+                    onPress={() => setControlOpen((v) => !v)}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 10,
                         flex: 1,
                       }}
                     >
                       <Ionicons
                         name="shield-checkmark-outline"
-                        size={16}
-                        color={isSuperAdmin ? "#9ca3af" : "#6b7280"}
+                        size={20}
+                        color="#9ca3af"
                       />
                       <Text
                         style={[
                           stylesFS.input,
-                          {
-                            color: isSuperAdmin
-                              ? "#9ca3af"
-                              : controlId
-                                ? "#111827"
-                                : "#9ca3af",
-                          },
+                          { color: controlId ? "#111827" : "#9ca3af" },
                         ]}
                         numberOfLines={1}
                       >
-                        {isSuperAdmin
-                          ? "Non autorisé"
-                          : controlId
-                            ? controlUsers.find(
-                                (u) => String(u.id) === String(controlId),
-                              )?.firstname
-                              ? `${controlUsers.find((u) => String(u.id) === String(controlId))?.firstname} ${controlUsers.find((u) => String(u.id) === String(controlId))?.lastname || ""}`
-                              : controlId
-                            : "Choisir un contrôleur"}
+                        {controlId
+                          ? controlUsers.find(
+                              (u) => String(u.id) === String(controlId),
+                            )
+                            ? `${controlUsers.find((u) => String(u.id) === String(controlId))?.firstname} ${controlUsers.find((u) => String(u.id) === String(controlId))?.lastname || ""}`
+                            : controlId
+                          : "Assigner un contrôleur"}
                       </Text>
                     </View>
                     <Ionicons
-                      name={
-                        isSuperAdmin
-                          ? "lock-closed-outline"
-                          : controlOpen
-                            ? "chevron-up"
-                            : "chevron-down"
-                      }
-                      size={16}
+                      name={controlOpen ? "chevron-up" : "chevron-down"}
+                      size={20}
                       color="#9ca3af"
                     />
                   </TouchableOpacity>
-                  {controlOpen && !isSuperAdmin && (
-                    <View
-                      style={{
-                        maxHeight: 200,
-                        borderWidth: 1,
-                        borderColor: "#e5e7eb",
-                        borderRadius: 10,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <ScrollView keyboardShouldPersistTaps="handled">
+
+                  {controlOpen && (
+                    <View style={stylesFS.dropdownList}>
+                      <ScrollView
+                        nestedScrollEnabled
+                        keyboardShouldPersistTaps="handled"
+                        style={{ maxHeight: 200 }}
+                      >
                         {loadingUsers ? (
                           <View style={{ padding: 12 }}>
-                            <Text style={{ color: "#6b7280" }}>
+                            <Text style={stylesFS.placeholderText}>
                               Chargement...
                             </Text>
                           </View>
                         ) : controlUsers.length === 0 ? (
                           <View style={{ padding: 12 }}>
-                            <Text style={{ color: "#6b7280" }}>
+                            <Text style={stylesFS.placeholderText}>
                               Aucun utilisateur
                             </Text>
                           </View>
@@ -746,27 +720,37 @@ export default function CreateProjectModal({
                                 setControlId(String(u.id));
                                 setControlOpen(false);
                               }}
-                              style={{
-                                paddingHorizontal: 12,
-                                paddingVertical: 10,
-                                backgroundColor:
-                                  String(controlId) === String(u.id)
-                                    ? "#f1f5f9"
-                                    : "#FFFFFF",
-                                borderBottomWidth: 1,
-                                borderBottomColor: "#f3f4f6",
-                              }}
+                              style={[
+                                stylesFS.dropdownItem,
+                                String(controlId) === String(u.id) &&
+                                  stylesFS.dropdownItemSelected,
+                              ]}
                             >
-                              <Text style={{ color: "#11224e" }}>
-                                {u.firstname || ""} {u.lastname || ""}
-                              </Text>
-                              {u.email ? (
+                              <View>
                                 <Text
-                                  style={{ color: "#6b7280", fontSize: 12 }}
+                                  style={[
+                                    stylesFS.dropdownItemText,
+                                    String(controlId) === String(u.id) &&
+                                      stylesFS.dropdownItemTextSelected,
+                                  ]}
                                 >
-                                  {u.email}
+                                  {u.firstname} {u.lastname}
                                 </Text>
-                              ) : null}
+                                {u.email && (
+                                  <Text
+                                    style={{ fontSize: 11, color: "#9ca3af" }}
+                                  >
+                                    {u.email}
+                                  </Text>
+                                )}
+                              </View>
+                              {String(controlId) === String(u.id) && (
+                                <Ionicons
+                                  name="checkmark"
+                                  size={16}
+                                  color="#f87b1b"
+                                />
+                              )}
                             </TouchableOpacity>
                           ))
                         )}
@@ -774,97 +758,69 @@ export default function CreateProjectModal({
                     </View>
                   )}
                 </View>
-                {/* Technicien User Select */}
-                <View style={{ gap: 8 }}>
-                  <Text
-                    style={{ fontSize: 12, color: "#6b7280", marginLeft: 2 }}
-                  >
-                    Technicien (optionnel)
-                  </Text>
+
+                {/* Technicien */}
+                <View style={{ marginBottom: 0 }}>
+                  <Text style={stylesFS.label}>Technicien</Text>
                   <TouchableOpacity
                     style={[
                       stylesFS.inputWrap,
                       { justifyContent: "space-between" },
-                      isSuperAdmin && {
-                        opacity: 0.5,
-                        backgroundColor: "#f3f4f6",
-                        borderColor: "#d1d5db",
-                      },
                     ]}
-                    onPress={() =>
-                      !isSuperAdmin && setTechnicienOpen((v) => !v)
-                    }
-                    disabled={isSuperAdmin}
+                    onPress={() => setTechnicienOpen((v) => !v)}
                   >
                     <View
                       style={{
                         flexDirection: "row",
                         alignItems: "center",
-                        gap: 8,
+                        gap: 10,
                         flex: 1,
                       }}
                     >
                       <Ionicons
                         name="construct-outline"
-                        size={16}
-                        color={isSuperAdmin ? "#9ca3af" : "#6b7280"}
+                        size={20}
+                        color="#9ca3af"
                       />
                       <Text
                         style={[
                           stylesFS.input,
-                          {
-                            color: isSuperAdmin
-                              ? "#9ca3af"
-                              : technicienId
-                                ? "#111827"
-                                : "#9ca3af",
-                          },
+                          { color: technicienId ? "#111827" : "#9ca3af" },
                         ]}
                         numberOfLines={1}
                       >
-                        {isSuperAdmin
-                          ? "Non autorisé"
-                          : technicienId
-                            ? technicienUsers.find(
-                                (u) => String(u.id) === String(technicienId),
-                              )?.firstname
-                              ? `${technicienUsers.find((u) => String(u.id) === String(technicienId))?.firstname} ${technicienUsers.find((u) => String(u.id) === String(technicienId))?.lastname || ""}`
-                              : technicienId
-                            : "Choisir un technicien"}
+                        {technicienId
+                          ? technicienUsers.find(
+                              (u) => String(u.id) === String(technicienId),
+                            )
+                            ? `${technicienUsers.find((u) => String(u.id) === String(technicienId))?.firstname} ${technicienUsers.find((u) => String(u.id) === String(technicienId))?.lastname || ""}`
+                            : technicienId
+                          : "Assigner un technicien"}
                       </Text>
                     </View>
                     <Ionicons
-                      name={
-                        isSuperAdmin
-                          ? "lock-closed-outline"
-                          : technicienOpen
-                            ? "chevron-up"
-                            : "chevron-down"
-                      }
-                      size={16}
+                      name={technicienOpen ? "chevron-up" : "chevron-down"}
+                      size={20}
                       color="#9ca3af"
                     />
                   </TouchableOpacity>
-                  {technicienOpen && !isSuperAdmin && (
-                    <View
-                      style={{
-                        maxHeight: 200,
-                        borderWidth: 1,
-                        borderColor: "#e5e7eb",
-                        borderRadius: 10,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <ScrollView keyboardShouldPersistTaps="handled">
+
+                  {technicienOpen && (
+                    <View style={stylesFS.dropdownList}>
+                      <ScrollView
+                        nestedScrollEnabled
+                        keyboardShouldPersistTaps="handled"
+                        style={{ maxHeight: 200 }}
+                      >
                         {loadingUsers ? (
                           <View style={{ padding: 12 }}>
-                            <Text style={{ color: "#6b7280" }}>
+                            <Text style={stylesFS.placeholderText}>
                               Chargement...
                             </Text>
                           </View>
                         ) : technicienUsers.length === 0 ? (
                           <View style={{ padding: 12 }}>
-                            <Text style={{ color: "#6b7280" }}>
+                            <Text style={stylesFS.placeholderText}>
                               Aucun utilisateur
                             </Text>
                           </View>
@@ -876,27 +832,37 @@ export default function CreateProjectModal({
                                 setTechnicienId(String(u.id));
                                 setTechnicienOpen(false);
                               }}
-                              style={{
-                                paddingHorizontal: 12,
-                                paddingVertical: 10,
-                                backgroundColor:
-                                  String(technicienId) === String(u.id)
-                                    ? "#f1f5f9"
-                                    : "#FFFFFF",
-                                borderBottomWidth: 1,
-                                borderBottomColor: "#f3f4f6",
-                              }}
+                              style={[
+                                stylesFS.dropdownItem,
+                                String(technicienId) === String(u.id) &&
+                                  stylesFS.dropdownItemSelected,
+                              ]}
                             >
-                              <Text style={{ color: "#11224e" }}>
-                                {u.firstname || ""} {u.lastname || ""}
-                              </Text>
-                              {u.email ? (
+                              <View>
                                 <Text
-                                  style={{ color: "#6b7280", fontSize: 12 }}
+                                  style={[
+                                    stylesFS.dropdownItemText,
+                                    String(technicienId) === String(u.id) &&
+                                      stylesFS.dropdownItemTextSelected,
+                                  ]}
                                 >
-                                  {u.email}
+                                  {u.firstname} {u.lastname}
                                 </Text>
-                              ) : null}
+                                {u.email && (
+                                  <Text
+                                    style={{ fontSize: 11, color: "#9ca3af" }}
+                                  >
+                                    {u.email}
+                                  </Text>
+                                )}
+                              </View>
+                              {String(technicienId) === String(u.id) && (
+                                <Ionicons
+                                  name="checkmark"
+                                  size={16}
+                                  color="#f87b1b"
+                                />
+                              )}
                             </TouchableOpacity>
                           ))
                         )}
@@ -922,7 +888,7 @@ export default function CreateProjectModal({
               >
                 {isSubmitting ? (
                   <>
-                    <Ionicons name="hourglass" size={20} color="#FFFFFF" />
+                    <ActivityIndicator size="small" color="#FFFFFF" />
                     <Text style={stylesFS.submitButtonText}>
                       Enregistrement...
                     </Text>
@@ -930,7 +896,9 @@ export default function CreateProjectModal({
                 ) : (
                   <>
                     <Ionicons name="save" size={20} color="#FFFFFF" />
-                    <Text style={stylesFS.submitButtonText}>Créer</Text>
+                    <Text style={stylesFS.submitButtonText}>
+                      Créer le chantier
+                    </Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -970,130 +938,183 @@ const stylesFS = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    borderBottomColor: "#F1F5F9",
   },
-  closeButton: { padding: 8 },
+  closeButton: {
+    padding: 8,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 8,
+  },
   headerCenter: { alignItems: "center", flex: 1 },
-  headerTitle: { fontSize: 18, fontWeight: "600", color: "#11224e" },
-  placeholder: { width: 40 },
+  headerTitle: { fontSize: 18, fontWeight: "700", color: "#0F172A" },
+  placeholder: { width: 44 },
+
   alertBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#fffbeb",
-    borderColor: "#f59e0b",
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     marginHorizontal: 16,
-    marginTop: 8,
-    borderRadius: 10,
+    marginTop: 16,
+    borderRadius: 12,
   },
-  alertBannerText: { color: "#b45309", flex: 1, fontSize: 12 },
-  content: { flex: 1, paddingHorizontal: 16 },
-  card: {
+  alertBannerText: {
+    color: "#991B1B",
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "500",
+  },
+
+  content: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
+
+  section: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
-    marginTop: 20,
-    marginHorizontal: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    marginBottom: 16,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
     elevation: 2,
-    borderWidth: 1,
-    borderColor: "#f87b1b",
-    gap: 8,
   },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#94A3B8",
+    marginBottom: 16,
+    letterSpacing: 0.5,
+  },
+
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    backgroundColor: "#fff",
+    gap: 12,
+    backgroundColor: "#F8FAFC",
     borderWidth: 1,
-    borderColor: "#f87b1b",
+    borderColor: "#E2E8F0",
     borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  input: { flex: 1, color: "#111827" },
+  input: { flex: 1, color: "#0F172A", fontSize: 15 },
+  label: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#475569",
+    marginBottom: 6,
+    marginLeft: 2,
+  },
+  labelSmall: {
+    fontSize: 11,
+    color: "#64748B",
+    marginBottom: 2,
+  },
+  dateText: {
+    fontSize: 14,
+    color: "#0F172A",
+    fontWeight: "500",
+  },
+
+  dropdownList: {
+    maxHeight: 220,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    marginTop: 6,
+    backgroundColor: "#FFFFFF",
+    overflow: "hidden",
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+    zIndex: 10,
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  dropdownItemSelected: {
+    backgroundColor: "#FFF7ED",
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    color: "#334155",
+  },
+  dropdownItemTextSelected: {
+    color: "#C2410C",
+    fontWeight: "600",
+  },
+  placeholderText: {
+    color: "#94A3B8",
+    fontSize: 14,
+    textAlign: "center",
+  },
+
   footer: {
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
+    paddingTop: 16,
+    paddingBottom: Platform.OS === "ios" ? 0 : 24,
     backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-    gap: 8,
+    borderTopColor: "#F1F5F9",
   },
   submitButton: {
-    backgroundColor: "#f87b1b",
-    borderRadius: 12,
+    backgroundColor: "#F97316",
+    borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 24,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
-    gap: 8,
-    shadowColor: "#f87b1b",
+    gap: 10,
+    shadowColor: "#F97316",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
     elevation: 4,
   },
-  submitButtonDisabled: { backgroundColor: "#d1d5db" },
+  submitButtonDisabled: { backgroundColor: "#CBD5E1", shadowOpacity: 0 },
   submitButtonText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
-  disabledInput: {
-    backgroundColor: "#f3f4f6",
-    borderColor: "#d1d5db",
-  },
+
   limitInfoBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#eff6ff",
-    borderColor: "#bfdbfe",
+    backgroundColor: "#EFF6FF",
+    borderColor: "#BFDBFE",
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     marginHorizontal: 16,
-    marginTop: 8,
-    borderRadius: 10,
+    marginTop: 16,
+    borderRadius: 12,
   },
   limitInfoBannerWarning: {
-    backgroundColor: "#fffbeb",
-    borderColor: "#f59e0b",
+    backgroundColor: "#FFFBEB",
+    borderColor: "#FCD34D",
   },
   limitInfoText: {
-    color: "#1e40af",
-    flex: 1,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  limitInfoTextWarning: {
-    color: "#b45309",
-  },
-  superAdminInfoBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#eff6ff",
-    borderColor: "#bfdbfe",
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 16,
-    borderRadius: 10,
-  },
-  superAdminInfoText: {
-    color: "#1e40af",
+    color: "#1E40AF",
     flex: 1,
     fontSize: 13,
     fontWeight: "500",
+  },
+  limitInfoTextWarning: {
+    color: "#B45309",
   },
 });
