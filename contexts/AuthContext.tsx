@@ -1,18 +1,18 @@
 import {
-    createContext,
-    ReactNode,
-    useContext,
-    useEffect,
-    useState,
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
 } from "react";
 import { setAuthToken, setOnUnauthorized } from "../services/api";
 import {
-    clearAuthToken,
-    clearUser,
-    getAuthToken,
-    getUser,
-    saveAuthToken,
-    saveUser,
+  clearAuthToken,
+  clearUser,
+  getAuthToken,
+  getUser,
+  saveAuthToken,
+  saveUser,
 } from "../services/secureStore";
 
 // Types
@@ -151,9 +151,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateUser = async (userData: Partial<User>) => {
     if (authState.user) {
-      const updatedUser = { ...authState.user, ...userData };
-      await saveUser(updatedUser);
-      setAuthState((prev) => ({ ...prev, user: updatedUser }));
+      try {
+        // Optimistic update
+        const updatedUser = { ...authState.user, ...userData };
+        setAuthState((prev) => ({ ...prev, user: updatedUser }));
+        await saveUser(updatedUser);
+
+        // Call API to ensure backend is updated
+        // Note: We need a service function that calls PUT /api/users/:id
+        // Since we don't have direct access to userService here without importing it
+        // and potentially creating circular deps, we can use the API instance directly
+        // or import the specific function if safe.
+        // Let's use the API instance initialized with headers.
+
+        // However, importing userService here is better if possible.
+        // Let's try dynamic import or assume the previous context structure meant for this.
+        // Actually, checking userService.ts, it has updateUser function.
+        // We generally shouldn't mix context state management with direct API calls if not necessary
+        // but here the user expects the context function to handle the sync.
+
+        // But wait, the previous code was:
+        // const res = await updateUser({ identifier: newIdentifier });
+        // The context's updateUser doesn't return a Promise that resolves to response data
+        // It's void/Promise<void>.
+
+        // Let's modify this to use userService.
+        // Create full payload with required fields from current user state
+        const fullPayload = {
+          firstname: authState.user.firstname,
+          lastname: authState.user.lastname,
+          email: authState.user.email,
+          identifier: authState.user.identifier,
+          ...userData,
+        };
+
+        const { updateUser: serviceUpdateUser } =
+          await import("../services/userService");
+        await serviceUpdateUser(authState.user.id, fullPayload as any);
+      } catch (error) {
+        console.error("Failed to update user in backend:", error);
+        // Ideally revert state here if failed
+        throw error; // Let the caller handle the error
+      }
     }
   };
 

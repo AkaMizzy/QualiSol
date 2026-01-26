@@ -295,9 +295,9 @@ export default function DashboardScreen() {
 
         // Fetch company info
         try {
-          const company = await companyService.getCompany(token);
-          if (company && company.title) {
-            setCompanyTitle(company.title);
+          const companyData = await companyService.getCompany();
+          if (companyData && companyData.title) {
+            setCompanyTitle(companyData.title);
           }
         } catch (error) {
           console.error("Failed to fetch company info:", error);
