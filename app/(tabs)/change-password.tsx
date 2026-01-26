@@ -1,27 +1,26 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { useAuth } from "@/contexts/AuthContext";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import AppHeader from '../../components/AppHeader';
-import * as authService from '../../services/authService';
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import AppHeader from "../../components/AppHeader";
+import * as authService from "../../services/authService";
 
 export default function ChangePasswordScreen() {
   const { user } = useAuth();
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +28,7 @@ export default function ChangePasswordScreen() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const passwordsMatch = newPassword === confirmPassword;
-  const isPasswordValid = newPassword.length >= 6;
+  const isPasswordValid = newPassword.length >= 4;
   const canSubmit = passwordsMatch && isPasswordValid && !isLoading;
 
   const handleChangePassword = async () => {
@@ -37,11 +36,11 @@ export default function ChangePasswordScreen() {
     setSuccess(null);
 
     if (!passwordsMatch) {
-      setError('Les nouveaux mots de passe ne correspondent pas.');
+      setError("Les nouveaux mots de passe ne correspondent pas.");
       return;
     }
     if (!isPasswordValid) {
-      setError('Le nouveau mot de passe doit comporter au moins 6 caractères.');
+      setError("Le nouveau mot de passe doit comporter au moins 4 caractères.");
       return;
     }
 
@@ -49,15 +48,18 @@ export default function ChangePasswordScreen() {
     try {
       const result = await authService.changePassword(newPassword);
       if (result.success) {
-        setSuccess('✅ Votre mot de passe a été changé avec succès.');
-        setNewPassword('');
-        setConfirmPassword('');
+        setSuccess("✅ Votre mot de passe a été changé avec succès.");
+        setNewPassword("");
+        setConfirmPassword("");
         setTimeout(() => router.back(), 2000);
       } else {
         setError(result.error);
       }
     } catch (err: any) {
-      setError(err.message || 'Échec de la modification du mot de passe. Veuillez réessayer.');
+      setError(
+        err.message ||
+          "Échec de la modification du mot de passe. Veuillez réessayer.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -67,11 +69,14 @@ export default function ChangePasswordScreen() {
     <SafeAreaView style={styles.container}>
       <AppHeader user={user || undefined} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.replace('/(tabs)/profile')} style={styles.backButton}>
+          <TouchableOpacity
+            onPress={() => router.replace("/(tabs)/profile")}
+            style={styles.backButton}
+          >
             <Ionicons name="arrow-back" size={24} color="#11224e" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Changer de mot de passe</Text>
@@ -93,9 +98,11 @@ export default function ChangePasswordScreen() {
                     value={newPassword}
                     onChangeText={setNewPassword}
                   />
-                  <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
+                  <TouchableOpacity
+                    onPress={() => setShowNewPassword(!showNewPassword)}
+                  >
                     <Ionicons
-                      name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
+                      name={showNewPassword ? "eye-off-outline" : "eye-outline"}
                       size={22}
                       color="#f87b1b"
                     />
@@ -105,7 +112,9 @@ export default function ChangePasswordScreen() {
 
               {/* Confirm New Password */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Confirmer le nouveau mot de passe</Text>
+                <Text style={styles.label}>
+                  Confirmer le nouveau mot de passe
+                </Text>
                 <View style={styles.inputWrapper}>
                   <TextInput
                     style={styles.input}
@@ -115,16 +124,22 @@ export default function ChangePasswordScreen() {
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                   />
-                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
                     <Ionicons
-                      name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                      name={
+                        showConfirmPassword ? "eye-off-outline" : "eye-outline"
+                      }
                       size={22}
                       color="#f87b1b"
                     />
                   </TouchableOpacity>
                 </View>
                 {confirmPassword.length > 0 && !passwordsMatch && (
-                  <Text style={styles.mismatchText}>Les mots de passe ne correspondent pas.</Text>
+                  <Text style={styles.mismatchText}>
+                    Les mots de passe ne correspondent pas.
+                  </Text>
                 )}
               </View>
               <TouchableOpacity
@@ -135,7 +150,9 @@ export default function ChangePasswordScreen() {
                 {isLoading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.buttonText}>Mettre à jour le mot de passe</Text>
+                  <Text style={styles.buttonText}>
+                    Mettre à jour le mot de passe
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -149,19 +166,19 @@ export default function ChangePasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: "#F2F2F7",
   },
   keyboardView: {
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-    backgroundColor: '#FFFFFF',
+    borderBottomColor: "#E5E5EA",
+    backgroundColor: "#FFFFFF",
   },
   backButton: {
     padding: 8,
@@ -169,8 +186,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#11224e',
+    fontWeight: "600",
+    color: "#11224e",
     marginLeft: 16,
   },
   scrollContainer: {
@@ -180,64 +197,64 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#f87b1b',
+    borderColor: "#f87b1b",
   },
   inputContainer: {
     marginBottom: 24,
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#1C1C1E',
+    fontWeight: "500",
+    color: "#1C1C1E",
     marginBottom: 8,
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#f87b1b',
+    borderColor: "#f87b1b",
     height: 56,
   },
   input: {
     flex: 1,
     fontSize: 14,
-    color: '#11224e',
+    color: "#11224e",
     paddingRight: 10,
   },
   button: {
-    backgroundColor: '#f87b1b',
+    backgroundColor: "#f87b1b",
     borderRadius: 12,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 16,
   },
   buttonDisabled: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: "#9CA3AF",
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   errorText: {
-    color: 'red',
+    color: "red",
     marginBottom: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
   successText: {
-    color: 'green',
+    color: "green",
     marginBottom: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
   mismatchText: {
-    color: '#D92D20', // A red color for the error
+    color: "#D92D20", // A red color for the error
     fontSize: 12,
     marginTop: 4,
   },

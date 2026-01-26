@@ -720,7 +720,12 @@ export default function DashboardScreen() {
             <Text
               style={[
                 styles.footerText,
-                { fontWeight: "bold", marginBottom: 2, fontSize: 13 },
+                {
+                  fontWeight: "bold",
+                  marginBottom: 4,
+                  fontSize: 14,
+                  color: "#000",
+                },
               ]}
             >
               {companyTitle}

@@ -18,7 +18,8 @@ class CompanyService {
       ? { headers: { Authorization: `Bearer ${token}` } }
       : undefined;
     const response = await api.get("/api/company/getCompanyById", config);
-    const company: Company = response.data;
+    // Handle wrapped response (response.data.data) or direct response (response.data)
+    const company: Company = response.data.data || response.data;
     return { ...company, logo: this.toAbsoluteUrl(company.logo) };
   }
 

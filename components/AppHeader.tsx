@@ -1,5 +1,6 @@
 import API_CONFIG from "@/app/config/api";
 import { ICONS } from "@/constants/Icons";
+import companyService from "@/services/companyService";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -29,6 +30,26 @@ export default function AppHeader({
   const router = useRouter();
   const [imageError, setImageError] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState(false);
+
+  // Fetch company logo on mount
+  useEffect(() => {
+    const fetchCompanyLogo = async () => {
+      try {
+        const company = await companyService.getCompany();
+        if (company?.logo) {
+          setCompanyLogo(company.logo);
+        }
+      } catch (error) {
+        console.error("Error fetching company logo:", error);
+      }
+    };
+
+    if (user) {
+      fetchCompanyLogo();
+    }
+  }, [user]);
 
   // Update time every second for a real-time feel
   useEffect(() => {
@@ -44,7 +65,8 @@ export default function AppHeader({
   // Reset image error when user changes
   useEffect(() => {
     setImageError(false);
-  }, [user?.photo]);
+    setLogoError(false);
+  }, [user?.photo, companyLogo]);
 
   const handleNavigate = (path: React.ComponentProps<typeof Link>["href"]) => {
     if (onNavigate) {
@@ -79,9 +101,12 @@ export default function AppHeader({
           accessibilityLabel="Navigate to home"
         >
           <Image
-            source={ICONS.newIcon}
+            source={
+              companyLogo && !logoError ? { uri: companyLogo } : ICONS.newIcon
+            }
             style={styles.logo}
             resizeMode="contain"
+            onError={() => setLogoError(true)}
           />
         </TouchableOpacity>
 
