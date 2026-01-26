@@ -6,12 +6,10 @@ import {
 import { getHealthStatus, startHealthPolling } from "@/services/health";
 import { Ionicons } from "@expo/vector-icons";
 
-import * as Google from "expo-auth-session/providers/google";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -23,6 +21,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -34,8 +33,6 @@ import ServerDownModal from "../../components/ServerHealth/ServerDownModal";
 import ServerHealthModal from "../../components/ServerHealth/ServerHealthModal";
 import { ICONS } from "../../constants/Icons";
 import { useAuth } from "../../contexts/AuthContext";
-
-WebBrowser.maybeCompleteAuthSession();
 
 interface LoginForm {
   identifier: string;
@@ -75,32 +72,6 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const isTablet = width >= 768;
-
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    iosClientId:
-      "1003184877153-pe30nmchbu9ji54o957qkh1isusesn34.apps.googleusercontent.com",
-    webClientId:
-      "1003184877153-idnal07pq0vjods5e0pukd1ljmdafvtg.apps.googleusercontent.com",
-    androidClientId:
-      "1003184877153-t0lfqit1m2q63jjj5hjqubgco0agk56b.apps.googleusercontent.com",
-  });
-
-  useEffect(() => {
-    if (response?.type === "success") {
-      const anyResp: any = response;
-      const { authentication } = anyResp;
-      if (authentication?.accessToken)
-        handleGoogleSignIn(authentication.accessToken);
-    }
-  }, [response]);
-
-  const handleGoogleSignIn = async (accessToken: string) => {
-    showAlert(
-      "error",
-      "Bientôt disponible",
-      "La connexion avec Google est en cours de développement.",
-    );
-  };
 
   const handleInputChange = (field: keyof LoginForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -206,17 +177,21 @@ export default function LoginScreen() {
             <View style={styles.mainContent}>
               {/* Header */}
               <View style={styles.header}>
-                <View style={styles.logoContainer}>
+                <Animated.View
+                  entering={FadeInDown.delay(200).springify().damping(12)}
+                  style={styles.logoContainer}
+                >
                   <Image
                     source={ICONS.newIcon}
                     style={styles.logoImage}
                     contentFit="contain"
                   />
-                </View>
+                </Animated.View>
               </View>
 
               {/* Form */}
-              <View
+              <Animated.View
+                entering={FadeInDown.delay(400).springify().damping(12)}
                 style={[
                   styles.formContainer,
                   isTablet && styles.formContainerTablet,
@@ -224,7 +199,7 @@ export default function LoginScreen() {
               >
                 {/* identifier Input */}
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>identifier</Text>
+                  <Text style={styles.inputLabel}>Identifiant</Text>
                   <View
                     style={[
                       styles.inputWrapper,
@@ -276,7 +251,7 @@ export default function LoginScreen() {
                     />
                     <TextInput
                       style={[styles.input, { outline: "none" } as any]}
-                      placeholder="Enter le mot de passe"
+                      placeholder="Entrer le mot de passe"
                       placeholderTextColor="#9CA3AF"
                       value={form.password}
                       onChangeText={(value) =>
@@ -327,65 +302,16 @@ export default function LoginScreen() {
                     <Text style={styles.loginButtonText}>Se connecter</Text>
                   )}
                 </TouchableOpacity>
-
-                <View style={styles.orDivider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.orText}>OR</Text>
-                  <View style={styles.dividerLine} />
-                </View>
-
-                <TouchableOpacity
-                  onPress={() => promptAsync()}
-                  activeOpacity={0.9}
-                  accessibilityRole="button"
-                  accessibilityLabel="Sign in with Google"
-                >
-                  <LinearGradient
-                    colors={[
-                      "#EA4335",
-                      "#FBBC05",
-                      "#34A853",
-                      "#4285F4",
-                      "#A142F4",
-                    ]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.googleButtonBorder}
-                  >
-                    <View style={styles.googleButtonInner}>
-                      <Image
-                        source={ICONS.google}
-                        style={styles.googleIcon}
-                        contentFit="contain"
-                      />
-                      <Text style={styles.googleButtonText}>
-                        Se connecter avec Google
-                      </Text>
-                    </View>
-                  </LinearGradient>
-                </TouchableOpacity>
-
-                {/* Register Button */}
-                <TouchableOpacity
-                  style={styles.registerButton}
-                  onPress={() => router.push("/(auth)/Register")}
-                  accessibilityRole="button"
-                  accessibilityLabel="S'inscrire"
-                >
-                  <Text style={styles.registerButtonText}>
-                    Pas encore de compte ?{" "}
-                    <Text style={styles.registerButtonLink}>S'inscrire</Text>
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              </Animated.View>
             </View>
 
             {/* Footer */}
-            <View
+            <Animated.View
+              entering={FadeInUp.delay(600).springify().damping(12)}
               style={[styles.footer, { paddingBottom: Math.max(16, bottom) }]}
             >
               <Text style={styles.copyrightText}>
-                <Text style={styles.copyrightBrand}>QualiSol</Text> ©
+                <Text style={styles.copyrightBrand}>QUALIsol</Text> ©
                 {new Date().getFullYear()}. Tous droits réservés.
               </Text>
               <TouchableOpacity
@@ -395,7 +321,7 @@ export default function LoginScreen() {
               >
                 <Text style={styles.websiteText}>www.muntaada.com</Text>
               </TouchableOpacity>
-            </View>
+            </Animated.View>
           </View>
         </KeyboardAvoidingView>
 
@@ -668,59 +594,7 @@ const styles = StyleSheet.create({
     borderColor: "#f87b1b",
     marginBottom: 10,
   },
-  orDivider: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 16,
-  },
-  dividerLine: {
-    flex: 1,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: "#E5E7EB",
-  },
-  orText: {
-    alignSelf: "center",
-    marginHorizontal: 12,
-    paddingHorizontal: 6,
-    fontSize: 14,
-    color: "#6B7280",
-    backgroundColor: "#FFFFFF",
-    zIndex: 1,
-    textAlignVertical: "center",
-  },
-  googleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#4285F4",
-    borderRadius: 12,
-    paddingVertical: 16,
-    marginTop: 12,
-  },
-  googleButtonText: {
-    color: "#111827",
-    fontSize: 16,
-    fontWeight: "700",
-    marginLeft: 10,
-  },
-  googleButtonBorder: {
-    borderRadius: 14,
-    padding: 2,
-    marginTop: 12,
-  },
-  googleButtonInner: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-  },
-  googleIcon: {
-    width: 20,
-    height: 20,
-    marginRight: 10,
-  },
+
   forgotPasswordText: {
     color: "#f87b1b",
     fontSize: 14,
@@ -756,18 +630,5 @@ const styles = StyleSheet.create({
     color: "#f87b1b",
     fontWeight: "600",
     marginTop: 4,
-  },
-  registerButton: {
-    alignItems: "center",
-    marginTop: 16,
-    paddingVertical: 8,
-  },
-  registerButtonText: {
-    fontSize: 14,
-    color: "#6B7280",
-  },
-  registerButtonLink: {
-    color: "#f87b1b",
-    fontWeight: "700",
   },
 });

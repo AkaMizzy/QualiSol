@@ -1,17 +1,9 @@
-import API_CONFIG from '@/app/config/api';
-import { ICONS } from '@/constants/Icons';
-import { Ionicons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import {
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
-} from 'react-native';
-
-
+import API_CONFIG from "@/app/config/api";
+import { ICONS } from "@/constants/Icons";
+import { Ionicons } from "@expo/vector-icons";
+import { Link, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface AppHeaderProps {
   showNotifications?: boolean;
@@ -32,7 +24,7 @@ export default function AppHeader({
   onNotificationPress,
   onProfilePress,
   onNavigate,
-  user
+  user,
 }: AppHeaderProps) {
   const router = useRouter();
   const [imageError, setImageError] = useState(false);
@@ -54,7 +46,7 @@ export default function AppHeader({
     setImageError(false);
   }, [user?.photo]);
 
-  const handleNavigate = (path: React.ComponentProps<typeof Link>['href']) => {
+  const handleNavigate = (path: React.ComponentProps<typeof Link>["href"]) => {
     if (onNavigate) {
       onNavigate();
     }
@@ -63,27 +55,26 @@ export default function AppHeader({
 
   const formatDateTime = (date: Date) => {
     const day = date.getDate();
-    const month = date.toLocaleString('en-GB', { month: 'short' });
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const month = date.toLocaleString("en-GB", { month: "short" });
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
     return `${day} ${month} - ${hours}:${minutes}`;
   };
-
 
   const handleProfilePress = () => {
     if (onProfilePress) {
       onProfilePress();
     } else {
-      handleNavigate('/(tabs)/profile');
+      handleNavigate("/(tabs)/profile");
     }
   };
 
   return (
     <View style={styles.header}>
       <View style={styles.headerRow}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.headerLeft}
-          onPress={() => handleNavigate('/(tabs)')}
+          onPress={() => handleNavigate("/(tabs)")}
           accessibilityRole="button"
           accessibilityLabel="Navigate to home"
         >
@@ -93,28 +84,18 @@ export default function AppHeader({
             resizeMode="contain"
           />
         </TouchableOpacity>
-        
+
         {/* Center - Date/Time */}
         <View style={styles.headerCenter}>
           <Text style={styles.dateTime}>{formatDateTime(currentDate)}</Text>
         </View>
-        
+
         {/* Right side - Action Icons */}
         <View style={styles.headerRight}>
           <TouchableOpacity
             accessibilityRole="button"
             style={styles.iconButton}
-            onPress={() => handleNavigate('/prospects')}
-          >
-            <Image 
-              source={ICONS.cvPNG} 
-              style={styles.headerIcon}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            accessibilityRole="button"
-            style={styles.iconButton}
-            onPress={() => handleNavigate('/parameters')}
+            onPress={() => handleNavigate("/parameters")}
           >
             <Image source={ICONS.settings} style={styles.headerIcon} />
           </TouchableOpacity>
@@ -129,12 +110,19 @@ export default function AppHeader({
                   source={{ uri: `${API_CONFIG.BASE_URL}${user.photo}` }}
                   style={styles.avatar}
                   onError={() => {
-                    console.log('Failed to load avatar image:', `${API_CONFIG.BASE_URL}${user.photo}`);
+                    console.log(
+                      "Failed to load avatar image:",
+                      `${API_CONFIG.BASE_URL}${user.photo}`,
+                    );
                     setImageError(true);
                   }}
                 />
               ) : (
-                <Ionicons name="person-circle-outline" size={28} color="#FF6B35" />
+                <Ionicons
+                  name="person-circle-outline"
+                  size={28}
+                  color="#FF6B35"
+                />
               )}
             </TouchableOpacity>
           )}
@@ -148,44 +136,44 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderBottomWidth: 2,
-    borderBottomColor: '#f87b1b',
+    borderBottomColor: "#f87b1b",
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   headerLeft: {
     width: 50,
     height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerCenter: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center'
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerRight: { 
+  headerRight: {
     width: 140,
-    flexDirection: 'row', 
-    justifyContent: 'flex-end', 
-    alignItems: 'center', 
-    gap: 6 
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    gap: 6,
   },
-  userName: { 
-    fontSize: 20, 
-    fontWeight: '700', 
-    color: '#11224e',
-    textAlign: 'center'
+  userName: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#11224e",
+    textAlign: "center",
   },
   dateTime: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#11224e',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#11224e",
+    textAlign: "center",
   },
   logo: {
     width: 100,
@@ -194,8 +182,8 @@ const styles = StyleSheet.create({
   iconButton: {
     width: 50,
     height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   avatar: {
     width: 45,
@@ -205,5 +193,5 @@ const styles = StyleSheet.create({
   headerIcon: {
     width: 32,
     height: 32,
-  }
+  },
 });
