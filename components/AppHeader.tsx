@@ -16,6 +16,8 @@ interface AppHeaderProps {
     firstname?: string;
     lastname?: string;
     photo?: string | null;
+    role?: string;
+    role_id?: string;
   };
 }
 
@@ -85,6 +87,39 @@ export default function AppHeader({
     return `${day} ${month} - ${hours}:${minutes}`;
   };
 
+  const getRoleDisplay = () => {
+    if (!user) return null;
+
+    // Determine role name
+    let roleName = user.role;
+
+    // If we only have role_id or if role is an ID, ideally we'd look it up.
+    // However, the prompt implies we should try to use what we have.
+    // If role is undefined, we might check if role_id is somehow useful, but mainly we rely on 'role' string if available.
+    // In AuthContext, 'role' is a string.
+
+    // Normalize properties
+    const lowerRole = roleName?.toLowerCase() || "";
+
+    let label = "Utilisateur";
+    let color = "#6b7280"; // Gray
+    let bg = "#e5e7eb";
+
+    if (lowerRole.includes("super admin")) {
+      label = "Super Admin";
+      color = "#7c3aed"; // Violet
+      bg = "#f3e8ff";
+    } else if (lowerRole.includes("admin")) {
+      label = "Admin";
+      color = "#2563eb"; // Blue
+      bg = "#dbeafe";
+    }
+
+    return { label, color, bg };
+  };
+
+  const roleInfo = getRoleDisplay();
+
   const handleProfilePress = () => {
     if (onProfilePress) {
       onProfilePress();
@@ -112,12 +147,28 @@ export default function AppHeader({
           />
         </TouchableOpacity>
 
-        {/* Center - Company Name & Date/Time */}
+        {/* Center - Company Name & User Info */}
         <View style={styles.headerCenter}>
           {companyTitle && (
             <Text style={styles.companyName} numberOfLines={1}>
               {companyTitle}
             </Text>
+          )}
+          {user && (
+            <View style={styles.userInfo}>
+              <Text style={styles.userNameText}>
+                {user.firstname} {user.lastname}
+              </Text>
+              {roleInfo && (
+                <View
+                  style={[styles.roleBadge, { backgroundColor: roleInfo.bg }]}
+                >
+                  <Text style={[styles.roleText, { color: roleInfo.color }]}>
+                    {roleInfo.label}
+                  </Text>
+                </View>
+              )}
+            </View>
           )}
           <Text style={styles.dateTime}>{formatDateTime(currentDate)}</Text>
         </View>
@@ -188,11 +239,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-  userName: {
-    fontSize: 20,
+  userInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  userNameText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1e293b",
+  },
+  roleBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  roleText: {
+    fontSize: 10,
     fontWeight: "700",
-    color: "#11224e",
-    textAlign: "center",
+    textTransform: "uppercase",
   },
   companyName: {
     fontSize: 14,
