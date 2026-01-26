@@ -1,6 +1,5 @@
 import AppHeader from "@/components/AppHeader";
 import CreateProjectModal from "@/components/projects/CreateProjectModal";
-import FolderTypeManagerModal from "@/components/projects/FolderTypeManagerModal";
 import ProjectDetailModal from "@/components/projects/ProjectDetailModal";
 import ProjectTypeManagerModal from "@/components/projects/ProjectTypeManagerModal";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,8 +27,6 @@ export default function ProjectsScreen() {
   const [detailVisible, setDetailVisible] = useState<boolean>(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [projectTypeManagerVisible, setProjectTypeManagerVisible] =
-    useState<boolean>(false);
-  const [folderTypeManagerVisible, setFolderTypeManagerVisible] =
     useState<boolean>(false);
 
   const refreshProjects = useCallback(async () => {
@@ -73,12 +70,6 @@ export default function ProjectsScreen() {
               style={styles.secondaryButton}
             >
               <Text style={styles.secondaryButtonText}>Type chantier</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setFolderTypeManagerVisible(true)}
-              style={styles.secondaryButton}
-            >
-              <Text style={styles.secondaryButtonText}>Type dossier</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.pageHeader}>
@@ -198,10 +189,6 @@ export default function ProjectsScreen() {
       <ProjectTypeManagerModal
         visible={projectTypeManagerVisible}
         onClose={() => setProjectTypeManagerVisible(false)}
-      />
-      <FolderTypeManagerModal
-        visible={folderTypeManagerVisible}
-        onClose={() => setFolderTypeManagerVisible(false)}
       />
     </>
   );

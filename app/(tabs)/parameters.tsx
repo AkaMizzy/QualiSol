@@ -1,8 +1,9 @@
+import FolderTypeManagerModal from "@/components/projects/FolderTypeManagerModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../components/AppHeader";
@@ -38,15 +39,22 @@ const PARAMETER_CARDS: ParameterCard[] = [
     color: "#ec4899",
   },
   {
-    title: "Anomalie 1",
-    description: "Configuration des anomalies de type 1",
+    title: "contrôles",
+    description: "Configurer les types de dossiers de contrôles",
+    image: require("../../assets/icons/approved.png"), // Assuming a generic folder icon or reusing existing
+    route: "action:folderTypes",
+    color: "#10b981",
+  },
+  {
+    title: "Anomalie niveau 1",
+    description: "Configuration des anomalies de niveau 1",
     image: require("../../assets/icons/anomalie.png"),
     route: "/anomalie1",
     color: "#f59e0b",
   },
   {
-    title: "Anomalie 2",
-    description: "Configuration des anomalies de type 2",
+    title: "Anomalie niveau 2",
+    description: "Configuration des anomalies de niveau 2",
     image: require("../../assets/icons/anomalie.png"),
     route: "/anomalie2",
     color: "#ef4444",
@@ -56,9 +64,15 @@ const PARAMETER_CARDS: ParameterCard[] = [
 export default function ParametersScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const [folderTypeManagerVisible, setFolderTypeManagerVisible] =
+    useState(false);
 
   const handleCardPress = (route: string) => {
-    router.push(route as any);
+    if (route === "action:folderTypes") {
+      setFolderTypeManagerVisible(true);
+    } else {
+      router.push(route as any);
+    }
   };
 
   React.useEffect(() => {
@@ -78,11 +92,7 @@ export default function ParametersScreen() {
       <AppHeader user={user || undefined} />
 
       <View style={styles.header}>
-        <Ionicons name="settings" size={32} color="#f87b1b" />
         <Text style={styles.headerTitle}>Paramètres</Text>
-        <Text style={styles.headerSubtitle}>
-          Gérez les paramètres de votre application
-        </Text>
       </View>
 
       <ScrollView
@@ -115,6 +125,11 @@ export default function ParametersScreen() {
           </Pressable>
         ))}
       </ScrollView>
+
+      <FolderTypeManagerModal
+        visible={folderTypeManagerVisible}
+        onClose={() => setFolderTypeManagerVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -125,23 +140,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   header: {
-    padding: 24,
+    padding: 16,
     backgroundColor: "white",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
-    alignItems: "center",
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "700",
     color: "#11224e",
-    marginTop: 12,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: "#6b7280",
-    marginTop: 4,
-    textAlign: "center",
   },
   content: {
     flex: 1,
