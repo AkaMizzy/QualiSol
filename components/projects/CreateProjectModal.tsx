@@ -41,8 +41,6 @@ export default function CreateProjectModal({
   const [dd, setDd] = useState("");
   const [df, setDf] = useState("");
   const [ownerId, setOwnerId] = useState("");
-  const [controlId, setControlId] = useState("");
-  const [technicienId, setTechnicienId] = useState("");
   const [projectTypeId, setProjectTypeId] = useState("");
   const [projectTypes, setProjectTypes] = useState<
     { id: string; title: string }[]
@@ -54,8 +52,6 @@ export default function CreateProjectModal({
   const [loadingUsers, setLoadingUsers] = useState(false);
 
   const [ownerOpen, setOwnerOpen] = useState(false);
-  const [controlOpen, setControlOpen] = useState(false);
-  const [technicienOpen, setTechnicienOpen] = useState(false);
   const [loadingTypes, setLoadingTypes] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,14 +66,6 @@ export default function CreateProjectModal({
   const adminUser = useMemo(
     () => companyUsers.find((u) => u.id === ownerId),
     [companyUsers, ownerId],
-  );
-  const controlUsers = useMemo(
-    () => companyUsers.filter((u) => u.id !== ownerId),
-    [companyUsers, ownerId],
-  );
-  const technicienUsers = useMemo(
-    () => companyUsers.filter((u) => u.id !== ownerId && u.id !== controlId),
-    [companyUsers, ownerId, controlId],
   );
 
   const isDisabled = useMemo(() => !title || !token, [title, token]);
@@ -95,11 +83,11 @@ export default function CreateProjectModal({
     }
 
     // Check for duplicate role assignments
-    const roles = [ownerId, controlId, technicienId].filter(Boolean);
-    const uniqueRoles = new Set(roles);
-    if (roles.length !== uniqueRoles.size) {
-      return "Un utilisateur ne peut pas être assigné à plusieurs rôles (Admin, Contrôleur, Technicien).";
-    }
+    // const roles = [ownerId].filter(Boolean);
+    // const uniqueRoles = new Set(roles);
+    // if (roles.length !== uniqueRoles.size) {
+    //   return "Un utilisateur ne peut pas être assigné à plusieurs rôles (Admin, Contrôleur, Technicien).";
+    // }
 
     return null;
   }
@@ -227,8 +215,10 @@ export default function CreateProjectModal({
         dd: dd || (undefined as any),
         df: df || (undefined as any),
         owner_id: ownerId || undefined,
-        control_id: controlId,
-        technicien_id: technicienId,
+        // @ts-ignore - Fields removed from UI but might be required by type
+        control_id: undefined,
+        // @ts-ignore - Fields removed from UI but might be required by type
+        technicien_id: undefined,
         projecttype_id: projectTypeId || undefined,
       });
       setTitle("");
@@ -236,8 +226,6 @@ export default function CreateProjectModal({
       setDd("");
       setDf("");
       setOwnerId("");
-      setControlId("");
-      setTechnicienId("");
       setProjectTypeId("");
       setError(null);
       if (onCreated) await onCreated();
@@ -337,8 +325,7 @@ export default function CreateProjectModal({
               contentContainerStyle={{ paddingBottom: 24 }}
               showsVerticalScrollIndicator={false}
             >
-              {/* SECTION: Informations Générales */}
-              <View style={stylesFS.section}>
+              <View style={stylesFS.card}>
                 <Text style={stylesFS.sectionTitle}>
                   INFORMATIONS GÉNÉRALES
                 </Text>
@@ -384,7 +371,7 @@ export default function CreateProjectModal({
                 </View>
 
                 {/* Project Type */}
-                <View style={{ marginBottom: 8 }}>
+                <View style={{ marginBottom: 24 }}>
                   <Text style={stylesFS.label}>Type de chantier</Text>
                   <TouchableOpacity
                     style={[
@@ -483,12 +470,12 @@ export default function CreateProjectModal({
                     </View>
                   )}
                 </View>
-              </View>
 
-              {/* SECTION: Période */}
-              <View style={stylesFS.section}>
                 <Text style={stylesFS.sectionTitle}>PÉRIODE</Text>
-                <View style={{ flexDirection: "row", gap: 12 }}>
+
+                <View
+                  style={{ flexDirection: "row", gap: 12, marginBottom: 24 }}
+                >
                   <TouchableOpacity
                     style={[stylesFS.inputWrap, { flex: 1 }]}
                     onPress={() => setDdPickerVisible(true)}
@@ -527,10 +514,7 @@ export default function CreateProjectModal({
                     </View>
                   </TouchableOpacity>
                 </View>
-              </View>
 
-              {/* SECTION: Équipe */}
-              <View style={stylesFS.section}>
                 <Text style={stylesFS.sectionTitle}>ÉQUIPE</Text>
 
                 {/* Admin */}
@@ -633,230 +617,6 @@ export default function CreateProjectModal({
                                 )}
                               </View>
                               {String(ownerId) === String(u.id) && (
-                                <Ionicons
-                                  name="checkmark"
-                                  size={16}
-                                  color="#f87b1b"
-                                />
-                              )}
-                            </TouchableOpacity>
-                          ))
-                        )}
-                      </ScrollView>
-                    </View>
-                  )}
-                </View>
-
-                {/* Controller */}
-                <View style={{ marginBottom: 16 }}>
-                  <Text style={stylesFS.label}>Contrôleur</Text>
-                  <TouchableOpacity
-                    style={[
-                      stylesFS.inputWrap,
-                      { justifyContent: "space-between" },
-                    ]}
-                    onPress={() => setControlOpen((v) => !v)}
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 10,
-                        flex: 1,
-                      }}
-                    >
-                      <Ionicons
-                        name="shield-checkmark-outline"
-                        size={20}
-                        color="#9ca3af"
-                      />
-                      <Text
-                        style={[
-                          stylesFS.input,
-                          { color: controlId ? "#111827" : "#9ca3af" },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {controlId
-                          ? controlUsers.find(
-                              (u) => String(u.id) === String(controlId),
-                            )
-                            ? `${controlUsers.find((u) => String(u.id) === String(controlId))?.firstname} ${controlUsers.find((u) => String(u.id) === String(controlId))?.lastname || ""}`
-                            : controlId
-                          : "Assigner un contrôleur"}
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name={controlOpen ? "chevron-up" : "chevron-down"}
-                      size={20}
-                      color="#9ca3af"
-                    />
-                  </TouchableOpacity>
-
-                  {controlOpen && (
-                    <View style={stylesFS.dropdownList}>
-                      <ScrollView
-                        nestedScrollEnabled
-                        keyboardShouldPersistTaps="handled"
-                        style={{ maxHeight: 200 }}
-                      >
-                        {loadingUsers ? (
-                          <View style={{ padding: 12 }}>
-                            <Text style={stylesFS.placeholderText}>
-                              Chargement...
-                            </Text>
-                          </View>
-                        ) : controlUsers.length === 0 ? (
-                          <View style={{ padding: 12 }}>
-                            <Text style={stylesFS.placeholderText}>
-                              Aucun utilisateur
-                            </Text>
-                          </View>
-                        ) : (
-                          controlUsers.map((u) => (
-                            <TouchableOpacity
-                              key={u.id}
-                              onPress={() => {
-                                setControlId(String(u.id));
-                                setControlOpen(false);
-                              }}
-                              style={[
-                                stylesFS.dropdownItem,
-                                String(controlId) === String(u.id) &&
-                                  stylesFS.dropdownItemSelected,
-                              ]}
-                            >
-                              <View>
-                                <Text
-                                  style={[
-                                    stylesFS.dropdownItemText,
-                                    String(controlId) === String(u.id) &&
-                                      stylesFS.dropdownItemTextSelected,
-                                  ]}
-                                >
-                                  {u.firstname} {u.lastname}
-                                </Text>
-                                {u.email && (
-                                  <Text
-                                    style={{ fontSize: 11, color: "#9ca3af" }}
-                                  >
-                                    {u.email}
-                                  </Text>
-                                )}
-                              </View>
-                              {String(controlId) === String(u.id) && (
-                                <Ionicons
-                                  name="checkmark"
-                                  size={16}
-                                  color="#f87b1b"
-                                />
-                              )}
-                            </TouchableOpacity>
-                          ))
-                        )}
-                      </ScrollView>
-                    </View>
-                  )}
-                </View>
-
-                {/* Technicien */}
-                <View style={{ marginBottom: 0 }}>
-                  <Text style={stylesFS.label}>Technicien</Text>
-                  <TouchableOpacity
-                    style={[
-                      stylesFS.inputWrap,
-                      { justifyContent: "space-between" },
-                    ]}
-                    onPress={() => setTechnicienOpen((v) => !v)}
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 10,
-                        flex: 1,
-                      }}
-                    >
-                      <Ionicons
-                        name="construct-outline"
-                        size={20}
-                        color="#9ca3af"
-                      />
-                      <Text
-                        style={[
-                          stylesFS.input,
-                          { color: technicienId ? "#111827" : "#9ca3af" },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {technicienId
-                          ? technicienUsers.find(
-                              (u) => String(u.id) === String(technicienId),
-                            )
-                            ? `${technicienUsers.find((u) => String(u.id) === String(technicienId))?.firstname} ${technicienUsers.find((u) => String(u.id) === String(technicienId))?.lastname || ""}`
-                            : technicienId
-                          : "Assigner un technicien"}
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name={technicienOpen ? "chevron-up" : "chevron-down"}
-                      size={20}
-                      color="#9ca3af"
-                    />
-                  </TouchableOpacity>
-
-                  {technicienOpen && (
-                    <View style={stylesFS.dropdownList}>
-                      <ScrollView
-                        nestedScrollEnabled
-                        keyboardShouldPersistTaps="handled"
-                        style={{ maxHeight: 200 }}
-                      >
-                        {loadingUsers ? (
-                          <View style={{ padding: 12 }}>
-                            <Text style={stylesFS.placeholderText}>
-                              Chargement...
-                            </Text>
-                          </View>
-                        ) : technicienUsers.length === 0 ? (
-                          <View style={{ padding: 12 }}>
-                            <Text style={stylesFS.placeholderText}>
-                              Aucun utilisateur
-                            </Text>
-                          </View>
-                        ) : (
-                          technicienUsers.map((u) => (
-                            <TouchableOpacity
-                              key={u.id}
-                              onPress={() => {
-                                setTechnicienId(String(u.id));
-                                setTechnicienOpen(false);
-                              }}
-                              style={[
-                                stylesFS.dropdownItem,
-                                String(technicienId) === String(u.id) &&
-                                  stylesFS.dropdownItemSelected,
-                              ]}
-                            >
-                              <View>
-                                <Text
-                                  style={[
-                                    stylesFS.dropdownItemText,
-                                    String(technicienId) === String(u.id) &&
-                                      stylesFS.dropdownItemTextSelected,
-                                  ]}
-                                >
-                                  {u.firstname} {u.lastname}
-                                </Text>
-                                {u.email && (
-                                  <Text
-                                    style={{ fontSize: 11, color: "#9ca3af" }}
-                                  >
-                                    {u.email}
-                                  </Text>
-                                )}
-                              </View>
-                              {String(technicienId) === String(u.id) && (
                                 <Ionicons
                                   name="checkmark"
                                   size={16}
@@ -975,7 +735,7 @@ const stylesFS = StyleSheet.create({
 
   content: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
 
-  section: {
+  card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
@@ -985,6 +745,13 @@ const stylesFS = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 12,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#E2E8F0",
+    marginVertical: 20,
   },
   sectionTitle: {
     fontSize: 12,
@@ -1000,7 +767,7 @@ const stylesFS = StyleSheet.create({
     gap: 12,
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#f87b1b",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -1027,7 +794,7 @@ const stylesFS = StyleSheet.create({
   dropdownList: {
     maxHeight: 220,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#f87b1b",
     borderRadius: 12,
     marginTop: 6,
     backgroundColor: "#FFFFFF",
