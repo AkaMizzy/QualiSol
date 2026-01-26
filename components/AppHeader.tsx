@@ -92,13 +92,6 @@ export default function AppHeader({
 
         {/* Right side - Action Icons */}
         <View style={styles.headerRight}>
-          <TouchableOpacity
-            accessibilityRole="button"
-            style={styles.iconButton}
-            onPress={() => handleNavigate("/parameters")}
-          >
-            <Image source={ICONS.settings} style={styles.headerIcon} />
-          </TouchableOpacity>
           {showProfile && (
             <TouchableOpacity
               accessibilityRole="button"
@@ -157,7 +150,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerRight: {
-    width: 140,
+    width: 50,
     flexDirection: "row",
     justifyContent: "flex-end",
     alignItems: "center",
@@ -176,22 +169,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   logo: {
-    width: 100,
-    height: 100,
+    width: 45,
+    height: 45,
   },
   iconButton: {
-    width: 50,
-    height: 50,
+    width: 45,
+    height: 45,
     justifyContent: "center",
     alignItems: "center",
   },
   avatar: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
   headerIcon: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
   },
 });

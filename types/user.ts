@@ -18,6 +18,12 @@ export interface CompanyUser {
   status?: { id: string; status: string }; // Field is 'status' not 'name'
 }
 
+// Extend CompanyUser to include identifier via augmentation or direct edit if preferred by previous context
+// But based on user.model.js, identifier is a core field.
+export interface CompanyUser {
+  identifier: string;
+}
+
 export interface CreateUserData {
   firstname: string;
   lastname: string;

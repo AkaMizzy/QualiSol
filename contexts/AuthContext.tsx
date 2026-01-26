@@ -1,6 +1,19 @@
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { setAuthToken, setOnUnauthorized } from '../services/api';
-import { clearAuthToken, clearUser, getAuthToken, getUser, saveAuthToken, saveUser } from '../services/secureStore';
+import {
+    createContext,
+    ReactNode,
+    useContext,
+    useEffect,
+    useState,
+} from "react";
+import { setAuthToken, setOnUnauthorized } from "../services/api";
+import {
+    clearAuthToken,
+    clearUser,
+    getAuthToken,
+    getUser,
+    saveAuthToken,
+    saveUser,
+} from "../services/secureStore";
 
 // Types
 export interface User {
@@ -10,6 +23,7 @@ export interface User {
   lastname: string;
   role: string;
   company_id: string | null;
+  identifier: string;
   photo?: string | null;
 }
 
@@ -49,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Register auto-logout callback for when token expires (401 errors)
   useEffect(() => {
     setOnUnauthorized(() => {
-      console.log('Token expired - auto logout triggered');
+      console.log("Token expired - auto logout triggered");
       logout();
     });
   }, []);
@@ -84,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (error) {
-      console.error('Error initializing auth:', error);
+      console.error("Error initializing auth:", error);
       setAuthState({
         user: null,
         token: null,
@@ -109,18 +123,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isPostLoginLoading: true,
       });
     } catch (error) {
-      console.error('Failed to set login data:', error);
+      console.error("Failed to set login data:", error);
     }
   };
 
   const logout = async (): Promise<void> => {
     try {
-      console.log('AuthContext: Starting logout process...');
+      console.log("AuthContext: Starting logout process...");
       await clearAuthToken();
       await clearUser();
       setAuthToken(null); // Clear token
-      console.log('AuthContext: Storage cleared, updating state...');
-      
+      console.log("AuthContext: Storage cleared, updating state...");
+
       setAuthState({
         user: null,
         token: null,
@@ -128,10 +142,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: false,
         isPostLoginLoading: false,
       });
-      
-      console.log('AuthContext: State updated to logged out');
+
+      console.log("AuthContext: State updated to logged out");
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
   };
 
@@ -139,12 +153,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (authState.user) {
       const updatedUser = { ...authState.user, ...userData };
       await saveUser(updatedUser);
-      setAuthState(prev => ({ ...prev, user: updatedUser }));
+      setAuthState((prev) => ({ ...prev, user: updatedUser }));
     }
   };
 
   const completePostLoginLoading = () => {
-    setAuthState(prev => ({ ...prev, isPostLoginLoading: false }));
+    setAuthState((prev) => ({ ...prev, isPostLoginLoading: false }));
   };
 
   const value: AuthContextType = {
@@ -155,18 +169,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     completePostLoginLoading,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 // Hook to use auth context
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

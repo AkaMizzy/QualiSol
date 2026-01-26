@@ -14,7 +14,7 @@ export const ICONS = {
   actionCorrective: require('@/assets/icons/action_corrective.png'),
   map: require('@/assets/icons/map.png'),
   pdf: require('@/assets/icons/pdf.png'),
-  newIcon: require('@/assets/icons/new_icon.png'),
+  newIcon: require('@/assets/icons/new_icon2.png'),
   signature: require('@/assets/icons/sign.png'),
   chatgpt: require('@/assets/icons/chatgpt.png'),
   folder: require('@/assets/icons/folder.png'),
