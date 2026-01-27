@@ -1,9 +1,16 @@
-import API_CONFIG from '@/app/config/api';
-import { COLORS, FONT, SIZES } from '@/constants/theme';
-import { Ged } from '@/services/gedService';
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import API_CONFIG from "@/app/config/api";
+import { COLORS, FONT, SIZES } from "@/constants/theme";
+import { Ged } from "@/services/gedService";
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import {
+    ActivityIndicator,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 
 interface GalerieCardProps {
   item: Ged;
@@ -11,57 +18,80 @@ interface GalerieCardProps {
   hasVoiceNote?: boolean;
   isOffline?: boolean;
   localImagePath?: string;
-  syncStatus?: 'pending' | 'syncing' | 'failed';
+  syncStatus?: "pending" | "syncing" | "failed";
 }
 
-export default function GalerieCard({ item, onPress, hasVoiceNote, isOffline, localImagePath, syncStatus }: GalerieCardProps) {
-  const GofG = API_CONFIG.BASE_URL
-  const formattedDate = new Date(item.created_at).toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+export default function GalerieCard({
+  item,
+  onPress,
+  hasVoiceNote,
+  isOffline,
+  localImagePath,
+  syncStatus,
+}: GalerieCardProps) {
+  const GofG = API_CONFIG.BASE_URL;
+  const formattedDate = new Date(item.created_at).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 
   // Use local image path for offline records, otherwise use backend URL
-  const imageSource = isOffline && localImagePath 
-    ? { uri: localImagePath }
-    : { uri: `${GofG}${item.url}` };
+  const imageSource =
+    isOffline && localImagePath
+      ? { uri: localImagePath }
+      : { uri: `${GofG}${item.url}` };
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.imageContainer}>
-        <Image 
-          source={imageSource}
-          style={styles.image}
-        />
+        <Image source={imageSource} style={styles.image} />
         {/* Sync status indicator */}
         {syncStatus && (
           <View style={styles.syncStatusBadge}>
-            {syncStatus === 'syncing' && (
+            {syncStatus === "syncing" && (
               <ActivityIndicator size="small" color={COLORS.white} />
             )}
-            {syncStatus === 'pending' && (
-              <Ionicons name="cloud-upload-outline" size={20} color={COLORS.white} />
+            {syncStatus === "pending" && (
+              <Ionicons
+                name="cloud-upload-outline"
+                size={20}
+                color={COLORS.white}
+              />
             )}
-            {syncStatus === 'failed' && (
+            {syncStatus === "failed" && (
               <Ionicons name="alert-circle-outline" size={20} color="#ff4444" />
             )}
           </View>
         )}
         <View style={styles.overlay}>
-          <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.title} numberOfLines={1}>
+            {item.title}
+          </Text>
           <Text style={styles.date}>{formattedDate}</Text>
         </View>
       </View>
       {item.author && (
         <View style={styles.content}>
-            <View style={styles.detailsContainer}>
-              {item.author && <Text style={styles.author} numberOfLines={1}>{item.author}</Text>}
-              {item.type && <Text style={styles.detailText} numberOfLines={1}>{item.type}</Text>}
-              {item.categorie && <Text style={styles.detailText} numberOfLines={1}>{item.categorie}</Text>}
-            </View>
+          <View style={styles.detailsContainer}>
+            {item.author && (
+              <Text style={styles.author} numberOfLines={1}>
+                {item.author}
+              </Text>
+            )}
+            {item.type && (
+              <Text style={styles.detailText} numberOfLines={1}>
+                {item.type}
+              </Text>
+            )}
+            {item.categorie && (
+              <Text style={styles.detailText} numberOfLines={1}>
+                {item.categorie}
+              </Text>
+            )}
+          </View>
         </View>
       )}
     </TouchableOpacity>
@@ -74,7 +104,7 @@ const styles = StyleSheet.create({
     margin: 8,
     backgroundColor: COLORS.white,
     borderRadius: SIZES.medium,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -83,31 +113,31 @@ const styles = StyleSheet.create({
   imageContainer: {
     borderTopLeftRadius: SIZES.medium,
     borderTopRightRadius: SIZES.medium,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   image: {
-    width: '100%',
+    width: "100%",
     height: 150,
   },
   overlay: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: "rgba(0,0,0,0.5)",
     paddingHorizontal: SIZES.medium,
     paddingVertical: SIZES.small,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   content: {
     padding: SIZES.medium,
   },
   detailsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
   },
   title: {
     fontFamily: FONT.bold,
@@ -117,9 +147,9 @@ const styles = StyleSheet.create({
     marginRight: SIZES.small,
   },
   date: {
-    fontWeight: '600',
+    fontWeight: "600",
     fontSize: SIZES.small,
-    color: '#f87b1b',
+    color: "#f87b1b",
   },
   author: {
     fontFamily: FONT.regular,
@@ -138,21 +168,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   voiceNoteIcon: {
-    position: 'absolute',
+    position: "absolute",
     top: 8,
     right: 8,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: "rgba(0,0,0,0.5)",
     borderRadius: 15,
     padding: 4,
   },
   syncStatusBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: 8,
     left: 8,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: "rgba(0,0,0,0.7)",
     borderRadius: 20,
     padding: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
 });

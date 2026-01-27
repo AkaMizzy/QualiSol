@@ -1006,7 +1006,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontFamily: FONT.bold,
     fontSize: SIZES.xLarge,
-    color: COLORS.secondary,
+    color: "#f87b1b",
   },
   labelContainer: {
     flexDirection: "row",
@@ -1064,7 +1064,7 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: FONT.medium,
     fontSize: SIZES.medium,
-    color: COLORS.secondary,
+    color: "#f87b1b",
     marginBottom: SIZES.small,
     alignSelf: "flex-start",
   },
@@ -1134,13 +1134,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: COLORS.primary,
+    color: "#f87b1b",
     marginBottom: 12,
   },
   severityTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#334155",
+    color: "#f87b1b",
     marginBottom: 12,
   },
   typeScrollView: {

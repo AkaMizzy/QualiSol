@@ -1,24 +1,24 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Audio, ResizeMode, Video } from 'expo-av';
-import { Image } from 'expo-image';
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { Audio, ResizeMode, Video } from "expo-av";
+import { Image } from "expo-image";
+import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Linking,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Linking,
+    Modal,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 
 interface PreviewModalProps {
   visible: boolean;
   onClose: () => void;
   mediaUrl?: string;
-  mediaType?: 'image' | 'video' | 'file' | 'voice';
+  mediaType?: "image" | "video" | "file" | "voice";
   title?: string;
   onEdit?: () => void;
   onAnnotate?: () => void;
@@ -34,7 +34,7 @@ interface PreviewModalProps {
   longitude?: string | null;
 }
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
 export default function PreviewModal({
   visible,
@@ -60,6 +60,7 @@ export default function PreviewModal({
   const [position, setPosition] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [showMetadata, setShowMetadata] = useState(true);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   useEffect(() => {
     return sound
@@ -70,18 +71,18 @@ export default function PreviewModal({
   }, [sound]);
 
   const loadAudio = async () => {
-    if (!mediaUrl || mediaType !== 'voice') return;
-    
+    if (!mediaUrl || mediaType !== "voice") return;
+
     try {
       setIsLoading(true);
       const { sound: audioSound } = await Audio.Sound.createAsync(
         { uri: mediaUrl },
         { shouldPlay: false },
-        onPlaybackStatusUpdate
+        onPlaybackStatusUpdate,
       );
       setSound(audioSound);
     } catch (error) {
-      console.error('Error loading audio:', error);
+      console.error("Error loading audio:", error);
     } finally {
       setIsLoading(false);
     }
@@ -97,7 +98,7 @@ export default function PreviewModal({
 
   const handlePlayPause = async () => {
     if (!sound) return;
-    
+
     if (isPlaying) {
       await sound.pauseAsync();
     } else {
@@ -114,25 +115,31 @@ export default function PreviewModal({
     const totalSeconds = Math.floor(milliseconds / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return date.toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
-  const hasMetadata = description || author || createdAt || type || categorie || (latitude && longitude);
+  const hasMetadata =
+    description ||
+    author ||
+    createdAt ||
+    type ||
+    categorie ||
+    (latitude && longitude);
 
   // Load audio when modal opens for voice type
   useEffect(() => {
-    if (visible && mediaType === 'voice') {
+    if (visible && mediaType === "voice") {
       loadAudio();
     }
   }, [visible, mediaUrl, mediaType]);
@@ -143,30 +150,32 @@ export default function PreviewModal({
 
   const handleOpenFile = async () => {
     if (!mediaUrl) return;
-    
+
     try {
       // Check if the URL can be opened
       const canOpen = await Linking.canOpenURL(mediaUrl);
-      
+
       if (canOpen) {
         await Linking.openURL(mediaUrl);
       } else {
         // If direct opening fails, try to open in browser
-        const browserUrl = mediaUrl.startsWith('http') ? mediaUrl : `https://${mediaUrl}`;
+        const browserUrl = mediaUrl.startsWith("http")
+          ? mediaUrl
+          : `https://${mediaUrl}`;
         await Linking.openURL(browserUrl);
       }
     } catch (error) {
-      console.error('Error opening file:', error);
+      console.error("Error opening file:", error);
       Alert.alert(
-        'Cannot Open File',
-        'Unable to open this file. You may need to download it first.',
-        [{ text: 'OK' }]
+        "Cannot Open File",
+        "Unable to open this file. You may need to download it first.",
+        [{ text: "OK" }],
       );
     }
   };
 
   const renderMedia = () => {
-    if (mediaType === 'image') {
+    if (mediaType === "image") {
       return (
         <Image
           source={{ uri: mediaUrl }}
@@ -177,7 +186,7 @@ export default function PreviewModal({
       );
     }
 
-    if (mediaType === 'video') {
+    if (mediaType === "video") {
       return (
         <Video
           source={{ uri: mediaUrl }}
@@ -190,22 +199,17 @@ export default function PreviewModal({
       );
     }
 
-    if (mediaType === 'file') {
+    if (mediaType === "file") {
       return (
         <View style={styles.fileContainer}>
           <View style={styles.fileIconContainer}>
             <Ionicons name="document-outline" size={64} color="#007AFF" />
           </View>
           <Text style={styles.fileName}>
-            {mediaUrl?.split('/').pop() || 'Document'}
+            {mediaUrl?.split("/").pop() || "Document"}
           </Text>
-          <Text style={styles.fileInfo}>
-            Document file
-          </Text>
-          <Pressable
-            style={styles.downloadButton}
-            onPress={handleOpenFile}
-          >
+          <Text style={styles.fileInfo}>Document file</Text>
+          <Pressable style={styles.downloadButton} onPress={handleOpenFile}>
             <Ionicons name="download-outline" size={20} color="#FFFFFF" />
             <Text style={styles.downloadButtonText}>Open Document</Text>
           </Pressable>
@@ -213,18 +217,16 @@ export default function PreviewModal({
       );
     }
 
-    if (mediaType === 'voice') {
+    if (mediaType === "voice") {
       return (
         <View style={styles.voiceContainer}>
           <View style={styles.voiceIconContainer}>
             <Ionicons name="mic-outline" size={64} color="#FF6B6B" />
           </View>
           <Text style={styles.voiceFileName}>
-            {mediaUrl?.split('/').pop() || 'Voice Recording'}
+            {mediaUrl?.split("/").pop() || "Voice Recording"}
           </Text>
-          <Text style={styles.voiceFileInfo}>
-            Voice message
-          </Text>
+          <Text style={styles.voiceFileInfo}>Voice message</Text>
           <View style={styles.audioPlayerContainer}>
             {/* Custom Audio Player */}
             <View style={styles.audioControls}>
@@ -235,30 +237,28 @@ export default function PreviewModal({
                 disabled={isLoading}
               >
                 <Ionicons
-                  name={isPlaying ? 'pause' : 'play'}
+                  name={isPlaying ? "pause" : "play"}
                   size={24}
                   color="#FFFFFF"
                 />
               </Pressable>
-              
+
               {/* Time Display */}
               <View style={styles.timeDisplay}>
-                <Text style={styles.timeText}>
-                  {formatTime(position)}
-                </Text>
-                <Text style={styles.timeText}>
-                  {formatTime(duration)}
-                </Text>
+                <Text style={styles.timeText}>{formatTime(position)}</Text>
+                <Text style={styles.timeText}>{formatTime(duration)}</Text>
               </View>
             </View>
-            
+
             {/* Progress Bar */}
             <View style={styles.progressContainer}>
               <View style={styles.progressBar}>
                 <View
                   style={[
                     styles.progressFill,
-                    { width: `${duration > 0 ? (position / duration) * 100 : 0}%` }
+                    {
+                      width: `${duration > 0 ? (position / duration) * 100 : 0}%`,
+                    },
                   ]}
                 />
               </View>
@@ -300,21 +300,21 @@ export default function PreviewModal({
           </View>
 
           <View style={styles.headerActions}>
-            {mediaType === 'image' && hasMetadata && (
+            {mediaType === "image" && hasMetadata && (
               <Pressable
                 style={styles.actionButton}
                 onPress={() => setShowMetadata(!showMetadata)}
                 accessibilityRole="button"
                 accessibilityLabel="Toggle metadata"
               >
-                <Ionicons 
-                  name={showMetadata ? "information" : "information-outline"} 
-                  size={24} 
-                  color="#FFFFFF" 
+                <Ionicons
+                  name={showMetadata ? "information" : "information-outline"}
+                  size={24}
+                  color="#FFFFFF"
                 />
               </Pressable>
             )}
-            {mediaType === 'image' && onAutoDescribe && (
+            {mediaType === "image" && onAutoDescribe && (
               <Pressable
                 style={styles.actionButton}
                 onPress={onAutoDescribe}
@@ -329,7 +329,7 @@ export default function PreviewModal({
                 )}
               </Pressable>
             )}
-            {mediaType === 'image' && onEdit && (
+            {mediaType === "image" && onEdit && (
               <Pressable
                 style={styles.actionButton}
                 onPress={onEdit}
@@ -340,7 +340,7 @@ export default function PreviewModal({
               </Pressable>
             )}
 
-            {mediaType === 'image' && onAnnotate && (
+            {mediaType === "image" && onAnnotate && (
               <Pressable
                 style={styles.actionButton}
                 onPress={onAnnotate}
@@ -363,21 +363,37 @@ export default function PreviewModal({
         </View>
 
         {/* Media Content */}
-        <View style={styles.mediaContainer}>
-          {renderMedia()}
-        </View>
+        <View style={styles.mediaContainer}>{renderMedia()}</View>
 
         {/* Metadata Overlay */}
-        {mediaType === 'image' && showMetadata && hasMetadata && (
+        {mediaType === "image" && showMetadata && hasMetadata && (
           <View style={styles.metadataOverlay}>
             <View style={styles.metadataCard}>
               {description && (
                 <View style={styles.metadataSection}>
                   <Text style={styles.metadataLabel}>Description</Text>
-                  <Text style={styles.metadataValue}>{description}</Text>
+                  <Pressable
+                    onPress={() =>
+                      setIsDescriptionExpanded(!isDescriptionExpanded)
+                    }
+                  >
+                    <Text
+                      style={styles.metadataValue}
+                      numberOfLines={isDescriptionExpanded ? undefined : 2}
+                    >
+                      {description}
+                    </Text>
+                    {description.length > 50 && (
+                      <Text
+                        style={{ color: "#007AFF", fontSize: 12, marginTop: 4 }}
+                      >
+                        {isDescriptionExpanded ? "Voir moins" : "Voir plus"}
+                      </Text>
+                    )}
+                  </Pressable>
                 </View>
               )}
-              
+
               <View style={styles.metadataRow}>
                 {author && (
                   <View style={styles.metadataItem}>
@@ -387,8 +403,14 @@ export default function PreviewModal({
                 )}
                 {createdAt && (
                   <View style={styles.metadataItem}>
-                    <Ionicons name="calendar-outline" size={16} color="#8E8E93" />
-                    <Text style={styles.metadataSmallValue}>{formatDate(createdAt)}</Text>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={16}
+                      color="#8E8E93"
+                    />
+                    <Text style={styles.metadataSmallValue}>
+                      {formatDate(createdAt)}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -397,13 +419,21 @@ export default function PreviewModal({
                 <View style={styles.metadataRow}>
                   {type && (
                     <View style={styles.badge}>
-                      <Ionicons name="pricetag-outline" size={14} color="#007AFF" />
+                      <Ionicons
+                        name="pricetag-outline"
+                        size={14}
+                        color="#007AFF"
+                      />
                       <Text style={styles.badgeText}>{type}</Text>
                     </View>
                   )}
                   {categorie && (
                     <View style={styles.badge}>
-                      <Ionicons name="folder-outline" size={14} color="#007AFF" />
+                      <Ionicons
+                        name="folder-outline"
+                        size={14}
+                        color="#007AFF"
+                      />
                       <Text style={styles.badgeText}>{categorie}</Text>
                     </View>
                   )}
@@ -414,7 +444,8 @@ export default function PreviewModal({
                 <View style={styles.metadataItem}>
                   <Ionicons name="location-outline" size={16} color="#8E8E93" />
                   <Text style={styles.metadataSmallValue}>
-                    {parseFloat(latitude).toFixed(6)}, {parseFloat(longitude).toFixed(6)}
+                    {parseFloat(latitude).toFixed(6)},{" "}
+                    {parseFloat(longitude).toFixed(6)}
                   </Text>
                 </View>
               )}
@@ -432,52 +463,52 @@ export default function PreviewModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.9)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   header: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     zIndex: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   headerContent: {
     flex: 1,
     marginRight: 20,
   },
   headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   title: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   actionButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
     marginLeft: 10,
   },
   mediaContainer: {
     flex: 1,
     width: screenWidth,
     height: screenHeight,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   mediaContent: {
     width: screenWidth,
@@ -485,130 +516,130 @@ const styles = StyleSheet.create({
   },
   fileContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 40,
   },
   fileIconContainer: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 24,
   },
   fileName: {
     fontSize: 24,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#FFFFFF",
+    textAlign: "center",
     marginBottom: 8,
   },
   fileInfo: {
     fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
+    color: "#8E8E93",
+    textAlign: "center",
     marginBottom: 32,
   },
   downloadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#007AFF',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#007AFF",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
   },
   downloadButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   voiceContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 40,
   },
   voiceIconContainer: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 24,
   },
   voiceFileName: {
     fontSize: 24,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#FFFFFF",
+    textAlign: "center",
     marginBottom: 8,
   },
   voiceFileInfo: {
     fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
+    color: "#8E8E93",
+    textAlign: "center",
     marginBottom: 32,
   },
   audioPlayerContainer: {
     width: screenWidth * 0.8,
     height: 120,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: "rgba(255, 255, 255, 0.2)",
     padding: 16,
   },
   audioControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 16,
   },
   playButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#FF6B6B',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#FF6B6B",
+    justifyContent: "center",
+    alignItems: "center",
   },
   timeDisplay: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   timeText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   progressContainer: {
-    position: 'relative',
+    position: "relative",
   },
   progressBar: {
     height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
     borderRadius: 2,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   progressFill: {
-    height: '100%',
-    backgroundColor: '#FF6B6B',
+    height: "100%",
+    backgroundColor: "#FF6B6B",
     borderRadius: 2,
   },
   progressTouchable: {
-    position: 'absolute',
+    position: "absolute",
     top: -8,
     left: 0,
     right: 0,
     bottom: -8,
   },
   backdrop: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -616,7 +647,7 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   metadataOverlay: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
@@ -625,55 +656,55 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   metadataCard: {
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    backgroundColor: "rgba(0, 0, 0, 0.85)",
     borderRadius: 16,
     padding: 16,
     gap: 12,
-    backdropFilter: 'blur(10px)',
+    backdropFilter: "blur(10px)",
   },
   metadataSection: {
     gap: 4,
   },
   metadataLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#8E8E93',
-    textTransform: 'uppercase',
+    fontWeight: "600",
+    color: "#8E8E93",
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   metadataValue: {
     fontSize: 15,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     lineHeight: 20,
   },
   metadataRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   metadataItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   metadataSmallValue: {
     fontSize: 13,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
   },
   badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 122, 255, 0.15)",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
     gap: 4,
     borderWidth: 1,
-    borderColor: 'rgba(0, 122, 255, 0.3)',
+    borderColor: "rgba(0, 122, 255, 0.3)",
   },
   badgeText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#007AFF',
+    fontWeight: "600",
+    color: "#007AFF",
   },
 });
