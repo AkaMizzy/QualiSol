@@ -5,7 +5,11 @@ import { Anomalie1, getAllAnomalies1 } from "@/services/anomalie1Service";
 import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
 import companyService from "@/services/companyService";
 import { getConnectivity } from "@/services/connectivity";
-import { describeImage, getAllGeds } from "@/services/gedService";
+import {
+  combineTextDescription,
+  describeImage,
+  getAllGeds,
+} from "@/services/gedService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -99,6 +103,50 @@ export default function AddImageModal({
   const [networkStatus, setNetworkStatus] = useState<"online" | "offline">(
     "online",
   );
+
+  const [isCombiningText, setIsCombiningText] = useState(false);
+
+  const handleCombineText = async () => {
+    if (!audioText && !iaText) {
+      setAlertInfo({
+        visible: true,
+        title: "Avertissement",
+        message: "Au moins une source de texte (Audio ou IA) est nécessaire.",
+        type: "error",
+      });
+      return;
+    }
+
+    if (!token) return;
+
+    setIsCombiningText(true);
+    try {
+      const combinedDescription = await combineTextDescription(
+        token,
+        audioText,
+        iaText,
+      );
+      setDescription(combinedDescription);
+      setAlertInfo({
+        visible: true,
+        title: "Succès",
+        message: "Description combinée générée avec succès !",
+        type: "success",
+      });
+    } catch (error: any) {
+      console.error("Combine text error:", error);
+      setAlertInfo({
+        visible: true,
+        title: "Erreur",
+        message:
+          error.message ||
+          "Impossible de combiner les textes. Veuillez réessayer.",
+        type: "error",
+      });
+    } finally {
+      setIsCombiningText(false);
+    }
+  };
   const [anomalieTypes, setAnomalieTypes] = useState<Anomalie1[]>([]);
   const [anomalieCategories, setAnomalieCategories] = useState<Anomalie2[]>([]);
   const [loadingAnomalies, setLoadingAnomalies] = useState(true);
@@ -179,16 +227,31 @@ export default function AddImageModal({
     }
 
     let result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: false,
       quality: 1,
     });
 
     if (!result.canceled) {
-      const selectedImage = result.assets[0];
-      setImage(selectedImage);
-      setImage(selectedImage);
-      handleGenerateDescription(selectedImage);
+      const selectedAsset = result.assets[0];
+
+      // Check file size for videos (limit 50MB)
+      if (
+        selectedAsset.type === "video" &&
+        selectedAsset.fileSize &&
+        selectedAsset.fileSize > 50 * 1024 * 1024
+      ) {
+        Alert.alert(
+          "Fichier trop volumineux",
+          "La taille de la vidéo ne doit pas dépasser 50 Mo.",
+        );
+        return;
+      }
+
+      setImage(selectedAsset);
+      if (selectedAsset.type !== "video") {
+        handleGenerateDescription(selectedAsset);
+      }
     }
   }, []);
 
@@ -203,14 +266,31 @@ export default function AddImageModal({
     }
 
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: false,
       quality: 1,
     });
 
     if (!result.canceled) {
-      const selectedImage = result.assets[0];
-      setImage(selectedImage);
+      const selectedAsset = result.assets[0];
+
+      // Check file size for videos (limit 50MB)
+      if (
+        selectedAsset.type === "video" &&
+        selectedAsset.fileSize &&
+        selectedAsset.fileSize > 50 * 1024 * 1024
+      ) {
+        Alert.alert(
+          "Fichier trop volumineux",
+          "La taille de la vidéo ne doit pas dépasser 50 Mo.",
+        );
+        return;
+      }
+
+      setImage(selectedAsset);
+      if (selectedAsset.type !== "video") {
+        // handleGenerateDescription logic if auto-generation is desired for gallery picks too
+      }
     }
   }, []);
 
@@ -547,10 +627,32 @@ export default function AddImageModal({
                   onPress={showImagePickerOptions}
                 >
                   {image ? (
-                    <Image
-                      source={{ uri: image.uri }}
-                      style={styles.imagePreview}
-                    />
+                    image.type === "video" ? (
+                      <View
+                        style={[
+                          styles.imagePreview,
+                          {
+                            justifyContent: "center",
+                            alignItems: "center",
+                            backgroundColor: "#000",
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name="play-circle-outline"
+                          size={64}
+                          color="#fff"
+                        />
+                        <Text style={{ color: "#fff", marginTop: 10 }}>
+                          Vidéo sélectionnée
+                        </Text>
+                      </View>
+                    ) : (
+                      <Image
+                        source={{ uri: image.uri }}
+                        style={styles.imagePreview}
+                      />
+                    )
                   ) : (
                     <View style={styles.imagePickerPlaceholder}>
                       <Ionicons
@@ -559,7 +661,7 @@ export default function AddImageModal({
                         color={COLORS.gray}
                       />
                       <Text style={styles.imagePickerText}>
-                        Prendre une photo
+                        Prendre une photo ou vidéo
                       </Text>
                     </View>
                   )}
@@ -576,24 +678,27 @@ export default function AddImageModal({
                         color={COLORS.secondary}
                       />
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.iconButton}
-                      onPress={() => handleGenerateDescription(image)}
-                      disabled={isGeneratingDescription}
-                    >
-                      {isGeneratingDescription ? (
-                        <ActivityIndicator
-                          size="small"
-                          color={COLORS.secondary}
-                        />
-                      ) : (
-                        <Ionicons
-                          name="sparkles-outline"
-                          size={20}
-                          color={COLORS.secondary}
-                        />
-                      )}
-                    </TouchableOpacity>
+
+                    {image.type !== "video" && (
+                      <TouchableOpacity
+                        style={styles.iconButton}
+                        onPress={() => handleGenerateDescription(image)}
+                        disabled={isGeneratingDescription}
+                      >
+                        {isGeneratingDescription ? (
+                          <ActivityIndicator
+                            size="small"
+                            color={COLORS.secondary}
+                          />
+                        ) : (
+                          <Ionicons
+                            name="sparkles-outline"
+                            size={20}
+                            color={COLORS.secondary}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    )}
 
                     <TouchableOpacity
                       style={[
@@ -798,6 +903,38 @@ export default function AddImageModal({
                   onChangeText={setIaText}
                   multiline
                 />
+
+                <TouchableOpacity
+                  style={[
+                    styles.button,
+                    { backgroundColor: COLORS.secondary, marginBottom: 15 },
+                  ]}
+                  onPress={handleCombineText}
+                  disabled={isCombiningText || (!audioText && !iaText)}
+                >
+                  {isCombiningText ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 8,
+                      }}
+                    >
+                      <Ionicons
+                        name="git-merge-outline"
+                        size={20}
+                        color="#fff"
+                      />
+                      <Text style={[styles.buttonText, { color: "#fff" }]}>
+                        Combiner & Générer Description
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
                 <Text style={styles.label}>Description finale</Text>
                 <View style={{ position: "relative" }}>
                   <TextInput
@@ -818,8 +955,6 @@ export default function AddImageModal({
                     </View>
                   )}
                 </View>
-
-
               </View>
 
               <View style={styles.buttonContainer}>

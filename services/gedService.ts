@@ -173,11 +173,32 @@ export async function transcribeAudio(
     body: formData,
   });
 
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json();
   if (!res.ok) {
     throw new Error(data.error || "Failed to transcribe audio");
   }
-  return data.text || "";
+  return data.text;
+}
+
+export async function combineTextDescription(
+  token: string,
+  audiotxt: string,
+  iatxt: string,
+): Promise<string> {
+  const res = await fetch(`${API_CONFIG.BASE_URL}/api/geds/combine-text`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ audiotxt, iatxt }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to combine text");
+  }
+  return data.description;
 }
 
 export async function enhanceText(
