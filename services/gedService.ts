@@ -128,14 +128,22 @@ export async function createGed(
 
 export async function describeImage(
   token: string,
-  file: { uri: string; type: string; name: string },
+  file: { uri: string | File; type: string; name: string },
 ): Promise<string> {
   const formData = new FormData();
-  formData.append("file", {
-    uri: file.uri,
-    type: file.type,
-    name: file.name,
-  } as any);
+
+  // Check if this is a browser File object (for web uploads)
+  if (typeof file.uri === "object" && file.uri instanceof File) {
+    // Web: Append the actual File object
+    formData.append("file", file.uri);
+  } else {
+    // React Native: Append as object with uri, type, name
+    formData.append("file", {
+      uri: file.uri,
+      type: file.type,
+      name: file.name,
+    } as any);
+  }
 
   const res = await fetch(`${API_CONFIG.BASE_URL}/api/geds/describe-image`, {
     method: "POST",
@@ -155,14 +163,22 @@ export async function describeImage(
 
 export async function transcribeAudio(
   token: string,
-  file: { uri: string; type: string; name: string },
+  file: { uri: string | File; type: string; name: string },
 ): Promise<string> {
   const formData = new FormData();
-  formData.append("file", {
-    uri: file.uri,
-    type: file.type,
-    name: file.name,
-  } as any);
+
+  // Check if this is a browser File object (for web uploads)
+  if (typeof file.uri === "object" && file.uri instanceof File) {
+    // Web: Append the actual File object
+    formData.append("file", file.uri);
+  } else {
+    // React Native: Append as object with uri, type, name
+    formData.append("file", {
+      uri: file.uri,
+      type: file.type,
+      name: file.name,
+    } as any);
+  }
 
   const res = await fetch(`${API_CONFIG.BASE_URL}/api/geds/transcribe`, {
     method: "POST",
@@ -253,17 +269,24 @@ export const updateGed = async (
 export async function updateGedFile(
   token: string,
   gedId: string,
-  file: { uri: string; name: string; type: string },
+  file: { uri: string | File; name: string; type: string },
   data?: Partial<Ged>,
 ): Promise<Ged> {
   const formData = new FormData();
 
   // Append file
-  formData.append("file", {
-    uri: file.uri,
-    name: file.name,
-    type: file.type,
-  } as any);
+  // Check if this is a browser File object (for web uploads)
+  if (typeof file.uri === "object" && file.uri instanceof File) {
+    // Web: Append the actual File object
+    formData.append("file", file.uri);
+  } else {
+    // React Native: Append as object with uri, type, name
+    formData.append("file", {
+      uri: file.uri,
+      name: file.name,
+      type: file.type,
+    } as any);
+  }
 
   // Append other data if provided
   if (data) {

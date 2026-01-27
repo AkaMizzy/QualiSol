@@ -4,23 +4,24 @@ import { Anomalie1, getAllAnomalies1 } from "@/services/anomalie1Service";
 import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
 import companyService from "@/services/companyService";
 import {
-    combineTextDescription,
-    createGed,
-    CreateGedInput,
-    describeImage,
+  combineTextDescription,
+  createGed,
+  CreateGedInput,
+  describeImage,
+  transcribeAudio,
 } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface WebAddImageModalProps {
@@ -43,6 +44,17 @@ export default function WebAddImageModal({
   const [audioText, setAudioText] = useState("");
   const [isCombiningText, setIsCombiningText] = useState(false);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+
+  // Audio recording state
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
+    null,
+  );
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [level, setLevel] = useState(5);
@@ -143,6 +155,19 @@ export default function WebAddImageModal({
     }
   }, [visible]);
 
+  // Recording timer effect
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordingDuration((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isRecording]);
+
   const resetForm = () => {
     setTitle("");
     setDescription("");
@@ -155,6 +180,104 @@ export default function WebAddImageModal({
     setSelectedCategorie(null);
     setLatitude(null);
     setLongitude(null);
+
+    // Reset audio recording state
+    setAudioFile(null);
+    setAudioUrl(null);
+    setIsRecording(false);
+    setRecordingDuration(0);
+    setIsTranscribing(false);
+    setMediaRecorder(null);
+    setAudioChunks([]);
+  };
+
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        const url = URL.createObjectURL(blob);
+        const file = new File([blob], `voicenote-${Date.now()}.webm`, {
+          type: "audio/webm",
+        });
+
+        setAudioFile(file);
+        setAudioUrl(url);
+        setAudioChunks([]);
+
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+      setAudioChunks(chunks);
+    } catch (error) {
+      console.error("Failed to start recording:", error);
+      alert(
+        "Impossible de démarrer l'enregistrement. Veuillez autoriser l'accès au microphone.",
+      );
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      setMediaRecorder(null);
+    }
+  };
+
+  const playAudio = () => {
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      audio.play();
+    }
+  };
+
+  const deleteAudio = () => {
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+    setAudioFile(null);
+    setAudioUrl(null);
+    setRecordingDuration(0);
+    setAudioText("");
+  };
+
+  const handleTranscribeAudio = async () => {
+    if (!audioFile || !token) return;
+
+    setIsTranscribing(true);
+    try {
+      const text = await transcribeAudio(token, {
+        uri: audioFile as any,
+        type: audioFile.type,
+        name: audioFile.name,
+      });
+      setAudioText(text);
+    } catch (error) {
+      console.error("Transcription error:", error);
+      alert("Erreur lors de la transcription audio");
+    } finally {
+      setIsTranscribing(false);
+    }
   };
 
   const handleFileSelect = (file: File) => {
@@ -246,7 +369,7 @@ export default function WebAddImageModal({
       // ACTUALLY, checking `gedService.ts` would be ideal, but let's implement standard flow.
 
       const description = await describeImage(token, {
-        uri: imagePreviewUrl || "", // Pass the data URL which is a valid URI
+        uri: imageFile as any, // Pass the actual File object for web
         name: imageFile.name,
         type: imageFile.type,
       });
@@ -447,19 +570,53 @@ export default function WebAddImageModal({
                       borderRadius: "8px",
                     }}
                   />
-                  <button
-                    onClick={() => {
-                      setImageFile(null);
-                      setImagePreviewUrl(null);
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "10px",
+                      right: "10px",
+                      display: "flex",
+                      gap: "8px",
                     }}
-                    style={deleteButtonStyle}
                   >
-                    <Ionicons
-                      name="trash-outline"
-                      size={24}
-                      color={COLORS.white}
-                    />
-                  </button>
+                    <button
+                      onClick={handleGenerateDescription}
+                      disabled={isGeneratingDescription}
+                      style={{
+                        ...actionButtonStyle,
+                        cursor: isGeneratingDescription ? "default" : "pointer",
+                        opacity: isGeneratingDescription ? 0.7 : 1,
+                      }}
+                      title="Générer une description avec l'IA"
+                    >
+                      {isGeneratingDescription ? (
+                        <ActivityIndicator
+                          size="small"
+                          color={COLORS.primary}
+                        />
+                      ) : (
+                        <Ionicons
+                          name="sparkles-outline"
+                          size={20}
+                          color={COLORS.primary}
+                        />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setImageFile(null);
+                        setImagePreviewUrl(null);
+                      }}
+                      style={actionButtonStyle}
+                      title="Supprimer l'image"
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={20}
+                        color="#dc2626"
+                      />
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <label
@@ -495,6 +652,162 @@ export default function WebAddImageModal({
                 value={title}
                 onChangeText={setTitle}
               />
+
+              {/* Voice Note Recorder */}
+              {isRecording ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "12px",
+                    borderRadius: "10px",
+                    border: "1px solid #fca5a5",
+                    backgroundColor: "#fee2e2",
+                    gap: "8px",
+                    marginTop: "12px",
+                  }}
+                >
+                  <ActivityIndicator size="small" color="#dc2626" />
+                  <span
+                    style={{
+                      color: "#b91c1c",
+                      fontWeight: "600",
+                      fontSize: "16px",
+                    }}
+                  >
+                    {formatDuration(recordingDuration)}
+                  </span>
+                  <button
+                    onClick={stopRecording}
+                    style={{
+                      backgroundColor: "#dc2626",
+                      padding: "6px 12px",
+                      borderRadius: "99px",
+                      border: "none",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Ionicons name="stop-circle" size={24} color="#FFFFFF" />
+                  </button>
+                </div>
+              ) : audioUrl ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: "8px",
+                    marginTop: "12px",
+                  }}
+                >
+                  <button
+                    onClick={playAudio}
+                    style={{
+                      display: "flex",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "flex-start",
+                      padding: "12px 50px",
+                      borderRadius: "10px",
+                      border: "1px solid #a5b4fc",
+                      backgroundColor: "#e0e7ff",
+                      gap: "8px",
+                      cursor: "pointer",
+                      flex: 1,
+                    }}
+                  >
+                    <Ionicons name="play-circle" size={24} color="#11224e" />
+                    <span
+                      style={{
+                        color: "#3730a3",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {formatDuration(recordingDuration)}
+                    </span>
+                  </button>
+
+                  {isTranscribing ? (
+                    <div
+                      style={{
+                        padding: "12px 16px",
+                        borderRadius: "10px",
+                        border: "1px solid #f87b1b",
+                        backgroundColor: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      <ActivityIndicator size="small" color="#11224e" />
+                    </div>
+                  ) : (
+                    !audioText && (
+                      <button
+                        onClick={handleTranscribeAudio}
+                        style={{
+                          padding: "12px 50px",
+                          borderRadius: "10px",
+                          border: "1px solid #f87b1b",
+                          backgroundColor: "#fff",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                        title="Transcrire l'audio"
+                      >
+                        <Ionicons
+                          name="musical-notes"
+                          size={25}
+                          color="#f87b1b"
+                        />
+                      </button>
+                    )
+                  )}
+
+                  <button
+                    onClick={deleteAudio}
+                    style={{
+                      padding: "12px 16px",
+                      borderRadius: "10px",
+                      border: "1px solid #f87b1b",
+                      backgroundColor: "#fff",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                    title="Supprimer l'audio"
+                  >
+                    <Ionicons name="trash-outline" size={25} color="#dc2626" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={startRecording}
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "12px",
+                    borderRadius: "10px",
+                    border: "1px solid #f87b1b",
+                    backgroundColor: "#f8fafc",
+                    gap: "8px",
+                    marginTop: "12px",
+                    cursor: "pointer",
+                    width: "100%",
+                  }}
+                >
+                  <Ionicons name="mic-outline" size={24} color="#f87b1b" />
+                  <span style={{ color: "#11224e", fontWeight: "600" }}>
+                    Ajouter une note vocale
+                  </span>
+                </button>
+              )}
             </View>
 
             {/* Anomaly Type Selection */}
@@ -832,18 +1145,16 @@ const dropZoneStyle = {
   transition: "all 0.2s",
 };
 
-const deleteButtonStyle = {
-  position: "absolute" as const,
-  top: "10px",
-  right: "10px",
-  backgroundColor: "rgba(0,0,0,0.6)",
+const actionButtonStyle = {
+  backgroundColor: "rgba(255, 255, 255, 0.95)",
   padding: "8px",
-  borderRadius: "20px",
-  border: "none",
+  borderRadius: "8px",
+  border: "1px solid #e2e8f0",
   cursor: "pointer",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+  transition: "all 0.2s",
 };
 
 const scrollContainerStyle = {
