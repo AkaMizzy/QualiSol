@@ -1,25 +1,43 @@
-import API_CONFIG from '@/app/config/api';
-import AppHeader from '@/components/AppHeader';
-import AddImageModal from '@/components/galerie/AddImageModal';
-import GalerieCard from '@/components/galerie/GalerieCard';
-import PictureAnnotator from '@/components/PictureAnnotator';
-import PreviewModal from '@/components/PreviewModal';
-import { ICONS } from '@/constants/Icons';
-import { COLORS, FONT, SIZES } from '@/constants/theme';
-import { useAuth } from '@/contexts/AuthContext';
-import { getConnectivity } from '@/services/connectivity';
-import { Ged, createGed, getAllGeds, updateGedFile } from '@/services/gedService';
-import { createOfflineRecord, getOfflineRecords } from '@/services/offlineStorageService';
-import { startSyncMonitoring } from '@/services/syncService';
-import { OfflineRecord } from '@/types/offlineTypes';
-import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
-import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import API_CONFIG from "@/app/config/api";
+import AppHeader from "@/components/AppHeader";
+import AddImageModal from "@/components/galerie/AddImageModal";
+import GalerieCard from "@/components/galerie/GalerieCard";
+import PictureAnnotator from "@/components/PictureAnnotator";
+import PreviewModal from "@/components/PreviewModal";
+import { ICONS } from "@/constants/Icons";
+import { COLORS, FONT, SIZES } from "@/constants/theme";
+import { useAuth } from "@/contexts/AuthContext";
+import { getConnectivity } from "@/services/connectivity";
+import {
+    Ged,
+    createGed,
+    getAllGeds,
+    updateGedFile,
+} from "@/services/gedService";
+import {
+    createOfflineRecord,
+    getOfflineRecords,
+} from "@/services/offlineStorageService";
+import { startSyncMonitoring } from "@/services/syncService";
+import { OfflineRecord } from "@/types/offlineTypes";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+    Alert,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
+} from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const IMAGES_PER_PAGE = 2;
 
@@ -28,7 +46,9 @@ export default function GalerieScreen() {
   const { width } = useWindowDimensions();
   const [geds, setGeds] = useState<Ged[]>([]);
   const [offlineRecords, setOfflineRecords] = useState<OfflineRecord[]>([]);
-  const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
+  const [networkStatus, setNetworkStatus] = useState<"online" | "offline">(
+    "online",
+  );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -38,7 +58,9 @@ export default function GalerieScreen() {
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Ged | null>(null);
   const [isAnnotatorVisible, setIsAnnotatorVisible] = useState(false);
-  const [annotatorImageUri, setAnnotatorImageUri] = useState<string | null>(null);
+  const [annotatorImageUri, setAnnotatorImageUri] = useState<string | null>(
+    null,
+  );
 
   const isTablet = width >= 768;
 
@@ -49,7 +71,7 @@ export default function GalerieScreen() {
         const fetchedGeds = await getAllGeds(token);
         setGeds(fetchedGeds);
       } catch (error) {
-        console.error('Failed to fetch geds:', error);
+        console.error("Failed to fetch geds:", error);
       } finally {
         setLoading(false);
       }
@@ -61,7 +83,7 @@ export default function GalerieScreen() {
       const records = await getOfflineRecords();
       setOfflineRecords(records);
     } catch (error) {
-      console.error('Failed to fetch offline records:', error);
+      console.error("Failed to fetch offline records:", error);
     }
   }, []);
 
@@ -81,7 +103,9 @@ export default function GalerieScreen() {
     if (!token) return;
 
     const stopSyncMonitoring = startSyncMonitoring(token, (result) => {
-      console.log(`Sync completed: ${result.synced} synced, ${result.failed} failed`);
+      console.log(
+        `Sync completed: ${result.synced} synced, ${result.failed} failed`,
+      );
       // Refresh data after sync
       void fetchGeds();
       void fetchOfflineRecords();
@@ -98,35 +122,55 @@ export default function GalerieScreen() {
         setModalVisible(true);
         setIsFirstLoad(false);
       }
-    }, [isFirstLoad])
+    }, [isFirstLoad]),
   );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchGeds(), fetchOfflineRecords(), checkNetworkStatus()]);
+    await Promise.all([
+      fetchGeds(),
+      fetchOfflineRecords(),
+      checkNetworkStatus(),
+    ]);
     setRefreshing(false);
   }, [fetchGeds, fetchOfflineRecords, checkNetworkStatus]);
 
-  const handleAddImage = async (data: { title: string; description: string; image: ImagePicker.ImagePickerAsset | null; voiceNote: { uri: string; type: string; name: string; } | null; author: string; latitude: number | null; longitude: number | null; level: number; type: string | null; categorie: string | null; }, shouldClose: boolean) => {
+  const handleAddImage = async (
+    data: {
+      title: string;
+      description: string;
+      image: ImagePicker.ImagePickerAsset | null;
+      voiceNote: { uri: string; type: string; name: string } | null;
+      author: string;
+      latitude: number | null;
+      longitude: number | null;
+      level: number;
+      type: string | null;
+      categorie: string | null;
+      audiotxt?: string;
+      iatxt?: string;
+    },
+    shouldClose: boolean,
+  ) => {
     if (!token || !user || !data.image) return;
-    
+
     // Check network status
     const connectivity = await getConnectivity();
-    const isOnline = connectivity.status === 'online';
+    const isOnline = connectivity.status === "online";
 
     try {
       if (isOnline) {
         // ONLINE: Upload directly to backend
         const idsource = "00000000-0000-0000-0000-000000000000";
         const { uri } = data.image;
-        const fileName = uri.split('/').pop() || `qualiphoto_${Date.now()}.jpg`;
-        const fileType = fileName.split('.').pop() || 'jpeg';
+        const fileName = uri.split("/").pop() || `qualiphoto_${Date.now()}.jpg`;
+        const fileType = fileName.split(".").pop() || "jpeg";
 
         await createGed(token, {
           idsource,
           title: data.title,
           description: data.description,
-          kind: 'qualiphoto',
+          kind: "qualiphoto",
           author: data.author,
           latitude: data.latitude?.toString(),
           longitude: data.longitude?.toString(),
@@ -138,18 +182,20 @@ export default function GalerieScreen() {
             type: `image/${fileType}`,
             name: fileName,
           },
+          audiotxt: data.audiotxt,
+          iatxt: data.iatxt,
         });
 
         if (data.voiceNote) {
           await createGed(token, {
             idsource,
             title: `${data.title} - Voice Note`,
-            kind: 'voice_note',
+            kind: "voice_note",
             author: data.author,
             file: data.voiceNote,
           });
         }
-        
+
         // Refresh the gallery to show the newly uploaded picture
         await fetchGeds();
       } else {
@@ -158,7 +204,7 @@ export default function GalerieScreen() {
           idsource: "00000000-0000-0000-0000-000000 000000",
           title: data.title,
           description: data.description,
-          kind: 'qualiphoto',
+          kind: "qualiphoto",
           author: data.author,
           latitude: data.latitude?.toString(),
           longitude: data.longitude?.toString(),
@@ -171,31 +217,37 @@ export default function GalerieScreen() {
 
         // Refresh offline records
         await fetchOfflineRecords();
-        
+
         Alert.alert(
-          'Enregistré hors ligne', 
-          'Votre photo sera synchronisée automatiquement lorsque vous aurez une connexion Internet.'
+          "Enregistré hors ligne",
+          "Votre photo sera synchronisée automatiquement lorsque vous aurez une connexion Internet.",
         );
       }
-      
+
       if (shouldClose) {
         setModalVisible(false);
       }
     } catch (error: any) {
-      console.error('[Galerie] Failed to save/upload files:', error);
-      console.error('[Galerie] Error stack:', error.stack);
-      console.error('[Galerie] Error message:', error.message);
-      
+      console.error("[Galerie] Failed to save/upload files:", error);
+      console.error("[Galerie] Error stack:", error.stack);
+      console.error("[Galerie] Error message:", error.message);
+
       // Handle 403 error specifically for limit reached
-      if (error?.message?.includes('limit') || error?.message?.includes('Image limit')) {
-        Alert.alert('Limite atteinte', error?.message || 'Vous avez atteint votre limite d\'images.');
-      } else {
-        const errorMsg = error?.message || 'Erreur inconnue';
+      if (
+        error?.message?.includes("limit") ||
+        error?.message?.includes("Image limit")
+      ) {
         Alert.alert(
-          isOnline ? 'Upload Failed' : 'Erreur hors ligne', 
-          isOnline 
-            ? `Please try again. Error: ${errorMsg}` 
-            : `Impossible de sauvegarder localement. Erreur: ${errorMsg}`
+          "Limite atteinte",
+          error?.message || "Vous avez atteint votre limite d'images.",
+        );
+      } else {
+        const errorMsg = error?.message || "Erreur inconnue";
+        Alert.alert(
+          isOnline ? "Upload Failed" : "Erreur hors ligne",
+          isOnline
+            ? `Please try again. Error: ${errorMsg}`
+            : `Impossible de sauvegarder localement. Erreur: ${errorMsg}`,
         );
       }
     }
@@ -223,52 +275,65 @@ export default function GalerieScreen() {
     setSelectedItem(null);
   };
 
-  const handleSaveAnnotation = async (image: { uri: string; name: string; type: string }) => {
+  const handleSaveAnnotation = async (image: {
+    uri: string;
+    name: string;
+    type: string;
+  }) => {
     if (!token || !selectedItem) {
-      Alert.alert('Erreur', 'Impossible de sauvegarder, session invalide.');
+      Alert.alert("Erreur", "Impossible de sauvegarder, session invalide.");
       return;
     }
     try {
       const updatedGed = await updateGedFile(token, selectedItem.id, image);
-      setGeds(prevGeds =>
-        prevGeds.map(ged => (ged.id === updatedGed.id ? updatedGed : ged))
+      setGeds((prevGeds) =>
+        prevGeds.map((ged) => (ged.id === updatedGed.id ? updatedGed : ged)),
       );
       handleCloseAnnotator();
     } catch (error) {
-      console.error('Failed to save annotation:', error);
-      Alert.alert('Erreur', 'Échec de l\'enregistrement de l\'annotation.');
+      console.error("Failed to save annotation:", error);
+      Alert.alert("Erreur", "Échec de l'enregistrement de l'annotation.");
     }
   };
 
   // Merge online GEDs and offline records
   const allImages = useMemo(() => {
     const onlineImages = geds
-      .filter(g => g.kind === 'qualiphoto')
-      .map(g => ({ ...g, isOffline: false, localImagePath: undefined, syncStatus: undefined }));
-    
-    const offlineImages = offlineRecords.map(r => ({
+      .filter((g) => g.kind === "qualiphoto")
+      .map((g) => ({
+        ...g,
+        isOffline: false,
+        localImagePath: undefined,
+        syncStatus: undefined,
+      }));
+
+    const offlineImages = offlineRecords.map((r) => ({
       ...r,
       id: r.id,
       url: null,
       size: null,
-      status_id: '',
-      company_id: '',
+      status_id: "",
+      company_id: "",
       position: null,
       level: undefined,
       isOffline: true,
       localImagePath: r.local_image_path,
       syncStatus: r.sync_status,
     })) as any[];
-    
-    return [...onlineImages, ...offlineImages]
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    return [...onlineImages, ...offlineImages].sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
   }, [geds, offlineRecords]);
 
   const filteredImages = useMemo(() => {
     if (!selectedDate) return allImages;
 
     const selectedDay = selectedDate.toDateString();
-    return allImages.filter(img => new Date(img.created_at).toDateString() === selectedDay);
+    return allImages.filter(
+      (img) => new Date(img.created_at).toDateString() === selectedDay,
+    );
   }, [allImages, selectedDate]);
 
   const totalPages = Math.ceil(filteredImages.length / IMAGES_PER_PAGE);
@@ -286,23 +351,26 @@ export default function GalerieScreen() {
   }, [paginatedData, currentPage]);
 
   const voiceNotesBySource = useMemo(() => {
-    return geds.reduce((acc, curr) => {
-        if (curr.kind === 'voice_note') {
-            acc[curr.idsource] = true;
+    return geds.reduce(
+      (acc, curr) => {
+        if (curr.kind === "voice_note") {
+          acc[curr.idsource] = true;
         }
         return acc;
-    }, {} as Record<string, boolean>);
+      },
+      {} as Record<string, boolean>,
+    );
   }, [geds]);
 
   const handleNextPage = () => {
     if (currentPage < totalPages - 1) {
-      setCurrentPage(prev => prev + 1);
+      setCurrentPage((prev) => prev + 1);
     }
   };
 
   const handlePrevPage = () => {
     if (currentPage > 0) {
-      setCurrentPage(prev => prev - 1);
+      setCurrentPage((prev) => prev - 1);
     }
   };
 
@@ -314,7 +382,7 @@ export default function GalerieScreen() {
     setCurrentPage(0);
     hideDatePicker();
   };
-  
+
   const handleShowAll = () => {
     setSelectedDate(null);
     setCurrentPage(0);
@@ -322,7 +390,11 @@ export default function GalerieScreen() {
 
   const formattedDate = useMemo(() => {
     if (!selectedDate) return "Filtrer par date";
-    return selectedDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+    return selectedDate.toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   }, [selectedDate]);
 
   return (
@@ -330,26 +402,41 @@ export default function GalerieScreen() {
       <AppHeader user={user || undefined} />
       <View style={styles.filterContainer}>
         {/* Network status indicator - only show when offline */}
-        {networkStatus === 'offline' && (
+        {networkStatus === "offline" && (
           <View style={styles.networkBadge}>
-            <Ionicons 
-              name="cloud-offline-outline" 
-              size={16} 
-              color={COLORS.white} 
+            <Ionicons
+              name="cloud-offline-outline"
+              size={16}
+              color={COLORS.white}
             />
             <Text style={styles.networkText}>Hors ligne</Text>
           </View>
         )}
-        
-        <TouchableOpacity style={styles.datePickerButton} onPress={showDatePicker}>
-          <Ionicons name="calendar-outline" size={20} color={selectedDate ? COLORS.primary : COLORS.gray} />
-          <Text style={[styles.datePickerText, selectedDate && styles.datePickerTextActive]}>
+
+        <TouchableOpacity
+          style={styles.datePickerButton}
+          onPress={showDatePicker}
+        >
+          <Ionicons
+            name="calendar-outline"
+            size={20}
+            color={selectedDate ? COLORS.primary : COLORS.gray}
+          />
+          <Text
+            style={[
+              styles.datePickerText,
+              selectedDate && styles.datePickerTextActive,
+            ]}
+          >
             {formattedDate}
           </Text>
         </TouchableOpacity>
-        
+
         {selectedDate && (
-          <TouchableOpacity style={styles.showAllButton} onPress={handleShowAll}>
+          <TouchableOpacity
+            style={styles.showAllButton}
+            onPress={handleShowAll}
+          >
             <Text style={styles.showAllButtonText}>Afficher tout</Text>
           </TouchableOpacity>
         )}
@@ -378,7 +465,9 @@ export default function GalerieScreen() {
           <View style={styles.contentContainer}>
             {currentPageImages.length === 0 ? (
               <View style={styles.centered}>
-                <Text style={styles.emptyText}>Pas d&apos;images trouvées.</Text>
+                <Text style={styles.emptyText}>
+                  Pas d&apos;images trouvées.
+                </Text>
               </View>
             ) : (
               currentPageImages.map((item: any) => (
@@ -395,21 +484,24 @@ export default function GalerieScreen() {
               ))
             )}
           </View>
-          
+
           {totalPages > 1 && (
             <View style={styles.paginationContainer}>
               <TouchableOpacity
-                style={[styles.pageButton, currentPage === 0 && styles.pageButtonDisabled]}
+                style={[
+                  styles.pageButton,
+                  currentPage === 0 && styles.pageButtonDisabled,
+                ]}
                 onPress={handlePrevPage}
                 disabled={currentPage === 0}
               >
-                <Ionicons 
-                  name="chevron-back" 
-                  size={24} 
-                  color={currentPage === 0 ? COLORS.gray : COLORS.primary} 
+                <Ionicons
+                  name="chevron-back"
+                  size={24}
+                  color={currentPage === 0 ? COLORS.gray : COLORS.primary}
                 />
               </TouchableOpacity>
-              
+
               <View style={styles.pageIndicator}>
                 <Text style={styles.pageText}>
                   {currentPage + 1} / {totalPages}
@@ -438,23 +530,33 @@ export default function GalerieScreen() {
                   })}
                 </View>
               </View>
-              
+
               <TouchableOpacity
-                style={[styles.pageButton, currentPage === totalPages - 1 && styles.pageButtonDisabled]}
+                style={[
+                  styles.pageButton,
+                  currentPage === totalPages - 1 && styles.pageButtonDisabled,
+                ]}
                 onPress={handleNextPage}
                 disabled={currentPage === totalPages - 1}
               >
-                <Ionicons 
-                  name="chevron-forward" 
-                  size={24} 
-                  color={currentPage === totalPages - 1 ? COLORS.gray : COLORS.primary} 
+                <Ionicons
+                  name="chevron-forward"
+                  size={24}
+                  color={
+                    currentPage === totalPages - 1
+                      ? COLORS.gray
+                      : COLORS.primary
+                  }
                 />
               </TouchableOpacity>
             </View>
           )}
         </ScrollView>
       )}
-      <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => setModalVisible(true)}
+      >
         <Image source={ICONS.cameraPng} style={{ width: 32, height: 32 }} />
       </TouchableOpacity>
       <AddImageModal
@@ -468,7 +570,7 @@ export default function GalerieScreen() {
           visible={!!selectedItem && !isAnnotatorVisible}
           onClose={closePreview}
           mediaUrl={`${API_CONFIG.BASE_URL}${selectedItem.url}`}
-          mediaType={selectedItem.kind === 'qualiphoto' ? 'image' : 'file'}
+          mediaType={selectedItem.kind === "qualiphoto" ? "image" : "file"}
           title={selectedItem.title}
           onAnnotate={handleOpenAnnotator}
           description={selectedItem.description}
@@ -486,7 +588,7 @@ export default function GalerieScreen() {
             baseImageUri={annotatorImageUri}
             onClose={handleCloseAnnotator}
             onSaved={handleSaveAnnotation}
-            title={`Annoter: ${selectedItem?.title || 'Photo'}`}
+            title={`Annoter: ${selectedItem?.title || "Photo"}`}
           />
         )}
       </Modal>
@@ -512,20 +614,20 @@ const styles = StyleSheet.create({
   },
   centered: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 50,
   },
   addButton: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 50,
     right: 30,
     width: 60,
     height: 60,
     borderRadius: 30,
     backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 8,
   },
   emptyText: {
@@ -534,9 +636,9 @@ const styles = StyleSheet.create({
     color: COLORS.gray,
   },
   filterContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    alignItems: "center",
     paddingVertical: SIZES.medium,
     paddingHorizontal: SIZES.large,
     backgroundColor: COLORS.white,
@@ -544,8 +646,8 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.lightWhite,
   },
   datePickerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: COLORS.lightWhite,
     paddingHorizontal: SIZES.large,
     paddingVertical: SIZES.small + 2,
@@ -580,14 +682,14 @@ const styles = StyleSheet.create({
   },
   skeletonCard: {
     height: 200,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: "#E0E0E0",
     borderRadius: SIZES.medium,
     marginBottom: SIZES.medium,
   },
   paginationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: SIZES.large,
     paddingVertical: SIZES.medium,
     backgroundColor: COLORS.white,
@@ -603,7 +705,7 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   pageIndicator: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   pageText: {
     fontFamily: FONT.bold,
@@ -612,8 +714,8 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.small,
   },
   dotsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   dot: {
     width: 8,
@@ -629,13 +731,13 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   networkBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: SIZES.medium,
     paddingVertical: SIZES.small,
     borderRadius: SIZES.large,
     marginRight: SIZES.small,
-    backgroundColor: '#ef4444',
+    backgroundColor: "#ef4444",
   },
   networkText: {
     fontFamily: FONT.medium,

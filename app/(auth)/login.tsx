@@ -182,7 +182,7 @@ export default function LoginScreen() {
                   style={styles.logoContainer}
                 >
                   <Image
-                    source={ICONS.newIcon}
+                    source={ICONS.authIcon}
                     style={styles.logoImage}
                     contentFit="contain"
                   />

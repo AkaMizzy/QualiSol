@@ -432,7 +432,7 @@ export default function DashboardScreen() {
         } else if (item.title === "Calendrier") {
           LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
           setIsCalendarVisible((prevState) => !prevState);
-        } else if (item.title === "galerie") {
+        } else if (item.title === "Galerie") {
           router.push("/galerie");
         } else if (item.title === "Paramètres") {
           router.push("/parameters");

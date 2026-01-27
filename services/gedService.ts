@@ -13,6 +13,8 @@ export type CreateGedInput = {
   type?: string;
   categorie?: string;
   assigned?: string;
+  audiotxt?: string;
+  iatxt?: string;
   file?: {
     uri: string | File; // Can be a string (React Native) or File object (Web)
     type: string;
@@ -38,6 +40,8 @@ export interface Ged {
   type?: string;
   categorie?: string;
   assigned?: string;
+  audiotxt?: string;
+  iatxt?: string;
   created_at: string;
   value?: string;
 }
@@ -80,6 +84,14 @@ export async function createGed(
 
   if (input.assigned) {
     formData.append("assigned", input.assigned);
+  }
+
+  if (input.audiotxt) {
+    formData.append("audiotxt", input.audiotxt);
+  }
+
+  if (input.iatxt) {
+    formData.append("iatxt", input.iatxt);
   }
 
   // Append file if provided
