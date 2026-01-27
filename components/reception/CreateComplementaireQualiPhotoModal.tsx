@@ -454,16 +454,19 @@ function CreateComplementaireQualiPhotoForm({
               />
               <View style={{ gap: 12 }}>
                 <Text style={styles.label}>Transcription Audio</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder="Transcription automatique..."
-                  placeholderTextColor="#9ca3af"
-                  value={audioText}
-                  onChangeText={setAudioText}
-                  multiline
-                />
+                <View style={[styles.inputWrap, { alignItems: "flex-start" }]}>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Transcription automatique..."
+                    placeholderTextColor="#9ca3af"
+                    value={audioText}
+                    onChangeText={setAudioText}
+                    multiline
+                  />
+                </View>
+
                 <Text style={styles.label}>Description IA</Text>
-                <View style={{ position: "relative" }}>
+                <View style={[styles.inputWrap, { alignItems: "flex-start" }]}>
                   <TextInput
                     style={[styles.input, styles.textArea]}
                     placeholder="Description générée par l'IA..."

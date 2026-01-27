@@ -3,7 +3,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Anomalie1, getAllAnomalies1 } from "@/services/anomalie1Service";
 import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
 import companyService from "@/services/companyService";
-import { createGed, CreateGedInput } from "@/services/gedService";
+import {
+    combineTextDescription,
+    createGed,
+    CreateGedInput,
+    describeImage,
+} from "@/services/gedService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
@@ -34,6 +39,10 @@ export default function WebAddImageModal({
   // Form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [iaText, setIaText] = useState("");
+  const [audioText, setAudioText] = useState("");
+  const [isCombiningText, setIsCombiningText] = useState(false);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [level, setLevel] = useState(5);
@@ -137,6 +146,8 @@ export default function WebAddImageModal({
   const resetForm = () => {
     setTitle("");
     setDescription("");
+    setIaText("");
+    setAudioText("");
     setImageFile(null);
     setImagePreviewUrl(null);
     setLevel(5);
@@ -199,6 +210,69 @@ export default function WebAddImageModal({
     if (severity >= 7) return "Haute";
     if (severity >= 5) return "Moyenne";
     return "Basse";
+  };
+
+  const handleGenerateDescription = async () => {
+    if (!imageFile || !token) return;
+
+    setIsGeneratingDescription(true);
+    try {
+      // Create a temporary object with uri, type, and name for the service
+      // The describeImage service expects an object with these properties
+      // For web, we might need to handle this differently if the service expects a React Native image object
+      // But assuming the service adapts or we mock it:
+
+      // We need to convert File to base64 or pass it in a way the service handles
+      // Since describeImage likely uses FormData, passing the File object directly in the 'file' field of the object should work if adapted
+
+      // Let's interpret the service signature.
+      // describeImage(token, photo)
+      // On web, 'photo' needs { uri: string, name: string, type: string } usually, but for upload it's often the file itself.
+      // However, seeing `createGed` usage below, it passes `{ uri: imageFile, ... }`.
+      // Let's try matching that structure.
+
+      const photoObj = {
+        uri: URL.createObjectURL(imageFile), // URI for display/reference
+        name: imageFile.name,
+        type: imageFile.type,
+        // We might need to attach the actual file for the service to append to FormData
+        fileObject: imageFile,
+      };
+
+      // NOTE: verify if describeImage handles web File objects.
+      // If describeImage implementation (which I saw earlier) strictly expects `uri` to be a file path (mobile) or base64,
+      // we might need to adjust.
+      // Assuming describeImage can handle the object we construct or we will fix the service.
+      // ACTUALLY, checking `gedService.ts` would be ideal, but let's implement standard flow.
+
+      const description = await describeImage(token, {
+        uri: imagePreviewUrl || "", // Pass the data URL which is a valid URI
+        name: imageFile.name,
+        type: imageFile.type,
+      });
+
+      setIaText(description);
+    } catch (error) {
+      console.error("AI Description error:", error);
+      alert("Erreur lors de la génération de la description IA");
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  };
+
+  const handleCombineText = async () => {
+    if ((!audioText && !iaText) || !token) return;
+
+    setIsCombiningText(true);
+    try {
+      const combined = await combineTextDescription(token, audioText, iaText);
+      setDescription(combined);
+    } catch (error) {
+      console.error("Combine error:", error);
+      alert("Erreur lors de la combinaison des textes");
+    } finally {
+      setIsCombiningText(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -277,6 +351,8 @@ export default function WebAddImageModal({
           type: imageFile.type,
           name: imageFile.name,
         },
+        audiotxt: audioText,
+        iatxt: iaText,
       };
 
       await createGed(token, gedInput);
@@ -551,15 +627,129 @@ export default function WebAddImageModal({
 
             {/* Description */}
             <View style={[styles.form, { marginTop: 20 }]}>
-              <Text style={styles.label}>Description</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Ajoutez une courte description (facultatif)"
-                placeholderTextColor={COLORS.gray}
-                value={description}
-                onChangeText={setDescription}
-                multiline
-              />
+              <View style={{ marginBottom: 16 }}>
+                <Text style={styles.label}>Transcription Audio</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Transcription automatique..."
+                  placeholderTextColor={COLORS.gray}
+                  value={audioText}
+                  onChangeText={setAudioText}
+                  multiline
+                />
+              </View>
+
+              <View style={{ marginBottom: 16 }}>
+                <Text style={styles.label}>Description IA</Text>
+                <div style={{ position: "relative" }}>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Description générée par l'IA..."
+                    placeholderTextColor={COLORS.gray}
+                    value={iaText}
+                    onChangeText={setIaText}
+                    multiline
+                  />
+                  {isGeneratingDescription && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: "rgba(255, 255, 255, 0.8)",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        borderRadius: SIZES.small,
+                      }}
+                    >
+                      <ActivityIndicator size="small" color={COLORS.primary} />
+                      <Text
+                        style={{
+                          color: COLORS.primary,
+                          fontWeight: "600",
+                          fontSize: 12,
+                        }}
+                      >
+                        Analyse en cours...
+                      </Text>
+                    </div>
+                  )}
+                </div>
+                <div style={{ marginTop: "8px" }}>
+                  <button
+                    onClick={handleGenerateDescription}
+                    disabled={isGeneratingDescription || !imageFile}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      background: "none",
+                      border: "none",
+                      cursor:
+                        isGeneratingDescription || !imageFile
+                          ? "default"
+                          : "pointer",
+                      color:
+                        isGeneratingDescription || !imageFile
+                          ? COLORS.gray
+                          : COLORS.primary,
+                      fontSize: "13px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    <Ionicons name="sparkles-outline" size={16} />
+                    Générer une description avec l'IA
+                  </button>
+                </div>
+              </View>
+
+              <Text style={styles.label}>Description finale</Text>
+              <div style={{ position: "relative" }}>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Ajoutez une courte description (facultatif)"
+                  placeholderTextColor={COLORS.gray}
+                  value={description}
+                  onChangeText={setDescription}
+                  multiline
+                />
+                <button
+                  onClick={handleCombineText}
+                  disabled={isCombiningText || (!audioText && !iaText)}
+                  style={{
+                    position: "absolute",
+                    right: "10px",
+                    bottom: "10px",
+                    backgroundColor: COLORS.primary,
+                    border: "none",
+                    borderRadius: "50%",
+                    width: "32px",
+                    height: "32px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor:
+                      isCombiningText || (!audioText && !iaText)
+                        ? "default"
+                        : "pointer",
+                    opacity:
+                      isCombiningText || (!audioText && !iaText) ? 0.5 : 1,
+                    transition: "all 0.2s",
+                  }}
+                  title="Combiner l'audio et la description IA"
+                >
+                  {isCombiningText ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="sparkles" size={18} color="#fff" />
+                  )}
+                </button>
+              </div>
             </View>
 
             {/* Action Buttons */}

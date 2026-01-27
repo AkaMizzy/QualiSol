@@ -6,42 +6,42 @@ import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
 import companyService from "@/services/companyService";
 import { Folder } from "@/services/folderService";
 import {
-    CreateGedInput,
-    Ged,
-    combineTextDescription,
-    createGed,
-    describeImage,
-    getAllGeds,
+  CreateGedInput,
+  Ged,
+  combineTextDescription,
+  createGed,
+  describeImage,
+  getAllGeds,
 } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    GestureHandlerRootView,
-    PanGestureHandler,
-    PanGestureHandlerGestureEvent,
+  GestureHandlerRootView,
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CustomAlert from "../CustomAlert";
@@ -955,17 +955,19 @@ export function CreateChildQualiPhotoForm({
 
               <View style={{ marginTop: 16, gap: 12 }}>
                 <Text style={styles.label}>Transcription Audio</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder="Transcription automatique..."
-                  placeholderTextColor="#9ca3af"
-                  value={audioText}
-                  onChangeText={setAudioText}
-                  multiline
-                />
+                <View style={[styles.inputWrap, { alignItems: "flex-start" }]}>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Transcription automatique..."
+                    placeholderTextColor="#9ca3af"
+                    value={audioText}
+                    onChangeText={setAudioText}
+                    multiline
+                  />
+                </View>
 
                 <Text style={styles.label}>Description IA</Text>
-                <View style={{ position: "relative" }}>
+                <View style={[styles.inputWrap, { alignItems: "flex-start" }]}>
                   <TextInput
                     style={[styles.input, styles.textArea]}
                     placeholder="Description générée par l'IA..."
@@ -1311,8 +1313,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 10,
     gap: 8,
-    
-    
   },
   descriptionLoadingText: {
     color: "#11224e",
