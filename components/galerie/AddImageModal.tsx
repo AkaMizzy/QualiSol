@@ -12,6 +12,7 @@ import {
 } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
+import { ResizeMode, Video } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -628,25 +629,13 @@ export default function AddImageModal({
                 >
                   {image ? (
                     image.type === "video" ? (
-                      <View
-                        style={[
-                          styles.imagePreview,
-                          {
-                            justifyContent: "center",
-                            alignItems: "center",
-                            backgroundColor: "#000",
-                          },
-                        ]}
-                      >
-                        <Ionicons
-                          name="play-circle-outline"
-                          size={64}
-                          color="#fff"
-                        />
-                        <Text style={{ color: "#fff", marginTop: 10 }}>
-                          Vidéo sélectionnée
-                        </Text>
-                      </View>
+                      <Video
+                        source={{ uri: image.uri }}
+                        style={styles.imagePreview}
+                        useNativeControls
+                        resizeMode={ResizeMode.CONTAIN}
+                        isLooping
+                      />
                     ) : (
                       <Image
                         source={{ uri: image.uri }}
@@ -895,45 +884,24 @@ export default function AddImageModal({
                 />
 
                 <Text style={styles.label}>Description IA</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder="Description générée par l'IA..."
-                  placeholderTextColor={COLORS.gray}
-                  value={iaText}
-                  onChangeText={setIaText}
-                  multiline
-                />
-
-                <TouchableOpacity
-                  style={[
-                    styles.button,
-                    { backgroundColor: COLORS.secondary, marginBottom: 15 },
-                  ]}
-                  onPress={handleCombineText}
-                  disabled={isCombiningText || (!audioText && !iaText)}
-                >
-                  {isCombiningText ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 8,
-                      }}
-                    >
-                      <Ionicons
-                        name="git-merge-outline"
-                        size={20}
-                        color="#fff"
-                      />
-                      <Text style={[styles.buttonText, { color: "#fff" }]}>
-                        Combiner & Générer Description
+                <View style={{ position: "relative" }}>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Description générée par l'IA..."
+                    placeholderTextColor={COLORS.gray}
+                    value={iaText}
+                    onChangeText={setIaText}
+                    multiline
+                  />
+                  {isGeneratingDescription && (
+                    <View style={styles.descriptionLoadingOverlay}>
+                      <ActivityIndicator size="small" color={COLORS.primary} />
+                      <Text style={styles.descriptionLoadingText}>
+                        Analyse en cours...
                       </Text>
                     </View>
                   )}
-                </TouchableOpacity>
+                </View>
 
                 <Text style={styles.label}>Description finale</Text>
                 <View style={{ position: "relative" }}>
@@ -944,16 +912,26 @@ export default function AddImageModal({
                     value={description}
                     onChangeText={setDescription}
                     multiline
-                    editable={!isGeneratingDescription}
                   />
-                  {isGeneratingDescription && (
-                    <View style={styles.descriptionLoadingOverlay}>
-                      <ActivityIndicator size="small" color={COLORS.primary} />
-                      <Text style={styles.descriptionLoadingText}>
-                        Analyse en cours...
-                      </Text>
-                    </View>
-                  )}
+                  <TouchableOpacity
+                    style={{
+                      position: "absolute",
+                      right: 10,
+                      bottom: 10,
+                      backgroundColor: COLORS.secondary,
+                      padding: 8,
+                      borderRadius: 20,
+                      opacity: !audioText && !iaText ? 0.5 : 1,
+                    }}
+                    onPress={handleCombineText}
+                    disabled={isCombiningText || (!audioText && !iaText)}
+                  >
+                    {isCombiningText ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Ionicons name="sparkles" size={20} color="#fff" />
+                    )}
+                  </TouchableOpacity>
                 </View>
               </View>
 
