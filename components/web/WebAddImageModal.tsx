@@ -4,6 +4,7 @@ import { Anomalie1, getAllAnomalies1 } from "@/services/anomalie1Service";
 import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
 import companyService from "@/services/companyService";
 import {
+  analyzeImageWithAnnotation,
   combineTextDescription,
   createGed,
   CreateGedInput,
@@ -22,7 +23,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 interface WebAddImageModalProps {
@@ -45,6 +46,9 @@ export default function WebAddImageModal({
   const [audioText, setAudioText] = useState("");
   const [isCombiningText, setIsCombiningText] = useState(false);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [annotatedImage, setAnnotatedImage] = useState<string | null>(null);
+  const [isFullScreenImageVisible, setIsFullScreenImageVisible] =
+    useState(false);
 
   // Audio recording state
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -206,6 +210,7 @@ export default function WebAddImageModal({
     setIsTranscribing(false);
     setMediaRecorder(null);
     setAudioChunks([]);
+    setAnnotatedImage(null);
   };
 
   const formatDuration = (seconds: number) => {
@@ -385,15 +390,33 @@ export default function WebAddImageModal({
       // Assuming describeImage can handle the object we construct or we will fix the service.
       // ACTUALLY, checking `gedService.ts` would be ideal, but let's implement standard flow.
 
-      const description = await describeImage(token, {
+      // Use the new analyzeImageWithAnnotation endpoint
+      const result = await analyzeImageWithAnnotation(token, {
         uri: imageFile as any, // Pass the actual File object for web
         name: imageFile.name,
         type: imageFile.type,
       });
 
-      setIaText(description);
+      setIaText(result.description);
+      setAnnotatedImage(result.annotatedImage);
     } catch (error) {
       console.error("AI Description error:", error);
+
+      // Try fallback to simple description
+      try {
+        console.log("Falling back to standard description...");
+        const description = await describeImage(token, {
+          uri: imageFile as any,
+          name: imageFile.name,
+          type: imageFile.type,
+        });
+        setIaText(description);
+        setAnnotatedImage(null);
+        return;
+      } catch (fallbackErr) {
+        console.error("Fallback failed", fallbackErr);
+      }
+
       alert("Erreur lors de la génération de la description IA");
     } finally {
       setIsGeneratingDescription(false);
@@ -658,6 +681,39 @@ export default function WebAddImageModal({
                 </label>
               )}
             </div>
+
+            {/* Annotated Image Preview */}
+            {annotatedImage && (
+              <View style={styles.annotatedImageContainer}>
+                <View style={styles.annotatedImageHeader}>
+                  <Ionicons
+                    name="analytics-outline"
+                    size={20}
+                    color="#ef4444"
+                  />
+                  <Text style={styles.annotatedImageTitle}>
+                    Analyse IA - Anomalies Détectées
+                  </Text>
+                </View>
+                <div style={styles.annotatedImageWrapper as any}>
+                  <img
+                    src={annotatedImage}
+                    alt="Annotated Analysis"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                      cursor: "zoom-in",
+                    }}
+                    onClick={() => setIsFullScreenImageVisible(true)}
+                  />
+                </div>
+                <Text style={styles.annotatedImageNote}>
+                  Cliquez sur l'image pour l'agrandir 🔍
+                </Text>
+               
+              </View>
+            )}
 
             {/* Title Input */}
             <View style={styles.form}>
@@ -1239,6 +1295,34 @@ export default function WebAddImageModal({
           </View>
         </View>
       </Modal>
+
+      {/* Full Screen Image Modal */}
+      <Modal
+        visible={isFullScreenImageVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsFullScreenImageVisible(false)}
+      >
+        <View style={styles.fullScreenModalContainer}>
+          <TouchableOpacity
+            style={styles.fullScreenModalCloseButton}
+            onPress={() => setIsFullScreenImageVisible(false)}
+          >
+            <Ionicons name="close-circle" size={40} color="white" />
+          </TouchableOpacity>
+          {annotatedImage && (
+            <img
+              src={annotatedImage}
+              alt="Full Screen Annotated"
+              style={{
+                maxWidth: "90%",
+                maxHeight: "90%",
+                objectFit: "contain",
+              }}
+            />
+          )}
+        </View>
+      </Modal>
     </Modal>
   );
 }
@@ -1661,5 +1745,57 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#fff",
+  },
+  // Annotated Image styles
+  annotatedImageContainer: {
+    width: "100%",
+    backgroundColor: "#fef2f2",
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: "#ef4444",
+    padding: 16,
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  annotatedImageHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  annotatedImageTitle: {
+    fontWeight: "700",
+    fontSize: 16,
+    color: "#ef4444",
+  },
+  annotatedImageWrapper: {
+    width: "100%",
+    height: 180,
+    backgroundColor: "#ffffff",
+    borderRadius: 8,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    marginBottom: 8,
+  },
+  annotatedImageNote: {
+    fontSize: 12,
+    color: "#991b1b",
+    fontStyle: "italic",
+    marginTop: 4,
+    textAlign: "center",
+  },
+  fullScreenModalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  fullScreenModalCloseButton: {
+    position: "absolute",
+    top: 50,
+    right: 30,
+    zIndex: 100,
+    cursor: "pointer",
   },
 });

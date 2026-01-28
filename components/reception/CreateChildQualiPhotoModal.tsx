@@ -8,6 +8,7 @@ import { Folder } from "@/services/folderService";
 import {
   CreateGedInput,
   Ged,
+  analyzeImageWithAnnotation,
   combineTextDescription,
   createGed,
   describeImage,
@@ -83,6 +84,8 @@ export function CreateChildQualiPhotoForm({
   const [, setLocationStatus] = useState<
     "idle" | "fetching" | "success" | "error"
   >("idle");
+  const [annotatedImage, setAnnotatedImage] = useState<string | null>(null);
+  const [fullScreenImageVisible, setFullScreenImageVisible] = useState(false);
   const [creationCount, setCreationCount] = useState(0);
   const [authorName, setAuthorName] = useState("");
   const [audioUri, setAudioUri] = useState<string | null>(null);
@@ -263,10 +266,23 @@ export function CreateChildQualiPhotoForm({
     setIsGeneratingDescription(true);
     setError(null);
     try {
-      const description = await describeImage(token, photo);
-      setIaText(description);
+      // Use the new analyzeImageWithAnnotation endpoint
+      const result = await analyzeImageWithAnnotation(token, photo);
+      setIaText(result.description);
+      setAnnotatedImage(result.annotatedImage);
     } catch (e: any) {
       console.error("AI Description Error:", e);
+
+      // Try fallback to simple description if annotation fails
+      try {
+        console.log("Falling back to standard description...");
+        const description = await describeImage(token, photo);
+        setIaText(description);
+        setAnnotatedImage(null);
+        return;
+      } catch (fallbackErr) {
+        console.error("Fallback failed:", fallbackErr);
+      }
 
       // Check if it's an AI refusal
       const errorData = e?.response?.data;
@@ -332,6 +348,8 @@ export function CreateChildQualiPhotoForm({
     setAssigned("");
     setAudioText("");
     setIaText("");
+    setAnnotatedImage(null);
+    setFullScreenImageVisible(false);
     scrollViewRef.current?.scrollTo({ y: 0, animated: true }); // Scroll to top
   };
 
@@ -684,6 +702,39 @@ export function CreateChildQualiPhotoForm({
                     Ajouter une Situation avant
                   </Text>
                 </TouchableOpacity>
+              )}
+
+              {/* Annotated Image Preview */}
+              {annotatedImage && photo?.type !== "video" && (
+                <View style={styles.annotatedImageContainer}>
+                  <View style={styles.annotatedImageHeader}>
+                    <Ionicons
+                      name="analytics-outline"
+                      size={20}
+                      color="#ef4444"
+                    />
+                    <Text style={styles.annotatedImageTitle}>
+                      Analyse IA - Anomalies Détectées
+                    </Text>
+                  </View>
+                  <View style={styles.annotatedImageWrapper}>
+                    <TouchableOpacity
+                      onPress={() => setFullScreenImageVisible(true)}
+                      activeOpacity={0.9}
+                      style={{ width: "100%", height: "100%" }}
+                    >
+                      <Image
+                        source={{ uri: annotatedImage }}
+                        style={styles.annotatedImagePreview}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.annotatedImageNote}>
+                    Appuyez l'image pour l'agrandir 🔍
+                  </Text>
+                  
+                </View>
               )}
 
               <View style={{ marginTop: 16, gap: 12 }}>
@@ -1128,6 +1179,30 @@ export function CreateChildQualiPhotoForm({
           />
         </Modal>
       )}
+
+      {/* Full Screen Image Modal */}
+      <Modal
+        visible={fullScreenImageVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setFullScreenImageVisible(false)}
+      >
+        <View style={styles.fullScreenModalContainer}>
+          <TouchableOpacity
+            style={styles.fullScreenModalCloseButton}
+            onPress={() => setFullScreenImageVisible(false)}
+          >
+            <Ionicons name="close-circle" size={40} color="white" />
+          </TouchableOpacity>
+          {annotatedImage && (
+            <Image
+              source={{ uri: annotatedImage }}
+              style={styles.fullScreenImage}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
 
       {/* Text Field Editor Popup Modal */}
       <Modal
@@ -1817,5 +1892,63 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "700",
     fontSize: 14,
+  },
+  // Annotated Image Preview Styles
+  annotatedImageContainer: {
+    width: "100%",
+    backgroundColor: "#fef2f2",
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: "#ef4444",
+    padding: 16,
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  annotatedImageHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  annotatedImageTitle: {
+    fontWeight: "700",
+    fontSize: 16,
+    color: "#ef4444",
+  },
+  annotatedImageWrapper: {
+    width: "100%",
+    height: 180,
+    backgroundColor: "#ffffff",
+    borderRadius: 8,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  annotatedImagePreview: {
+    width: "100%",
+    height: "100%",
+  },
+  annotatedImageNote: {
+    fontSize: 12,
+    color: "#991b1b",
+    fontStyle: "italic",
+    marginTop: 8,
+    textAlign: "center",
+  },
+  fullScreenModalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  fullScreenModalCloseButton: {
+    position: "absolute",
+    top: 50,
+    right: 30,
+    zIndex: 1,
+  },
+  fullScreenImage: {
+    width: "100%",
+    height: "100%",
   },
 });
