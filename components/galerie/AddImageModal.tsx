@@ -20,6 +20,7 @@ import {
     ActivityIndicator,
     Alert,
     Image,
+    Keyboard,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -28,6 +29,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
+    TouchableWithoutFeedback,
     View,
 } from "react-native";
 import {
@@ -1022,7 +1024,15 @@ export default function AddImageModal({
         transparent
         onRequestClose={() => setEditingField(null)}
       >
-        <View style={styles.textEditorModalContainer}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.textEditorModalContainer}
+        >
+          <TouchableOpacity
+            style={styles.textEditorBackdrop}
+            activeOpacity={1}
+            onPress={() => setEditingField(null)}
+          />
           <View style={styles.textEditorModalContent}>
             <View style={styles.textEditorHeader}>
               <Text style={styles.textEditorTitle}>
@@ -1037,20 +1047,31 @@ export default function AddImageModal({
               </TouchableOpacity>
             </View>
 
-            <TextInput
-              style={styles.textEditorInput}
-              placeholder="Saisissez votre texte..."
-              placeholderTextColor={COLORS.gray}
-              value={tempFieldValue}
-              onChangeText={setTempFieldValue}
-              multiline
-              autoFocus
-            />
+            <ScrollView
+              style={styles.textEditorScrollContainer}
+              contentContainerStyle={styles.textEditorScrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <View style={styles.textEditorInputContainer}>
+                  <TextInput
+                    style={styles.textEditorInput}
+                    placeholder="Saisissez votre texte..."
+                    placeholderTextColor={COLORS.gray}
+                    value={tempFieldValue}
+                    onChangeText={setTempFieldValue}
+                    multiline
+                  />
+                </View>
+              </TouchableWithoutFeedback>
+            </ScrollView>
 
             <View style={styles.textEditorButtons}>
               <TouchableOpacity
                 style={[styles.textEditorButton, styles.textEditorCancelButton]}
                 onPress={() => {
+                  Keyboard.dismiss();
                   setEditingField(null);
                   setTempFieldValue("");
                 }}
@@ -1067,6 +1088,7 @@ export default function AddImageModal({
                   } else if (editingField === "description") {
                     setDescription(tempFieldValue);
                   }
+                  Keyboard.dismiss();
                   setEditingField(null);
                   setTempFieldValue("");
                 }}
@@ -1075,7 +1097,7 @@ export default function AddImageModal({
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
       <CustomAlert
         visible={alertInfo.visible}
@@ -1258,9 +1280,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: SIZES.large,
   },
+  textEditorBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
   textEditorModalContent: {
     width: "100%",
-    maxHeight: "80%",
+    height: "80%",
     backgroundColor: COLORS.white,
     borderRadius: SIZES.large,
     padding: SIZES.large,
@@ -1276,9 +1301,19 @@ const styles = StyleSheet.create({
     fontSize: SIZES.large,
     color: COLORS.primary,
   },
+  textEditorScrollContainer: {
+    flex: 1,
+    width: "100%",
+  },
+  textEditorScrollContent: {
+    flexGrow: 1,
+  },
+  textEditorInputContainer: {
+    flex: 1,
+  },
   textEditorInput: {
     width: "100%",
-    height: 400,
+    minHeight: 400,
     padding: SIZES.medium,
     backgroundColor: COLORS.lightWhite,
     borderRadius: SIZES.small,
@@ -1287,7 +1322,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.gray2,
     textAlignVertical: "top",
-    marginBottom: SIZES.medium,
   },
   textEditorButtons: {
     flexDirection: "row",
