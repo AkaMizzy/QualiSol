@@ -6,9 +6,9 @@ import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
 import companyService from "@/services/companyService";
 import { getConnectivity } from "@/services/connectivity";
 import {
-  combineTextDescription,
-  describeImage,
-  getAllGeds,
+    combineTextDescription,
+    describeImage,
+    getAllGeds,
 } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,22 +17,22 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import {
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
+    PanGestureHandler,
+    PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import CustomAlert from "../CustomAlert";
 
@@ -106,6 +106,12 @@ export default function AddImageModal({
   );
 
   const [isCombiningText, setIsCombiningText] = useState(false);
+
+  // Popup modal states
+  const [editingField, setEditingField] = useState<
+    "audio" | "ia" | "description" | null
+  >(null);
+  const [tempFieldValue, setTempFieldValue] = useState<string>("");
 
   const handleCombineText = async () => {
     if (!audioText && !iaText) {
@@ -874,65 +880,113 @@ export default function AddImageModal({
 
               <View style={[styles.form, { marginTop: 20 }]}>
                 <Text style={styles.label}>Transcription Audio</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder="Transcription automatique..."
-                  placeholderTextColor={COLORS.gray}
-                  value={audioText}
-                  onChangeText={setAudioText}
-                  multiline
-                />
+                <TouchableOpacity
+                  style={styles.fieldPreview}
+                  onPress={() => {
+                    setEditingField("audio");
+                    setTempFieldValue(audioText);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.fieldPreviewText,
+                      !audioText && styles.fieldPreviewPlaceholder,
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {audioText || "Transcription automatique..."}
+                  </Text>
+                  <Ionicons
+                    name="create-outline"
+                    size={20}
+                    color={COLORS.primary}
+                    style={styles.fieldEditIcon}
+                  />
+                </TouchableOpacity>
 
                 <Text style={styles.label}>Description IA</Text>
-                <View style={{ position: "relative" }}>
-                  <TextInput
-                    style={[styles.input, styles.textArea]}
-                    placeholder="Description générée par l'IA..."
-                    placeholderTextColor={COLORS.gray}
-                    value={iaText}
-                    onChangeText={setIaText}
-                    multiline
-                  />
-                  {isGeneratingDescription && (
-                    <View style={styles.descriptionLoadingOverlay}>
+                <TouchableOpacity
+                  style={styles.fieldPreview}
+                  onPress={() => {
+                    setEditingField("ia");
+                    setTempFieldValue(iaText);
+                  }}
+                >
+                  {isGeneratingDescription ? (
+                    <View style={styles.fieldPreviewLoading}>
                       <ActivityIndicator size="small" color={COLORS.primary} />
-                      <Text style={styles.descriptionLoadingText}>
+                      <Text style={styles.fieldPreviewLoadingText}>
                         Analyse en cours...
                       </Text>
                     </View>
+                  ) : (
+                    <>
+                      <Text
+                        style={[
+                          styles.fieldPreviewText,
+                          !iaText && styles.fieldPreviewPlaceholder,
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {iaText || "Description générée par l'IA..."}
+                      </Text>
+                      <Ionicons
+                        name="create-outline"
+                        size={20}
+                        color={COLORS.primary}
+                        style={styles.fieldEditIcon}
+                      />
+                    </>
                   )}
-                </View>
+                </TouchableOpacity>
 
-                <Text style={styles.label}>Description finale</Text>
-                <View style={{ position: "relative" }}>
-                  <TextInput
-                    style={[styles.input, styles.textArea]}
-                    placeholder="Ajoutez une courte description (facultatif)"
-                    placeholderTextColor={COLORS.gray}
-                    value={description}
-                    onChangeText={setDescription}
-                    multiline
-                  />
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Text style={styles.label}>Description finale</Text>
                   <TouchableOpacity
-                    style={{
-                      position: "absolute",
-                      right: 10,
-                      bottom: 10,
-                      backgroundColor: COLORS.secondary,
-                      padding: 8,
-                      borderRadius: 20,
-                      opacity: !audioText && !iaText ? 0.5 : 1,
-                    }}
+                    style={styles.combineButton}
                     onPress={handleCombineText}
                     disabled={isCombiningText || (!audioText && !iaText)}
                   >
                     {isCombiningText ? (
                       <ActivityIndicator size="small" color="#fff" />
                     ) : (
-                      <Ionicons name="sparkles" size={20} color="#fff" />
+                      <>
+                        <Ionicons name="sparkles" size={16} color="#fff" />
+                        <Text style={styles.combineButtonText}>Combiner</Text>
+                      </>
                     )}
                   </TouchableOpacity>
                 </View>
+                <TouchableOpacity
+                  style={styles.fieldPreview}
+                  onPress={() => {
+                    setEditingField("description");
+                    setTempFieldValue(description);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.fieldPreviewText,
+                      !description && styles.fieldPreviewPlaceholder,
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {description ||
+                      "Ajoutez une courte description (facultatif)"}
+                  </Text>
+                  <Ionicons
+                    name="create-outline"
+                    size={20}
+                    color={COLORS.primary}
+                    style={styles.fieldEditIcon}
+                  />
+                </TouchableOpacity>
               </View>
 
               <View style={styles.buttonContainer}>
@@ -960,6 +1014,69 @@ export default function AddImageModal({
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Text Field Editor Popup Modal */}
+      <Modal
+        visible={editingField !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setEditingField(null)}
+      >
+        <View style={styles.textEditorModalContainer}>
+          <View style={styles.textEditorModalContent}>
+            <View style={styles.textEditorHeader}>
+              <Text style={styles.textEditorTitle}>
+                {editingField === "audio"
+                  ? "Transcription Audio"
+                  : editingField === "ia"
+                    ? "Description IA"
+                    : "Description finale"}
+              </Text>
+              <TouchableOpacity onPress={() => setEditingField(null)}>
+                <Ionicons name="close" size={24} color={COLORS.secondary} />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={styles.textEditorInput}
+              placeholder="Saisissez votre texte..."
+              placeholderTextColor={COLORS.gray}
+              value={tempFieldValue}
+              onChangeText={setTempFieldValue}
+              multiline
+              autoFocus
+            />
+
+            <View style={styles.textEditorButtons}>
+              <TouchableOpacity
+                style={[styles.textEditorButton, styles.textEditorCancelButton]}
+                onPress={() => {
+                  setEditingField(null);
+                  setTempFieldValue("");
+                }}
+              >
+                <Text style={styles.textEditorCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.textEditorButton, styles.textEditorSaveButton]}
+                onPress={() => {
+                  if (editingField === "audio") {
+                    setAudioText(tempFieldValue);
+                  } else if (editingField === "ia") {
+                    setIaText(tempFieldValue);
+                  } else if (editingField === "description") {
+                    setDescription(tempFieldValue);
+                  }
+                  setEditingField(null);
+                  setTempFieldValue("");
+                }}
+              >
+                <Text style={styles.textEditorSaveText}>Enregistrer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <CustomAlert
         visible={alertInfo.visible}
         title={alertInfo.title}
@@ -1082,6 +1199,124 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: "top",
+  },
+  fieldPreview: {
+    width: "100%",
+    minHeight: 60,
+    padding: SIZES.medium,
+    backgroundColor: COLORS.lightWhite,
+    borderRadius: SIZES.small,
+    marginBottom: SIZES.medium,
+    borderWidth: 1,
+    borderColor: COLORS.gray2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  fieldPreviewText: {
+    fontFamily: FONT.regular,
+    fontSize: SIZES.medium,
+    color: COLORS.secondary,
+    flex: 1,
+    marginRight: SIZES.small,
+  },
+  fieldPreviewPlaceholder: {
+    color: COLORS.gray,
+  },
+  fieldEditIcon: {
+    marginLeft: SIZES.small,
+  },
+  fieldPreviewLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  fieldPreviewLoadingText: {
+    color: COLORS.primary,
+    fontFamily: FONT.medium,
+    fontSize: SIZES.small,
+  },
+  combineButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: COLORS.secondary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    opacity: 1,
+  },
+  combineButtonText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  textEditorModalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: SIZES.large,
+  },
+  textEditorModalContent: {
+    width: "100%",
+    maxHeight: "80%",
+    backgroundColor: COLORS.white,
+    borderRadius: SIZES.large,
+    padding: SIZES.large,
+  },
+  textEditorHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: SIZES.medium,
+  },
+  textEditorTitle: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.large,
+    color: COLORS.primary,
+  },
+  textEditorInput: {
+    width: "100%",
+    height: 400,
+    padding: SIZES.medium,
+    backgroundColor: COLORS.lightWhite,
+    borderRadius: SIZES.small,
+    fontFamily: FONT.regular,
+    fontSize: SIZES.medium,
+    borderWidth: 1,
+    borderColor: COLORS.gray2,
+    textAlignVertical: "top",
+    marginBottom: SIZES.medium,
+  },
+  textEditorButtons: {
+    flexDirection: "row",
+    gap: SIZES.small,
+  },
+  textEditorButton: {
+    flex: 1,
+    paddingVertical: SIZES.medium,
+    borderRadius: SIZES.medium,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  textEditorCancelButton: {
+    backgroundColor: COLORS.lightWhite,
+    borderWidth: 1,
+    borderColor: COLORS.gray2,
+  },
+  textEditorSaveButton: {
+    backgroundColor: COLORS.primary,
+  },
+  textEditorCancelText: {
+    color: COLORS.secondary,
+    fontFamily: FONT.bold,
+    fontSize: SIZES.medium,
+  },
+  textEditorSaveText: {
+    color: COLORS.white,
+    fontFamily: FONT.bold,
+    fontSize: SIZES.medium,
   },
   buttonContainer: {
     flexDirection: "row",
