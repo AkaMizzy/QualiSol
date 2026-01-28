@@ -6,9 +6,10 @@ import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
 import companyService from "@/services/companyService";
 import { getConnectivity } from "@/services/connectivity";
 import {
-    combineTextDescription,
-    describeImage,
-    getAllGeds,
+  analyzeImageWithAnnotation,
+  combineTextDescription,
+  describeImage,
+  getAllGeds,
 } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,24 +18,24 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import {
-    PanGestureHandler,
-    PanGestureHandlerGestureEvent,
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import CustomAlert from "../CustomAlert";
 
@@ -78,6 +79,8 @@ export default function AddImageModal({
   } | null>(null);
   const [audioText, setAudioText] = useState<string>("");
   const [iaText, setIaText] = useState<string>("");
+  const [annotatedImage, setAnnotatedImage] = useState<string | null>(null);
+  const [fullScreenImageVisible, setFullScreenImageVisible] = useState(false);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
@@ -186,23 +189,33 @@ export default function AddImageModal({
         return;
       }
       setIsGeneratingDescription(true);
+
+      const photoFile = {
+        uri: photoToDescribe.uri,
+        name:
+          photoToDescribe.fileName ||
+          photoToDescribe.uri.split("/").pop() ||
+          "photo.jpg",
+        type: photoToDescribe.type || "image/jpeg",
+      };
+
       try {
-        const photoFile = {
-          uri: photoToDescribe.uri,
-          name:
-            photoToDescribe.fileName ||
-            photoToDescribe.uri.split("/").pop() ||
-            "photo.jpg",
-          type: photoToDescribe.type || "image/jpeg",
-        };
-        const description = await describeImage(token, photoFile);
+        // Use the new analyzeImageWithAnnotation endpoint
+        const result = await analyzeImageWithAnnotation(token, photoFile);
         // Store AI description in separate field
-        setIaText(description);
-        // Optionnaly append to description if you want user to see it, but user requested to separate it.
-        // So checking user request: "output shouldnt again be in description but in the aitext"
-        // So we do NOT append to description.
+        setIaText(result.description);
+        // Store the annotated image for display
+        setAnnotatedImage(result.annotatedImage);
       } catch (e: any) {
-        console.error("Failed to generate description:", e);
+        console.error("Failed to generate description with annotation:", e);
+        // Fallback to old method if annotation fails
+        try {
+          const description = await describeImage(token, photoFile);
+          setIaText(description);
+          setAnnotatedImage(null);
+        } catch (fallbackError: any) {
+          console.error("Fallback description also failed:", fallbackError);
+        }
       } finally {
         setIsGeneratingDescription(false);
       }
@@ -456,6 +469,8 @@ export default function AddImageModal({
     setImage(null);
     setVoiceNote(null);
     setAudioText("");
+    setIaText("");
+    setAnnotatedImage(null);
     setLevel(5);
     setSelectedType(null);
     setSelectedCategorie(null);
@@ -713,6 +728,38 @@ export default function AddImageModal({
                   </View>
                 )}
               </View>
+
+              {/* Annotated Image Preview */}
+              {annotatedImage && image?.type !== "video" && (
+                <View style={styles.annotatedImageContainer}>
+                  <View style={styles.annotatedImageHeader}>
+                    <Ionicons
+                      name="analytics-outline"
+                      size={20}
+                      color="#ef4444"
+                    />
+                    <Text style={styles.annotatedImageTitle}>
+                      Analyse IA - Anomalies Détectées
+                    </Text>
+                  </View>
+                  <View style={styles.annotatedImageWrapper}>
+                    <TouchableOpacity
+                      onPress={() => setFullScreenImageVisible(true)}
+                      activeOpacity={0.9}
+                      style={{ width: "100%", height: "100%" }}
+                    >
+                      <Image
+                        source={{ uri: annotatedImage }}
+                        style={styles.annotatedImagePreview}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.annotatedImageNote}>
+                    Appuyez l'image pour l'agrandir 🔍
+                  </Text>
+                </View>
+              )}
 
               <View style={styles.form}>
                 <Text style={styles.label}>Titre (optionnel)</Text>
@@ -1107,6 +1154,30 @@ export default function AddImageModal({
         onClose={() => setAlertInfo({ ...alertInfo, visible: false })}
         buttons={alertInfo.buttons}
       />
+
+      {/* Full Screen Image Modal */}
+      <Modal
+        visible={fullScreenImageVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setFullScreenImageVisible(false)}
+      >
+        <View style={styles.fullScreenModalContainer}>
+          <TouchableOpacity
+            style={styles.fullScreenModalCloseButton}
+            onPress={() => setFullScreenImageVisible(false)}
+          >
+            <Ionicons name="close-circle" size={40} color="white" />
+          </TouchableOpacity>
+          {annotatedImage && (
+            <Image
+              source={{ uri: annotatedImage }}
+              style={styles.fullScreenImage}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
     </Modal>
   );
 }
@@ -1620,5 +1691,63 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontWeight: "500",
+  },
+  // Annotated Image Preview Styles
+  annotatedImageContainer: {
+    width: "100%",
+    backgroundColor: "#fef2f2",
+    borderRadius: SIZES.medium,
+    borderWidth: 2,
+    borderColor: "#ef4444",
+    padding: SIZES.medium,
+    marginTop: SIZES.medium,
+    marginBottom: SIZES.medium,
+  },
+  annotatedImageHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: SIZES.small,
+  },
+  annotatedImageTitle: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.medium,
+    color: "#ef4444",
+  },
+  annotatedImageWrapper: {
+    width: "100%",
+    height: 180,
+    backgroundColor: "#ffffff",
+    borderRadius: SIZES.small,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  annotatedImagePreview: {
+    width: "100%",
+    height: "100%",
+  },
+  annotatedImageNote: {
+    fontSize: 12,
+    color: "#991b1b",
+    fontStyle: "italic",
+    marginTop: SIZES.small,
+    textAlign: "center",
+  },
+  fullScreenModalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  fullScreenModalCloseButton: {
+    position: "absolute",
+    top: 50,
+    right: 30,
+    zIndex: 1,
+  },
+  fullScreenImage: {
+    width: "100%",
+    height: "100%",
   },
 });

@@ -161,6 +161,52 @@ export async function describeImage(
   return data.description || "";
 }
 
+export async function analyzeImageWithAnnotation(
+  token: string,
+  file: { uri: string | File; type: string; name: string },
+): Promise<{
+  description: string;
+  annotatedImage: string;
+  anomalyCount: number;
+}> {
+  const formData = new FormData();
+
+  // Check if this is a browser File object (for web uploads)
+  if (typeof file.uri === "object" && file.uri instanceof File) {
+    // Web: Append the actual File object
+    formData.append("file", file.uri);
+  } else {
+    // React Native: Append as object with uri, type, name
+    formData.append("file", {
+      uri: file.uri,
+      type: file.type,
+      name: file.name,
+    } as any);
+  }
+
+  const res = await fetch(
+    `${API_CONFIG.BASE_URL}/api/geds/analyze-image-annotation`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        // Don't set Content-Type header - let the browser set it with boundary for FormData
+      },
+      body: formData,
+    },
+  );
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to analyze image with annotation");
+  }
+  return {
+    description: data.description || "",
+    annotatedImage: data.annotatedImage || "",
+    anomalyCount: data.anomalyCount || 0,
+  };
+}
+
 export async function transcribeAudio(
   token: string,
   file: { uri: string | File; type: string; name: string },
