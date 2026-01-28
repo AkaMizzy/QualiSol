@@ -12,7 +12,7 @@ import {
 } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
@@ -22,8 +22,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+  View
 } from "react-native";
 
 interface WebAddImageModalProps {
@@ -89,6 +88,7 @@ export default function WebAddImageModal({
     "audio" | "ia" | "description" | null
   >(null);
   const [tempFieldValue, setTempFieldValue] = useState<string>("");
+  const textInputRef = useRef<any>(null);
 
   // Load anomalies on mount
   useEffect(() => {
@@ -175,6 +175,15 @@ export default function WebAddImageModal({
       if (interval) clearInterval(interval);
     };
   }, [isRecording]);
+
+  // Auto-focus TextInput when popup modal opens
+  useEffect(() => {
+    if (editingField !== null && textInputRef.current) {
+      setTimeout(() => {
+        textInputRef.current?.focus();
+      }, 100);
+    }
+  }, [editingField]);
 
   const resetForm = () => {
     setTitle("");
@@ -1184,18 +1193,18 @@ export default function WebAddImageModal({
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
-              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <View style={styles.textEditorInputContainer}>
-                  <TextInput
-                    style={styles.textEditorInput}
-                    placeholder="Saisissez votre texte..."
-                    placeholderTextColor={COLORS.gray}
-                    value={tempFieldValue}
-                    onChangeText={setTempFieldValue}
-                    multiline
-                  />
-                </View>
-              </TouchableWithoutFeedback>
+              <View style={styles.textEditorInputContainer}>
+                <TextInput
+                  ref={textInputRef}
+                  style={styles.textEditorInput}
+                  placeholder="Saisissez votre texte..."
+                  placeholderTextColor={COLORS.gray}
+                  value={tempFieldValue}
+                  onChangeText={setTempFieldValue}
+                  multiline
+                  autoFocus
+                />
+              </View>
             </ScrollView>
 
             <View style={styles.textEditorButtons}>
