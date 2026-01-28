@@ -7,16 +7,16 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Alert,
-  FlatList,
-  LayoutAnimation,
-  Linking,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
+    Alert,
+    FlatList,
+    LayoutAnimation,
+    Linking,
+    Pressable,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../components/AppHeader";
@@ -174,20 +174,18 @@ export default function DashboardScreen() {
 
       // Merge system items with folder type items
       // Filter out Paramètres first if user is not Super Admin
-      const filteredSystemItems =
-        user?.role === "Super Admin"
-          ? SYSTEM_GRID_ITEMS
-          : SYSTEM_GRID_ITEMS.filter((item) => item.title !== "Paramètres");
+      const filteredSystemItems = ["Super Admin", "Admin"].includes(user?.role)
+        ? SYSTEM_GRID_ITEMS
+        : SYSTEM_GRID_ITEMS.filter((item) => item.title !== "Paramètres");
 
       setGridItems([...filteredSystemItems, ...folderTypeItems]);
     } catch (error) {
       console.error("Failed to load folder types:", error);
       // On error, still show system items
       // Filter out Paramètres if not Super Admin
-      const filteredSystemItems =
-        user?.role === "Super Admin"
-          ? SYSTEM_GRID_ITEMS
-          : SYSTEM_GRID_ITEMS.filter((item) => item.title !== "Paramètres");
+      const filteredSystemItems = ["Super Admin", "Admin"].includes(user?.role)
+        ? SYSTEM_GRID_ITEMS
+        : SYSTEM_GRID_ITEMS.filter((item) => item.title !== "Paramètres");
 
       setGridItems(filteredSystemItems);
     } finally {
@@ -239,10 +237,9 @@ export default function DashboardScreen() {
       );
 
       // Update grid items
-      const filteredSystemItems =
-        user?.role === "Super Admin"
-          ? SYSTEM_GRID_ITEMS
-          : SYSTEM_GRID_ITEMS.filter((item) => item.title !== "Paramètres");
+      const filteredSystemItems = ["Super Admin", "Admin"].includes(user?.role)
+        ? SYSTEM_GRID_ITEMS
+        : SYSTEM_GRID_ITEMS.filter((item) => item.title !== "Paramètres");
 
       const folderTypeItems: GridItem[] = typesWithImages.map((ft) => ({
         title: ft.title,
@@ -752,7 +749,7 @@ export default function DashboardScreen() {
             © 2025 Qualisol. Tous droits réservés.
           </Text>
         </View>
-        {user?.role === "Super Admin" && (
+        {["Super Admin", "Admin"].includes(user?.role) && (
           <Pressable
             onPress={() => router.push("/parameters")}
             style={{ padding: 8 }}

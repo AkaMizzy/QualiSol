@@ -2,7 +2,9 @@ import AppHeader from "@/components/AppHeader";
 import CreateUserModal from "@/components/users/CreateUserModal";
 import UserDetailModal from "@/components/users/UserDetailModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { getAllRoles } from "@/services/roleService";
 import { getUsers } from "@/services/userService";
+import { Role } from "@/types/role";
 import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -23,6 +25,7 @@ import API_CONFIG from "../config/api";
 export default function UsersScreen() {
   const { user } = useAuth();
   const [users, setUsers] = useState<CompanyUser[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -34,10 +37,14 @@ export default function UsersScreen() {
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const userList = await getUsers();
+      const [userList, rolesList] = await Promise.all([
+        getUsers(),
+        getAllRoles(),
+      ]);
       setUsers(userList);
+      setRoles(rolesList);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error("Error fetching users or roles:", error);
       Alert.alert("Erreur", "Impossible de charger la liste des utilisateurs");
     } finally {
       setLoading(false);
@@ -124,8 +131,11 @@ export default function UsersScreen() {
   const filteredUsers = React.useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return users.filter((u) => {
-      if (roleFilter !== "all" && u.role?.role.toLowerCase() !== roleFilter)
-        return false;
+      if (roleFilter !== "all") {
+        const userRoleName =
+          u.role?.role || roles.find((r) => r.id === u.role_id)?.role;
+        if (userRoleName?.toLowerCase() !== roleFilter) return false;
+      }
       if (!q) return true;
       const hay =
         `${u.firstname} ${u.lastname} ${u.email} ${u.phone1 ?? ""} ${u.phone2 ?? ""}`.toLowerCase();
@@ -134,7 +144,9 @@ export default function UsersScreen() {
   }, [users, searchQuery, roleFilter]);
 
   const renderUserCard = ({ item }: { item: CompanyUser }) => {
-    const roleStyle = getRoleStyle(item.role?.role);
+    const userRoleName =
+      item.role?.role || roles.find((r) => r.id === item.role_id)?.role;
+    const roleStyle = getRoleStyle(userRoleName);
     const statusStyle = getStatusStyle(item.status?.status);
     const interneStyle = getInterneStyle(item.interne);
 
@@ -145,7 +157,7 @@ export default function UsersScreen() {
       <TouchableOpacity
         style={[
           styles.userCard,
-          item.role?.role === "admin" && styles.adminCard,
+          userRoleName?.toLowerCase() === "admin" && styles.adminCard,
         ]}
         onPress={() => handleUserCardPress(item)}
         activeOpacity={0.7}
@@ -178,7 +190,7 @@ export default function UsersScreen() {
 
           {/* Badges */}
           <View style={styles.badgesContainer}>
-            {item.role?.role && (
+            {userRoleName && (
               <View
                 style={[
                   styles.badge,

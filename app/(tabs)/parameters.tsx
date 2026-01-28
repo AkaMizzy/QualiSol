@@ -76,12 +76,12 @@ export default function ParametersScreen() {
   };
 
   React.useEffect(() => {
-    if (user && user.role !== "Super Admin") {
+    if (user && !["Super Admin", "Admin"].includes(user.role)) {
       router.replace("/");
     }
   }, [user, router]);
 
-  if (!user || user.role !== "Super Admin") {
+  if (!user || !["Super Admin", "Admin"].includes(user.role)) {
     // Optionally render nothing or a loading spinner while redirecting
     // But since we want to "completely remove access", returning null avoids flash of content
     return null;
