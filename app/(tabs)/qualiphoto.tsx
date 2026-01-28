@@ -88,7 +88,7 @@ export default function QualiPhotoGalleryScreen() {
   }, [folders, selectedProject]);
 
   const fetchFolders = useCallback(async () => {
-    if (!token) return;
+    if (!token || !user) return; // Ensure user is available
 
     if (fetchingRef.current) return;
     fetchingRef.current = true;
@@ -102,8 +102,16 @@ export default function QualiPhotoGalleryScreen() {
 
       if (requestId !== requestIdRef.current) return;
 
+      // Filter folders for standard users - access control
+      let availableFolders = items;
+      if (!["Super Admin", "Admin"].includes(user.role)) {
+        availableFolders = items.filter(
+          (f) => String(f.owner_id) === String(user.id),
+        );
+      }
+
       // Sort folders by creation date, latest first
-      const sortedItems = items.sort((a, b) => {
+      const sortedItems = availableFolders.sort((a, b) => {
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
         return dateB - dateA;
@@ -123,7 +131,7 @@ export default function QualiPhotoGalleryScreen() {
         setIsLoading(false);
       }
     }
-  }, [token]);
+  }, [token, user]);
 
   const refresh = useCallback(async () => {
     if (!token) return;
@@ -145,11 +153,21 @@ export default function QualiPhotoGalleryScreen() {
   // Load projects on mount
   useEffect(() => {
     async function fetchProjects() {
-      if (!token) return;
+      if (!token || !user) return;
       setLoadingProjects(true);
       try {
         const fetchedProjects = await folderService.getAllProjects(token);
-        setProjects(fetchedProjects);
+
+        // Filter projects for non-admin users
+        // Only show projects where they are assigned as owner/admin
+        if (["Super Admin", "Admin"].includes(user.role)) {
+          setProjects(fetchedProjects);
+        } else {
+          const userProjects = fetchedProjects.filter(
+            (p) => String(p.owner_id) === String(user.id),
+          );
+          setProjects(userProjects);
+        }
       } catch (error) {
         console.error("Failed to load projects", error);
         // Handle error appropriately in UI
@@ -158,7 +176,7 @@ export default function QualiPhotoGalleryScreen() {
       }
     }
     fetchProjects();
-  }, [token]);
+  }, [token, user]);
 
   // Load users on mount
   useEffect(() => {
@@ -470,6 +488,7 @@ export default function QualiPhotoGalleryScreen() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         projectId={selectedProject}
+        assignedOwnerId={selectedUser}
         onSuccess={(created) => {
           setModalVisible(false);
           if (created) {

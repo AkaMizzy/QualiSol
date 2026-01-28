@@ -1,4 +1,4 @@
-import api from './api';
+import api from "./api";
 
 export interface Ged {
   id: string;
@@ -42,6 +42,7 @@ export interface Folder {
 export interface Project {
   id: string;
   title: string;
+  owner_id?: string | null;
 }
 
 export interface Zone {
@@ -52,49 +53,63 @@ export interface Zone {
 
 export type CreateFolderPayload = Pick<
   Folder,
-  | 'code'
-  | 'title'
-  | 'description'
-  | 'conclusion'
-  | 'project_id'
-  | 'zone_id'
-  | 'owner_id'
-  | 'control_id'
-  | 'technicien_id'
-  | 'foldertype'
+  | "code"
+  | "title"
+  | "description"
+  | "conclusion"
+  | "project_id"
+  | "zone_id"
+  | "owner_id"
+  | "control_id"
+  | "technicien_id"
+  | "foldertype"
 >;
 
 export type UpdateFolderPayload = Partial<Folder>;
 
-async function generateGedParallelePdf(folderId: string, token: string): Promise<Ged> {
+async function generateGedParallelePdf(
+  folderId: string,
+  token: string,
+): Promise<Ged> {
   const response = await api.get(`api/gedparallele/generate-pdf/${folderId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return response.data.data;
 }
 
-async function getAllFolders(token: string, folderTypeId?: string): Promise<Folder[]> {
-  const url = folderTypeId ? `api/folders?foldertype=${folderTypeId}` : 'api/folders';
+async function getAllFolders(
+  token: string,
+  folderTypeId?: string,
+): Promise<Folder[]> {
+  const url = folderTypeId
+    ? `api/folders?foldertype=${folderTypeId}`
+    : "api/folders";
   const response = await api.get(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return response.data;
 }
 
-async function getFolderById(folderId: string, token: string): Promise<Folder | null> {
+async function getFolderById(
+  folderId: string,
+  token: string,
+): Promise<Folder | null> {
   try {
     const response = await api.get(`api/folders/${folderId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
   } catch (error) {
-    console.error('Failed to fetch folder:', error);
+    console.error("Failed to fetch folder:", error);
     return null;
   }
 }
 
-async function createFolder(payload: CreateFolderPayload, token: string): Promise<Folder> {
-  const response = await api.post('api/folders', payload, {
+async function createFolder(
+  payload: CreateFolderPayload,
+  token: string,
+): Promise<Folder> {
+  const response = await api.post("api/folders", payload, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return response.data.data;
@@ -103,7 +118,7 @@ async function createFolder(payload: CreateFolderPayload, token: string): Promis
 async function updateFolder(
   id: string,
   payload: UpdateFolderPayload,
-  token: string
+  token: string,
 ): Promise<Folder> {
   const response = await api.put(`api/folders/${id}`, payload, {
     headers: { Authorization: `Bearer ${token}` },
@@ -111,21 +126,31 @@ async function updateFolder(
   return response.data;
 }
 
-async function enhanceText(text: string, token: string): Promise<{ enhancedText: string }> {
-  const response = await api.post('api/folders/enhance-text', { text }, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+async function enhanceText(
+  text: string,
+  token: string,
+): Promise<{ enhancedText: string }> {
+  const response = await api.post(
+    "api/folders/enhance-text",
+    { text },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
   return response.data;
 }
 
 async function getAllProjects(token: string): Promise<Project[]> {
-  const response = await api.get('api/projets', {
+  const response = await api.get("api/projets", {
     headers: { Authorization: `Bearer ${token}` },
   });
   return response.data;
 }
 
-async function getZonesByProjectId(projectId: string, token: string): Promise<Zone[]> {
+async function getZonesByProjectId(
+  projectId: string,
+  token: string,
+): Promise<Zone[]> {
   const response = await api.get(`api/zones/project/${projectId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -133,7 +158,7 @@ async function getZonesByProjectId(projectId: string, token: string): Promise<Zo
 }
 
 async function getAllZones(token: string): Promise<Zone[]> {
-  const response = await api.get('api/zones', {
+  const response = await api.get("api/zones", {
     headers: { Authorization: `Bearer ${token}` },
   });
   return response.data;
@@ -144,7 +169,6 @@ async function deleteFolder(folderId: string, token: string): Promise<void> {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
-
 
 const folderService = {
   getAllFolders,
@@ -158,8 +182,5 @@ const folderService = {
   generateGedParallelePdf,
   deleteFolder,
 };
-
-
-
 
 export default folderService;

@@ -1,14 +1,28 @@
-import API_CONFIG from '@/app/config/api';
-import { ICONS } from '@/constants/Icons';
-import { useAuth } from '@/contexts/AuthContext';
-import companyService from '@/services/companyService';
-import folderService, { CreateFolderPayload, Folder } from '@/services/folderService';
-import { Company } from '@/types/company';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import VoiceNoteRecorder from '../VoiceNoteRecorder';
+import API_CONFIG from "@/app/config/api";
+import { ICONS } from "@/constants/Icons";
+import { useAuth } from "@/contexts/AuthContext";
+import companyService from "@/services/companyService";
+import folderService, {
+    CreateFolderPayload,
+    Folder,
+} from "@/services/folderService";
+import { Company } from "@/types/company";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import VoiceNoteRecorder from "../VoiceNoteRecorder";
 
 type Props = {
   visible: boolean;
@@ -16,65 +30,71 @@ type Props = {
   onSuccess?: (created: Folder) => void;
   projectId?: string;
   zoneId?: string;
+  assignedOwnerId?: string;
 };
 
-export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, projectId, zoneId }: Props) {
+export default function CreateQualiPhotoModal({
+  visible,
+  onClose,
+  onSuccess,
+  projectId,
+  zoneId,
+  assignedOwnerId,
+}: Props) {
   const { token, user } = useAuth();
-  const isAdmin = user?.role === 'Admin';
-  const isController = user?.role === 'Controller' || user?.role === 'Contrôleur';
-  const [title, setTitle] = useState<string>('');
-  const [description, setDescription] = useState<string>('');
+  const isAdmin = user?.role === "Admin";
+  const isController =
+    user?.role === "Controller" || user?.role === "Contrôleur";
+  const [title, setTitle] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-
-
-  const [companyUsers, setCompanyUsers] = useState<{ id: string; firstname?: string; lastname?: string; email?: string }[]>([]);
+  const [companyUsers, setCompanyUsers] = useState<
+    { id: string; firstname?: string; lastname?: string; email?: string }[]
+  >([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [ownerId, setOwnerId] = useState('');
-  const [controlId, setControlId] = useState('');
-  const [technicienId, setTechnicienId] = useState('');
-  const [controlOpen, setControlOpen] = useState(false);
-  const [technicienOpen, setTechnicienOpen] = useState(false);
+  const [ownerId, setOwnerId] = useState("");
 
   const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
   const [currentFoldersCount, setCurrentFoldersCount] = useState(0);
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [loadingLimits, setLoadingLimits] = useState(true);
 
-  const adminUser = useMemo(() => companyUsers.find(u => u.id === ownerId), [companyUsers, ownerId]);
-
-  const controlUsers = useMemo(() => companyUsers.filter(u => u.id !== ownerId), [companyUsers, ownerId]);
-  const technicienUsers = useMemo(() => companyUsers.filter(u => u.id !== ownerId && u.id !== controlId), [companyUsers, ownerId, controlId]);
+  const adminUser = useMemo(
+    () => companyUsers.find((u) => u.id === ownerId),
+    [companyUsers, ownerId],
+  );
 
   useEffect(() => {
-    if (visible && user?.id) {
-      setOwnerId(user.id);
-      // If user is a Controller, also auto-assign them as the controller
-      if (isController) {
-        setControlId(user.id);
+    if (visible) {
+      // Use assigned owner if provided, otherwise default to current user
+      if (assignedOwnerId) {
+        setOwnerId(assignedOwnerId);
+      } else if (user?.id) {
+        setOwnerId(user.id);
       }
     }
-  }, [visible, user, isController]);
+  }, [visible, user, assignedOwnerId]);
 
   useEffect(() => {
     const fetchLimitInfo = async () => {
       try {
         setLoadingLimits(true);
         if (!token) return;
-        
+
         const [company, folders] = await Promise.all([
           companyService.getCompany(),
-          folderService.getAllFolders(token)
+          folderService.getAllFolders(token),
         ]);
-        
+
         setCompanyInfo(company);
         setCurrentFoldersCount(folders.length);
-        
+
         const limit = company.nbfolders || 2;
         setIsLimitReached(folders.length >= limit);
       } catch (error) {
-        console.error('Error fetching limit info:', error);
+        console.error("Error fetching limit info:", error);
       } finally {
         setLoadingLimits(false);
       }
@@ -85,8 +105,6 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
     }
   }, [visible, token]);
 
-
-
   useEffect(() => {
     async function loadUsers() {
       if (!visible) return;
@@ -96,13 +114,19 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
       }
       setLoadingUsers(true);
       try {
-        const baseUrl = API_CONFIG.BASE_URL?.replace(/\/$/, '') || '';
+        const baseUrl = API_CONFIG.BASE_URL?.replace(/\/$/, "") || "";
         const url = `${baseUrl}/api/users`;
         const res = await fetch(url, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         });
-        if (!res.ok) { setCompanyUsers([]); return; }
+        if (!res.ok) {
+          setCompanyUsers([]);
+          return;
+        }
         const data = await res.json();
         if (Array.isArray(data)) setCompanyUsers(data);
         else setCompanyUsers([]);
@@ -115,25 +139,28 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
     loadUsers();
   }, [visible, token]);
 
-  const isDisabled = useMemo(() => !title || !token || submitting || isLimitReached, [title, token, submitting, isLimitReached]);
+  const isDisabled = useMemo(
+    () => !title || !token || submitting || isLimitReached,
+    [title, token, submitting, isLimitReached],
+  );
 
   const handleSubmit = async () => {
     if (!token) return;
     setError(null);
-    if (!title || title.trim().length === 0) { setError('Veuillez saisir un titre.'); return; }
+    if (!title || title.trim().length === 0) {
+      setError("Veuillez saisir un titre.");
+      return;
+    }
 
     if (isLimitReached) {
-      setError(`Vous avez atteint la limite de ${companyInfo?.nbfolders || 2} dossiers. Veuillez mettre à niveau votre plan pour ajouter plus de dossiers.`);
+      setError(
+        `Vous avez atteint la limite de ${companyInfo?.nbfolders || 2} dossiers. Veuillez mettre à niveau votre plan pour ajouter plus de dossiers.`,
+      );
       return;
     }
 
-    const roles = [ownerId, controlId, technicienId].filter(Boolean);
+    const roles = [ownerId].filter(Boolean);
     const uniqueRoles = new Set(roles);
-
-    if (roles.length !== uniqueRoles.size) {
-      setError('Un utilisateur ne peut pas être assigné à plusieurs rôles (Admin, Contrôleur, Technicien).');
-      return;
-    }
 
     setSubmitting(true);
     try {
@@ -142,8 +169,9 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
         title,
         description,
         owner_id: ownerId || undefined,
-        control_id: controlId || undefined,
-        technicien_id: technicienId || undefined,
+        // Removed control_id and technicien_id as requested
+        control_id: undefined,
+        technicien_id: undefined,
         project_id: projectId,
         zone_id: zoneId,
       };
@@ -152,10 +180,16 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
       handleClose();
     } catch (e: any) {
       // Handle 403 error specifically for limit reached
-      if (e?.message?.includes('limit') || e?.message?.includes('Folder limit')) {
-        setError(e?.message || `Vous avez atteint la limite de ${companyInfo?.nbfolders || 2} dossiers.`);
+      if (
+        e?.message?.includes("limit") ||
+        e?.message?.includes("Folder limit")
+      ) {
+        setError(
+          e?.message ||
+            `Vous avez atteint la limite de ${companyInfo?.nbfolders || 2} dossiers.`,
+        );
       } else {
-        setError(e?.message || 'Échec de l\'enregistrement');
+        setError(e?.message || "Échec de l'enregistrement");
       }
     } finally {
       setSubmitting(false);
@@ -163,22 +197,23 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
   };
 
   const handleClose = () => {
-    setTitle('');
-    setDescription('');
-    setOwnerId('');
-    setControlId('');
-    setTechnicienId('');
-    setControlOpen(false);
-    setTechnicienOpen(false);
+    setTitle("");
+    setDescription("");
+    // Do not reset ownerId here to keep it stable if needed, or reset to defaults in useEffect
     setError(null);
     onClose();
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={handleClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={handleClose}
+    >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <SafeAreaView style={styles.container}>
           <View style={styles.header}>
@@ -204,21 +239,34 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
 
           {/* Limit Info Banner */}
           {!loadingLimits && companyInfo && (
-            <View style={[styles.limitInfoBanner, isLimitReached && styles.limitInfoBannerWarning]}>
-              <Ionicons 
-                name={isLimitReached ? "warning" : "folder"} 
-                size={16} 
-                color={isLimitReached ? "#b45309" : "#3b82f6"} 
+            <View
+              style={[
+                styles.limitInfoBanner,
+                isLimitReached && styles.limitInfoBannerWarning,
+              ]}
+            >
+              <Ionicons
+                name={isLimitReached ? "warning" : "folder"}
+                size={16}
+                color={isLimitReached ? "#b45309" : "#3b82f6"}
               />
-              <Text style={[styles.limitInfoText, isLimitReached && styles.limitInfoTextWarning]}>
+              <Text
+                style={[
+                  styles.limitInfoText,
+                  isLimitReached && styles.limitInfoTextWarning,
+                ]}
+              >
                 Dossiers: {currentFoldersCount} / {companyInfo.nbfolders || 2}
                 {isLimitReached && " - Nombre des dossiers dépassé"}
               </Text>
             </View>
           )}
 
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            <View style={{paddingTop: 16}}>
+          <ScrollView
+            style={styles.content}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={{ paddingTop: 16 }}>
               <View style={[styles.inputWrap, { marginBottom: 16 }]}>
                 <Ionicons name="text-outline" size={16} color="#f87b1b" />
                 <TextInput
@@ -230,94 +278,54 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
                 />
               </View>
 
-
-
-              {/* Owner (Admin) Select */}
               <View style={{ gap: 8, marginTop: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Admin </Text>
-                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }, styles.disabledInput]} disabled>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="person-circle-outline" size={16} color="#f87b1b" />
-                    <Text style={[styles.input, { color: ownerId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {adminUser
-                        ? `${adminUser.firstname || ''} ${adminUser.lastname || ''}`.trim() || adminUser.email
-                        : (loadingUsers ? 'Chargement...' : (user?.email || 'Admin non défini'))
-                      }
-                    </Text>
-                  </View>
-                  <Ionicons name="lock-closed-outline" size={16} color="#9ca3af" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Control Select - Locked for Controllers, selectable for Admins */}
-              <View style={{ gap: 8, marginTop: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Contrôleur {isController ? '(vous)' : ''}</Text>
-                <TouchableOpacity 
-                  style={[styles.inputWrap, { justifyContent: 'space-between' }, isController && styles.disabledInput]} 
-                  onPress={() => !isController && setControlOpen(v => !v)}
-                  disabled={isController}
+                <Text style={{ fontSize: 12, color: "#6b7280", marginLeft: 2 }}>
+                  Propriétaire
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.inputWrap,
+                    { justifyContent: "space-between" },
+                    styles.disabledInput,
+                  ]}
+                  disabled
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="shield-checkmark-outline" size={16} color={isController ? '#3b82f6' : '#f87b1b'} />
-                    <Text style={[styles.input, { color: controlId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {isController 
-                        ? `${user?.firstname || ''} ${user?.lastname || ''}`.trim() || user?.email || 'Vous'
-                        : (controlId ? (companyUsers.find(u => String(u.id) === String(controlId))?.firstname ? `${companyUsers.find(u => String(controlId) === String(u.id))?.firstname} ${companyUsers.find(u => String(controlId) === String(u.id))?.lastname || ''}` : controlId) : 'Choisir un contrôleur')
-                      }
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      flex: 1,
+                    }}
+                  >
+                    <Ionicons
+                      name="person-circle-outline"
+                      size={16}
+                      color="#f87b1b"
+                    />
+                    <Text
+                      style={[
+                        styles.input,
+                        { color: ownerId ? "#111827" : "#9ca3af" },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {adminUser
+                        ? `${adminUser.firstname || ""} ${adminUser.lastname || ""}`.trim() ||
+                          adminUser.email
+                        : loadingUsers
+                          ? "Chargement..."
+                          : assignedOwnerId
+                            ? "Utilisateur sélectionné"
+                            : user?.email || "Admin non défini"}
                     </Text>
                   </View>
-                  <Ionicons name={isController ? 'lock-closed-outline' : (controlOpen ? 'chevron-up' : 'chevron-down')} size={16} color={isController ? '#9ca3af' : '#f87b1b'} />
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={16}
+                    color="#9ca3af"
+                  />
                 </TouchableOpacity>
-                {controlOpen && !isController && (
-                  <View style={{ maxHeight: 200, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
-                    <ScrollView keyboardShouldPersistTaps="handled">
-                      {loadingUsers ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
-                      ) : controlUsers.length === 0 ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
-                      ) : (
-                        controlUsers.map(u => (
-                          <TouchableOpacity key={u.id} onPress={() => { setControlId(String(u.id)); setControlOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(controlId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
-                            <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
-                            {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
-                          </TouchableOpacity>
-                        ))
-                      )}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
-
-              {/* Technicien Select */}
-              <View style={{ gap: 8, marginTop: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Technicien</Text>
-                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setTechnicienOpen(v => !v)}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="construct-outline" size={16} color="#f87b1b" />
-                    <Text style={[styles.input, { color: technicienId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {technicienId ? (companyUsers.find(u => String(u.id) === String(technicienId))?.firstname ? `${companyUsers.find(u => String(technicienId) === String(u.id))?.firstname} ${companyUsers.find(u => String(technicienId) === String(u.id))?.lastname || ''}` : technicienId) : 'Choisir un technicien'}
-                    </Text>
-                  </View>
-                  <Ionicons name={technicienOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#f87b1b" />
-                </TouchableOpacity>
-                {technicienOpen && (
-                  <View style={{ maxHeight: 200, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
-                    <ScrollView keyboardShouldPersistTaps="handled">
-                      {loadingUsers ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
-                      ) : technicienUsers.length === 0 ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
-                      ) : (
-                        technicienUsers.map(u => (
-                          <TouchableOpacity key={u.id} onPress={() => { setTechnicienId(String(u.id)); setTechnicienOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(technicienId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
-                            <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
-                            {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
-                          </TouchableOpacity>
-                        ))
-                      )}
-                    </ScrollView>
-                  </View>
-                )}
               </View>
 
               <View style={{ marginBottom: 16 }}>
@@ -326,13 +334,20 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
                     // Not saving audio file here, just using for transcription
                   }}
                   onTranscriptionComplete={(text) => {
-                    setDescription(prev => (prev ? `${prev}\n${text}` : text));
+                    setDescription((prev) =>
+                      prev ? `${prev}\n${text}` : text,
+                    );
                   }}
                 />
               </View>
 
-              <View style={[styles.inputWrap, { alignItems: 'flex-start' }]}> 
-                <Ionicons name="chatbubble-ellipses-outline" size={16} color="#f87b1b" style={{ marginTop: 4 }} />
+              <View style={[styles.inputWrap, { alignItems: "flex-start" }]}>
+                <Ionicons
+                  name="chatbubble-ellipses-outline"
+                  size={16}
+                  color="#f87b1b"
+                  style={{ marginTop: 4 }}
+                />
                 <TextInput
                   placeholder="Introduction"
                   placeholderTextColor="#9ca3af"
@@ -348,9 +363,12 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
           </ScrollView>
 
           <View style={styles.footer}>
-            <TouchableOpacity 
-              style={[styles.submitButton, isDisabled && styles.submitButtonDisabled]} 
-              disabled={isDisabled} 
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                isDisabled && styles.submitButtonDisabled,
+              ]}
+              disabled={isDisabled}
               onPress={handleSubmit}
             >
               {submitting ? (
@@ -373,45 +391,89 @@ export default function CreateQualiPhotoModal({ visible, onClose, onSuccess, pro
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+  },
   closeButton: { padding: 8 },
-  headerCenter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, flex: 1 },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#f87b1b' },
+  headerCenter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    flex: 1,
+  },
+  headerTitle: { fontSize: 20, fontWeight: "700", color: "#f87b1b" },
   placeholder: { width: 40 },
   content: { flex: 1, paddingHorizontal: 16 },
-  alertBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fffbeb', borderColor: '#f59e0b', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, marginHorizontal: 16, marginTop: 8, borderRadius: 10 },
-  alertBannerText: { color: '#b45309', flex: 1, fontSize: 12 },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#f87b1b', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
-  disabledInput: {
-    backgroundColor: '#f3f4f6',
-    borderColor: '#d1d5db',
+  alertBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fffbeb",
+    borderColor: "#f59e0b",
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 10,
   },
-  input: { flex: 1, color: '#111827' },
-  footer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#e5e7eb' },
-  submitButton: { 
-    backgroundColor: '#f87b1b', 
-    borderRadius: 12, 
-    paddingVertical: 16, 
+  alertBannerText: { color: "#b45309", flex: 1, fontSize: 12 },
+  inputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  disabledInput: {
+    backgroundColor: "#f3f4f6",
+    borderColor: "#d1d5db",
+  },
+  input: { flex: 1, color: "#111827" },
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+  },
+  submitButton: {
+    backgroundColor: "#f87b1b",
+    borderRadius: 12,
+    paddingVertical: 16,
     paddingHorizontal: 24,
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    flexDirection: 'row', 
-    gap: 8, 
-    shadowColor: '#f87b1b',
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+    shadowColor: "#f87b1b",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
-  submitButtonDisabled: { backgroundColor: '#d1d5db' },
-  submitButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  submitButtonDisabled: { backgroundColor: "#d1d5db" },
+  submitButtonText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
   limitInfoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
-    backgroundColor: '#eff6ff',
-    borderColor: '#bfdbfe',
+    backgroundColor: "#eff6ff",
+    borderColor: "#bfdbfe",
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -420,18 +482,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   limitInfoBannerWarning: {
-    backgroundColor: '#fffbeb',
-    borderColor: '#f59e0b',
+    backgroundColor: "#fffbeb",
+    borderColor: "#f59e0b",
   },
   limitInfoText: {
-    color: '#1e40af',
+    color: "#1e40af",
     flex: 1,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   limitInfoTextWarning: {
-    color: '#b45309',
+    color: "#b45309",
   },
 });
-
-
