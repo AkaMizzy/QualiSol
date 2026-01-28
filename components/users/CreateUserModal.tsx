@@ -1,14 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Modal,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
@@ -502,9 +502,7 @@ export default function CreateUserModal({
                     <View style={{ flexDirection: "row", gap: 12 }}>
                       {roles
                         .filter((r) =>
-                          ["admin", "super admin"].includes(
-                            r.role.toLowerCase(),
-                          ),
+                          ["admin", "user"].includes(r.role.toLowerCase()),
                         )
                         .map((role) => (
                           <TouchableOpacity
@@ -522,7 +520,7 @@ export default function CreateUserModal({
                           >
                             <Ionicons
                               name={
-                                role.role.toLowerCase() === "super admin"
+                                role.role.toLowerCase() === "admin"
                                   ? "shield-checkmark"
                                   : "person"
                               }

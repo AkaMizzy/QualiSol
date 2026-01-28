@@ -558,7 +558,7 @@ export default function UpdateUserComp({
                   <View style={{ flexDirection: "row", gap: 12 }}>
                     {roles
                       .filter((r) =>
-                        ["admin", "super admin"].includes(r.role.toLowerCase()),
+                        ["admin", "user"].includes(r.role.toLowerCase()),
                       )
                       .map((role) => (
                         <TouchableOpacity
@@ -576,7 +576,7 @@ export default function UpdateUserComp({
                         >
                           <Ionicons
                             name={
-                              role.role.toLowerCase() === "super admin"
+                              role.role.toLowerCase() === "admin"
                                 ? "shield-checkmark"
                                 : "person"
                             }

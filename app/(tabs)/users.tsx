@@ -1,12 +1,12 @@
-import AppHeader from '@/components/AppHeader';
-import CreateUserModal from '@/components/users/CreateUserModal';
-import UserDetailModal from '@/components/users/UserDetailModal';
-import { useAuth } from '@/contexts/AuthContext';
-import { getUsers } from '@/services/userService';
-import { CompanyUser } from '@/types/user';
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import React, { useCallback, useEffect, useState } from 'react';
+import AppHeader from "@/components/AppHeader";
+import CreateUserModal from "@/components/users/CreateUserModal";
+import UserDetailModal from "@/components/users/UserDetailModal";
+import { useAuth } from "@/contexts/AuthContext";
+import { getUsers } from "@/services/userService";
+import { CompanyUser } from "@/types/user";
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -16,9 +16,9 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import API_CONFIG from '../config/api';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import API_CONFIG from "../config/api";
 
 export default function UsersScreen() {
   const { user } = useAuth();
@@ -26,8 +26,8 @@ export default function UsersScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all");
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<CompanyUser | null>(null);
 
@@ -37,8 +37,8 @@ export default function UsersScreen() {
       const userList = await getUsers();
       setUsers(userList);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      Alert.alert('Erreur', 'Impossible de charger la liste des utilisateurs');
+      console.error("Error fetching users:", error);
+      Alert.alert("Erreur", "Impossible de charger la liste des utilisateurs");
     } finally {
       setLoading(false);
     }
@@ -50,8 +50,11 @@ export default function UsersScreen() {
       const userList = await getUsers();
       setUsers(userList);
     } catch (error) {
-      console.error('Error refreshing users:', error);
-      Alert.alert('Erreur', 'Impossible de rafraîchir la liste des utilisateurs');
+      console.error("Error refreshing users:", error);
+      Alert.alert(
+        "Erreur",
+        "Impossible de rafraîchir la liste des utilisateurs",
+      );
     } finally {
       setRefreshing(false);
     }
@@ -78,49 +81,71 @@ export default function UsersScreen() {
 
   const getRoleStyle = (roleName?: string) => {
     const lowerCaseRole = roleName?.toLowerCase();
-    return lowerCaseRole === 'admin'
-      ? { bg: '#ffffff', color: '#11224e', border: '#11224e', label: 'Admin' }
-      : { bg: '#ffffff', color: '#f87b1b', border: '#f87b1b', label: 'Utilisateur' };
+    return lowerCaseRole === "admin"
+      ? { bg: "#ffffff", color: "#11224e", border: "#11224e", label: "Admin" }
+      : {
+          bg: "#ffffff",
+          color: "#f87b1b",
+          border: "#f87b1b",
+          label: "Utilisateur",
+        };
   };
 
   const getStatusStyle = (statusName?: string) => {
     const lowerCaseStatus = statusName?.toLowerCase();
-    return lowerCaseStatus === 'actif' || lowerCaseStatus === 'active'
-      ? { bg: '#e9f7ef', color: '#2ecc71', border: '#c6f0d9', label: 'Actif' }
-      : { bg: '#f4f5f7', color: '#6b7280', border: '#e5e7eb', label: 'Inactif' };
+    return lowerCaseStatus === "actif" || lowerCaseStatus === "active"
+      ? { bg: "#e9f7ef", color: "#2ecc71", border: "#c6f0d9", label: "Actif" }
+      : {
+          bg: "#f4f5f7",
+          color: "#6b7280",
+          border: "#e5e7eb",
+          label: "Inactif",
+        };
   };
 
   const getInterneStyle = (interne?: number) => {
     return interne === 1 || interne === undefined
-      ? { bg: '#eff6ff', color: '#3b82f6', border: '#bfdbfe', label: 'Interne', icon: 'business' as const }
-      : { bg: '#fff7ed', color: '#f87b1b', border: '#fed7aa', label: 'Externe', icon: 'globe' as const };
+      ? {
+          bg: "#eff6ff",
+          color: "#3b82f6",
+          border: "#bfdbfe",
+          label: "Interne",
+          icon: "business" as const,
+        }
+      : {
+          bg: "#fff7ed",
+          color: "#f87b1b",
+          border: "#fed7aa",
+          label: "Externe",
+          icon: "globe" as const,
+        };
   };
 
   const filteredUsers = React.useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return users.filter((u) => {
-      if (roleFilter !== 'all' && u.role?.name.toLowerCase() !== roleFilter) return false;
+      if (roleFilter !== "all" && u.role?.role.toLowerCase() !== roleFilter)
+        return false;
       if (!q) return true;
-      const hay = `${u.firstname} ${u.lastname} ${u.email} ${u.phone1 ?? ''} ${u.phone2 ?? ''}`.toLowerCase();
+      const hay =
+        `${u.firstname} ${u.lastname} ${u.email} ${u.phone1 ?? ""} ${u.phone2 ?? ""}`.toLowerCase();
       return hay.includes(q);
     });
   }, [users, searchQuery, roleFilter]);
 
   const renderUserCard = ({ item }: { item: CompanyUser }) => {
-    const roleStyle = getRoleStyle(item.role?.name);
-    const statusStyle = getStatusStyle(item.status?.name);
+    const roleStyle = getRoleStyle(item.role?.role);
+    const statusStyle = getStatusStyle(item.status?.status);
     const interneStyle = getInterneStyle(item.interne);
-    
+
     // Build avatar URL if photo exists
-    const avatarUrl = item.photo 
-      ? `${API_CONFIG.BASE_URL}${item.photo}`
-      : null;
-    
+    const avatarUrl = item.photo ? `${API_CONFIG.BASE_URL}${item.photo}` : null;
+
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[
           styles.userCard,
-          item.role?.name === 'admin' && styles.adminCard
+          item.role?.role === "admin" && styles.adminCard,
         ]}
         onPress={() => handleUserCardPress(item)}
         activeOpacity={0.7}
@@ -148,37 +173,74 @@ export default function UsersScreen() {
               {item.firstname} {item.lastname}
             </Text>
             <Text style={styles.userEmail}>{item.email}</Text>
-            {item.phone1 && (
-              <Text style={styles.userPhone}>{item.phone1}</Text>
-            )}
+            {item.phone1 && <Text style={styles.userPhone}>{item.phone1}</Text>}
           </View>
 
           {/* Badges */}
           <View style={styles.badgesContainer}>
-            {item.role?.name && (
-              <View style={[styles.badge, { backgroundColor: roleStyle.bg, borderColor: roleStyle.border }]}>
+            {item.role?.role && (
+              <View
+                style={[
+                  styles.badge,
+                  {
+                    backgroundColor: roleStyle.bg,
+                    borderColor: roleStyle.border,
+                  },
+                ]}
+              >
                 <Text style={[styles.badgeText, { color: roleStyle.color }]}>
                   {roleStyle.label}
                 </Text>
               </View>
             )}
-            {item.status?.name && (
-              <View style={[styles.badge, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border, marginTop: 4 }]}>
+            {item.status?.status && (
+              <View
+                style={[
+                  styles.badge,
+                  {
+                    backgroundColor: statusStyle.bg,
+                    borderColor: statusStyle.border,
+                    marginTop: 4,
+                  },
+                ]}
+              >
                 <Text style={[styles.badgeText, { color: statusStyle.color }]}>
                   {statusStyle.label}
                 </Text>
               </View>
             )}
             {/* Internal/External indicator */}
-            <View style={[styles.badge, { backgroundColor: interneStyle.bg, borderColor: interneStyle.border, marginTop: 4, flexDirection: 'row', gap: 4 }]}>
-              <Ionicons name={interneStyle.icon} size={10} color={interneStyle.color} />
+            <View
+              style={[
+                styles.badge,
+                {
+                  backgroundColor: interneStyle.bg,
+                  borderColor: interneStyle.border,
+                  marginTop: 4,
+                  flexDirection: "row",
+                  gap: 4,
+                },
+              ]}
+            >
+              <Ionicons
+                name={interneStyle.icon}
+                size={10}
+                color={interneStyle.color}
+              />
               <Text style={[styles.badgeText, { color: interneStyle.color }]}>
                 {interneStyle.label}
               </Text>
             </View>
             {/* Show represented company for external users */}
             {item.interne === 0 && item.represent && (
-              <Text style={{ fontSize: 10, color: '#f87b1b', marginTop: 4, textAlign: 'right' as const }}>
+              <Text
+                style={{
+                  fontSize: 10,
+                  color: "#f87b1b",
+                  marginTop: 4,
+                  textAlign: "right" as const,
+                }}
+              >
                 {item.represent}
               </Text>
             )}
@@ -187,7 +249,6 @@ export default function UsersScreen() {
       </TouchableOpacity>
     );
   };
-
 
   if (loading && users.length === 0) {
     return (
@@ -200,7 +261,7 @@ export default function UsersScreen() {
 
   return (
     <>
-      <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
         <AppHeader user={user || undefined} />
         <View style={styles.container}>
           <View style={styles.header}>
@@ -217,7 +278,7 @@ export default function UsersScreen() {
                 autoCapitalize="none"
               />
               {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <TouchableOpacity onPress={() => setSearchQuery("")}>
                   <Ionicons name="close-circle" size={18} color="#9ca3af" />
                 </TouchableOpacity>
               )}
@@ -237,25 +298,55 @@ export default function UsersScreen() {
               {/* Role chips */}
               <View style={styles.filterGroup}>
                 <TouchableOpacity
-                  style={[styles.chip, roleFilter === 'all' && styles.chipActive]}
-                  onPress={() => setRoleFilter('all')}
+                  style={[
+                    styles.chip,
+                    roleFilter === "all" && styles.chipActive,
+                  ]}
+                  onPress={() => setRoleFilter("all")}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.chipText, roleFilter === 'all' && styles.chipTextActive]}>Tous rôles</Text>
+                  <Text
+                    style={[
+                      styles.chipText,
+                      roleFilter === "all" && styles.chipTextActive,
+                    ]}
+                  >
+                    Tous rôles
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.chip, roleFilter === 'admin' && styles.chipActive]}
-                  onPress={() => setRoleFilter('admin')}
+                  style={[
+                    styles.chip,
+                    roleFilter === "admin" && styles.chipActive,
+                  ]}
+                  onPress={() => setRoleFilter("admin")}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.chipText, roleFilter === 'admin' && styles.chipTextActive]}>Admin</Text>
+                  <Text
+                    style={[
+                      styles.chipText,
+                      roleFilter === "admin" && styles.chipTextActive,
+                    ]}
+                  >
+                    Admin
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.chip, roleFilter === 'user' && styles.chipActive]}
-                  onPress={() => setRoleFilter('user')}
+                  style={[
+                    styles.chip,
+                    roleFilter === "user" && styles.chipActive,
+                  ]}
+                  onPress={() => setRoleFilter("user")}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.chipText, roleFilter === 'user' && styles.chipTextActive]}>Utilisateur</Text>
+                  <Text
+                    style={[
+                      styles.chipText,
+                      roleFilter === "user" && styles.chipTextActive,
+                    ]}
+                  >
+                    Utilisateur
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -270,7 +361,7 @@ export default function UsersScreen() {
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                colors={['#11224e']}
+                colors={["#11224e"]}
                 tintColor="#11224e"
               />
             }
@@ -299,12 +390,12 @@ export default function UsersScreen() {
         onClose={handleCloseDetailModal}
         onUserUpdated={(updatedUser) => {
           // Update the user in the local state
-          setUsers(prevUsers => 
-            prevUsers.map(u => u.id === updatedUser.id ? updatedUser : u)
+          setUsers((prevUsers) =>
+            prevUsers.map((u) => (u.id === updatedUser.id ? updatedUser : u)),
           );
         }}
         onUserDeleted={(userId) => {
-          setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
+          setUsers((prevUsers) => prevUsers.filter((u) => u.id !== userId));
         }}
       />
     </>
@@ -314,34 +405,34 @@ export default function UsersScreen() {
 const styles = {
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: "white",
   },
   header: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
     padding: 16,
   },
   headerSearchContainer: {
     flex: 1,
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: "#e5e7eb",
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     marginRight: 12,
   },
   title: {
     fontSize: 22,
-    fontWeight: '700' as const,
-    color: '#11224e',
+    fontWeight: "700" as const,
+    color: "#11224e",
   },
   subtitle: {
     marginTop: 4,
-    color: '#6b7280',
+    color: "#6b7280",
     fontSize: 14,
   },
   controlsContainer: {
@@ -349,60 +440,60 @@ const styles = {
     paddingBottom: 8,
   },
   searchContainer: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: "#e5e7eb",
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: 'white',
+    backgroundColor: "white",
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#111827',
+    color: "#111827",
   },
   filtersRow: {
-    flexDirection: 'row' as const,
-    justifyContent: 'flex-start' as const,
+    flexDirection: "row" as const,
+    justifyContent: "flex-start" as const,
     marginTop: 12,
   },
   filterGroup: {
-    flexDirection: 'row' as const,
+    flexDirection: "row" as const,
     gap: 8,
   },
   chip: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: "#e5e7eb",
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   chipActive: {
-    borderColor: '#f87b1b',
-    backgroundColor: '#fff7ed',
+    borderColor: "#f87b1b",
+    backgroundColor: "#fff7ed",
   },
   chipText: {
     fontSize: 12,
-    color: '#374151',
-    fontWeight: '500' as const,
+    color: "#374151",
+    fontWeight: "500" as const,
   },
   chipTextActive: {
-    color: '#f87b1b',
-    fontWeight: '600' as const,
+    color: "#f87b1b",
+    fontWeight: "600" as const,
   },
   addButton: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    backgroundColor: '#FFFFFF',
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#f87b1b',
+    borderColor: "#f87b1b",
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    shadowColor: '#f87b1b',
+    shadowColor: "#f87b1b",
     shadowOffset: {
       width: 0,
       height: 1,
@@ -413,8 +504,8 @@ const styles = {
   },
   addButtonText: {
     fontSize: 14,
-    fontWeight: '600' as const,
-    color: '#f87b1b',
+    fontWeight: "600" as const,
+    color: "#f87b1b",
     marginLeft: 6,
   },
   listContainer: {
@@ -422,13 +513,13 @@ const styles = {
     paddingBottom: 100,
   },
   userCard: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: "#e5e7eb",
     borderRadius: 10,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 1,
@@ -438,12 +529,12 @@ const styles = {
     elevation: 2,
   },
   adminCard: {
-    borderColor: '#f87b1b',
+    borderColor: "#f87b1b",
   },
   userHeader: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'flex-start' as const,
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "flex-start" as const,
   },
   avatarContainer: {
     marginRight: 12,
@@ -452,38 +543,38 @@ const styles = {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: "#f3f4f6",
   },
   avatarPlaceholder: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#f3f4f6',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    backgroundColor: "#f3f4f6",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: "#e5e7eb",
   },
   userInfo: {
     flex: 1,
   },
   userName: {
     fontSize: 16,
-    fontWeight: '600' as const,
-    color: '#11224e',
+    fontWeight: "600" as const,
+    color: "#11224e",
   },
   userEmail: {
     fontSize: 14,
-    color: '#6b7280',
+    color: "#6b7280",
     marginTop: 2,
   },
   userPhone: {
     fontSize: 14,
-    color: '#6b7280',
+    color: "#6b7280",
     marginTop: 2,
   },
   badgesContainer: {
-    alignItems: 'flex-end' as const,
+    alignItems: "flex-end" as const,
   },
   badge: {
     borderWidth: 1,
@@ -491,37 +582,37 @@ const styles = {
     paddingVertical: 4,
     borderRadius: 12,
     minWidth: 80,
-    alignItems: 'center' as const,
+    alignItems: "center" as const,
   },
   badgeText: {
     fontSize: 11,
-    fontWeight: '600' as const,
+    fontWeight: "600" as const,
   },
   loadingContainer: {
     flex: 1,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   loadingText: {
     marginTop: 12,
-    color: '#6b7280',
+    color: "#6b7280",
     fontSize: 16,
   },
   emptyContainer: {
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     paddingVertical: 64,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600' as const,
-    color: '#374151',
+    fontWeight: "600" as const,
+    color: "#374151",
     marginTop: 16,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#6b7280',
-    textAlign: 'center' as const,
+    color: "#6b7280",
+    textAlign: "center" as const,
     marginTop: 8,
     paddingHorizontal: 32,
   },
