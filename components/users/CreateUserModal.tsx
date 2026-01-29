@@ -469,8 +469,6 @@ export default function CreateUserModal({
 
               {/* Section: Connexion & Contact */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Connexion & Contact</Text>
-
                 <InputField
                   label="Identifiant"
                   icon="finger-print-outline"

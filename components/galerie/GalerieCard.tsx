@@ -2,6 +2,7 @@ import API_CONFIG from "@/app/config/api";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { Ged } from "@/services/gedService";
 import { Ionicons } from "@expo/vector-icons";
+import { ResizeMode, Video } from "expo-av";
 import React from "react";
 import {
     ActivityIndicator,
@@ -19,6 +20,7 @@ interface GalerieCardProps {
   isOffline?: boolean;
   localImagePath?: string;
   syncStatus?: "pending" | "syncing" | "failed";
+  isVideo?: boolean;
 }
 
 export default function GalerieCard({
@@ -28,6 +30,7 @@ export default function GalerieCard({
   isOffline,
   localImagePath,
   syncStatus,
+  isVideo,
 }: GalerieCardProps) {
   const GofG = API_CONFIG.BASE_URL;
   const formattedDate = new Date(item.created_at).toLocaleDateString("fr-FR", {
@@ -47,7 +50,29 @@ export default function GalerieCard({
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.imageContainer}>
-        <Image source={imageSource} style={styles.image} />
+        {isVideo ? (
+          <Video
+            source={imageSource}
+            style={styles.image}
+            resizeMode={ResizeMode.COVER}
+            shouldPlay={false}
+            isMuted={true}
+          />
+        ) : (
+          <Image source={imageSource} style={styles.image} />
+        )}
+
+        {/* Play icon overlay for videos */}
+        {isVideo && (
+          <View style={styles.playIconOverlay}>
+            <Ionicons
+              name="play-circle"
+              size={40}
+              color="rgba(255, 255, 255, 0.9)"
+            />
+          </View>
+        )}
+
         {/* Sync status indicator */}
         {syncStatus && (
           <View style={styles.syncStatusBadge}>
@@ -174,6 +199,16 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
     borderRadius: 15,
     padding: 4,
+  },
+  playIconOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1,
   },
   syncStatusBadge: {
     position: "absolute",

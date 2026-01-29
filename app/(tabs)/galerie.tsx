@@ -64,6 +64,13 @@ export default function GalerieScreen() {
 
   const isTablet = width >= 768;
 
+  const isVideoFile = (filename: string | null) => {
+    if (!filename) return false;
+    const videoExtensions = ["mp4", "mov", "avi", "webm", "mkv"];
+    const ext = filename.split(".").pop()?.toLowerCase();
+    return ext ? videoExtensions.includes(ext) : false;
+  };
+
   const fetchGeds = useCallback(async () => {
     if (token) {
       try {
@@ -482,6 +489,7 @@ export default function GalerieScreen() {
                     isOffline={item.isOffline}
                     localImagePath={item.localImagePath}
                     syncStatus={item.syncStatus}
+                    isVideo={isVideoFile(item.url)}
                   />
                 </View>
               ))
@@ -573,7 +581,13 @@ export default function GalerieScreen() {
           visible={!!selectedItem && !isAnnotatorVisible}
           onClose={closePreview}
           mediaUrl={`${API_CONFIG.BASE_URL}${selectedItem.url}`}
-          mediaType={selectedItem.kind === "qualiphoto" ? "image" : "file"}
+          mediaType={
+            isVideoFile(selectedItem.url)
+              ? "video"
+              : selectedItem.kind === "qualiphoto"
+                ? "image"
+                : "file"
+          }
           title={selectedItem.title}
           onAnnotate={handleOpenAnnotator}
           description={selectedItem.description}
