@@ -1,14 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
@@ -88,18 +88,17 @@ export default function CreateUserModal({
   // Logic to handle role assignment based on User Type (Interne vs Externe)
   useEffect(() => {
     if (roles.length > 0) {
-      const adminRole = roles.find((r) => r.role.toLowerCase() === "admin");
+      const userRole = roles.find((r) => r.role.toLowerCase() === "user");
 
       if (formData.interne === 0) {
-        // External User -> Force "Admin"
-        if (adminRole && formData.role_id !== adminRole.id) {
-          setFormData((prev) => ({ ...prev, role_id: adminRole.id }));
+        // External User -> Force "User"
+        if (userRole && formData.role_id !== userRole.id) {
+          setFormData((prev) => ({ ...prev, role_id: userRole.id }));
         }
       } else {
-        // Internal User -> Default to "Admin" if no role selected (or keep current if valid)
-        // We want to force a selection or default to Admin.
-        if (!formData.role_id && adminRole) {
-          setFormData((prev) => ({ ...prev, role_id: adminRole.id }));
+        // Internal User -> Default to "User" if no role selected
+        if (!formData.role_id && userRole) {
+          setFormData((prev) => ({ ...prev, role_id: userRole.id }));
         }
       }
     }
@@ -203,8 +202,8 @@ export default function CreateUserModal({
       // Ensure role_id is set
       if (!dataToSend.role_id) {
         // Fallback if role missing (should not happen with logic)
-        const adminRole = roles.find((r) => r.role.toLowerCase() === "admin");
-        if (adminRole) dataToSend.role_id = adminRole.id;
+        const userRole = roles.find((r) => r.role.toLowerCase() === "user");
+        if (userRole) dataToSend.role_id = userRole.id;
       }
 
       await createUser(dataToSend);
