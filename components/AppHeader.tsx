@@ -92,10 +92,10 @@ export default function AppHeader({
 
     const lowerRole = user.role?.toLowerCase() || "";
 
-    if (lowerRole.includes("super admin")) {
-      return "#f87b1b"; // Orange for Super Admin
-    } else if (lowerRole.includes("admin")) {
-      return "#2563eb"; // Blue for Admin
+    if (lowerRole.includes("admin")) {
+      return "#f87b1b"; // Orange for Admin & Super Admin
+    } else if (lowerRole === "user") {
+      return "#2563eb"; // Blue for User
     }
 
     return "#1e293b"; // Default dark color for other roles
