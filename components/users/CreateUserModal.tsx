@@ -214,13 +214,13 @@ export default function CreateUserModal({
     } catch (error: any) {
       console.error("Error creating user:", error);
 
-      // Handle 403 error specifically for limit reached
-      if (error.response?.status === 403) {
-        const errorData = error.response?.data;
+      // Handle 403 (Limit) and 409 (Conflict) specifically, or general errors
+      if (error.response?.data?.error) {
+        Alert.alert("Erreur", error.response.data.error);
+      } else if (error.response?.status === 403) {
         Alert.alert(
           "Limite atteinte",
-          errorData?.error ||
-            `Vous avez atteint la limite de ${companyInfo?.nbusers || 2} utilisateurs.`,
+          `Vous avez atteint la limite de ${companyInfo?.nbusers || 2} utilisateurs.`,
         );
       } else {
         Alert.alert(
