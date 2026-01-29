@@ -1,7 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
-import * as Linking from 'expo-linking';
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { Audio, ResizeMode, Video } from "expo-av";
+import * as Linking from "expo-linking";
+import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -15,21 +15,28 @@ import {
     Text,
     TouchableOpacity,
     useWindowDimensions,
-    View
-} from 'react-native';
+    View,
+} from "react-native";
 
-import API_CONFIG from '@/app/config/api';
-import { ICONS } from '@/constants/Icons';
-import { useAuth } from '@/contexts/AuthContext';
-import { Folder } from '@/services/folderService';
-import { describeImage, Ged, getGedsBySource, updateGed, updateGedFile } from '@/services/gedService';
-import { getAllStatuses, Status } from '@/services/statusService';
+import API_CONFIG from "@/app/config/api";
+import { ICONS } from "@/constants/Icons";
+import { useAuth } from "@/contexts/AuthContext";
+import { Folder } from "@/services/folderService";
+import {
+    describeImage,
+    Ged,
+    getGedsBySource,
+    updateGed,
+    updateGedFile,
+} from "@/services/gedService";
+import { getAllStatuses, Status } from "@/services/statusService";
+import { isVideoFile } from "@/utils/mediaUtils";
 
-import CustomAlert from '../CustomAlert';
-import PictureAnnotator from '../PictureAnnotator';
-import PreviewModal from '../PreviewModal';
-import CreateComplementaireQualiPhotoModal from './CreateComplementaireQualiPhotoModal';
-import DescriptionEditModal from './DescriptionEditModal';
+import CustomAlert from "../CustomAlert";
+import PictureAnnotator from "../PictureAnnotator";
+import PreviewModal from "../PreviewModal";
+import CreateComplementaireQualiPhotoModal from "./CreateComplementaireQualiPhotoModal";
+import DescriptionEditModal from "./DescriptionEditModal";
 
 type ChildQualiPhotoViewProps = {
   item: Ged;
@@ -57,24 +64,35 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   const { width } = useWindowDimensions();
   const [afterPhotos, setAfterPhotos] = useState<Ged[]>([]);
   const [isLoadingAfter, setIsLoadingAfter] = useState(true);
-  const [isCreateAfterModalVisible, setCreateAfterModalVisible] = useState(false);
-  
+  const [isCreateAfterModalVisible, setCreateAfterModalVisible] =
+    useState(false);
+
   // Local state for "avant" description to allow immediate UI updates
-  const [avantDescription, setAvantDescription] = useState(item.description || '');
-  
+  const [avantDescription, setAvantDescription] = useState(
+    item.description || "",
+  );
+
   // Description edit modal state
-  const [isDescriptionModalVisible, setIsDescriptionModalVisible] = useState(false);
-  const [editingDescriptionType, setEditingDescriptionType] = useState<'avant' | 'apres' | null>(null);
+  const [isDescriptionModalVisible, setIsDescriptionModalVisible] =
+    useState(false);
+  const [editingDescriptionType, setEditingDescriptionType] = useState<
+    "avant" | "apres" | null
+  >(null);
   const [currentItem, setCurrentItem] = useState<Ged | null>(null);
 
   // Preview modal state
   const [isPreviewModalVisible, setIsPreviewModalVisible] = useState(false);
-  const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' | 'video' | 'file' | 'voice' } | null>(null);
+  const [previewMedia, setPreviewMedia] = useState<{
+    url: string;
+    type: "image" | "video" | "file" | "voice";
+  } | null>(null);
   const [previewedItem, setPreviewedItem] = useState<Ged | null>(null);
 
   // Annotator modal state
   const [isAnnotatorVisible, setIsAnnotatorVisible] = useState(false);
-  const [annotatorImageUri, setAnnotatorImageUri] = useState<string | null>(null);
+  const [annotatorImageUri, setAnnotatorImageUri] = useState<string | null>(
+    null,
+  );
 
   // Status state
   const [statuses, setStatuses] = useState<Status[]>([]);
@@ -83,27 +101,31 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   const [isDescribing, setIsDescribing] = useState(false);
   const [alertInfo, setAlertInfo] = useState<{
     visible: boolean;
-    type: 'success' | 'error';
+    type: "success" | "error";
     title: string;
     message: string;
-  }>({ visible: false, type: 'success', title: '', message: '' });
+  }>({ visible: false, type: "success", title: "", message: "" });
 
   const isTablet = width >= 768;
 
   // Update local state when item prop changes
   useEffect(() => {
-    setAvantDescription(item.description || '');
+    setAvantDescription(item.description || "");
   }, [item.description]);
-  
+
   // Voice notes state
   const [voiceNotesAvant, setVoiceNotesAvant] = useState<Ged[]>([]);
   const [voiceNotesApres, setVoiceNotesApres] = useState<Ged[]>([]);
-  const [isLoadingVoiceNotesAvant, setIsLoadingVoiceNotesAvant] = useState(false);
-  const [isLoadingVoiceNotesApres, setIsLoadingVoiceNotesApres] = useState(false);
-  
+  const [isLoadingVoiceNotesAvant, setIsLoadingVoiceNotesAvant] =
+    useState(false);
+  const [isLoadingVoiceNotesApres, setIsLoadingVoiceNotesApres] =
+    useState(false);
+
   // Audio playback state
   const [playingSound, setPlayingSound] = useState<Audio.Sound | null>(null);
-  const [playingVoiceNoteId, setPlayingVoiceNoteId] = useState<string | null>(null);
+  const [playingVoiceNoteId, setPlayingVoiceNoteId] = useState<string | null>(
+    null,
+  );
   const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
@@ -112,10 +134,12 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
       try {
         const fetchedStatuses = await getAllStatuses(token);
         setStatuses(fetchedStatuses);
-        const initialStatus = fetchedStatuses.find(s => s.id === item.status_id);
+        const initialStatus = fetchedStatuses.find(
+          (s) => s.id === item.status_id,
+        );
         setCurrentStatus(initialStatus || null);
       } catch (error) {
-        console.error('Failed to fetch statuses:', error);
+        console.error("Failed to fetch statuses:", error);
       }
     }
 
@@ -131,10 +155,10 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
 
       setIsLoadingAfter(true);
       try {
-        const photos = await getGedsBySource(token, item.id, 'photoapres');
+        const photos = await getGedsBySource(token, item.id, "photoapres");
         setAfterPhotos(photos);
       } catch (error) {
-        console.error('Failed to fetch after photos:', error);
+        console.error("Failed to fetch after photos:", error);
         setAfterPhotos([]);
       } finally {
         setIsLoadingAfter(false);
@@ -151,10 +175,10 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
 
       setIsLoadingVoiceNotesAvant(true);
       try {
-        const voiceNotes = await getGedsBySource(token, item.id, 'audio');
+        const voiceNotes = await getGedsBySource(token, item.id, "audio");
         setVoiceNotesAvant(voiceNotes);
       } catch (error) {
-        console.error('Failed to fetch voice notes avant:', error);
+        console.error("Failed to fetch voice notes avant:", error);
         setVoiceNotesAvant([]);
       } finally {
         setIsLoadingVoiceNotesAvant(false);
@@ -172,10 +196,14 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
 
       setIsLoadingVoiceNotesApres(true);
       try {
-        const voiceNotes = await getGedsBySource(token, firstAfterPhotoId, 'audio');
+        const voiceNotes = await getGedsBySource(
+          token,
+          firstAfterPhotoId,
+          "audio",
+        );
         setVoiceNotesApres(voiceNotes);
       } catch (error) {
-        console.error('Failed to fetch voice notes apres:', error);
+        console.error("Failed to fetch voice notes apres:", error);
         setVoiceNotesApres([]);
       } finally {
         setIsLoadingVoiceNotesApres(false);
@@ -186,14 +214,20 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   }, [firstAfterPhotoId, token]);
 
   const handleValidate = async () => {
-    const activeStatus = statuses.find(s => s.status === 'Active');
+    const activeStatus = statuses.find((s) => s.status === "Active");
     if (!token || !item?.id || !activeStatus) {
-      Alert.alert('Erreur', 'Impossible de valider, statut "Active" non trouvé ou session invalide.');
+      Alert.alert(
+        "Erreur",
+        'Impossible de valider, statut "Active" non trouvé ou session invalide.',
+      );
       return;
     }
 
     if (afterPhotos.length === 0) {
-      Alert.alert('Information', 'Veuillez ajouter une photo "après" avant de valider.');
+      Alert.alert(
+        "Information",
+        'Veuillez ajouter une photo "après" avant de valider.',
+      );
       return;
     }
 
@@ -204,23 +238,25 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
 
       // Update "après" photo
       if (afterPhotos.length > 0 && afterPhotos[0].id) {
-        await updateGed(token, afterPhotos[0].id, { status_id: activeStatus.id });
+        await updateGed(token, afterPhotos[0].id, {
+          status_id: activeStatus.id,
+        });
       }
 
       setCurrentStatus(activeStatus);
       setAlertInfo({
         visible: true,
-        type: 'success',
-        title: 'Succès',
-        message: 'Le dossier a été validé.',
+        type: "success",
+        title: "Succès",
+        message: "Le dossier a été validé.",
       });
     } catch (error) {
-      console.error('Failed to validate status:', error);
+      console.error("Failed to validate status:", error);
       setAlertInfo({
         visible: true,
-        type: 'error',
-        title: 'Erreur',
-        message: 'Échec de la mise à jour du statut.',
+        type: "error",
+        title: "Erreur",
+        message: "Échec de la mise à jour du statut.",
       });
     } finally {
       setIsUpdatingStatus(false);
@@ -232,72 +268,75 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   };
 
   const handleAfterPhotoSuccess = (createdGed: Ged) => {
-    setAfterPhotos(prev => [...prev, createdGed]);
+    setAfterPhotos((prev) => [...prev, createdGed]);
     setCreateAfterModalVisible(false);
   };
 
   const handleShareBothPhotos = async () => {
     try {
       if (afterPhotos.length === 0) {
-        Alert.alert('Information', 'Veuillez ajouter une photo "après" avant de partager.');
+        Alert.alert(
+          "Information",
+          'Veuillez ajouter une photo "après" avant de partager.',
+        );
         return;
       }
 
       const avantUrl = `${API_CONFIG.BASE_URL}${item.url}`;
       const apresUrl = `${API_CONFIG.BASE_URL}${afterPhotos[0].url}`;
-      
+
       // Build rich metadata message
       const parts = [];
-      parts.push('📸 Situation Avant / Situation Après');
-      parts.push('');
-      
+      parts.push("📸 Situation Avant / Situation Après");
+      parts.push("");
+
       if (companyTitle) {
         parts.push(`🏢 Entreprise: ${companyTitle}`);
       }
-      
+
       if (projectTitle) {
         parts.push(`🏗️ Projet: ${projectTitle}`);
       }
-      
+
       if (zoneTitle) {
         parts.push(`📍 Zone: ${zoneTitle}`);
       }
-      
+
       if (item.author) {
         parts.push(`👤 Auteur: ${item.author}`);
       }
-      
-      parts.push('');
-      parts.push('📷 Situation Avant:');
+
+      parts.push("");
+      parts.push("📷 Situation Avant:");
       parts.push(avantUrl);
-      parts.push('');
-      parts.push('📷 Situation Après:');
+      parts.push("");
+      parts.push("📷 Situation Après:");
       parts.push(apresUrl);
-      parts.push('');
-      parts.push('━━━━━━━━━━━');
-      parts.push('📱 Qualisol | Muntadaacom');
-      
-      const message = parts.join('\n');
-      
+      parts.push("");
+      parts.push("━━━━━━━━━━━");
+      parts.push("📱 Qualisol | Muntadaacom");
+
+      const message = parts.join("\n");
+
       await Share.share({
         message: message,
       });
     } catch (error) {
-      console.error('Error sharing photos:', error);
-      Alert.alert('Erreur', 'Impossible de partager les photos.');
+      console.error("Error sharing photos:", error);
+      Alert.alert("Erreur", "Impossible de partager les photos.");
     }
   };
 
-  const handleOpenDescriptionEdit = (type: 'avant' | 'apres') => {
-    if (type === 'avant') {
+  const handleOpenDescriptionEdit = (type: "avant" | "apres") => {
+    if (type === "avant") {
       setCurrentItem(item);
-      setEditingDescriptionType('avant');
+      setEditingDescriptionType("avant");
     } else {
       if (afterPhotos[0]) {
         setCurrentItem(afterPhotos[0]);
-        setEditingDescriptionType('apres');
+        setEditingDescriptionType("apres");
       } else {
-        Alert.alert('Information', 'Aucune photo "après" disponible.');
+        Alert.alert("Information", 'Aucune photo "après" disponible.');
         return;
       }
     }
@@ -305,16 +344,18 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   };
 
   const handleDescriptionSave = (updatedDescription: string) => {
-    if (editingDescriptionType === 'avant' && currentItem) {
+    if (editingDescriptionType === "avant" && currentItem) {
       // Update local state for immediate UI feedback
       // The API call is already done in the modal
       setAvantDescription(updatedDescription);
-    } else if (editingDescriptionType === 'apres' && currentItem) {
+    } else if (editingDescriptionType === "apres" && currentItem) {
       // Update the after photo description
-      setAfterPhotos(prev =>
-        prev.map(photo =>
-          photo.id === currentItem.id ? { ...photo, description: updatedDescription } : photo
-        )
+      setAfterPhotos((prev) =>
+        prev.map((photo) =>
+          photo.id === currentItem.id
+            ? { ...photo, description: updatedDescription }
+            : photo,
+        ),
       );
     }
     setIsDescriptionModalVisible(false);
@@ -327,12 +368,16 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     if (fullUrl) {
       // Basic check for media type based on extension.
       // This could be improved if the API provides a mime type.
-      const isVideo = ['.mp4', '.mov', '.avi'].some(ext => gedItem.url?.toLowerCase().endsWith(ext));
-      const isVoice = ['.mp3', '.wav', '.m4a', '.aac'].some(ext => gedItem.url?.toLowerCase().endsWith(ext));
-      
-      let type: 'image' | 'video' | 'file' | 'voice' = 'image';
-      if (isVideo) type = 'video';
-      else if (isVoice) type = 'voice';
+      const isVideo = [".mp4", ".mov", ".avi"].some((ext) =>
+        gedItem.url?.toLowerCase().endsWith(ext),
+      );
+      const isVoice = [".mp3", ".wav", ".m4a", ".aac"].some((ext) =>
+        gedItem.url?.toLowerCase().endsWith(ext),
+      );
+
+      let type: "image" | "video" | "file" | "voice" = "image";
+      if (isVideo) type = "video";
+      else if (isVoice) type = "voice";
       // For now, we assume everything else is an image or needs to be handled as a generic file if not image.
       // Since QualiPhoto is about photos, 'image' is a safe default.
 
@@ -340,7 +385,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
       setPreviewedItem(gedItem);
       setIsPreviewModalVisible(true);
     } else {
-      Alert.alert('Erreur', 'Média non disponible.');
+      Alert.alert("Erreur", "Média non disponible.");
     }
   };
 
@@ -366,36 +411,49 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     setPreviewedItem(null);
   };
 
-  const handleSaveAnnotation = async (image: { uri: string; name: string; type: string }) => {
+  const handleSaveAnnotation = async (image: {
+    uri: string;
+    name: string;
+    type: string;
+  }) => {
     if (!token || !previewedItem) {
-      Alert.alert('Erreur', 'Impossible de sauvegarder, session invalide.');
+      Alert.alert("Erreur", "Impossible de sauvegarder, session invalide.");
       return;
     }
 
     try {
-      const updatedGedResponse = await updateGedFile(token, previewedItem.id, image);
+      const updatedGedResponse = await updateGedFile(
+        token,
+        previewedItem.id,
+        image,
+      );
 
       // After successful upload, update the relevant state to refresh UI
       if (item.id === updatedGedResponse.id) {
         // This is the "avant" photo. Call the callback to notify the parent.
         onAvantPhotoUpdate(updatedGedResponse);
-      } else if (afterPhotos.some(p => p.id === updatedGedResponse.id)) {
+      } else if (afterPhotos.some((p) => p.id === updatedGedResponse.id)) {
         // This is an "après" photo. We can update the local state to show the new image.
-        setAfterPhotos(prev =>
-          prev.map(photo => (photo.id === updatedGedResponse.id ? updatedGedResponse : photo))
+        setAfterPhotos((prev) =>
+          prev.map((photo) =>
+            photo.id === updatedGedResponse.id ? updatedGedResponse : photo,
+          ),
         );
       }
-      
+
       handleCloseAnnotator();
     } catch (error) {
-      console.error('Failed to save annotation:', error);
-      Alert.alert('Erreur', 'Échec de l\'enregistrement de l\'annotation.');
+      console.error("Failed to save annotation:", error);
+      Alert.alert("Erreur", "Échec de l'enregistrement de l'annotation.");
     }
   };
 
   const handleAutoDescribe = async () => {
     if (!token || !previewedItem || !previewedItem.url) {
-      Alert.alert("Erreur", "Impossible de décrire l'image, informations manquantes.");
+      Alert.alert(
+        "Erreur",
+        "Impossible de décrire l'image, informations manquantes.",
+      );
       return;
     }
 
@@ -403,32 +461,36 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     try {
       const imageUrl = getFullImageUrl(previewedItem.url);
       if (!imageUrl) {
-        throw new Error('Invalid image URL');
+        throw new Error("Invalid image URL");
       }
 
       const file = {
         uri: imageUrl,
-        type: 'image/jpeg', // Assuming jpeg, could be improved
-        name: previewedItem.url.split('/').pop() || 'image.jpg',
+        type: "image/jpeg", // Assuming jpeg, could be improved
+        name: previewedItem.url.split("/").pop() || "image.jpg",
       };
 
       const aiDescription = await describeImage(token, file);
 
-      const currentDescription = previewedItem.description || '';
+      const currentDescription = previewedItem.description || "";
       const newDescription = currentDescription
         ? `${currentDescription}\n\n${aiDescription}`
         : aiDescription;
 
-      const updatedGed = await updateGed(token, previewedItem.id, { description: newDescription });
+      const updatedGed = await updateGed(token, previewedItem.id, {
+        description: newDescription,
+      });
 
       // Update state
       if (item.id === updatedGed.id) {
-        setAvantDescription(updatedGed.description || '');
+        setAvantDescription(updatedGed.description || "");
         // Also update the item itself in case it's used elsewhere
         onAvantPhotoUpdate(updatedGed);
-      } else if (afterPhotos.some(p => p.id === updatedGed.id)) {
-        setAfterPhotos(prev =>
-          prev.map(photo => (photo.id === updatedGed.id ? updatedGed : photo))
+      } else if (afterPhotos.some((p) => p.id === updatedGed.id)) {
+        setAfterPhotos((prev) =>
+          prev.map((photo) =>
+            photo.id === updatedGed.id ? updatedGed : photo,
+          ),
         );
       }
 
@@ -437,26 +499,31 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
 
       setAlertInfo({
         visible: true,
-        type: 'success',
-        title: 'Succès',
-        message: 'La description a été ajoutée avec succès.',
+        type: "success",
+        title: "Succès",
+        message: "La description a été ajoutée avec succès.",
       });
     } catch (error) {
-      console.error('Failed to describe image:', error);
-      Alert.alert('Erreur', 'Échec de la génération de la description.');
+      console.error("Failed to describe image:", error);
+      Alert.alert("Erreur", "Échec de la génération de la description.");
     } finally {
       setIsDescribing(false);
     }
   };
 
-  const getFullImageUrl = (relativeUrl: string | null | undefined): string | null => {
+  const getFullImageUrl = (
+    relativeUrl: string | null | undefined,
+  ): string | null => {
     if (!relativeUrl) return null;
     return `${API_CONFIG.BASE_URL}${relativeUrl}`;
   };
 
   const openMap = async (latitude: string | null, longitude: string | null) => {
     if (!latitude || !longitude) {
-      Alert.alert('Information', 'Aucune coordonnée de localisation disponible.');
+      Alert.alert(
+        "Information",
+        "Aucune coordonnée de localisation disponible.",
+      );
       return;
     }
 
@@ -464,12 +531,12 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     const lon = parseFloat(longitude);
 
     if (isNaN(lat) || isNaN(lon)) {
-      Alert.alert('Erreur', 'Coordonnées de localisation invalides.');
+      Alert.alert("Erreur", "Coordonnées de localisation invalides.");
       return;
     }
 
     let url: string;
-    if (Platform.OS === 'ios') {
+    if (Platform.OS === "ios") {
       url = `maps://?q=${lat},${lon}`;
     } else {
       url = `geo:${lat},${lon}?q=${lat},${lon}`;
@@ -485,8 +552,8 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
         await Linking.openURL(googleMapsUrl);
       }
     } catch (error) {
-      console.error('Error opening map:', error);
-      Alert.alert('Erreur', 'Impossible d\'ouvrir l\'application de cartes.');
+      console.error("Error opening map:", error);
+      Alert.alert("Erreur", "Impossible d'ouvrir l'application de cartes.");
     }
   };
 
@@ -527,21 +594,21 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
 
       // If no URL, show error
       if (!voiceNote.url) {
-        Alert.alert('Erreur', 'Fichier audio non disponible.');
+        Alert.alert("Erreur", "Fichier audio non disponible.");
         return;
       }
 
       // Build full URL
       const audioUrl = getFullImageUrl(voiceNote.url);
       if (!audioUrl) {
-        Alert.alert('Erreur', 'URL audio invalide.');
+        Alert.alert("Erreur", "URL audio invalide.");
         return;
       }
 
       // Create and play new sound
       const { sound } = await Audio.Sound.createAsync(
         { uri: audioUrl },
-        { shouldPlay: true }
+        { shouldPlay: true },
       );
 
       sound.setOnPlaybackStatusUpdate((status) => {
@@ -560,8 +627,8 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
       setPlayingVoiceNoteId(voiceNote.id);
       setIsPlaying(true);
     } catch (error) {
-      console.error('Error playing voice note:', error);
-      Alert.alert('Erreur', 'Impossible de lire la note vocale.');
+      console.error("Error playing voice note:", error);
+      Alert.alert("Erreur", "Impossible de lire la note vocale.");
       setPlayingSound(null);
       setPlayingVoiceNoteId(null);
       setIsPlaying(false);
@@ -586,33 +653,36 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
       );
     }
 
-      return (
-        <View style={styles.voiceNotesList}>
-          {voiceNotes.map((voiceNote) => {
-            const isCurrentNote = playingVoiceNoteId === voiceNote.id;
-            const showPause = isCurrentNote && isPlaying;
-            return (
-              <TouchableOpacity
-                key={voiceNote.id}
-                style={[styles.voiceNoteItem, isCurrentNote && styles.voiceNoteItemPlaying]}
-                onPress={() => handlePlayPauseVoiceNote(voiceNote)}
-              >
-                <Ionicons
-                  name={showPause ? 'pause-circle' : 'play-circle'}
-                  size={24}
-                  color={isCurrentNote ? '#f87b1b' : '#11224e'}
-                />
-                <Text style={styles.voiceNoteTitle} numberOfLines={1}>
-                  {voiceNote.title || 'Note vocale'}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      );
+    return (
+      <View style={styles.voiceNotesList}>
+        {voiceNotes.map((voiceNote) => {
+          const isCurrentNote = playingVoiceNoteId === voiceNote.id;
+          const showPause = isCurrentNote && isPlaying;
+          return (
+            <TouchableOpacity
+              key={voiceNote.id}
+              style={[
+                styles.voiceNoteItem,
+                isCurrentNote && styles.voiceNoteItemPlaying,
+              ]}
+              onPress={() => handlePlayPauseVoiceNote(voiceNote)}
+            >
+              <Ionicons
+                name={showPause ? "pause-circle" : "play-circle"}
+                size={24}
+                color={isCurrentNote ? "#f87b1b" : "#11224e"}
+              />
+              <Text style={styles.voiceNoteTitle} numberOfLines={1}>
+                {voiceNote.title || "Note vocale"}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
   };
 
-  const isValidated = currentStatus?.status === 'Active';
+  const isValidated = currentStatus?.status === "Active";
   const canValidate = afterPhotos.length > 0;
 
   const header = (
@@ -638,12 +708,18 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
       </View>
       <View style={styles.headerTitles}>
         <Text style={styles.title}>{item.title}</Text>
-        <Text numberOfLines={1} style={styles.subtitle}>{subtitle}</Text>
+        <Text numberOfLines={1} style={styles.subtitle}>
+          {subtitle}
+        </Text>
       </View>
       <View style={styles.headerActionsContainer}>
         {!readOnly && (
           <TouchableOpacity
-            style={[styles.headerAction, (isLoadingAfter || afterPhotos.length > 0) && styles.disabledHeaderAction]}
+            style={[
+              styles.headerAction,
+              (isLoadingAfter || afterPhotos.length > 0) &&
+                styles.disabledHeaderAction,
+            ]}
             onPress={handleAddAfterPhoto}
             disabled={isLoadingAfter || afterPhotos.length > 0}
             accessibilityLabel="Ajouter une photo complémentaire"
@@ -664,10 +740,37 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
             <View style={isTablet ? styles.avantApresColumn : undefined}>
               <Text style={styles.sectionTitle}>Avant</Text>
               {item.url ? (
-                <TouchableOpacity onPress={() => handleOpenPreview(item)} style={styles.photoContainer}>
-                  <Image source={{ uri: getFullImageUrl(item.url) as string }} style={styles.childThumbnail} />
+                <TouchableOpacity
+                  onPress={() => handleOpenPreview(item)}
+                  style={styles.photoContainer}
+                >
+                  {isVideoFile(item.url) ? (
+                    <View style={styles.thumbnailContainer}>
+                      <Video
+                        source={{ uri: getFullImageUrl(item.url) as string }}
+                        style={styles.childThumbnail}
+                        resizeMode={ResizeMode.COVER}
+                        shouldPlay={false}
+                        isMuted={true}
+                      />
+                      <View style={styles.playIconOverlay}>
+                        <Ionicons
+                          name="play-circle"
+                          size={40}
+                          color="rgba(255, 255, 255, 0.9)"
+                        />
+                      </View>
+                    </View>
+                  ) : (
+                    <Image
+                      source={{ uri: getFullImageUrl(item.url) as string }}
+                      style={styles.childThumbnail}
+                    />
+                  )}
                   <View style={styles.childGridOverlay}>
-                    <Text style={styles.childGridTitle} numberOfLines={1}>{item.title}</Text>
+                    <Text style={styles.childGridTitle} numberOfLines={1}>
+                      {item.title}
+                    </Text>
                   </View>
                 </TouchableOpacity>
               ) : null}
@@ -694,16 +797,46 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
               {isLoadingAfter ? (
                 <ActivityIndicator style={{ marginVertical: 12 }} />
               ) : afterPhotos.length > 0 ? (
-                afterPhotos.map(photo => (
-                  <TouchableOpacity key={photo.id} onPress={() => handleOpenPreview(photo)} style={styles.photoContainer}>
-                    <Image source={{ uri: getFullImageUrl(photo.url) as string }} style={styles.childThumbnail} />
+                afterPhotos.map((photo) => (
+                  <TouchableOpacity
+                    key={photo.id}
+                    onPress={() => handleOpenPreview(photo)}
+                    style={styles.photoContainer}
+                  >
+                    {isVideoFile(photo.url) ? (
+                      <View style={styles.thumbnailContainer}>
+                        <Video
+                          source={{ uri: getFullImageUrl(photo.url) as string }}
+                          style={styles.childThumbnail}
+                          resizeMode={ResizeMode.COVER}
+                          shouldPlay={false}
+                          isMuted={true}
+                        />
+                        <View style={styles.playIconOverlay}>
+                          <Ionicons
+                            name="play-circle"
+                            size={40}
+                            color="rgba(255, 255, 255, 0.9)"
+                          />
+                        </View>
+                      </View>
+                    ) : (
+                      <Image
+                        source={{ uri: getFullImageUrl(photo.url) as string }}
+                        style={styles.childThumbnail}
+                      />
+                    )}
                     <View style={styles.childGridOverlay}>
-                      <Text style={styles.childGridTitle} numberOfLines={1}>{photo.title}</Text>
+                      <Text style={styles.childGridTitle} numberOfLines={1}>
+                        {photo.title}
+                      </Text>
                     </View>
                   </TouchableOpacity>
                 ))
               ) : (
-                <Text style={styles.noAfterPhotosText}>Aucune photo après n&apos;a encore été ajoutée.</Text>
+                <Text style={styles.noAfterPhotosText}>
+                  Aucune photo après n&apos;a encore été ajoutée.
+                </Text>
               )}
             </View>
           </View>
@@ -718,7 +851,8 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                       <TouchableOpacity
                         onPress={() => openMap(item.latitude, item.longitude)}
                         style={styles.locationIconButton}
-                        accessibilityLabel="Ouvrir la localisation sur la carte">
+                        accessibilityLabel="Ouvrir la localisation sur la carte"
+                      >
                         <Ionicons name="location" size={20} color="#f87b1b" />
                       </TouchableOpacity>
                     )}
@@ -731,9 +865,15 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                     <Text style={styles.columnHeader}>Après</Text>
                     {afterPhotos[0]?.latitude && afterPhotos[0]?.longitude && (
                       <TouchableOpacity
-                        onPress={() => openMap(afterPhotos[0].latitude, afterPhotos[0].longitude)}
+                        onPress={() =>
+                          openMap(
+                            afterPhotos[0].latitude,
+                            afterPhotos[0].longitude,
+                          )
+                        }
                         style={styles.locationIconButton}
-                        accessibilityLabel="Ouvrir la localisation sur la carte">
+                        accessibilityLabel="Ouvrir la localisation sur la carte"
+                      >
                         <Ionicons name="location" size={20} color="#f87b1b" />
                       </TouchableOpacity>
                     )}
@@ -743,13 +883,15 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
               <View style={styles.comparisonGrid}>
                 <View style={styles.comparisonColumn}>
                   <View style={styles.infoCard}>
-                    <TouchableOpacity onPress={() => handleOpenDescriptionEdit('avant')}>
+                    <TouchableOpacity
+                      onPress={() => handleOpenDescriptionEdit("avant")}
+                    >
                       <View style={styles.infoLabelContainer}>
                         <Text style={styles.infoLabel}>Description</Text>
                       </View>
                       <View style={[styles.inputWrap, { minHeight: 80 }]}>
                         <Text style={styles.descriptionText} numberOfLines={4}>
-                          {avantDescription || 'Aucune description.'}
+                          {avantDescription || "Aucune description."}
                         </Text>
                       </View>
                     </TouchableOpacity>
@@ -758,7 +900,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                 <View style={styles.comparisonColumn}>
                   <View style={styles.infoCard}>
                     <TouchableOpacity
-                      onPress={() => handleOpenDescriptionEdit('apres')}
+                      onPress={() => handleOpenDescriptionEdit("apres")}
                       disabled={!afterPhotos[0]}
                     >
                       <View style={styles.infoLabelContainer}>
@@ -766,7 +908,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                       </View>
                       <View style={[styles.inputWrap, { minHeight: 80 }]}>
                         <Text style={styles.descriptionText} numberOfLines={4}>
-                          {afterPhotos[0]?.description || 'Aucune description.'}
+                          {afterPhotos[0]?.description || "Aucune description."}
                         </Text>
                       </View>
                     </TouchableOpacity>
@@ -777,13 +919,19 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                 <View style={styles.comparisonColumn}>
                   <View style={styles.infoCard}>
                     <Text style={styles.infoLabel}>Notes vocales</Text>
-                    {renderVoiceNotesList(voiceNotesAvant, isLoadingVoiceNotesAvant)}
+                    {renderVoiceNotesList(
+                      voiceNotesAvant,
+                      isLoadingVoiceNotesAvant,
+                    )}
                   </View>
                 </View>
                 <View style={styles.comparisonColumn}>
                   <View style={styles.infoCard}>
                     <Text style={styles.infoLabel}>Notes vocales</Text>
-                    {renderVoiceNotesList(voiceNotesApres, isLoadingVoiceNotesApres)}
+                    {renderVoiceNotesList(
+                      voiceNotesApres,
+                      isLoadingVoiceNotesApres,
+                    )}
                   </View>
                 </View>
               </View>
@@ -800,14 +948,20 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                   : {},
             ]}
             onPress={handleValidate}
-            disabled={isUpdatingStatus || !canValidate || isValidated || readOnly}
+            disabled={
+              isUpdatingStatus || !canValidate || isValidated || readOnly
+            }
             accessibilityLabel="Valider le dossier"
           >
             {isUpdatingStatus ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.validateButtonText}>
-                {isValidated ? 'Dossier Validé' : (readOnly ? 'Lecture seule' : 'Valider le Dossier')}
+                {isValidated
+                  ? "Dossier Validé"
+                  : readOnly
+                    ? "Lecture seule"
+                    : "Valider le Dossier"}
               </Text>
             )}
           </TouchableOpacity>
@@ -834,9 +988,13 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
             setCurrentItem(null);
           }}
           onSave={handleDescriptionSave}
-          initialDescription={currentItem.description || ''}
+          initialDescription={currentItem.description || ""}
           gedItem={currentItem}
-          title={editingDescriptionType === 'avant' ? 'Situation Avant' : 'Situation Après'}
+          title={
+            editingDescriptionType === "avant"
+              ? "Situation Avant"
+              : "Situation Après"
+          }
         />
       )}
       {previewMedia && (
@@ -845,7 +1003,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
           onClose={handleClosePreview}
           mediaUrl={previewMedia.url}
           mediaType={previewMedia.type}
-          title={previewedItem?.title || 'Aperçu'}
+          title={previewedItem?.title || "Aperçu"}
           onAnnotate={previewedItem ? handleOpenAnnotator : undefined}
           onAutoDescribe={previewedItem ? handleAutoDescribe : undefined}
           isDescribing={isDescribing}
@@ -864,7 +1022,7 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
             baseImageUri={annotatorImageUri}
             onClose={handleCloseAnnotator}
             onSaved={handleSaveAnnotation}
-            title={`Annoter: ${previewedItem?.title || 'Photo'}`}
+            title={`Annoter: ${previewedItem?.title || "Photo"}`}
           />
         )}
       </Modal>
@@ -873,325 +1031,341 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
         type={alertInfo.type}
         title={alertInfo.title}
         message={alertInfo.message}
-        onClose={() => setAlertInfo(prev => ({ ...prev, visible: false }))}
+        onClose={() => setAlertInfo((prev) => ({ ...prev, visible: false }))}
       />
     </>
   );
 };
 
 const styles = StyleSheet.create({
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#FFFFFF',
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3.84,
-      },
-      closeBtn: {
-        width: 40,
-        height: 40,
-        backgroundColor: '#F2F2F7',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#f87b1b',
-      },
-      headerTitles: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingLeft: 50,
-      },
-      headerActionsContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-      },
-      headerLeftActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-      },
-      shareIconButton: {
-        width: 40,
-        height: 40,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#F2F2F7',
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#f87b1b',
-      },
-      headerAction: {
-        width: 40,
-        height: 40,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#F2F2F7',
-        borderRadius: 20,
-        marginLeft: 8,
-      },
-      disabledHeaderAction: {
-        opacity: 0.5,
-      },
-      headerActionIcon: {
-        width: 35,
-        height: 35,
-      },
-      title: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#f87b1b',
-      },
-      subtitle: {
-        marginTop: 4,
-        fontSize: 13,
-        color: '#6b7280',
-      },
-      content: {
-        paddingHorizontal: 12,
-        paddingTop: 12,
-        paddingBottom: 24,
-        gap: 24,
-      },
-      sectionTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#f87b1b',
-        marginBottom: 8,
-      },
-      noAfterPhotosText: {
-        textAlign: 'center',
-        color: '#6b7280',
-        paddingVertical: 16,
-        fontSize: 13,
-      },
-      photoContainer: {
-        marginBottom: 8,
-        borderRadius: 12,
-        overflow: 'hidden',
-        position: 'relative',
-      },
-      childThumbnail: {
-        width: '100%',
-        aspectRatio: 16/9,
-        backgroundColor: '#f3f4f6',
-      },
-      childGridOverlay: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        padding: 8,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      },
-      childGridTitle: {
-        color: '#f87b1b',
-        fontSize: 12,
-        fontWeight: 'bold',
-        flex: 1,
-      },
-      comparisonContainer: {
-        marginTop: 12,
-        gap: 12,
-      },
-      comparisonTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#11224e',
-        marginBottom: 16,
-        textAlign: 'center',
-      },
-      comparisonGrid: {
-        flexDirection: 'row',
-        gap: 12,
-      },
-      comparisonColumn: {
-        flex: 1,
-      },
-      columnHeaderContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 8,
-        gap: 8,
-      },
-      columnHeader: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#f87b1b',
-      },
-      locationIconButton: {
-        padding: 4,
-      },
-      statusButton: {
-        backgroundColor: '#f87b1b',
-        paddingVertical: 4,
-        paddingHorizontal: 10,
-        borderRadius: 8,
-        alignSelf: 'center',
-      },
-      statusButtonText: {
-        color: '#FFFFFF',
-        fontSize: 12,
-        fontWeight: '600',
-      },
-      validateButton: {
-        backgroundColor: '#f87b1b',
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 16,
-        marginTop: 24,
-        marginBottom: 16,
-      },
-      validatedButton: {
-        backgroundColor: '#4ade80',
-      },
-      disabledValidateButton: {
-        backgroundColor: '#a1a1aa',
-      },
-      validateButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: 'bold',
-      },
-      infoCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        elevation: 2,
-      },
-      metaContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: 12,
-      },
-      metaText: {
-        fontSize: 13,
-        color: '#11224e',
-        backgroundColor: '#f9fafb',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        overflow: 'hidden',
-      },
-      metaLabel: {
-        fontWeight: '600',
-        color: '#f87b1b',
-      },
-      infoLabel: {
-        color: '#f87b1b',
-        fontSize: 12,
-        marginBottom: 8,
-        fontWeight: '600',
-      },
-      infoLabelContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'flex-start',
-        marginBottom: 8,
-      },
-      inputWrap: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-      },
-      descriptionText: {
-        flex: 1,
-        color: '#111827',
-        fontSize: 14,
-        lineHeight: 20,
-      },
-      voiceNotesContainer: {
-        paddingVertical: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-      },
-      voiceNotesPlaceholder: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        paddingVertical: 16,
-        backgroundColor: '#f9fafb',
-        borderRadius: 8,
-      },
-      placeholderText: {
-        color: '#9ca3af',
-        fontSize: 13,
-        fontStyle: 'italic',
-      },
-      voiceNotesList: {
-        gap: 8,
-      },
-      voiceNoteItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        backgroundColor: '#f9fafb',
-        borderRadius: 8,
-      },
-      voiceNoteItemPlaying: {
-        backgroundColor: '#fef3e7',
-      },
-      voiceNoteTitle: {
-        flex: 1,
-        color: '#11224e',
-        fontSize: 13,
-        fontWeight: '500',
-      },
-      modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-      },
-      statusModalContainer: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 20,
-        width: '80%',
-        alignItems: 'center',
-      },
-      modalTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#f87b1b',
-        marginBottom: 20,
-      },
-      statusOption: {
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        width: '100%',
-        alignItems: 'center',
-      },
-      statusOptionText: {
-        fontSize: 16,
-        color: '#11224e',
-        fontWeight: '500',
-      },
-      avantApresContainer: {
-        flexDirection: 'row',
-        gap: 12,
-      },
-      avantApresColumn: {
-        flex: 1,
-      },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#FFFFFF",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+  },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    backgroundColor: "#F2F2F7",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+  },
+  headerTitles: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingLeft: 50,
+  },
+  headerActionsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+  headerLeftActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  shareIconButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F2F2F7",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+  },
+  headerAction: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F2F2F7",
+    borderRadius: 20,
+    marginLeft: 8,
+  },
+  disabledHeaderAction: {
+    opacity: 0.5,
+  },
+  headerActionIcon: {
+    width: 35,
+    height: 35,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#f87b1b",
+  },
+  subtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    color: "#6b7280",
+  },
+  content: {
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 24,
+    gap: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#f87b1b",
+    marginBottom: 8,
+  },
+  noAfterPhotosText: {
+    textAlign: "center",
+    color: "#6b7280",
+    paddingVertical: 16,
+    fontSize: 13,
+  },
+  photoContainer: {
+    marginBottom: 8,
+    borderRadius: 12,
+    overflow: "hidden",
+    position: "relative",
+  },
+  childThumbnail: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    backgroundColor: "#f3f4f6",
+  },
+  childGridOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    padding: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  childGridTitle: {
+    color: "#f87b1b",
+    fontSize: 12,
+    fontWeight: "bold",
+    flex: 1,
+  },
+  comparisonContainer: {
+    marginTop: 12,
+    gap: 12,
+  },
+  comparisonTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#11224e",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  comparisonGrid: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  comparisonColumn: {
+    flex: 1,
+  },
+  columnHeaderContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+    gap: 8,
+  },
+  columnHeader: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#f87b1b",
+  },
+  locationIconButton: {
+    padding: 4,
+  },
+  statusButton: {
+    backgroundColor: "#f87b1b",
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    alignSelf: "center",
+  },
+  statusButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  validateButton: {
+    backgroundColor: "#f87b1b",
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  validatedButton: {
+    backgroundColor: "#4ade80",
+  },
+  disabledValidateButton: {
+    backgroundColor: "#a1a1aa",
+  },
+  validateButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  infoCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  metaContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 12,
+  },
+  metaText: {
+    fontSize: 13,
+    color: "#11224e",
+    backgroundColor: "#f9fafb",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  metaLabel: {
+    fontWeight: "600",
+    color: "#f87b1b",
+  },
+  infoLabel: {
+    color: "#f87b1b",
+    fontSize: 12,
+    marginBottom: 8,
+    fontWeight: "600",
+  },
+  infoLabelContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    marginBottom: 8,
+  },
+  inputWrap: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  descriptionText: {
+    flex: 1,
+    color: "#111827",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  voiceNotesContainer: {
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  voiceNotesPlaceholder: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 16,
+    backgroundColor: "#f9fafb",
+    borderRadius: 8,
+  },
+  placeholderText: {
+    color: "#9ca3af",
+    fontSize: 13,
+    fontStyle: "italic",
+  },
+  voiceNotesList: {
+    gap: 8,
+  },
+  voiceNoteItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: "#f9fafb",
+    borderRadius: 8,
+  },
+  voiceNoteItemPlaying: {
+    backgroundColor: "#fef3e7",
+  },
+  voiceNoteTitle: {
+    flex: 1,
+    color: "#11224e",
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  statusModalContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 20,
+    width: "80%",
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#f87b1b",
+    marginBottom: 20,
+  },
+  statusOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    width: "100%",
+    alignItems: "center",
+  },
+  statusOptionText: {
+    fontSize: 16,
+    color: "#11224e",
+    fontWeight: "500",
+  },
+  avantApresContainer: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  avantApresColumn: {
+    flex: 1,
+  },
+  thumbnailContainer: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    backgroundColor: "#f3f4f6",
+    position: "relative",
+  },
+  playIconOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1,
+  },
 });

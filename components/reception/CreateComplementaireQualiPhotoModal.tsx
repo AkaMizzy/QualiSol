@@ -1,40 +1,42 @@
 import { useAuth } from "@/contexts/AuthContext";
 import companyService from "@/services/companyService";
 import {
-  analyzeImageWithAnnotation,
-  combineTextDescription,
-  createGed,
-  CreateGedInput,
-  describeImage,
-  Ged,
-  getAllGeds,
+    analyzeImageWithAnnotation,
+    combineTextDescription,
+    createGed,
+    CreateGedInput,
+    describeImage,
+    Ged,
+    getAllGeds,
 } from "@/services/gedService";
 import { Company } from "@/types/company";
+import { isVideoFile } from "@/utils/mediaUtils";
 import { Ionicons } from "@expo/vector-icons";
+import { ResizeMode, Video } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import PictureAnnotator from "../PictureAnnotator";
@@ -215,34 +217,93 @@ function CreateComplementaireQualiPhotoForm({
   };
 
   const handlePickPhoto = useCallback(async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission",
-        "L'autorisation d'accéder à la caméra est requise.",
-      );
-      return;
-    }
+    Alert.alert(
+      "Choisir un média",
+      "Voulez-vous prendre une photo/vidéo ou choisir depuis la galerie ?",
+      [
+        {
+          text: "Caméra",
+          onPress: async () => {
+            const { status } =
+              await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== "granted") {
+              Alert.alert(
+                "Permission",
+                "L'autorisation d'accéder à la caméra est requise.",
+              );
+              return;
+            }
+            launchPicker("camera");
+          },
+        },
+        {
+          text: "Galerie",
+          onPress: async () => {
+            const { status } =
+              await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== "granted") {
+              Alert.alert(
+                "Permission",
+                "L'autorisation d'accéder à la galerie est requise.",
+              );
+              return;
+            }
+            launchPicker("gallery");
+          },
+        },
+        {
+          text: "Annuler",
+          style: "cancel",
+        },
+      ],
+    );
+  }, []);
 
-    const result = await ImagePicker.launchCameraAsync({
+  const launchPicker = async (mode: "camera" | "gallery") => {
+    let result;
+    const options: ImagePicker.ImagePickerOptions = {
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: false,
       quality: 0.9,
-    });
+    };
+
+    if (mode === "camera") {
+      result = await ImagePicker.launchCameraAsync(options);
+    } else {
+      result = await ImagePicker.launchImageLibraryAsync(options);
+    }
+
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
       const uri = asset.uri;
-      const fileName = uri.split("/").pop() || "photo.jpg";
-      const fileType = fileName.split(".").pop() || "jpeg";
+      const fileName =
+        uri.split("/").pop() ||
+        (asset.type === "video" ? "video.mp4" : "photo.jpg");
+      const ext = fileName.split(".").pop()?.toLowerCase();
+
+      let mimeType =
+        asset.type === "video"
+          ? `video/${ext || "mp4"}`
+          : `image/${ext || "jpeg"}`;
+
+      // Fallback if type is missing or generic
+      if (!asset.type) {
+        if (["mp4", "mov", "avi", "mkv"].includes(ext || "")) {
+          mimeType = `video/${ext}`;
+        } else {
+          mimeType = `image/${ext || "jpeg"}`;
+        }
+      }
 
       const newPhoto = {
         uri,
         name: fileName,
-        type: `image/${fileType}`,
+        type: mimeType,
       };
 
       setPhoto(newPhoto);
     }
-  }, []);
+  };
 
   const openAnnotatorForExisting = () => {
     if (!photo) return;
@@ -405,10 +466,20 @@ function CreateComplementaireQualiPhotoForm({
           <View style={styles.card}>
             {photo ? (
               <View style={styles.imagePreviewContainer}>
-                <Image
-                  source={{ uri: photo.uri }}
-                  style={styles.imagePreview}
-                />
+                {isVideoFile(photo.uri) ? (
+                  <Video
+                    source={{ uri: photo.uri }}
+                    style={styles.imagePreview}
+                    resizeMode={ResizeMode.COVER}
+                    shouldPlay={false}
+                    isMuted={true}
+                  />
+                ) : (
+                  <Image
+                    source={{ uri: photo.uri }}
+                    style={styles.imagePreview}
+                  />
+                )}
                 <View style={styles.imageActions}>
                   <TouchableOpacity
                     style={[styles.iconButton, styles.iconButtonSecondary]}
@@ -456,7 +527,7 @@ function CreateComplementaireQualiPhotoForm({
               >
                 <Ionicons name="camera-outline" size={24} color="#475569" />
                 <Text style={styles.photoPickerText}>
-                  Ajouter une Situation après
+                  Ajouter une Situation après (Photo/Vidéo)
                 </Text>
               </TouchableOpacity>
             )}
@@ -490,7 +561,6 @@ function CreateComplementaireQualiPhotoForm({
                 <Text style={styles.annotatedImageNote}>
                   Appuyez l'image pour l'agrandir 🔍
                 </Text>
-               
               </View>
             )}
 

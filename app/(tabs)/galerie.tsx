@@ -20,6 +20,7 @@ import {
 } from "@/services/offlineStorageService";
 import { startSyncMonitoring } from "@/services/syncService";
 import { OfflineRecord } from "@/types/offlineTypes";
+import { isVideoFile } from "@/utils/mediaUtils";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
@@ -63,13 +64,6 @@ export default function GalerieScreen() {
   );
 
   const isTablet = width >= 768;
-
-  const isVideoFile = (filename: string | null) => {
-    if (!filename) return false;
-    const videoExtensions = ["mp4", "mov", "avi", "webm", "mkv"];
-    const ext = filename.split(".").pop()?.toLowerCase();
-    return ext ? videoExtensions.includes(ext) : false;
-  };
 
   const fetchGeds = useCallback(async () => {
     if (token) {
