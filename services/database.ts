@@ -1,13 +1,15 @@
-import { Platform } from 'react-native';
+import { Platform } from "react-native";
 
 // Conditional import: only import SQLite on native platforms
-let SQLite: typeof import('expo-sqlite') | null = null;
-if (Platform.OS !== 'web') {
-  SQLite = require('expo-sqlite');
+let SQLite: typeof import("expo-sqlite") | null = null;
+if (Platform.OS !== "web") {
+  SQLite = require("expo-sqlite");
 }
 
 // Type definition for database (can be null on web)
-type SQLiteDatabase = typeof SQLite extends null ? null : import('expo-sqlite').SQLiteDatabase;
+type SQLiteDatabase = typeof SQLite extends null
+  ? null
+  : import("expo-sqlite").SQLiteDatabase;
 
 let database: SQLiteDatabase | null = null;
 let isInitializing = false;
@@ -18,7 +20,7 @@ let initPromise: Promise<void> | null = null;
  */
 async function initializeDatabase(db: any): Promise<void> {
   if (!db) return;
-  
+
   try {
     // Create offline_records table
     await db.execAsync(`
@@ -39,7 +41,30 @@ async function initializeDatabase(db: any): Promise<void> {
         created_at TEXT NOT NULL
       );
     `);
-    console.log('[Database] offline_records table created successfully');
+    console.log("[Database] offline_records table created successfully");
+
+    // Schema Migrations: Add new columns if they don't exist
+    const safeAddColumn = async (columnName: string, columnType: string) => {
+      try {
+        await db.execAsync(
+          `ALTER TABLE offline_records ADD COLUMN ${columnName} ${columnType}`,
+        );
+        console.log(`[Database] Added column ${columnName} to offline_records`);
+      } catch (e: any) {
+        // Ignore error if column already exists
+        if (!e.message?.includes("duplicate column name")) {
+          console.warn(
+            `[Database] Note: Could not add column ${columnName} (might already exist)`,
+          );
+        }
+      }
+    };
+
+    await safeAddColumn("idauthor", "TEXT");
+    await safeAddColumn("iddevice", "TEXT");
+    await safeAddColumn("chantier", "TEXT");
+    await safeAddColumn("audiotxt", "TEXT");
+    await safeAddColumn("iatxt", "TEXT");
 
     // Create sync_queue table
     await db.execAsync(`
@@ -53,21 +78,23 @@ async function initializeDatabase(db: any): Promise<void> {
         FOREIGN KEY (record_id) REFERENCES offline_records (id) ON DELETE CASCADE
       );
     `);
-    console.log('[Database] sync_queue table created successfully');
+    console.log("[Database] sync_queue table created successfully");
 
     // Create index on sync_queue status for faster queries
     await db.execAsync(`
       CREATE INDEX IF NOT EXISTS idx_sync_queue_status ON sync_queue(status);
     `);
-    console.log('[Database] sync_queue status index created successfully');
+    console.log("[Database] sync_queue status index created successfully");
 
     // Create index on offline_records created_at for sorting
     await db.execAsync(`
       CREATE INDEX IF NOT EXISTS idx_offline_records_created_at ON offline_records(created_at);
     `);
-    console.log('[Database] offline_records created_at index created successfully');
+    console.log(
+      "[Database] offline_records created_at index created successfully",
+    );
   } catch (error) {
-    console.error('[Database] Failed to initialize database schema:', error);
+    console.error("[Database] Failed to initialize database schema:", error);
     throw error;
   }
 }
@@ -78,8 +105,8 @@ async function initializeDatabase(db: any): Promise<void> {
  */
 export async function getDatabase(): Promise<any> {
   // SQLite is not available on web
-  if (Platform.OS === 'web' || !SQLite) {
-    console.log('[Database] SQLite not available on web platform');
+  if (Platform.OS === "web" || !SQLite) {
+    console.log("[Database] SQLite not available on web platform");
     return null;
   }
 
@@ -98,26 +125,26 @@ export async function getDatabase(): Promise<any> {
 
   // Start initialization
   isInitializing = true;
-  
+
   try {
     initPromise = (async () => {
-      console.log('[Database] Opening database...');
-      database = await SQLite!.openDatabaseAsync('galerie_offline.db');
-      console.log('[Database] Database opened successfully');
-      
+      console.log("[Database] Opening database...");
+      database = await SQLite!.openDatabaseAsync("galerie_offline.db");
+      console.log("[Database] Database opened successfully");
+
       await initializeDatabase(database);
-      console.log('[Database] Database initialization complete');
+      console.log("[Database] Database initialization complete");
     })();
-    
+
     await initPromise;
-    
+
     if (!database) {
-      throw new Error('Database initialization failed - database is null');
+      throw new Error("Database initialization failed - database is null");
     }
-    
+
     return database;
   } catch (error) {
-    console.error('[Database] Failed to get database:', error);
+    console.error("[Database] Failed to get database:", error);
     database = null;
     throw error;
   } finally {
@@ -133,9 +160,9 @@ export async function closeDatabase(): Promise<void> {
   if (database) {
     try {
       await database.closeAsync();
-      console.log('[Database] Database closed successfully');
+      console.log("[Database] Database closed successfully");
     } catch (error) {
-      console.error('[Database] Failed to close database:', error);
+      console.error("[Database] Failed to close database:", error);
     } finally {
       database = null;
     }
@@ -148,11 +175,11 @@ export async function closeDatabase(): Promise<void> {
  */
 export async function executeSql(
   sql: string,
-  params: any[] = []
+  params: any[] = [],
 ): Promise<any> {
   const db = await getDatabase();
   if (!db) {
-    throw new Error('Database not available on web platform');
+    throw new Error("Database not available on web platform");
   }
   return db.runAsync(sql, params);
 }

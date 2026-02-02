@@ -8,6 +8,11 @@ export interface OfflineRecord {
   description: string | null;
   kind: string;
   author: string;
+  idauthor?: string;
+  iddevice?: string;
+  chantier?: string;
+  audiotxt?: string;
+  iatxt?: string;
   latitude: string | null;
   longitude: string | null;
   level: number;
@@ -16,7 +21,7 @@ export interface OfflineRecord {
   local_image_path: string;
   local_voice_note_path: string | null;
   created_at: string;
-  sync_status?: 'pending' | 'syncing' | 'completed' | 'failed';
+  sync_status?: "pending" | "syncing" | "completed" | "failed";
   retry_count?: number;
 }
 
@@ -29,6 +34,11 @@ export interface OfflineRecordData {
   description?: string;
   kind: string;
   author: string;
+  idauthor?: string;
+  iddevice?: string;
+  chantier?: string;
+  audiotxt?: string;
+  iatxt?: string;
   latitude?: string;
   longitude?: string;
   level?: number;
@@ -53,7 +63,7 @@ export interface SyncResult {
 export interface SyncQueueEntry {
   id: number;
   record_id: string;
-  status: 'pending' | 'syncing' | 'completed' | 'failed';
+  status: "pending" | "syncing" | "completed" | "failed";
   retry_count: number;
   last_attempt_at: string | null;
   error_message: string | null;

@@ -347,11 +347,39 @@ export default function AddImageModal({
           console.log("Location permission denied.");
           return;
         }
-        const location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
+
+        // 1. Try to get last known position first for immediate response
+        const lastKnown = await Location.getLastKnownPositionAsync({});
+        if (lastKnown) {
+          setLatitude(lastKnown.coords.latitude);
+          setLongitude(lastKnown.coords.longitude);
+        }
+
+        // 2. Try to get fresh high-accuracy location
+        // Use a timeout to prevent hanging indefinitely in offline mode
+        const freshLocationPromise = Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced, // Balanced is faster and sufficient
         });
-        setLatitude(location.coords.latitude);
-        setLongitude(location.coords.longitude);
+
+        // Timeout after 5 seconds
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Location timeout")), 5000),
+        );
+
+        try {
+          const freshLocation = (await Promise.race([
+            freshLocationPromise,
+            timeoutPromise,
+          ])) as Location.LocationObject;
+          if (freshLocation) {
+            setLatitude(freshLocation.coords.latitude);
+            setLongitude(freshLocation.coords.longitude);
+          }
+        } catch (e) {
+          console.log(
+            "Could not fetch fresh location (timeout or error), keeping last known if available.",
+          );
+        }
       } catch (error) {
         console.warn("Could not fetch location automatically.", error);
       }
