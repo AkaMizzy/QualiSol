@@ -16,11 +16,13 @@ import {
 type VoiceNoteRecorderProps = {
   onRecordingComplete: (uri: string | null) => void;
   onTranscriptionComplete?: (text: string) => void;
+  showTranscribeButton?: boolean;
 };
 
 export default function VoiceNoteRecorder({
   onRecordingComplete,
   onTranscriptionComplete,
+  showTranscribeButton = true,
 }: VoiceNoteRecorderProps) {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -199,32 +201,37 @@ export default function VoiceNoteRecorder({
           <Text style={styles.recordedText}>{formatDuration(duration)}</Text>
         </TouchableOpacity>
 
-        {isTranscribing ? (
-          <View
-            style={[
-              styles.container,
-              { marginTop: 0, paddingHorizontal: 16, backgroundColor: "#fff" },
-            ]}
-          >
-            <ActivityIndicator color="#11224e" />
-          </View>
-        ) : (
-          !transcribedText && (
-            <TouchableOpacity
+        {showTranscribeButton &&
+          (isTranscribing ? (
+            <View
               style={[
                 styles.container,
                 {
                   marginTop: 0,
-                  paddingHorizontal: 50,
+                  paddingHorizontal: 16,
                   backgroundColor: "#fff",
                 },
               ]}
-              onPress={handleTranscribe}
             >
-              <FontAwesome5 name="file-audio" size={25} color="#f87b1b" />
-            </TouchableOpacity>
-          )
-        )}
+              <ActivityIndicator color="#11224e" />
+            </View>
+          ) : (
+            !transcribedText && (
+              <TouchableOpacity
+                style={[
+                  styles.container,
+                  {
+                    marginTop: 0,
+                    paddingHorizontal: 50,
+                    backgroundColor: "#fff",
+                  },
+                ]}
+                onPress={handleTranscribe}
+              >
+                <FontAwesome5 name="file-audio" size={25} color="#f87b1b" />
+              </TouchableOpacity>
+            )
+          ))}
         <TouchableOpacity
           style={[
             styles.container,

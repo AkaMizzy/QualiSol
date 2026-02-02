@@ -690,6 +690,7 @@ export default function AddImageModal({
               <View style={styles.compactSection}>
                 <VoiceNoteRecorder
                   onRecordingComplete={handleRecordingComplete}
+                  showTranscribeButton={false}
                 />
 
                 {/* Expand/Collapse Button */}
