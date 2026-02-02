@@ -690,115 +690,7 @@ export default function AddImageModal({
               {/* EXPANDED SECTION - Conditionally Visible */}
               {isExpanded && (
                 <View style={styles.expandedSection}>
-                  <View style={styles.form}>
-                    <Text style={styles.label}>Titre (optionnel)</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="ex: 'Photo d'inspection du site'"
-                      placeholderTextColor={COLORS.gray}
-                      value={title}
-                      onChangeText={setTitle}
-                    />
-                  </View>
-
-                  {/* Anomaly Type Selection (from anomalie1) */}
-                  <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionTitle}>
-                      Type d&apos;anomalie
-                    </Text>
-                    {loadingAnomalies ? (
-                      <ActivityIndicator size="small" color="#f59e0b" />
-                    ) : anomalieTypes.length === 0 ? (
-                      <Text style={{ color: "#6b7280", fontSize: 12 }}>
-                        Aucun type disponible
-                      </Text>
-                    ) : (
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.typeScrollView}
-                      >
-                        {anomalieTypes.map((type) => (
-                          <TouchableOpacity
-                            key={type.id}
-                            style={[
-                              styles.typeButton,
-                              selectedType === type.anomalie &&
-                                styles.typeButtonSelected,
-                            ]}
-                            onPress={() =>
-                              setSelectedType(type.anomalie || null)
-                            }
-                          >
-                            <Ionicons
-                              name="alert-circle-outline"
-                              size={20}
-                              color={
-                                selectedType === type.anomalie
-                                  ? "#FFFFFF"
-                                  : "#11224e"
-                              }
-                            />
-                            <Text
-                              style={[
-                                styles.typeButtonText,
-                                selectedType === type.anomalie &&
-                                  styles.typeButtonTextSelected,
-                              ]}
-                            >
-                              {type.anomalie || "Sans nom"}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    )}
-                  </View>
-
-                  {/* Anomaly Category Selection (from anomalie2) */}
-                  <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionTitle}>
-                      Catégorie d&apos;anomalie
-                    </Text>
-                    {loadingAnomalies ? (
-                      <ActivityIndicator size="small" color="#ef4444" />
-                    ) : anomalieCategories.length === 0 ? (
-                      <Text style={{ color: "#6b7280", fontSize: 12 }}>
-                        Aucune catégorie disponible
-                      </Text>
-                    ) : (
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.categoryScrollView}
-                      >
-                        {anomalieCategories.map((category) => (
-                          <TouchableOpacity
-                            key={category.id}
-                            style={[
-                              styles.categoryButton,
-                              selectedCategorie === category.anomalie &&
-                                styles.categoryButtonSelected,
-                            ]}
-                            onPress={() =>
-                              setSelectedCategorie(category.anomalie || null)
-                            }
-                          >
-                            <Text
-                              style={[
-                                styles.categoryButtonText,
-                                selectedCategorie === category.anomalie &&
-                                  styles.categoryButtonTextSelected,
-                              ]}
-                            >
-                              {category.anomalie || "Sans nom"}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    )}
-                  </View>
-
-                  {/* Severity Slider */}
+                  {/* Severity Slider - FIRST */}
                   <View style={styles.sectionContainer}>
                     <Text style={styles.severityTitle}>Niveau de sévérité</Text>
                     <PanGestureHandler onGestureEvent={onSeverityPan}>
@@ -852,63 +744,118 @@ export default function AddImageModal({
                     </PanGestureHandler>
                   </View>
 
-                  <View style={[styles.form, { marginTop: 20 }]}>
-                    <Text style={styles.label}>Description IA</Text>
-                    <TouchableOpacity
-                      style={styles.fieldPreview}
-                      onPress={() => {
-                        setEditingField("ia");
-                        setTempFieldValue(iaText);
-                      }}
-                    >
-                      {isGeneratingDescription ? (
-                        <View style={styles.fieldPreviewLoading}>
-                          <ActivityIndicator
-                            size="small"
-                            color={COLORS.primary}
-                          />
-                          <Text style={styles.fieldPreviewLoadingText}>
-                            Analyse en cours...
-                          </Text>
-                        </View>
-                      ) : (
-                        <>
-                          <Text
-                            style={[
-                              styles.fieldPreviewText,
-                              !iaText && styles.fieldPreviewPlaceholder,
-                            ]}
-                            numberOfLines={2}
-                          >
-                            {iaText || "Description générée par l'IA..."}
-                          </Text>
-                          <Ionicons
-                            name="create-outline"
-                            size={20}
-                            color={COLORS.primary}
-                            style={styles.fieldEditIcon}
-                          />
-                        </>
-                      )}
-                    </TouchableOpacity>
-
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <Text style={styles.label}>Description finale</Text>
-                      <TouchableOpacity
-                        style={styles.combineButton}
-                        onPress={handleCombineText}
-                        disabled={!iaText}
+                  {/* Anomaly Type Selection - SECOND */}
+                  <View style={styles.sectionContainer}>
+                    <Text style={styles.sectionTitle}>
+                      Type d&apos;anomalie
+                    </Text>
+                    {loadingAnomalies ? (
+                      <ActivityIndicator size="small" color="#f59e0b" />
+                    ) : anomalieTypes.length === 0 ? (
+                      <Text style={{ color: "#6b7280", fontSize: 12 }}>
+                        Aucun type disponible
+                      </Text>
+                    ) : (
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.typeScrollView}
                       >
-                        <Ionicons name="sparkles" size={16} color="#fff" />
-                        <Text style={styles.combineButtonText}>Combiner</Text>
-                      </TouchableOpacity>
-                    </View>
+                        {anomalieTypes.map((type) => (
+                          <TouchableOpacity
+                            key={type.id}
+                            style={[
+                              styles.typeButton,
+                              selectedType === type.anomalie &&
+                                styles.typeButtonSelected,
+                            ]}
+                            onPress={() =>
+                              setSelectedType(type.anomalie || null)
+                            }
+                          >
+                            <Ionicons
+                              name="alert-circle-outline"
+                              size={20}
+                              color={
+                                selectedType === type.anomalie
+                                  ? "#FFFFFF"
+                                  : "#11224e"
+                              }
+                            />
+                            <Text
+                              style={[
+                                styles.typeButtonText,
+                                selectedType === type.anomalie &&
+                                  styles.typeButtonTextSelected,
+                              ]}
+                            >
+                              {type.anomalie || "Sans nom"}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    )}
+                  </View>
+
+                  {/* Anomaly Category Selection - THIRD */}
+                  <View style={styles.sectionContainer}>
+                    <Text style={styles.sectionTitle}>
+                      Catégorie d&apos;anomalie
+                    </Text>
+                    {loadingAnomalies ? (
+                      <ActivityIndicator size="small" color="#ef4444" />
+                    ) : anomalieCategories.length === 0 ? (
+                      <Text style={{ color: "#6b7280", fontSize: 12 }}>
+                        Aucune catégorie disponible
+                      </Text>
+                    ) : (
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.categoryScrollView}
+                      >
+                        {anomalieCategories.map((category) => (
+                          <TouchableOpacity
+                            key={category.id}
+                            style={[
+                              styles.categoryButton,
+                              selectedCategorie === category.anomalie &&
+                                styles.categoryButtonSelected,
+                            ]}
+                            onPress={() =>
+                              setSelectedCategorie(category.anomalie || null)
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.categoryButtonText,
+                                selectedCategorie === category.anomalie &&
+                                  styles.categoryButtonTextSelected,
+                              ]}
+                            >
+                              {category.anomalie || "Sans nom"}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    )}
+                  </View>
+
+                  {/* Title Field - FOURTH */}
+                  <View style={styles.form}>
+                    <Text style={styles.label}>Titre (optionnel)</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="ex: 'Photo d'inspection du site'"
+                      placeholderTextColor={COLORS.gray}
+                      value={title}
+                      onChangeText={setTitle}
+                    />
+                  </View>
+
+                  {/* Description Field - FIFTH (and final) */}
+                  <View style={[styles.form, { marginTop: 20 }]}>
+                    <Text style={styles.label}>Description (optionnel)</Text>
                     <TouchableOpacity
                       style={styles.fieldPreview}
                       onPress={() => {
