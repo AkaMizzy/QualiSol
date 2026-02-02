@@ -119,12 +119,22 @@ export default function VoiceNoteRecorder({
     }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
+    if (sound) {
+      try {
+        await sound.stopAsync();
+        await sound.unloadAsync();
+      } catch (err) {
+        console.error("Error unloading sound", err);
+      }
+      setSound(null);
+    }
     setRecordingUri(null);
     setStatus("idle");
     setDuration(0);
     onRecordingComplete(null);
     setTranscribedText(null);
+    setIsTranscribing(false);
   }
 
   function formatDuration(seconds: number) {
