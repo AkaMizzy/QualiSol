@@ -693,22 +693,6 @@ export default function AddImageModal({
                   showTranscribeButton={false}
                 />
 
-                {/* Expand/Collapse Button */}
-                <TouchableOpacity
-                  style={styles.expandButton}
-                  onPress={() => setIsExpanded(!isExpanded)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.expandButtonText}>
-                    {isExpanded ? "Moins d'options" : "Plus d'options"}
-                  </Text>
-                  <Ionicons
-                    name={isExpanded ? "chevron-up" : "chevron-down"}
-                    size={20}
-                    color={COLORS.primary}
-                  />
-                </TouchableOpacity>
-
                 {/* First Button Set - Compact Section */}
                 <View style={styles.buttonContainer}>
                   <TouchableOpacity
@@ -731,6 +715,22 @@ export default function AddImageModal({
                     <Text style={styles.buttonText}>Ajouter l&apos;image</Text>
                   </TouchableOpacity>
                 </View>
+
+                {/* Expand/Collapse Button */}
+                <TouchableOpacity
+                  style={styles.expandButton}
+                  onPress={() => setIsExpanded(!isExpanded)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.expandButtonText}>
+                    {isExpanded ? "Moins d'options" : "Plus d'options"}
+                  </Text>
+                  <Ionicons
+                    name={isExpanded ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color={COLORS.primary}
+                  />
+                </TouchableOpacity>
               </View>
 
               {/* EXPANDED SECTION - Conditionally Visible */}
