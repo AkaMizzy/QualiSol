@@ -397,7 +397,49 @@ export default function PreviewModal({
                   </View>
                 )}
               </View>
-
+{voiceNoteUrl && (
+                <View style={styles.metadataSection}>
+                  <Text style={styles.metadataLabel}>Note Vocale</Text>
+                  <View style={styles.miniPlayerContainer}>
+                    <Pressable
+                      style={styles.miniPlayButton}
+                      onPress={handlePlayPause}
+                      disabled={isLoading}
+                    >
+                      <Ionicons
+                        name={isPlaying ? "pause" : "play"}
+                        size={20}
+                        color="#FFFFFF"
+                      />
+                    </Pressable>
+                    <View style={styles.miniProgressContainer}>
+                      <View style={styles.miniProgressBar}>
+                        <View
+                          style={[
+                            styles.miniProgressFill,
+                            {
+                              width: `${duration > 0 ? (position / duration) * 100 : 0}%`,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <Pressable
+                        style={styles.progressTouchable}
+                        onPress={(event) => {
+                          const { locationX } = event.nativeEvent;
+                          const progressBarWidth = screenWidth * 0.5; // Approximate width (adjust based on layouts)
+                          const percentage = locationX / progressBarWidth;
+                          const newPosition = percentage * duration;
+                          handleSeek(newPosition);
+                        }}
+                      />
+                    </View>
+                    <Text style={styles.miniTimeText}>
+                      {formatTime(position)} / {formatTime(duration)}
+                    </Text>
+                  </View>
+                </View>
+              )}
               {/* Title Section (Moved here as requested) */}
               {title && (
                 <View style={styles.metadataSection}>
@@ -455,49 +497,6 @@ export default function PreviewModal({
                 </View>
               )}
 
-              {voiceNoteUrl && (
-                <View style={styles.metadataSection}>
-                  <Text style={styles.metadataLabel}>Note Vocale</Text>
-                  <View style={styles.miniPlayerContainer}>
-                    <Pressable
-                      style={styles.miniPlayButton}
-                      onPress={handlePlayPause}
-                      disabled={isLoading}
-                    >
-                      <Ionicons
-                        name={isPlaying ? "pause" : "play"}
-                        size={20}
-                        color="#FFFFFF"
-                      />
-                    </Pressable>
-                    <View style={styles.miniProgressContainer}>
-                      <View style={styles.miniProgressBar}>
-                        <View
-                          style={[
-                            styles.miniProgressFill,
-                            {
-                              width: `${duration > 0 ? (position / duration) * 100 : 0}%`,
-                            },
-                          ]}
-                        />
-                      </View>
-                      <Pressable
-                        style={styles.progressTouchable}
-                        onPress={(event) => {
-                          const { locationX } = event.nativeEvent;
-                          const progressBarWidth = screenWidth * 0.5; // Approximate width (adjust based on layouts)
-                          const percentage = locationX / progressBarWidth;
-                          const newPosition = percentage * duration;
-                          handleSeek(newPosition);
-                        }}
-                      />
-                    </View>
-                    <Text style={styles.miniTimeText}>
-                      {formatTime(position)} / {formatTime(duration)}
-                    </Text>
-                  </View>
-                </View>
-              )}
 
             </View>
           </View>
