@@ -141,6 +141,8 @@ export default function GalerieScreen() {
       image: ImagePicker.ImagePickerAsset | null;
       voiceNote: { uri: string; type: string; name: string } | null;
       author: string;
+      idauthor?: string;
+      iddevice?: string;
       latitude: number | null;
       longitude: number | null;
       level: number;
@@ -171,6 +173,8 @@ export default function GalerieScreen() {
           description: data.description,
           kind: "qualiphoto",
           author: data.author,
+          idauthor: data.idauthor,
+          iddevice: data.iddevice,
           latitude: data.latitude?.toString(),
           longitude: data.longitude?.toString(),
           level: data.level,

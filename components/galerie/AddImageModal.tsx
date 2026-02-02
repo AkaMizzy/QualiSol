@@ -8,7 +8,10 @@ import { getConnectivity } from "@/services/connectivity";
 import { getAllGeds } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ResizeMode, Video } from "expo-av";
+import { randomUUID } from "expo-crypto";
+import * as Device from "expo-device";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -44,6 +47,8 @@ interface AddImageModalProps {
       image: ImagePicker.ImagePickerAsset | null;
       voiceNote: { uri: string; type: string; name: string } | null;
       author: string;
+      idauthor?: string;
+      iddevice?: string;
       latitude: number | null;
       longitude: number | null;
       level: number;
@@ -463,22 +468,43 @@ export default function AddImageModal({
       }
     }
 
-    onAdd(
-      {
-        title,
-        description,
-        image,
-        voiceNote,
-        author: authorName,
-        latitude,
-        longitude,
-        level,
-        type: selectedType,
-        categorie: selectedCategorie,
-        iatxt: iaText,
-      },
-      shouldClose,
-    );
+    // Get Device ID
+    const getDeviceId = async () => {
+      try {
+        let deviceId = await AsyncStorage.getItem("device_id");
+        if (!deviceId) {
+          deviceId = randomUUID();
+          await AsyncStorage.setItem("device_id", deviceId);
+        }
+        // Combine model name with unique ID for better traceability
+        const modelName = Device.modelName || "Device";
+        return `${modelName} - ${deviceId}`;
+      } catch (e) {
+        console.error("Error getting device ID", e);
+        return "Unknown Device";
+      }
+    };
+
+    getDeviceId().then((deviceId) => {
+      onAdd(
+        {
+          title,
+          description,
+          image,
+          voiceNote,
+          author: authorName,
+          idauthor: user?.id,
+          iddevice: deviceId,
+          latitude,
+          longitude,
+          level,
+          type: selectedType,
+          categorie: selectedCategorie,
+          iatxt: iaText,
+        },
+        shouldClose,
+      );
+    });
 
     // Show success alert asking if user wants to continue
     setAlertInfo({
@@ -967,9 +993,7 @@ export default function AddImageModal({
           <View style={styles.textEditorModalContent}>
             <View style={styles.textEditorHeader}>
               <Text style={styles.textEditorTitle}>
-                {editingField === "ia"
-                  ? "Description IA"
-                  : "Description"}
+                {editingField === "ia" ? "Description IA" : "Description"}
               </Text>
               <TouchableOpacity onPress={() => setEditingField(null)}>
                 <Ionicons name="close" size={24} color={COLORS.secondary} />
