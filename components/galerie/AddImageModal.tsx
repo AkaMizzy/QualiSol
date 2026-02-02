@@ -5,11 +5,7 @@ import { Anomalie1, getAllAnomalies1 } from "@/services/anomalie1Service";
 import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
 import companyService from "@/services/companyService";
 import { getConnectivity } from "@/services/connectivity";
-import {
-  analyzeImageWithAnnotation,
-  describeImage,
-  getAllGeds,
-} from "@/services/gedService";
+import { getAllGeds } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
 import { ResizeMode, Video } from "expo-av";
@@ -158,45 +154,6 @@ export default function AddImageModal({
     }
     loadAnomalies();
   }, [token, visible]);
-  const handleGenerateDescription = useCallback(
-    async (photoToDescribe: ImagePicker.ImagePickerAsset) => {
-      if (!photoToDescribe || !token) {
-        return;
-      }
-      setIsGeneratingDescription(true);
-
-      const photoFile = {
-        uri: photoToDescribe.uri,
-        name:
-          photoToDescribe.fileName ||
-          photoToDescribe.uri.split("/").pop() ||
-          "photo.jpg",
-        type: photoToDescribe.type || "image/jpeg",
-      };
-
-      try {
-        // Use the new analyzeImageWithAnnotation endpoint
-        const result = await analyzeImageWithAnnotation(token, photoFile);
-        // Store AI description in separate field
-        setIaText(result.description);
-        // Store the annotated image for display
-        setAnnotatedImage(result.annotatedImage);
-      } catch (e: any) {
-        console.error("Failed to generate description with annotation:", e);
-        // Fallback to old method if annotation fails
-        try {
-          const description = await describeImage(token, photoFile);
-          setIaText(description);
-          setAnnotatedImage(null);
-        } catch (fallbackError: any) {
-          console.error("Fallback description also failed:", fallbackError);
-        }
-      } finally {
-        setIsGeneratingDescription(false);
-      }
-    },
-    [token],
-  );
 
   const handleRecordingComplete = useCallback((uri: string | null) => {
     if (uri) {
@@ -246,9 +203,6 @@ export default function AddImageModal({
       }
 
       setImage(selectedAsset);
-      if (selectedAsset.type !== "video") {
-        handleGenerateDescription(selectedAsset);
-      }
     }
   }, []);
 
@@ -634,27 +588,6 @@ export default function AddImageModal({
                         color={COLORS.secondary}
                       />
                     </TouchableOpacity>
-
-                    {image.type !== "video" && (
-                      <TouchableOpacity
-                        style={styles.iconButton}
-                        onPress={() => handleGenerateDescription(image)}
-                        disabled={isGeneratingDescription}
-                      >
-                        {isGeneratingDescription ? (
-                          <ActivityIndicator
-                            size="small"
-                            color={COLORS.secondary}
-                          />
-                        ) : (
-                          <Ionicons
-                            name="sparkles-outline"
-                            size={20}
-                            color={COLORS.secondary}
-                          />
-                        )}
-                      </TouchableOpacity>
-                    )}
 
                     <TouchableOpacity
                       style={[
@@ -1059,30 +992,6 @@ export default function AddImageModal({
         onClose={() => setAlertInfo({ ...alertInfo, visible: false })}
         buttons={alertInfo.buttons}
       />
-
-      {/* Full Screen Image Modal */}
-      <Modal
-        visible={fullScreenImageVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setFullScreenImageVisible(false)}
-      >
-        <View style={styles.fullScreenModalContainer}>
-          <TouchableOpacity
-            style={styles.fullScreenModalCloseButton}
-            onPress={() => setFullScreenImageVisible(false)}
-          >
-            <Ionicons name="close-circle" size={40} color="white" />
-          </TouchableOpacity>
-          {annotatedImage && (
-            <Image
-              source={{ uri: annotatedImage }}
-              style={styles.fullScreenImage}
-              resizeMode="contain"
-            />
-          )}
-        </View>
-      </Modal>
     </Modal>
   );
 }
