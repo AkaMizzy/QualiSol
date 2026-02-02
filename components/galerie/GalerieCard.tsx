@@ -101,14 +101,14 @@ export default function GalerieCard({
       {item.author && (
         <View style={styles.content}>
           <View style={styles.detailsContainer}>
-            {item.title && (
-              <Text style={styles.author} numberOfLines={1}>
-                {item.title}
-              </Text>
-            )}
             {item.chantier && (
               <Text style={styles.detailText} numberOfLines={1}>
                 {item.chantier}
+              </Text>
+            )}
+            {item.title && (
+              <Text style={styles.author} numberOfLines={1}>
+                {item.title}
               </Text>
             )}
             {item.type && (
