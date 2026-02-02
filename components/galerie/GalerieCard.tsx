@@ -5,12 +5,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { ResizeMode, Video } from "expo-av";
 import React from "react";
 import {
-    ActivityIndicator,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface GalerieCardProps {
@@ -93,7 +93,7 @@ export default function GalerieCard({
         )}
         <View style={styles.overlay}>
           <Text style={styles.title} numberOfLines={1}>
-            {item.title}
+            {item.author}
           </Text>
           <Text style={styles.date}>{formattedDate}</Text>
         </View>
@@ -101,9 +101,9 @@ export default function GalerieCard({
       {item.author && (
         <View style={styles.content}>
           <View style={styles.detailsContainer}>
-            {item.author && (
+            {item.title && (
               <Text style={styles.author} numberOfLines={1}>
-                {item.author}
+                {item.title}
               </Text>
             )}
             {item.type && (
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   },
   author: {
     fontFamily: FONT.regular,
-    fontSize: SIZES.small,
+    fontSize: SIZES.medium,
     color: COLORS.gray,
     marginRight: SIZES.small,
   },
