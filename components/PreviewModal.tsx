@@ -304,12 +304,7 @@ export default function PreviewModal({
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerContent}>
-            {title && (
-              <Text style={styles.title} numberOfLines={1}>
-                {title}
-              </Text>
-            )}
+          <View style={styles.headerContent}> 
           </View>
 
           <View style={styles.headerActions}>
@@ -385,7 +380,7 @@ export default function PreviewModal({
               <View style={styles.metadataRow}>
                 {author && (
                   <View style={styles.metadataItem}>
-                    <Ionicons name="person-outline" size={16} color="#8E8E93" />
+                    <Ionicons name="person-outline" size={16} color="#f87b1b" />
                     <Text style={styles.metadataSmallValue}>{author}</Text>
                   </View>
                 )}
@@ -394,7 +389,7 @@ export default function PreviewModal({
                     <Ionicons
                       name="calendar-outline"
                       size={16}
-                      color="#8E8E93"
+                      color="#f87b1b"
                     />
                     <Text style={styles.metadataSmallValue}>
                       {formatDate(createdAt)}
@@ -406,7 +401,6 @@ export default function PreviewModal({
               {/* Title Section (Moved here as requested) */}
               {title && (
                 <View style={styles.metadataSection}>
-                  <Text style={styles.metadataLabel}>Titre</Text>
                   <Text style={styles.metadataValue}>{title}</Text>
                 </View>
               )}
@@ -505,15 +499,6 @@ export default function PreviewModal({
                 </View>
               )}
 
-              {latitude && longitude && (
-                <View style={styles.metadataItem}>
-                  <Ionicons name="location-outline" size={16} color="#8E8E93" />
-                  <Text style={styles.metadataSmallValue}>
-                    {parseFloat(latitude).toFixed(6)},{" "}
-                    {parseFloat(longitude).toFixed(6)}
-                  </Text>
-                </View>
-              )}
             </View>
           </View>
         )}
@@ -733,7 +718,7 @@ const styles = StyleSheet.create({
   metadataLabel: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#8E8E93",
+    color: "#f87b1b",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
