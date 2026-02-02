@@ -106,6 +106,11 @@ export default function GalerieCard({
                 {item.title}
               </Text>
             )}
+            {item.chantier && (
+              <Text style={styles.detailText} numberOfLines={1}>
+                {item.chantier}
+              </Text>
+            )}
             {item.type && (
               <Text style={styles.detailText} numberOfLines={1}>
                 {item.type}

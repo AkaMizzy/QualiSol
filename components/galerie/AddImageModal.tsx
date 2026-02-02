@@ -54,6 +54,7 @@ interface AddImageModalProps {
       level: number;
       type: string | null;
       categorie: string | null;
+      chantier?: string;
       audiotxt?: string;
       iatxt?: string;
     },
@@ -70,6 +71,7 @@ export default function AddImageModal({
 }: AddImageModalProps) {
   const { token, user } = useAuth();
   const [title, setTitle] = useState("");
+  const [chantier, setChantier] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [voiceNote, setVoiceNote] = useState<{
@@ -292,6 +294,7 @@ export default function AddImageModal({
     } else if (!visible && prevVisible) {
       // Modal just closed, reset form
       setTitle("");
+      setChantier("");
       setDescription("");
       setImage(null);
       setVoiceNote(null);
@@ -404,6 +407,7 @@ export default function AddImageModal({
 
   const resetForm = () => {
     setTitle("");
+    setChantier("");
     setDescription("");
     setImage(null);
     setVoiceNote(null);
@@ -490,6 +494,7 @@ export default function AddImageModal({
       onAdd(
         {
           title,
+          chantier,
           description,
           image,
           voiceNote,
@@ -911,6 +916,18 @@ export default function AddImageModal({
                       placeholderTextColor={COLORS.gray}
                       value={title}
                       onChangeText={setTitle}
+                    />
+                  </View>
+
+                  {/* Chantier Field */}
+                  <View style={[styles.form, { marginTop: 15 }]}>
+                    <Text style={styles.label}>Chantier (optionnel)</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="ex: 'Maison M. Dupont'"
+                      placeholderTextColor={COLORS.gray}
+                      value={chantier}
+                      onChangeText={setChantier}
                     />
                   </View>
 

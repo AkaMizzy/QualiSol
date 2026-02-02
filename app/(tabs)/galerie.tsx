@@ -137,6 +137,7 @@ export default function GalerieScreen() {
   const handleAddImage = async (
     data: {
       title: string;
+      chantier?: string;
       description: string;
       image: ImagePicker.ImagePickerAsset | null;
       voiceNote: { uri: string; type: string; name: string } | null;
@@ -175,6 +176,7 @@ export default function GalerieScreen() {
           author: data.author,
           idauthor: data.idauthor,
           iddevice: data.iddevice,
+          chantier: data.chantier,
           latitude: data.latitude?.toString(),
           longitude: data.longitude?.toString(),
           level: data.level,

@@ -9,6 +9,7 @@ export type CreateGedInput = {
   author: string;
   idauthor?: string;
   iddevice?: string;
+  chantier?: string;
   latitude?: string;
   longitude?: string;
   level?: number;
@@ -34,6 +35,7 @@ export interface Ged {
   author: string;
   idauthor?: string;
   iddevice?: string;
+  chantier?: string;
   captudedate?: string;
   position: number | null;
   latitude: string | null;
@@ -67,6 +69,9 @@ export async function createGed(
   }
   if (input.iddevice) {
     formData.append("iddevice", input.iddevice);
+  }
+  if (input.chantier) {
+    formData.append("chantier", input.chantier);
   }
 
   if (input.description) {
