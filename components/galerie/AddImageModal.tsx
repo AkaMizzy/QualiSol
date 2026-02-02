@@ -6,10 +6,10 @@ import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
 import companyService from "@/services/companyService";
 import { getConnectivity } from "@/services/connectivity";
 import {
-  analyzeImageWithAnnotation,
-  combineTextDescription,
-  describeImage,
-  getAllGeds,
+    analyzeImageWithAnnotation,
+    combineTextDescription,
+    describeImage,
+    getAllGeds,
 } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,24 +18,24 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import {
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
+    PanGestureHandler,
+    PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import CustomAlert from "../CustomAlert";
 
@@ -586,11 +586,9 @@ export default function AddImageModal({
             >
               <View style={styles.headerContainer}>
                 <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                  <Ionicons name="close" size={24} color={COLORS.secondary} />
+                  <Ionicons name="close" size={30} color={COLORS.primary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>
-                  Ajouter une nouvelle image
-                </Text>
+                <Text style={styles.headerTitle}>Constat</Text>
                 {/* Network Status Indicator - only show when offline */}
                 {networkStatus === "offline" && (
                   <View style={styles.networkStatusBadge}>
@@ -615,32 +613,6 @@ export default function AddImageModal({
                   <Text style={styles.offlineInfoText}>
                     Mode hors ligne : votre photo sera synchronisée
                     automatiquement lors de la reconnexion.
-                  </Text>
-                </View>
-              )}
-
-              {/* Storage Quota Banner */}
-              {!loadingLimits && companyInfo && (
-                <View
-                  style={[
-                    styles.limitInfoBanner,
-                    isStorageQuotaReached && styles.limitInfoBannerWarning,
-                  ]}
-                >
-                  <Ionicons
-                    name={isStorageQuotaReached ? "warning" : "cloud-outline"}
-                    size={16}
-                    color={isStorageQuotaReached ? "#b45309" : "#f59e0b"}
-                  />
-                  <Text
-                    style={[
-                      styles.limitInfoText,
-                      isStorageQuotaReached && styles.limitInfoTextWarning,
-                    ]}
-                  >
-                    Stockage: {currentStorageGB.toFixed(2)}GB /{" "}
-                    {storageQuotaGB.toFixed(2)}GB
-                    {isStorageQuotaReached && " - Quota dépassé"}
                   </Text>
                 </View>
               )}
@@ -762,6 +734,14 @@ export default function AddImageModal({
               )}
 
               <View style={styles.form}>
+                <VoiceNoteRecorder
+                  onRecordingComplete={handleRecordingComplete}
+                  onTranscriptionComplete={(text) => {
+                    // Save transcription to separate field instead of description
+                    setAudioText(text);
+                  }}
+                />
+
                 <Text style={styles.label}>Titre (optionnel)</Text>
                 <TextInput
                   style={styles.input}
@@ -769,14 +749,6 @@ export default function AddImageModal({
                   placeholderTextColor={COLORS.gray}
                   value={title}
                   onChangeText={setTitle}
-                />
-
-                <VoiceNoteRecorder
-                  onRecordingComplete={handleRecordingComplete}
-                  onTranscriptionComplete={(text) => {
-                    // Save transcription to separate field instead of description
-                    setAudioText(text);
-                  }}
                 />
               </View>
 

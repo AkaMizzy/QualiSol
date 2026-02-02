@@ -38,7 +38,7 @@ export default function WebLayout() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Image
-            source={require("@/assets/icons/new_icon.png")}
+            source={require("@/assets/icons/auth_logo.jpeg")}
             style={styles.logo}
             resizeMode="contain"
           />
