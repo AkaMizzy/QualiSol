@@ -969,7 +969,7 @@ export default function AddImageModal({
               <Text style={styles.textEditorTitle}>
                 {editingField === "ia"
                   ? "Description IA"
-                  : "Description finale"}
+                  : "Description"}
               </Text>
               <TouchableOpacity onPress={() => setEditingField(null)}>
                 <Ionicons name="close" size={24} color={COLORS.secondary} />
@@ -1178,7 +1178,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     gap: 6,
-    marginTop: SIZES.medium,
+    marginTop: 4, // Reduced from SIZES.medium
   },
   expandButtonText: {
     color: COLORS.primary,
@@ -1186,7 +1186,7 @@ const styles = StyleSheet.create({
     fontSize: SIZES.medium,
   },
   expandedSection: {
-    marginTop: SIZES.small,
+    marginTop: 0, // Reduced from SIZES.small
   },
   textArea: {
     height: 100,

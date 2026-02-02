@@ -9,14 +9,14 @@ import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { getConnectivity } from "@/services/connectivity";
 import {
-  Ged,
-  createGed,
-  getAllGeds,
-  updateGedFile,
+    Ged,
+    createGed,
+    getAllGeds,
+    updateGedFile,
 } from "@/services/gedService";
 import {
-  createOfflineRecord,
-  getOfflineRecords,
+    createOfflineRecord,
+    getOfflineRecords,
 } from "@/services/offlineStorageService";
 import { startSyncMonitoring } from "@/services/syncService";
 import { OfflineRecord } from "@/types/offlineTypes";
@@ -27,17 +27,16 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Alert,
-  Modal,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
+    Alert,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from "react-native";
-import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const IMAGES_PER_PAGE = 2;
@@ -55,8 +54,7 @@ export default function GalerieScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+
   const [selectedItem, setSelectedItem] = useState<Ged | null>(null);
   const [isAnnotatorVisible, setIsAnnotatorVisible] = useState(false);
   const [annotatorImageUri, setAnnotatorImageUri] = useState<string | null>(
@@ -331,24 +329,15 @@ export default function GalerieScreen() {
     );
   }, [geds, offlineRecords]);
 
-  const filteredImages = useMemo(() => {
-    if (!selectedDate) return allImages;
-
-    const selectedDay = selectedDate.toDateString();
-    return allImages.filter(
-      (img) => new Date(img.created_at).toDateString() === selectedDay,
-    );
-  }, [allImages, selectedDate]);
-
-  const totalPages = Math.ceil(filteredImages.length / IMAGES_PER_PAGE);
+  const totalPages = Math.ceil(allImages.length / IMAGES_PER_PAGE);
 
   const paginatedData = useMemo(() => {
     const pages = [];
-    for (let i = 0; i < filteredImages.length; i += IMAGES_PER_PAGE) {
-      pages.push(filteredImages.slice(i, i + IMAGES_PER_PAGE));
+    for (let i = 0; i < allImages.length; i += IMAGES_PER_PAGE) {
+      pages.push(allImages.slice(i, i + IMAGES_PER_PAGE));
     }
     return pages;
-  }, [filteredImages]);
+  }, [allImages]);
 
   const currentPageImages = useMemo(() => {
     return paginatedData[currentPage] || [];
@@ -378,29 +367,6 @@ export default function GalerieScreen() {
     }
   };
 
-  const showDatePicker = () => setDatePickerVisibility(true);
-  const hideDatePicker = () => setDatePickerVisibility(false);
-
-  const handleConfirmDate = (date: Date) => {
-    setSelectedDate(date);
-    setCurrentPage(0);
-    hideDatePicker();
-  };
-
-  const handleShowAll = () => {
-    setSelectedDate(null);
-    setCurrentPage(0);
-  };
-
-  const formattedDate = useMemo(() => {
-    if (!selectedDate) return "Filtrer par date";
-    return selectedDate.toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  }, [selectedDate]);
-
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader user={user || undefined} />
@@ -416,42 +382,7 @@ export default function GalerieScreen() {
             <Text style={styles.networkText}>Hors ligne</Text>
           </View>
         )}
-
-        <TouchableOpacity
-          style={styles.datePickerButton}
-          onPress={showDatePicker}
-        >
-          <Ionicons
-            name="calendar-outline"
-            size={20}
-            color={selectedDate ? COLORS.primary : COLORS.gray}
-          />
-          <Text
-            style={[
-              styles.datePickerText,
-              selectedDate && styles.datePickerTextActive,
-            ]}
-          >
-            {formattedDate}
-          </Text>
-        </TouchableOpacity>
-
-        {selectedDate && (
-          <TouchableOpacity
-            style={styles.showAllButton}
-            onPress={handleShowAll}
-          >
-            <Text style={styles.showAllButtonText}>Afficher tout</Text>
-          </TouchableOpacity>
-        )}
       </View>
-
-      <DateTimePickerModal
-        isVisible={isDatePickerVisible}
-        mode="date"
-        onConfirm={handleConfirmDate}
-        onCancel={hideDatePicker}
-      />
 
       {loading && !refreshing ? (
         <View style={styles.skeletonContainer}>
