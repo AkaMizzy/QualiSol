@@ -305,7 +305,17 @@ export default function GalerieScreen() {
   // Merge online GEDs and offline records
   const allImages = useMemo(() => {
     const onlineImages = geds
-      .filter((g) => g.kind === "qualiphoto")
+      .filter((g) => {
+        if (g.kind !== "qualiphoto") return false;
+
+        // Filter by time: only show images from the last 24 hours
+        if (!g.captudedate) return false;
+        const imgDate = new Date(g.captudedate);
+        const oneDayAgo = new Date();
+        oneDayAgo.setHours(oneDayAgo.getHours() - 24);
+
+        return imgDate >= oneDayAgo;
+      })
       .map((g) => ({
         ...g,
         isOffline: false,

@@ -477,8 +477,9 @@ export default function AddImageModal({
           await AsyncStorage.setItem("device_id", deviceId);
         }
         // Combine model name with unique ID for better traceability
+        const brand = Device.brand || "Brand";
         const modelName = Device.modelName || "Device";
-        return `${modelName} - ${deviceId}`;
+        return `${brand} ${modelName} - ${deviceId}`;
       } catch (e) {
         console.error("Error getting device ID", e);
         return "Unknown Device";
