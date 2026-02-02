@@ -38,7 +38,7 @@ const SYSTEM_GRID_ITEMS: {
   type: "system";
 }[] = [
   {
-    title: "Galerie",
+    title: "Constat",
     image: require("../../assets/icons/camera_p.png"),
     type: "system",
   },
@@ -48,7 +48,7 @@ const SYSTEM_GRID_ITEMS: {
     type: "system",
   },
   {
-    title: "Danger",
+    title: "To-Do",
     image: require("../../assets/icons/danger.png"),
     type: "system",
   },
@@ -424,12 +424,12 @@ export default function DashboardScreen() {
         // Handle system items with fixed routes
         else if (item.title === "Suivi") {
           router.push("/qualiphoto");
-        } else if (item.title === "Danger") {
+        } else if (item.title === "To-Do") {
           router.push("/danger");
         } else if (item.title === "Calendrier") {
           LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
           setIsCalendarVisible((prevState) => !prevState);
-        } else if (item.title === "Galerie") {
+        } else if (item.title === "Constat") {
           router.push("/galerie");
         } else if (item.title === "Paramètres") {
           router.push("/parameters");

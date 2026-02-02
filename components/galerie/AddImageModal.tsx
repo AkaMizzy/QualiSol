@@ -876,7 +876,7 @@ export default function AddImageModal({
                   )}
 
                   {/* Title Field - FOURTH */}
-                  <View style={styles.form}>
+                  <View style={[styles.form, { marginTop: 15 }]}>
                     <Text style={styles.label}>Titre (optionnel)</Text>
                     <TextInput
                       style={styles.input}
