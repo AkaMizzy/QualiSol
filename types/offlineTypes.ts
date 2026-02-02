@@ -15,6 +15,9 @@ export interface OfflineRecord {
   iatxt?: string;
   latitude: string | null;
   longitude: string | null;
+  altitude: string | null;
+  accuracy: string | null;
+  altitudeAccuracy: string | null;
   level: number;
   type: string | null;
   categorie: string | null;
@@ -41,6 +44,9 @@ export interface OfflineRecordData {
   iatxt?: string;
   latitude?: string;
   longitude?: string;
+  altitude?: string;
+  accuracy?: string;
+  altitudeAccuracy?: string;
   level?: number;
   type?: string;
   categorie?: string;

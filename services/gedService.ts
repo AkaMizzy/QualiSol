@@ -12,6 +12,9 @@ export type CreateGedInput = {
   chantier?: string;
   latitude?: string;
   longitude?: string;
+  altitude?: string;
+  accuracy?: string;
+  altitudeAccuracy?: string;
   level?: number;
   type?: string;
   categorie?: string;
@@ -19,7 +22,7 @@ export type CreateGedInput = {
   audiotxt?: string;
   iatxt?: string;
   file?: {
-    uri: string | File; // Can be a string (React Native) or File object (Web)
+    uri: string | File; 
     type: string;
     name: string;
   };
@@ -40,6 +43,9 @@ export interface Ged {
   position: number | null;
   latitude: string | null;
   longitude: string | null;
+  altitude: string | null;
+  accuracy: string | null;
+  altitudeAccuracy: string | null;
   url: string | null;
   size: number | null;
   status_id: string;
@@ -84,6 +90,18 @@ export async function createGed(
 
   if (input.longitude) {
     formData.append("longitude", input.longitude);
+  }
+
+  if (input.altitude) {
+    formData.append("altitude", input.altitude);
+  }
+
+  if (input.accuracy) {
+    formData.append("accuracy", input.accuracy);
+  }
+
+  if (input.altitudeAccuracy) {
+    formData.append("altitudeAccuracy", input.altitudeAccuracy);
   }
 
   if (input.level !== undefined) {

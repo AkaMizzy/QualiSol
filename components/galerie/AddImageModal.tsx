@@ -51,6 +51,9 @@ interface AddImageModalProps {
       iddevice?: string;
       latitude: number | null;
       longitude: number | null;
+      altitude: number | null;
+      accuracy: number | null;
+      altitudeAccuracy: number | null;
       level: number;
       type: string | null;
       categorie: string | null;
@@ -84,6 +87,9 @@ export default function AddImageModal({
   const [fullScreenImageVisible, setFullScreenImageVisible] = useState(false);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  const [altitude, setAltitude] = useState<number | null>(null);
+  const [accuracy, setAccuracy] = useState<number | null>(null);
+  const [altitudeAccuracy, setAltitudeAccuracy] = useState<number | null>(null);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [level, setLevel] = useState(5);
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -301,6 +307,9 @@ export default function AddImageModal({
       setIaText("");
       setLatitude(null);
       setLongitude(null);
+      setAltitude(null);
+      setAccuracy(null);
+      setAltitudeAccuracy(null);
       setIsGeneratingDescription(false);
       setLevel(5);
       setSelectedType(null);
@@ -353,6 +362,9 @@ export default function AddImageModal({
         if (lastKnown) {
           setLatitude(lastKnown.coords.latitude);
           setLongitude(lastKnown.coords.longitude);
+          setAltitude(lastKnown.coords.altitude);
+          setAccuracy(lastKnown.coords.accuracy);
+          setAltitudeAccuracy(lastKnown.coords.altitudeAccuracy);
         }
 
         // 2. Try to get fresh high-accuracy location
@@ -371,9 +383,13 @@ export default function AddImageModal({
             freshLocationPromise,
             timeoutPromise,
           ])) as Location.LocationObject;
+
           if (freshLocation) {
             setLatitude(freshLocation.coords.latitude);
             setLongitude(freshLocation.coords.longitude);
+            setAltitude(freshLocation.coords.altitude);
+            setAccuracy(freshLocation.coords.accuracy);
+            setAltitudeAccuracy(freshLocation.coords.altitudeAccuracy);
           }
         } catch (e) {
           console.log(
@@ -531,6 +547,9 @@ export default function AddImageModal({
           iddevice: deviceId,
           latitude,
           longitude,
+          altitude,
+          accuracy,
+          altitudeAccuracy,
           level,
           type: selectedType,
           categorie: selectedCategorie,

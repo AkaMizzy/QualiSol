@@ -91,6 +91,37 @@ export default function GalerieCard({
             )}
           </View>
         )}
+
+        {/* GPS Status Indicator */}
+        {(() => {
+          const lat = item.latitude;
+          const long = item.longitude;
+          const accuracy = item.accuracy ? parseFloat(item.accuracy) : null;
+
+          let iconColor = "#FF3B30"; // Default Red (No GPS)
+
+          if (lat && long) {
+            if (accuracy === null || isNaN(accuracy)) {
+              iconColor = "#007AFF"; // Blue (Position exists, unknown accuracy)
+            } else if (accuracy <= 20) {
+              iconColor = "#34C759"; // Green (Good accuracy <= 20m)
+            } else {
+              iconColor = "#FF9500"; // Orange (Poor accuracy > 20m)
+            }
+          }
+
+          return (
+            <View
+              style={[
+                styles.gpsStatusBadge,
+                { backgroundColor: "rgba(0,0,0,0.5)" },
+              ]}
+            >
+              <Ionicons name="location-sharp" size={16} color={iconColor} />
+            </View>
+          );
+        })()}
+
         <View style={styles.overlay}>
           <Text style={styles.title} numberOfLines={1}>
             {item.author}
@@ -218,11 +249,20 @@ const styles = StyleSheet.create({
   syncStatusBadge: {
     position: "absolute",
     top: 8,
-    left: 8,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    borderRadius: 20,
-    padding: 6,
-    flexDirection: "row",
+    right: 8,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    borderRadius: 12,
+    padding: 4,
+    zIndex: 10,
+  },
+  gpsStatusBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8, // Positioned on the left to avoid conflict with sync badge
+    borderRadius: 12,
+    padding: 4,
+    zIndex: 10,
+    justifyContent: "center",
     alignItems: "center",
   },
 });

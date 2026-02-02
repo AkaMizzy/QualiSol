@@ -146,6 +146,9 @@ export default function GalerieScreen() {
       iddevice?: string;
       latitude: number | null;
       longitude: number | null;
+      altitude: number | null;
+      accuracy: number | null;
+      altitudeAccuracy: number | null;
       level: number;
       type: string | null;
       categorie: string | null;
@@ -179,6 +182,9 @@ export default function GalerieScreen() {
           chantier: data.chantier,
           latitude: data.latitude?.toString(),
           longitude: data.longitude?.toString(),
+          altitude: data.altitude?.toString(),
+          accuracy: data.accuracy?.toString(),
+          altitudeAccuracy: data.altitudeAccuracy?.toString(),
           level: data.level,
           type: data.type || undefined,
           categorie: data.categorie || undefined,
@@ -223,6 +229,9 @@ export default function GalerieScreen() {
           iatxt: data.iatxt,
           latitude: data.latitude?.toString(),
           longitude: data.longitude?.toString(),
+          altitude: data.altitude?.toString(),
+          accuracy: data.accuracy?.toString(),
+          altitudeAccuracy: data.altitudeAccuracy?.toString(),
           level: data.level,
           type: data.type || undefined,
           categorie: data.categorie || undefined,
@@ -528,6 +537,7 @@ export default function GalerieScreen() {
           createdAt={selectedItem.created_at}
           type={selectedItem.type}
           categorie={selectedItem.categorie}
+          chantier={selectedItem.chantier}
           latitude={selectedItem.latitude}
           longitude={selectedItem.longitude}
           voiceNoteUrl={

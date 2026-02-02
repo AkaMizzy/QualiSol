@@ -3,15 +3,15 @@ import { Audio, ResizeMode, Video } from "expo-av";
 import { Image } from "expo-image";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Linking,
-    Modal,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Linking,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 interface PreviewModalProps {
@@ -30,6 +30,7 @@ interface PreviewModalProps {
   createdAt?: string;
   type?: string;
   categorie?: string;
+  chantier?: string;
   latitude?: string | null;
   longitude?: string | null;
   voiceNoteUrl?: string; // New prop for associated voice note
@@ -52,6 +53,7 @@ export default function PreviewModal({
   createdAt,
   type,
   categorie,
+  chantier,
   latitude,
   longitude,
   voiceNoteUrl,
@@ -125,6 +127,7 @@ export default function PreviewModal({
     createdAt ||
     type ||
     categorie ||
+    chantier ||
     (latitude && longitude);
 
   // Load audio when modal opens for voice type OR if there is a voiceNoteUrl for an image
@@ -304,8 +307,7 @@ export default function PreviewModal({
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerContent}> 
-          </View>
+          <View style={styles.headerContent}></View>
 
           <View style={styles.headerActions}>
             {mediaType === "image" && hasMetadata && (
@@ -397,7 +399,7 @@ export default function PreviewModal({
                   </View>
                 )}
               </View>
-{voiceNoteUrl && (
+              {voiceNoteUrl && (
                 <View style={styles.metadataSection}>
                   <Text style={styles.metadataLabel}>Note Vocale</Text>
                   <View style={styles.miniPlayerContainer}>
@@ -444,6 +446,13 @@ export default function PreviewModal({
               {title && (
                 <View style={styles.metadataSection}>
                   <Text style={styles.metadataValue}>{title}</Text>
+                </View>
+              )}
+
+              {chantier && (
+                <View style={styles.metadataSection}>
+                  <Text style={styles.metadataLabel}>Chantier</Text>
+                  <Text style={styles.metadataValue}>{chantier}</Text>
                 </View>
               )}
 
@@ -496,8 +505,6 @@ export default function PreviewModal({
                   )}
                 </View>
               )}
-
-
             </View>
           </View>
         )}
