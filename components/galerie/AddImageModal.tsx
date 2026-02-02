@@ -25,13 +25,14 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View
+  View,
 } from "react-native";
 import {
   PanGestureHandler,
   PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import CustomAlert from "../CustomAlert";
+import PictureAnnotator from "../PictureAnnotator";
 
 interface AddImageModalProps {
   visible: boolean;
@@ -111,6 +112,10 @@ export default function AddImageModal({
 
   // Two-level layout state
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Annotator state
+  const [isAnnotatorVisible, setAnnotatorVisible] = useState(false);
+  const [annotatorBaseUri, setAnnotatorBaseUri] = useState<string | null>(null);
 
   const handleCombineText = async () => {
     if (!iaText) {
@@ -396,13 +401,15 @@ export default function AddImageModal({
     setTitle("");
     setDescription("");
     setImage(null);
-    setImage(null);
     setVoiceNote(null);
     setIaText("");
     setAnnotatedImage(null);
     setLevel(5);
     setSelectedType(null);
     setSelectedCategorie(null);
+    // Reset annotator state
+    setAnnotatorVisible(false);
+    setAnnotatorBaseUri(null);
   };
 
   const handleAdd = (shouldClose: boolean) => {
@@ -498,6 +505,34 @@ export default function AddImageModal({
     });
   };
 
+  // Annotation handlers
+  const openAnnotatorForExisting = () => {
+    if (!image) return;
+    setAnnotatorBaseUri(image.uri);
+    setAnnotatorVisible(true);
+  };
+
+  const handleAnnotatorSaved = (annotatedImage: {
+    uri: string;
+    name: string;
+    type: string;
+  }) => {
+    // Replace current image with annotated version
+    // ImagePickerAsset requires width/height, use original dimensions or defaults
+    setImage({
+      uri: annotatedImage.uri,
+      width: image?.width || 1920,
+      height: image?.height || 1080,
+      fileName: annotatedImage.name,
+      fileSize: image?.fileSize,
+      type: annotatedImage.type as "image" | "video",
+      mimeType: annotatedImage.type,
+    } as ImagePicker.ImagePickerAsset);
+    // Close annotator
+    setAnnotatorVisible(false);
+    setAnnotatorBaseUri(null);
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <KeyboardAvoidingView
@@ -586,6 +621,17 @@ export default function AddImageModal({
                     >
                       <Ionicons
                         name="camera-reverse-outline"
+                        size={20}
+                        color={COLORS.secondary}
+                      />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.iconButton}
+                      onPress={openAnnotatorForExisting}
+                    >
+                      <Ionicons
+                        name="create-outline"
                         size={20}
                         color={COLORS.secondary}
                       />
@@ -987,6 +1033,19 @@ export default function AddImageModal({
         onClose={() => setAlertInfo({ ...alertInfo, visible: false })}
         buttons={alertInfo.buttons}
       />
+
+      {/* PictureAnnotator for drawing on images */}
+      {isAnnotatorVisible && annotatorBaseUri && (
+        <PictureAnnotator
+          baseImageUri={annotatorBaseUri}
+          onClose={() => {
+            setAnnotatorVisible(false);
+            setAnnotatorBaseUri(null);
+          }}
+          onSaved={handleAnnotatorSaved}
+          title="Annoter l'image"
+        />
+      )}
     </Modal>
   );
 }
@@ -1256,8 +1315,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginTop: SIZES.large,
     width: "100%",
-    paddingBottom: 40,
-    marginBottom: 20,
+    paddingBottom: 0, // Reduced from 40 to eliminate gap
+    marginBottom: 0, // Reduced from 20 to eliminate gap
   },
   button: {
     flex: 1,
