@@ -6,10 +6,9 @@ import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
 import companyService from "@/services/companyService";
 import { getConnectivity } from "@/services/connectivity";
 import {
-    analyzeImageWithAnnotation,
-    combineTextDescription,
-    describeImage,
-    getAllGeds,
+  analyzeImageWithAnnotation,
+  describeImage,
+  getAllGeds,
 } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,24 +17,24 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import {
-    PanGestureHandler,
-    PanGestureHandlerGestureEvent,
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import CustomAlert from "../CustomAlert";
 
@@ -77,7 +76,6 @@ export default function AddImageModal({
     type: string;
     name: string;
   } | null>(null);
-  const [audioText, setAudioText] = useState<string>("");
   const [iaText, setIaText] = useState<string>("");
   const [annotatedImage, setAnnotatedImage] = useState<string | null>(null);
   const [fullScreenImageVisible, setFullScreenImageVisible] = useState(false);
@@ -110,54 +108,31 @@ export default function AddImageModal({
     "online",
   );
 
-  const [isCombiningText, setIsCombiningText] = useState(false);
-
   // Popup modal states
-  const [editingField, setEditingField] = useState<
-    "audio" | "ia" | "description" | null
-  >(null);
+  const [editingField, setEditingField] = useState<"ia" | "description" | null>(
+    null,
+  );
   const [tempFieldValue, setTempFieldValue] = useState<string>("");
 
   const handleCombineText = async () => {
-    if (!audioText && !iaText) {
+    if (!iaText) {
       setAlertInfo({
         visible: true,
         title: "Avertissement",
-        message: "Au moins une source de texte (Audio ou IA) est nécessaire.",
+        message: "Une description IA est nécessaire.",
         type: "error",
       });
       return;
     }
 
-    if (!token) return;
-
-    setIsCombiningText(true);
-    try {
-      const combinedDescription = await combineTextDescription(
-        token,
-        audioText,
-        iaText,
-      );
-      setDescription(combinedDescription);
-      setAlertInfo({
-        visible: true,
-        title: "Succès",
-        message: "Description combinée générée avec succès !",
-        type: "success",
-      });
-    } catch (error: any) {
-      console.error("Combine text error:", error);
-      setAlertInfo({
-        visible: true,
-        title: "Erreur",
-        message:
-          error.message ||
-          "Impossible de combiner les textes. Veuillez réessayer.",
-        type: "error",
-      });
-    } finally {
-      setIsCombiningText(false);
-    }
+    // Directly use IA text as the description
+    setDescription(iaText);
+    setAlertInfo({
+      visible: true,
+      title: "Succès",
+      message: "Description ajoutée avec succès !",
+      type: "success",
+    });
   };
   const [anomalieTypes, setAnomalieTypes] = useState<Anomalie1[]>([]);
   const [anomalieCategories, setAnomalieCategories] = useState<Anomalie2[]>([]);
@@ -354,7 +329,6 @@ export default function AddImageModal({
       setDescription("");
       setImage(null);
       setVoiceNote(null);
-      setAudioText("");
       setIaText("");
       setLatitude(null);
       setLongitude(null);
@@ -468,7 +442,6 @@ export default function AddImageModal({
     setImage(null);
     setImage(null);
     setVoiceNote(null);
-    setAudioText("");
     setIaText("");
     setAnnotatedImage(null);
     setLevel(5);
@@ -539,7 +512,6 @@ export default function AddImageModal({
         level,
         type: selectedType,
         categorie: selectedCategorie,
-        audiotxt: audioText,
         iatxt: iaText,
       },
       shouldClose,
@@ -736,10 +708,6 @@ export default function AddImageModal({
               <View style={styles.form}>
                 <VoiceNoteRecorder
                   onRecordingComplete={handleRecordingComplete}
-                  onTranscriptionComplete={(text) => {
-                    // Save transcription to separate field instead of description
-                    setAudioText(text);
-                  }}
                 />
 
                 <Text style={styles.label}>Titre (optionnel)</Text>
@@ -900,31 +868,6 @@ export default function AddImageModal({
               </View>
 
               <View style={[styles.form, { marginTop: 20 }]}>
-                <Text style={styles.label}>Transcription Audio</Text>
-                <TouchableOpacity
-                  style={styles.fieldPreview}
-                  onPress={() => {
-                    setEditingField("audio");
-                    setTempFieldValue(audioText);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.fieldPreviewText,
-                      !audioText && styles.fieldPreviewPlaceholder,
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {audioText || "Transcription automatique..."}
-                  </Text>
-                  <Ionicons
-                    name="create-outline"
-                    size={20}
-                    color={COLORS.primary}
-                    style={styles.fieldEditIcon}
-                  />
-                </TouchableOpacity>
-
                 <Text style={styles.label}>Description IA</Text>
                 <TouchableOpacity
                   style={styles.fieldPreview}
@@ -972,16 +915,10 @@ export default function AddImageModal({
                   <TouchableOpacity
                     style={styles.combineButton}
                     onPress={handleCombineText}
-                    disabled={isCombiningText || (!audioText && !iaText)}
+                    disabled={!iaText}
                   >
-                    {isCombiningText ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <>
-                        <Ionicons name="sparkles" size={16} color="#fff" />
-                        <Text style={styles.combineButtonText}>Combiner</Text>
-                      </>
-                    )}
+                    <Ionicons name="sparkles" size={16} color="#fff" />
+                    <Text style={styles.combineButtonText}>Combiner</Text>
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity
@@ -1055,11 +992,9 @@ export default function AddImageModal({
           <View style={styles.textEditorModalContent}>
             <View style={styles.textEditorHeader}>
               <Text style={styles.textEditorTitle}>
-                {editingField === "audio"
-                  ? "Transcription Audio"
-                  : editingField === "ia"
-                    ? "Description IA"
-                    : "Description finale"}
+                {editingField === "ia"
+                  ? "Description IA"
+                  : "Description finale"}
               </Text>
               <TouchableOpacity onPress={() => setEditingField(null)}>
                 <Ionicons name="close" size={24} color={COLORS.secondary} />
@@ -1100,9 +1035,7 @@ export default function AddImageModal({
               <TouchableOpacity
                 style={[styles.textEditorButton, styles.textEditorSaveButton]}
                 onPress={() => {
-                  if (editingField === "audio") {
-                    setAudioText(tempFieldValue);
-                  } else if (editingField === "ia") {
+                  if (editingField === "ia") {
                     setIaText(tempFieldValue);
                   } else if (editingField === "description") {
                     setDescription(tempFieldValue);
