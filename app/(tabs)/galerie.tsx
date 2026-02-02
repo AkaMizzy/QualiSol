@@ -198,6 +198,8 @@ export default function GalerieScreen() {
             title: `${data.title} - Voice Note`,
             kind: "voice_note",
             author: data.author,
+            idauthor: data.idauthor,
+            iddevice: data.iddevice,
             file: data.voiceNote,
           });
         }

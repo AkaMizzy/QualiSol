@@ -576,7 +576,7 @@ export default function AddImageModal({
             >
               <View style={styles.headerContainer}>
                 <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                  <Ionicons name="close" size={30} color={COLORS.primary} />
+                  <Ionicons name="close" size={32} color={COLORS.primary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Constat</Text>
                 {/* Network Status Indicator - only show when offline */}
@@ -1112,9 +1112,25 @@ const styles = StyleSheet.create({
   closeButton: {
     position: "absolute",
     left: 0,
-    top: 0,
-    padding: SIZES.small,
+    top: 0, // Slight adjustment for larger button
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.white,
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 10,
+    // Add shadow/frame
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "#f87b1b",
   },
   headerTitle: {
     textAlign: "center",
