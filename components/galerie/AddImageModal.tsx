@@ -1037,15 +1037,25 @@ export default function AddImageModal({
 
       {/* PictureAnnotator for drawing on images */}
       {isAnnotatorVisible && annotatorBaseUri && (
-        <PictureAnnotator
-          baseImageUri={annotatorBaseUri}
-          onClose={() => {
+        <Modal
+          visible={isAnnotatorVisible}
+          animationType="slide"
+          presentationStyle="fullScreen"
+          onRequestClose={() => {
             setAnnotatorVisible(false);
             setAnnotatorBaseUri(null);
           }}
-          onSaved={handleAnnotatorSaved}
-          title="Annoter l'image"
-        />
+        >
+          <PictureAnnotator
+            baseImageUri={annotatorBaseUri}
+            onClose={() => {
+              setAnnotatorVisible(false);
+              setAnnotatorBaseUri(null);
+            }}
+            onSaved={handleAnnotatorSaved}
+            title="Annoter l'image"
+          />
+        </Modal>
       )}
     </Modal>
   );

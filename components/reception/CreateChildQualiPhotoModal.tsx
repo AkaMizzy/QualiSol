@@ -6,13 +6,13 @@ import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
 import companyService from "@/services/companyService";
 import { Folder } from "@/services/folderService";
 import {
-  CreateGedInput,
-  Ged,
-  analyzeImageWithAnnotation,
-  combineTextDescription,
-  createGed,
-  describeImage,
-  getAllGeds,
+    CreateGedInput,
+    Ged,
+    analyzeImageWithAnnotation,
+    combineTextDescription,
+    createGed,
+    describeImage,
+    getAllGeds,
 } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { isVideoFile } from "@/utils/mediaUtils";
@@ -21,32 +21,32 @@ import { ResizeMode, Video } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import {
-  GestureHandlerRootView,
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
+    GestureHandlerRootView,
+    PanGestureHandler,
+    PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CustomAlert from "../CustomAlert";
@@ -1382,15 +1382,25 @@ export function CreateChildQualiPhotoForm({
 
       {/* PictureAnnotator for drawing on images */}
       {isAnnotatorVisible && annotatorBaseUri && (
-        <PictureAnnotator
-          baseImageUri={annotatorBaseUri}
-          onClose={() => {
+        <Modal
+          visible={isAnnotatorVisible}
+          animationType="slide"
+          presentationStyle="fullScreen"
+          onRequestClose={() => {
             setAnnotatorVisible(false);
             setAnnotatorBaseUri(null);
           }}
-          onSaved={handleAnnotatorSaved}
-          title="Annoter l'image"
-        />
+        >
+          <PictureAnnotator
+            baseImageUri={annotatorBaseUri}
+            onClose={() => {
+              setAnnotatorVisible(false);
+              setAnnotatorBaseUri(null);
+            }}
+            onSaved={handleAnnotatorSaved}
+            title="Annoter l'image"
+          />
+        </Modal>
       )}
     </GestureHandlerRootView>
   );
