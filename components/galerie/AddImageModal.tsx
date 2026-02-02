@@ -13,7 +13,6 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Keyboard,
@@ -26,7 +25,7 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
+  View
 } from "react-native";
 import {
   PanGestureHandler,
@@ -744,18 +743,12 @@ export default function AddImageModal({
                     </PanGestureHandler>
                   </View>
 
-                  {/* Anomaly Type Selection - SECOND */}
-                  <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionTitle}>
-                      Type d&apos;anomalie
-                    </Text>
-                    {loadingAnomalies ? (
-                      <ActivityIndicator size="small" color="#f59e0b" />
-                    ) : anomalieTypes.length === 0 ? (
-                      <Text style={{ color: "#6b7280", fontSize: 12 }}>
-                        Aucun type disponible
+                  {/* Anomaly Type Selection - SECOND (only if options available) */}
+                  {!loadingAnomalies && anomalieTypes.length > 0 && (
+                    <View style={styles.sectionContainer}>
+                      <Text style={styles.sectionTitle}>
+                        Type d&apos;anomalie
                       </Text>
-                    ) : (
                       <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
@@ -794,21 +787,15 @@ export default function AddImageModal({
                           </TouchableOpacity>
                         ))}
                       </ScrollView>
-                    )}
-                  </View>
+                    </View>
+                  )}
 
-                  {/* Anomaly Category Selection - THIRD */}
-                  <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionTitle}>
-                      Catégorie d&apos;anomalie
-                    </Text>
-                    {loadingAnomalies ? (
-                      <ActivityIndicator size="small" color="#ef4444" />
-                    ) : anomalieCategories.length === 0 ? (
-                      <Text style={{ color: "#6b7280", fontSize: 12 }}>
-                        Aucune catégorie disponible
+                  {/* Anomaly Category Selection - THIRD (only if options available) */}
+                  {!loadingAnomalies && anomalieCategories.length > 0 && (
+                    <View style={styles.sectionContainer}>
+                      <Text style={styles.sectionTitle}>
+                        Catégorie d&apos;anomalie
                       </Text>
-                    ) : (
                       <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
@@ -838,8 +825,8 @@ export default function AddImageModal({
                           </TouchableOpacity>
                         ))}
                       </ScrollView>
-                    )}
-                  </View>
+                    </View>
+                  )}
 
                   {/* Title Field - FOURTH */}
                   <View style={styles.form}>
