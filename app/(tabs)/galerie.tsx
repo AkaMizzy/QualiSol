@@ -225,11 +225,6 @@ export default function GalerieScreen() {
 
         // Refresh offline records
         await fetchOfflineRecords();
-
-        Alert.alert(
-          "Enregistré hors ligne",
-          "Votre photo sera synchronisée automatiquement lorsque vous aurez une connexion Internet.",
-        );
       }
 
       if (shouldClose) {
