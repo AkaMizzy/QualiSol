@@ -32,6 +32,7 @@ interface PreviewModalProps {
   categorie?: string;
   latitude?: string | null;
   longitude?: string | null;
+  voiceNoteUrl?: string; // New prop for associated voice note
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
@@ -53,6 +54,7 @@ export default function PreviewModal({
   categorie,
   latitude,
   longitude,
+  voiceNoteUrl,
 }: PreviewModalProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -70,29 +72,17 @@ export default function PreviewModal({
       : undefined;
   }, [sound]);
 
-  const loadAudio = async () => {
-    if (!mediaUrl || mediaType !== "voice") return;
-
-    try {
-      setIsLoading(true);
-      const { sound: audioSound } = await Audio.Sound.createAsync(
-        { uri: mediaUrl },
-        { shouldPlay: false },
-        onPlaybackStatusUpdate,
-      );
-      setSound(audioSound);
-    } catch (error) {
-      console.error("Error loading audio:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const onPlaybackStatusUpdate = (status: any) => {
     if (status.isLoaded) {
       setIsPlaying(status.isPlaying);
       setDuration(status.durationMillis || 0);
       setPosition(status.positionMillis || 0);
+      if (status.didJustFinish) {
+        setIsPlaying(false);
+        setPosition(status.durationMillis || 0);
+        // Optional: Reset to start?
+        // sound?.setPositionAsync(0);
+      }
     }
   };
 
@@ -137,12 +127,35 @@ export default function PreviewModal({
     categorie ||
     (latitude && longitude);
 
-  // Load audio when modal opens for voice type
+  // Load audio when modal opens for voice type OR if there is a voiceNoteUrl for an image
   useEffect(() => {
-    if (visible && mediaType === "voice") {
-      loadAudio();
+    if (visible) {
+      if (mediaType === "voice" && mediaUrl) {
+        loadAudio(mediaUrl);
+      } else if (mediaType === "image" && voiceNoteUrl) {
+        loadAudio(voiceNoteUrl);
+      }
     }
-  }, [visible, mediaUrl, mediaType]);
+  }, [visible, mediaUrl, mediaType, voiceNoteUrl]);
+
+  const loadAudio = async (uri: string) => {
+    try {
+      if (sound) {
+        await sound.unloadAsync();
+      }
+      setIsLoading(true);
+      const { sound: audioSound } = await Audio.Sound.createAsync(
+        { uri },
+        { shouldPlay: false },
+        onPlaybackStatusUpdate,
+      );
+      setSound(audioSound);
+    } catch (error) {
+      console.error("Error loading audio:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (!mediaUrl || !mediaType) {
     return null;
@@ -369,6 +382,35 @@ export default function PreviewModal({
         {mediaType === "image" && showMetadata && hasMetadata && (
           <View style={styles.metadataOverlay}>
             <View style={styles.metadataCard}>
+              <View style={styles.metadataRow}>
+                {author && (
+                  <View style={styles.metadataItem}>
+                    <Ionicons name="person-outline" size={16} color="#8E8E93" />
+                    <Text style={styles.metadataSmallValue}>{author}</Text>
+                  </View>
+                )}
+                {createdAt && (
+                  <View style={styles.metadataItem}>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={16}
+                      color="#8E8E93"
+                    />
+                    <Text style={styles.metadataSmallValue}>
+                      {formatDate(createdAt)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Title Section (Moved here as requested) */}
+              {title && (
+                <View style={styles.metadataSection}>
+                  <Text style={styles.metadataLabel}>Titre</Text>
+                  <Text style={styles.metadataValue}>{title}</Text>
+                </View>
+              )}
+
               {description && (
                 <View style={styles.metadataSection}>
                   <Text style={styles.metadataLabel}>Description</Text>
@@ -394,27 +436,6 @@ export default function PreviewModal({
                 </View>
               )}
 
-              <View style={styles.metadataRow}>
-                {author && (
-                  <View style={styles.metadataItem}>
-                    <Ionicons name="person-outline" size={16} color="#8E8E93" />
-                    <Text style={styles.metadataSmallValue}>{author}</Text>
-                  </View>
-                )}
-                {createdAt && (
-                  <View style={styles.metadataItem}>
-                    <Ionicons
-                      name="calendar-outline"
-                      size={16}
-                      color="#8E8E93"
-                    />
-                    <Text style={styles.metadataSmallValue}>
-                      {formatDate(createdAt)}
-                    </Text>
-                  </View>
-                )}
-              </View>
-
               {(type || categorie) && (
                 <View style={styles.metadataRow}>
                   {type && (
@@ -437,6 +458,50 @@ export default function PreviewModal({
                       <Text style={styles.badgeText}>{categorie}</Text>
                     </View>
                   )}
+                </View>
+              )}
+
+              {voiceNoteUrl && (
+                <View style={styles.metadataSection}>
+                  <Text style={styles.metadataLabel}>Note Vocale</Text>
+                  <View style={styles.miniPlayerContainer}>
+                    <Pressable
+                      style={styles.miniPlayButton}
+                      onPress={handlePlayPause}
+                      disabled={isLoading}
+                    >
+                      <Ionicons
+                        name={isPlaying ? "pause" : "play"}
+                        size={20}
+                        color="#FFFFFF"
+                      />
+                    </Pressable>
+                    <View style={styles.miniProgressContainer}>
+                      <View style={styles.miniProgressBar}>
+                        <View
+                          style={[
+                            styles.miniProgressFill,
+                            {
+                              width: `${duration > 0 ? (position / duration) * 100 : 0}%`,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <Pressable
+                        style={styles.progressTouchable}
+                        onPress={(event) => {
+                          const { locationX } = event.nativeEvent;
+                          const progressBarWidth = screenWidth * 0.5; // Approximate width (adjust based on layouts)
+                          const percentage = locationX / progressBarWidth;
+                          const newPosition = percentage * duration;
+                          handleSeek(newPosition);
+                        }}
+                      />
+                    </View>
+                    <Text style={styles.miniTimeText}>
+                      {formatTime(position)} / {formatTime(duration)}
+                    </Text>
+                  </View>
                 </View>
               )}
 
@@ -706,5 +771,44 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: "#007AFF",
+  },
+  miniPlayerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 8,
+    padding: 8,
+    gap: 12,
+  },
+  miniPlayButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#FF6B6B",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  miniProgressContainer: {
+    flex: 1,
+    height: 20,
+    justifyContent: "center",
+  },
+  miniProgressBar: {
+    height: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  miniProgressFill: {
+    height: "100%",
+    backgroundColor: "#FF6B6B",
+    borderRadius: 2,
+  },
+  miniTimeText: {
+    fontSize: 10,
+    color: "#8E8E93",
+    fontVariant: ["tabular-nums"],
+    width: 65,
+    textAlign: "right",
   },
 });
