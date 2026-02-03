@@ -49,6 +49,7 @@ import {
     PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
+import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
 import VoiceNoteRecorder from "../VoiceNoteRecorder";
 
@@ -75,6 +76,7 @@ export function CreateChildQualiPhotoForm({
     name: string;
     type: string;
   } | null>(null);
+  const [captureModalVisible, setCaptureModalVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [latitude, setLatitude] = useState<number | null>(null);
@@ -389,15 +391,11 @@ export function CreateChildQualiPhotoForm({
   const handlePickPhoto = useCallback(async () => {
     Alert.alert(
       "Choisir un média",
-      "Voulez-vous prendre une photo, enregistrer une vidéo ou choisir depuis la galerie ?",
+      "Voulez-vous prendre une photo/vidéo ou choisir depuis la galerie ?",
       [
         {
-          text: "Prendre une photo",
-          onPress: handleTakePhoto,
-        },
-        {
-          text: "Enregistrer une vidéo",
-          onPress: handleRecordVideo,
+          text: "Caméra (Photo/Vidéo)",
+          onPress: () => setCaptureModalVisible(true),
         },
         {
           text: "Galerie",
@@ -420,7 +418,28 @@ export function CreateChildQualiPhotoForm({
         },
       ],
     );
-  }, [handleTakePhoto, handleRecordVideo]);
+  }, []);
+
+  const handleMediaCaptured = (media: {
+    uri: string;
+    type: "image" | "video";
+    width?: number;
+    height?: number;
+  }) => {
+    setMode("capture");
+
+    const fileName =
+      media.uri.split("/").pop() ||
+      (media.type === "video" ? "video.mp4" : "photo.jpg");
+    // Determine mime type roughly
+    const mimeType = media.type === "video" ? "video/mp4" : "image/jpeg";
+
+    setPhoto({
+      uri: media.uri,
+      name: fileName,
+      type: mimeType,
+    });
+  };
 
   const launchPicker = async (mode: "camera" | "gallery" | "video") => {
     let result;
@@ -1452,6 +1471,11 @@ export function CreateChildQualiPhotoForm({
           />
         </Modal>
       )}
+      <CaptureModal
+        visible={captureModalVisible}
+        onClose={() => setCaptureModalVisible(false)}
+        onMediaCaptured={handleMediaCaptured}
+      />
     </GestureHandlerRootView>
   );
 }

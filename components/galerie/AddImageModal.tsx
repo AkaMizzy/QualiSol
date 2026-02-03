@@ -16,24 +16,25 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    Alert,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Alert,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import {
-    PanGestureHandler,
-    PanGestureHandlerGestureEvent,
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
+import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
 import PictureAnnotator from "../PictureAnnotator";
 
@@ -132,6 +133,8 @@ export default function AddImageModal({
   // Annotator state
   const [isAnnotatorVisible, setAnnotatorVisible] = useState(false);
   const [annotatorBaseUri, setAnnotatorBaseUri] = useState<string | null>(null);
+
+  const [captureModalVisible, setCaptureModalVisible] = useState(false);
 
   const handleCombineText = async () => {
     if (!iaText) {
@@ -250,6 +253,25 @@ export default function AddImageModal({
     }
   }, []);
 
+  const handleMediaCaptured = (media: {
+    uri: string;
+    type: "image" | "video";
+    width?: number;
+    height?: number;
+  }) => {
+    setImage({
+      // Cast to ImagePickerAsset
+      uri: media.uri,
+      type: media.type,
+      width: media.width || 1920,
+      height: media.height || 1080,
+      fileName:
+        media.uri.split("/").pop() ||
+        (media.type === "video" ? "video.mp4" : "photo.jpg"),
+    } as any);
+    setMode("capture");
+  };
+
   const handlePickFromGallery = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -297,39 +319,18 @@ export default function AddImageModal({
     }
 
     if (allowedMode === "capture") {
-      Alert.alert(
-        "Nouveau Constat",
-        "Voulez-vous prendre une photo ou enregistrer une vidéo ?",
-        [
-          {
-            text: "Prendre une photo",
-            onPress: handleTakePhoto,
-          },
-          {
-            text: "Enregistrer une vidéo",
-            onPress: handleRecordVideo,
-          },
-          {
-            text: "Annuler",
-            style: "cancel",
-          },
-        ],
-      );
+      setCaptureModalVisible(true);
       return;
     }
 
     // Default "both" behavior
     Alert.alert(
       "Choisir un média",
-      "Voulez-vous prendre une photo, enregistrer une vidéo ou choisir depuis la galerie ?",
+      "Voulez-vous prendre une photo/vidéo ou choisir depuis la galerie ?",
       [
         {
-          text: "Prendre une photo",
-          onPress: handleTakePhoto,
-        },
-        {
-          text: "Enregistrer une vidéo",
-          onPress: handleRecordVideo,
+          text: "Caméra (Photo/Vidéo)",
+          onPress: () => setCaptureModalVisible(true),
         },
         {
           text: "Choisir depuis la galerie",
@@ -341,7 +342,7 @@ export default function AddImageModal({
         },
       ],
     );
-  }, [handleTakePhoto, handleRecordVideo, handlePickFromGallery, allowedMode]);
+  }, [handlePickFromGallery, allowedMode]);
 
   useEffect(() => {
     const prevVisible = prevVisibleRef.current;
@@ -1193,6 +1194,12 @@ export default function AddImageModal({
           />
         </Modal>
       )}
+
+      <CaptureModal
+        visible={captureModalVisible}
+        onClose={() => setCaptureModalVisible(false)}
+        onMediaCaptured={handleMediaCaptured}
+      />
     </Modal>
   );
 }

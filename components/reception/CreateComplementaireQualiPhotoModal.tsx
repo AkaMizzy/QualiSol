@@ -39,6 +39,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import CaptureModal from "../CaptureModal";
 import PictureAnnotator from "../PictureAnnotator";
 import VoiceNoteRecorder from "../VoiceNoteRecorder";
 
@@ -71,6 +72,7 @@ function CreateComplementaireQualiPhotoForm({
     name: string;
     type: string;
   } | null>(null);
+  const [captureModalVisible, setCaptureModalVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [comment, setComment] = useState("");
@@ -247,15 +249,11 @@ function CreateComplementaireQualiPhotoForm({
   const handlePickPhoto = useCallback(async () => {
     Alert.alert(
       "Choisir un média",
-      "Voulez-vous prendre une photo, enregistrer une vidéo ou choisir depuis la galerie ?",
+      "Voulez-vous prendre une photo/vidéo ou choisir depuis la galerie ?",
       [
         {
-          text: "Prendre une photo",
-          onPress: handleTakePhoto,
-        },
-        {
-          text: "Enregistrer une vidéo",
-          onPress: handleRecordVideo,
+          text: "Caméra (Photo/Vidéo)",
+          onPress: () => setCaptureModalVisible(true),
         },
         {
           text: "Galerie",
@@ -278,7 +276,28 @@ function CreateComplementaireQualiPhotoForm({
         },
       ],
     );
-  }, [handleTakePhoto, handleRecordVideo]);
+  }, []);
+
+  const handleMediaCaptured = (media: {
+    uri: string;
+    type: "image" | "video";
+    width?: number;
+    height?: number;
+  }) => {
+    setMode("capture");
+
+    const fileName =
+      media.uri.split("/").pop() ||
+      (media.type === "video" ? "video.mp4" : "photo.jpg");
+    // Determine mime type roughly
+    const mimeType = media.type === "video" ? "video/mp4" : "image/jpeg";
+
+    setPhoto({
+      uri: media.uri,
+      name: fileName,
+      type: mimeType,
+    });
+  };
 
   const launchPicker = async (mode: "camera" | "gallery" | "video") => {
     let result;
@@ -800,17 +819,21 @@ function CreateComplementaireQualiPhotoForm({
             style={styles.fullScreenModalCloseButton}
             onPress={() => setFullScreenImageVisible(false)}
           >
-            <Ionicons name="close-circle" size={40} color="white" />
+            <Ionicons name="close" size={30} color={COLORS.white} />
           </TouchableOpacity>
-          {annotatedImage && (
-            <Image
-              source={{ uri: annotatedImage }}
-              style={styles.fullScreenImage}
-              resizeMode="contain"
-            />
-          )}
+          <Image
+            source={{ uri: annotatedImage || "" }}
+            style={styles.fullScreenImage}
+            resizeMode="contain"
+          />
         </View>
       </Modal>
+
+      <CaptureModal
+        visible={captureModalVisible}
+        onClose={() => setCaptureModalVisible(false)}
+        onMediaCaptured={handleMediaCaptured}
+      />
 
       {/* Text Field Editor Popup Modal */}
       <Modal
