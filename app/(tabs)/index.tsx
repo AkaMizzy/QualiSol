@@ -43,6 +43,11 @@ const SYSTEM_GRID_ITEMS: {
     type: "system",
   },
   {
+    title: "Galerie",
+    image: require("../../assets/icons/camera_p.png"),
+    type: "system",
+  },
+  {
     title: "Suivi",
     image: require("../../assets/icons/folder.png"),
     type: "system",
@@ -431,6 +436,8 @@ export default function DashboardScreen() {
           setIsCalendarVisible((prevState) => !prevState);
         } else if (item.title === "Constat") {
           router.push("/galerie");
+        } else if (item.title === "Galerie") {
+          router.push("/constat");
         } else if (item.title === "Paramètres") {
           router.push("/parameters");
         } else {

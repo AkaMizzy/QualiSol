@@ -65,6 +65,7 @@ interface AddImageModalProps {
     shouldClose: boolean,
   ) => void;
   openCameraOnShow?: boolean;
+  allowedMode?: "upload" | "capture" | "both";
 }
 
 export default function AddImageModal({
@@ -72,6 +73,7 @@ export default function AddImageModal({
   onClose,
   onAdd,
   openCameraOnShow = false,
+  allowedMode = "both",
 }: AddImageModalProps) {
   const { token, user } = useAuth();
   const [title, setTitle] = useState("");
@@ -289,6 +291,34 @@ export default function AddImageModal({
   }, []);
 
   const showImagePickerOptions = useCallback(() => {
+    if (allowedMode === "upload") {
+      handlePickFromGallery();
+      return;
+    }
+
+    if (allowedMode === "capture") {
+      Alert.alert(
+        "Nouveau Constat",
+        "Voulez-vous prendre une photo ou enregistrer une vidéo ?",
+        [
+          {
+            text: "Prendre une photo",
+            onPress: handleTakePhoto,
+          },
+          {
+            text: "Enregistrer une vidéo",
+            onPress: handleRecordVideo,
+          },
+          {
+            text: "Annuler",
+            style: "cancel",
+          },
+        ],
+      );
+      return;
+    }
+
+    // Default "both" behavior
     Alert.alert(
       "Choisir un média",
       "Voulez-vous prendre une photo, enregistrer une vidéo ou choisir depuis la galerie ?",
@@ -311,14 +341,18 @@ export default function AddImageModal({
         },
       ],
     );
-  }, [handleTakePhoto, handleRecordVideo, handlePickFromGallery]);
+  }, [handleTakePhoto, handleRecordVideo, handlePickFromGallery, allowedMode]);
 
   useEffect(() => {
     const prevVisible = prevVisibleRef.current;
     prevVisibleRef.current = visible;
 
     if (visible && !prevVisible && openCameraOnShow) {
-      // Modal just opened, trigger camera with a delay
+      // Modal just opened
+      // If allowedMode is "upload", do NOT automatically trigger camera check,
+      // but show picker options (which will trigger gallery).
+      // If "capture", we want to show choices (Photo vs Video).
+
       const timer = setTimeout(() => {
         showImagePickerOptions();
       }, 400);
@@ -340,7 +374,7 @@ export default function AddImageModal({
       setLevel(5);
       setSelectedType(null);
     }
-  }, [visible, showImagePickerOptions, openCameraOnShow]);
+  }, [visible, showImagePickerOptions, openCameraOnShow, allowedMode]);
 
   useEffect(() => {
     const fetchLimitInfo = async () => {
