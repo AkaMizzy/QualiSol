@@ -1,18 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Audio, ResizeMode, Video } from "expo-av";
+import * as FileSystem from "expo-file-system";
 import { Image } from "expo-image";
+import * as Sharing from "expo-sharing";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Linking,
-    Modal,
-    Pressable,
-    Share,
-    StyleSheet,
-    Text,
-    View,
+  Alert,
+  Dimensions,
+  Linking,
+  Modal,
+  Platform,
+  Pressable,
+  Share,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 interface PreviewModalProps {
@@ -112,6 +114,9 @@ export default function PreviewModal({
 
   const handleShare = async () => {
     try {
+      if (!mediaUrl) return;
+      setIsLoading(true);
+
       // Build rich metadata message
       const parts = [];
       if (title) parts.push(`📸 ${title}`);
@@ -139,9 +144,8 @@ export default function PreviewModal({
 
       parts.push("");
 
-      if (mediaUrl) {
-        parts.push(`🔗 ${mediaUrl}`);
-      }
+      // We don't need to append link if we are sharing the file, but it's good backup in text payload
+      parts.push(`🔗 ${mediaUrl}`);
 
       parts.push("");
       parts.push("━━━━━━━━━━━");
@@ -149,332 +153,179 @@ export default function PreviewModal({
 
       const message = parts.join("\n");
 
-      await Share.share({
-        message: message,
-      });
+      // Download file to local cache
+      let localUri = mediaUrl;
+      if (mediaUrl.startsWith("http") || mediaUrl.startsWith("https")) {
+        const filename = mediaUrl.split("/").pop() || "share_image.jpg";
+
+        // Use new Expo FileSystem API (SDK 52+)
+        if (FileSystem.Paths && FileSystem.Paths.cache) {
+          const cacheDir = FileSystem.Paths.cache;
+          const targetFile = new FileSystem.File(cacheDir, filename);
+          await FileSystem.File.downloadFileAsync(mediaUrl, targetFile);
+          localUri = targetFile.uri;
+        } else {
+          // Fallback for older versions if somehow running there, though types indicate new version
+          // Note: cacheDirectory might not exist on types but might at runtime?
+          // But we follow types here.
+          throw new Error("FileSystem API not supported");
+        }
+      }
+
+      if (Platform.OS === "android") {
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(localUri, {
+            mimeType: "image/jpeg",
+            dialogTitle: "Partager l'image",
+          });
+        } else {
+          Alert.alert("Erreur", "Le partage n'est pas disponible.");
+        }
+      } else {
+        // iOS
+        await Share.share({
+          url: localUri,
+          message: message, // iOS often allows message with file
+        });
+      }
     } catch (error) {
       console.error("Error sharing photo:", error);
       Alert.alert("Erreur", "Impossible de partager l'élément.");
-    }
-  };
-
-  const formatTime = (milliseconds: number) => {
-    const totalSeconds = Math.floor(milliseconds / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const hasMetadata =
-    description ||
-    author ||
-    createdAt ||
-    type ||
-    categorie ||
-    chantier ||
-    (latitude && longitude);
-
-  // Load audio when modal opens for voice type OR if there is a voiceNoteUrl for an image
-  useEffect(() => {
-    if (visible) {
-      if (mediaType === "voice" && mediaUrl) {
-        loadAudio(mediaUrl);
-      } else if (mediaType === "image" && voiceNoteUrl) {
-        loadAudio(voiceNoteUrl);
-      }
-    }
-  }, [visible, mediaUrl, mediaType, voiceNoteUrl]);
-
-  const loadAudio = async (uri: string) => {
-    try {
-      if (sound) {
-        await sound.unloadAsync();
-      }
-      setIsLoading(true);
-      const { sound: audioSound } = await Audio.Sound.createAsync(
-        { uri },
-        { shouldPlay: false },
-        onPlaybackStatusUpdate,
-      );
-      setSound(audioSound);
-    } catch (error) {
-      console.error("Error loading audio:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (!mediaUrl || !mediaType) {
-    return null;
-  }
-
-  const handleOpenFile = async () => {
-    if (!mediaUrl) return;
-
-    try {
-      // Check if the URL can be opened
-      const canOpen = await Linking.canOpenURL(mediaUrl);
-
-      if (canOpen) {
-        await Linking.openURL(mediaUrl);
-      } else {
-        // If direct opening fails, try to open in browser
-        const browserUrl = mediaUrl.startsWith("http")
-          ? mediaUrl
-          : `https://${mediaUrl}`;
-        await Linking.openURL(browserUrl);
-      }
-    } catch (error) {
-      console.error("Error opening file:", error);
-      Alert.alert(
-        "Cannot Open File",
-        "Unable to open this file. You may need to download it first.",
-        [{ text: "OK" }],
-      );
-    }
+  const formatTime = (millis: number) => {
+    const minutes = Math.floor(millis / 60000);
+    const seconds = ((millis % 60000) / 1000).toFixed(0);
+    return `${minutes}:${Number(seconds) < 10 ? "0" : ""}${seconds}`;
   };
 
-  const renderMedia = () => {
-    if (mediaType === "image") {
-      return (
-        <Image
-          source={{ uri: mediaUrl }}
-          style={styles.mediaContent}
-          contentFit="contain"
-          transition={200}
-        />
+  const handleOpenFile = async () => {
+    if (mediaUrl) {
+      // For standard file opening (browser or viewer)
+      // If it's a specialized file type, maybe use Sharing or specific viewer
+      Linking.openURL(mediaUrl).catch((err) =>
+        Alert.alert("Erreur", "Impossible d'ouvrir le fichier"),
       );
     }
-
-    if (mediaType === "video") {
-      return (
-        <Video
-          source={{ uri: mediaUrl }}
-          style={styles.mediaContent}
-          useNativeControls
-          resizeMode={ResizeMode.CONTAIN}
-          shouldPlay={false}
-          isLooping={false}
-        />
-      );
-    }
-
-    if (mediaType === "file") {
-      return (
-        <View style={styles.fileContainer}>
-          <View style={styles.fileIconContainer}>
-            <Ionicons name="document-outline" size={64} color="#007AFF" />
-          </View>
-          <Text style={styles.fileName}>
-            {mediaUrl?.split("/").pop() || "Document"}
-          </Text>
-          <Text style={styles.fileInfo}>Document file</Text>
-          <Pressable style={styles.downloadButton} onPress={handleOpenFile}>
-            <Ionicons name="download-outline" size={20} color="#FFFFFF" />
-            <Text style={styles.downloadButtonText}>Open Document</Text>
-          </Pressable>
-        </View>
-      );
-    }
-
-    if (mediaType === "voice") {
-      return (
-        <View style={styles.voiceContainer}>
-          <View style={styles.voiceIconContainer}>
-            <Ionicons name="mic-outline" size={64} color="#FF6B6B" />
-          </View>
-          <Text style={styles.voiceFileName}>
-            {mediaUrl?.split("/").pop() || "Voice Recording"}
-          </Text>
-          <Text style={styles.voiceFileInfo}>Voice message</Text>
-          <View style={styles.audioPlayerContainer}>
-            {/* Custom Audio Player */}
-            <View style={styles.audioControls}>
-              {/* Play/Pause Button */}
-              <Pressable
-                style={styles.playButton}
-                onPress={handlePlayPause}
-                disabled={isLoading}
-              >
-                <Ionicons
-                  name={isPlaying ? "pause" : "play"}
-                  size={24}
-                  color="#FFFFFF"
-                />
-              </Pressable>
-
-              {/* Time Display */}
-              <View style={styles.timeDisplay}>
-                <Text style={styles.timeText}>{formatTime(position)}</Text>
-                <Text style={styles.timeText}>{formatTime(duration)}</Text>
-              </View>
-            </View>
-
-            {/* Progress Bar */}
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${duration > 0 ? (position / duration) * 100 : 0}%`,
-                    },
-                  ]}
-                />
-              </View>
-              <Pressable
-                style={styles.progressTouchable}
-                onPress={(event) => {
-                  const { locationX } = event.nativeEvent;
-                  const progressBarWidth = screenWidth * 0.6; // Approximate width
-                  const percentage = locationX / progressBarWidth;
-                  const newPosition = percentage * duration;
-                  handleSeek(newPosition);
-                }}
-              />
-            </View>
-          </View>
-        </View>
-      );
-    }
-
-    return null;
   };
 
   return (
     <Modal
       visible={visible}
-      transparent
+      transparent={true}
       animationType="fade"
       onRequestClose={onClose}
     >
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerContent}></View>
-
+          <View style={styles.headerContent}>
+            {/* Title moved to metadata section at bottom */}
+          </View>
           <View style={styles.headerActions}>
-            {/* Share Button moved here or beside others */}
-            <Pressable
-              style={styles.actionButton}
-              onPress={handleShare}
-              accessibilityRole="button"
-              accessibilityLabel="Partager"
-            >
+            {/* Share Button */}
+            <Pressable style={styles.actionButton} onPress={handleShare}>
               <Ionicons name="share-social-outline" size={24} color="#f87b1b" />
             </Pressable>
-
-            {mediaType === "image" && hasMetadata && (
-              <Pressable
-                style={styles.actionButton}
-                onPress={() => setShowMetadata(!showMetadata)}
-                accessibilityRole="button"
-                accessibilityLabel="Toggle metadata"
-              >
-                <Ionicons
-                  name={showMetadata ? "information" : "information-outline"}
-                  size={24}
-                  color="#FFFFFF"
-                />
+            {onAnnotate && mediaType === "image" && (
+              <Pressable style={styles.actionButton} onPress={onAnnotate}>
+                <Ionicons name="pencil" size={24} color="#f87b1b" />
               </Pressable>
             )}
-            {mediaType === "image" && onAutoDescribe && (
-              <Pressable
-                style={styles.actionButton}
-                onPress={onAutoDescribe}
-                disabled={isDescribing}
-                accessibilityRole="button"
-                accessibilityLabel="Generate AI description"
-              >
-                {isDescribing ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Ionicons name="sparkles-outline" size={24} color="#FFFFFF" />
-                )}
+            {onEdit && (
+              <Pressable style={styles.actionButton} onPress={onEdit}>
+                <Ionicons name="create-outline" size={24} color="#f87b1b" />
               </Pressable>
             )}
-            {mediaType === "image" && onEdit && (
-              <Pressable
-                style={styles.actionButton}
-                onPress={onEdit}
-                accessibilityRole="button"
-                accessibilityLabel="Edit photo"
-              >
-                <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-              </Pressable>
-            )}
-
-            {mediaType === "image" && onAnnotate && (
-              <Pressable
-                style={styles.actionButton}
-                onPress={onAnnotate}
-                accessibilityRole="button"
-                accessibilityLabel="Annoter"
-              >
-                <Ionicons name="brush-outline" size={24} color="#f87b1b" />
-              </Pressable>
-            )}
-
             {onDelete && (
               <Pressable
-                style={styles.actionButton}
-                onPress={onDelete}
-                accessibilityRole="button"
-                accessibilityLabel="Delete"
+                style={[styles.actionButton, { backgroundColor: "#FF3B30" }]}
+                onPress={() => {
+                  Alert.alert(
+                    "Supprimer",
+                    "Êtes-vous sûr de vouloir supprimer cet élément ?",
+                    [
+                      { text: "Annuler", style: "cancel" },
+                      {
+                        text: "Supprimer",
+                        style: "destructive",
+                        onPress: onDelete,
+                      },
+                    ],
+                  );
+                }}
               >
-                <Ionicons name="trash-outline" size={24} color="#FF3B30" />
+                <Ionicons name="trash-outline" size={24} color="#FFFFFF" />
               </Pressable>
             )}
-
             <Pressable
-              style={styles.actionButton}
+              style={[styles.actionButton, { marginLeft: 20 }]}
               onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel="Close preview"
             >
               <Ionicons name="close" size={28} color="#f87b1b" />
             </Pressable>
           </View>
         </View>
 
-        {/* Media Content */}
-        <View style={styles.mediaContainer}>{renderMedia()}</View>
+        <Pressable
+          style={styles.mediaContainer}
+          onPress={() => setShowMetadata(!showMetadata)}
+        >
+          {mediaType === "video" ? (
+            <Video
+              style={styles.mediaContent}
+              source={{ uri: mediaUrl || "" }}
+              useNativeControls
+              resizeMode={ResizeMode.CONTAIN}
+              isLooping
+            />
+          ) : mediaType === "image" ? (
+            <Image
+              style={styles.mediaContent}
+              source={{ uri: mediaUrl || "" }}
+              contentFit="contain"
+              transition={200}
+            />
+          ) : (
+            <View style={styles.fileContainer}>
+              <View style={styles.fileIconContainer}>
+                <Ionicons name="document-text" size={60} color="#FFFFFF" />
+              </View>
+              <Text style={styles.fileName}>{title}</Text>
+              <Text style={styles.fileInfo}>Fichier {type || categorie}</Text>
+              <Pressable style={styles.downloadButton} onPress={handleOpenFile}>
+                <Ionicons name="download-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.downloadButtonText}>Ouvrir le fichier</Text>
+              </Pressable>
+            </View>
+          )}
+        </Pressable>
 
-        {/* Metadata Overlay */}
-        {mediaType === "image" && showMetadata && hasMetadata && (
+        {showMetadata && (
           <View style={styles.metadataOverlay}>
             <View style={styles.metadataCard}>
               <View style={styles.metadataRow}>
-                {author && (
-                  <View style={styles.metadataItem}>
-                    <Ionicons name="person-outline" size={16} color="#f87b1b" />
-                    <Text style={styles.metadataSmallValue}>{author}</Text>
-                  </View>
-                )}
+                <View style={styles.metadataItem}>
+                  <Ionicons
+                    name="person-circle-outline"
+                    size={16}
+                    color="#007AFF"
+                  />
+                  <Text style={styles.metadataSmallValue}>
+                    {author || "Inconnu"}
+                  </Text>
+                </View>
                 {createdAt && (
                   <View style={styles.metadataItem}>
-                    <Ionicons
-                      name="calendar-outline"
-                      size={16}
-                      color="#f87b1b"
-                    />
+                    <Ionicons name="time-outline" size={16} color="#8E8E93" />
                     <Text style={styles.metadataSmallValue}>
-                      {formatDate(createdAt)}
+                      {new Date(createdAt).toLocaleDateString()}
                     </Text>
                   </View>
                 )}
-                {level !== undefined && (
+                {level !== undefined && level !== null && (
                   <View style={styles.metadataItem}>
                     <Ionicons
                       name="warning-outline"
@@ -871,12 +722,14 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 20,
     justifyContent: "center",
+    alignItems: "center",
   },
   miniProgressBar: {
     height: 4,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderRadius: 2,
     overflow: "hidden",
+    width: "100%",
   },
   miniProgressFill: {
     height: "100%",
