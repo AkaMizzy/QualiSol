@@ -42,6 +42,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import CaptureModal from "../CaptureModal";
 import PictureAnnotator from "../PictureAnnotator";
 import VoiceNoteRecorder from "../VoiceNoteRecorder";
+import { COLORS } from "@/constants/theme";
 
 export type QualiPhotoItem = {
   id: string;
