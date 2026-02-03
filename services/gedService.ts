@@ -21,6 +21,7 @@ export type CreateGedInput = {
   assigned?: string;
   audiotxt?: string;
   iatxt?: string;
+  mode?: "upload" | "capture";
   file?: {
     uri: string | File;
     type: string;
@@ -55,6 +56,7 @@ export interface Ged {
   assigned?: string;
   audiotxt?: string;
   iatxt?: string;
+  mode?: "upload" | "capture";
   created_at: string;
   value?: string;
 }
@@ -126,6 +128,10 @@ export async function createGed(
 
   if (input.iatxt) {
     formData.append("iatxt", input.iatxt);
+  }
+
+  if (input.mode) {
+    formData.append("mode", input.mode);
   }
 
   // Append file if provided

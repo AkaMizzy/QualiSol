@@ -38,6 +38,7 @@ interface PreviewModalProps {
   voiceNoteUrl?: string; // New prop for associated voice note
   companyTitle?: string;
   level?: number;
+  mode?: "upload" | "capture";
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
@@ -64,6 +65,7 @@ export default function PreviewModal({
   voiceNoteUrl,
   companyTitle,
   level,
+  mode,
 }: PreviewModalProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -483,6 +485,22 @@ export default function PreviewModal({
                     />
                     <Text style={styles.metadataSmallValue}>
                       Sévérité: {level}
+                    </Text>
+                  </View>
+                )}
+                {mode && (
+                  <View style={styles.metadataItem}>
+                    <Ionicons
+                      name={
+                        mode === "capture"
+                          ? "camera-outline"
+                          : "cloud-upload-outline"
+                      }
+                      size={16}
+                      color="#f87b1b"
+                    />
+                    <Text style={styles.metadataSmallValue}>
+                      {mode === "capture" ? "Capturé" : "Importé"}
                     </Text>
                   </View>
                 )}

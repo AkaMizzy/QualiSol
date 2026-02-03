@@ -60,6 +60,7 @@ interface AddImageModalProps {
       chantier?: string;
       audiotxt?: string;
       iatxt?: string;
+      mode?: "upload" | "capture";
     },
     shouldClose: boolean,
   ) => void;
@@ -95,6 +96,7 @@ export default function AddImageModal({
   const [selectedCategorie, setSelectedCategorie] = useState<string | null>(
     null,
   );
+  const [mode, setMode] = useState<"upload" | "capture">("upload");
   const [severitySliderWidth, setSeveritySliderWidth] = useState(0);
   const prevVisibleRef = useRef(visible);
   const [alertInfo, setAlertInfo] = useState<{
@@ -207,6 +209,7 @@ export default function AddImageModal({
 
     if (!result.canceled) {
       setImage(result.assets[0]);
+      setMode("capture");
     }
   }, []);
 
@@ -241,6 +244,7 @@ export default function AddImageModal({
       }
 
       setImage(selectedAsset);
+      setMode("capture");
     }
   }, []);
 
@@ -277,6 +281,7 @@ export default function AddImageModal({
       }
 
       setImage(selectedAsset);
+      setMode("upload");
       if (selectedAsset.type !== "video") {
         // handleGenerateDescription logic if auto-generation is desired for gallery picks too
       }
@@ -480,9 +485,9 @@ export default function AddImageModal({
     setLevel(5);
     setSelectedType(null);
     setSelectedCategorie(null);
-    // Reset annotator state
     setAnnotatorVisible(false);
     setAnnotatorBaseUri(null);
+    setMode("upload");
   };
 
   const handleAdd = (shouldClose: boolean) => {
@@ -573,6 +578,7 @@ export default function AddImageModal({
           type: selectedType,
           categorie: selectedCategorie,
           iatxt: iaText,
+          mode: mode,
         },
         shouldClose,
       );

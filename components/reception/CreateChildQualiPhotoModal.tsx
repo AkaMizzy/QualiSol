@@ -98,6 +98,7 @@ export function CreateChildQualiPhotoForm({
     null,
   );
   const [severitySliderWidth, setSeveritySliderWidth] = useState(0);
+  const [mode, setMode] = useState<"upload" | "capture">("upload");
   const [assigned, setAssigned] = useState("");
   const [assignedOpen, setAssignedOpen] = useState(false);
   const [companyUsers, setCompanyUsers] = useState<
@@ -354,6 +355,7 @@ export function CreateChildQualiPhotoForm({
     setFullScreenImageVisible(false);
     setAnnotatorVisible(false); // Reset annotator state
     setAnnotatorBaseUri(null); // Reset annotator state
+    setMode("upload");
     scrollViewRef.current?.scrollTo({ y: 0, animated: true }); // Scroll to top
   };
 
@@ -443,6 +445,11 @@ export function CreateChildQualiPhotoForm({
     }
 
     if (!result.canceled && result.assets[0]) {
+      // Set mode based on picker mode used
+      const pickerMode =
+        mode === "camera" || mode === "video" ? "capture" : "upload";
+      setMode(pickerMode);
+
       const asset = result.assets[0];
 
       // Check file size for videos (limit 50MB)
@@ -545,6 +552,7 @@ export function CreateChildQualiPhotoForm({
         file: photo,
         audiotxt: audioText,
         iatxt: iaText,
+        mode: mode,
       };
 
       const result = await createGed(token, payload);

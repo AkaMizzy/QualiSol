@@ -96,6 +96,7 @@ function CreateComplementaireQualiPhotoForm({
   const [tempFieldValue, setTempFieldValue] = useState<string>("");
 
   const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
+  const [mode, setMode] = useState<"upload" | "capture">("upload");
 
   // Storage quota state
   const [currentStorageGB, setCurrentStorageGB] = useState(0);
@@ -304,6 +305,11 @@ function CreateComplementaireQualiPhotoForm({
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
 
+      // Set mode based on picker mode used
+      const pickerMode =
+        mode === "camera" || mode === "video" ? "capture" : "upload";
+      setMode(pickerMode);
+
       // Check file size for videos (limit 50MB)
       if (
         (asset.type === "video" || mode === "video") &&
@@ -378,6 +384,7 @@ function CreateComplementaireQualiPhotoForm({
         file: photo,
         audiotxt: audioText,
         iatxt: iaText,
+        mode: mode,
       });
 
       if (audioUri) {
