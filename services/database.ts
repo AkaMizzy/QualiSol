@@ -36,6 +36,7 @@ async function initializeDatabase(db: any): Promise<void> {
         level INTEGER,
         type TEXT,
         categorie TEXT,
+        mode TEXT,
         local_image_path TEXT NOT NULL,
         local_voice_note_path TEXT,
         created_at TEXT NOT NULL
@@ -65,6 +66,7 @@ async function initializeDatabase(db: any): Promise<void> {
     await safeAddColumn("chantier", "TEXT");
     await safeAddColumn("audiotxt", "TEXT");
     await safeAddColumn("iatxt", "TEXT");
+    await safeAddColumn("mode", "TEXT");
 
     // Create sync_queue table
     await db.execAsync(`

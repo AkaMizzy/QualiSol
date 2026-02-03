@@ -73,24 +73,47 @@ export default function GalerieCard({
           </View>
         )}
 
-        {/* Sync status indicator */}
-        {syncStatus && (
-          <View style={styles.syncStatusBadge}>
-            {syncStatus === "syncing" && (
-              <ActivityIndicator size="small" color={COLORS.white} />
-            )}
-            {syncStatus === "pending" && (
+        {/* Top Right Badges Container */}
+        <View style={styles.topRightContainer}>
+          {/* Mode Indicator */}
+          {item.mode && (
+            <View
+              style={[
+                styles.badge,
+                { backgroundColor: "rgba(0,0,0,0.5)" }, // Consistent dark background
+              ]}
+            >
               <Ionicons
-                name="cloud-upload-outline"
-                size={20}
-                color={COLORS.white}
+                name={item.mode === "capture" ? "camera" : "cloud-upload"}
+                size={16}
+                color={COLORS.primary}
               />
-            )}
-            {syncStatus === "failed" && (
-              <Ionicons name="alert-circle-outline" size={20} color="#ff4444" />
-            )}
-          </View>
-        )}
+            </View>
+          )}
+
+          {/* Sync status indicator */}
+          {syncStatus && (
+            <View style={styles.badge}>
+              {syncStatus === "syncing" && (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              )}
+              {syncStatus === "pending" && (
+                <Ionicons
+                  name="cloud-upload-outline"
+                  size={20}
+                  color={COLORS.white}
+                />
+              )}
+              {syncStatus === "failed" && (
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={20}
+                  color="#ff4444"
+                />
+              )}
+            </View>
+          )}
+        </View>
 
         {/* GPS Status Indicator */}
         {(() => {
@@ -246,15 +269,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 1,
   },
-  syncStatusBadge: {
+  topRightContainer: {
     position: "absolute",
     top: 8,
     right: 8,
+    flexDirection: "row",
+    gap: 4,
+    zIndex: 10,
+  },
+  badge: {
     backgroundColor: "rgba(0,0,0,0.6)",
     borderRadius: 12,
     padding: 4,
-    zIndex: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
+  // syncStatusBadge removed in favor of generic badge in container
   gpsStatusBadge: {
     position: "absolute",
     top: 8,

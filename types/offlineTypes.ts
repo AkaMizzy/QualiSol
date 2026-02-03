@@ -21,6 +21,7 @@ export interface OfflineRecord {
   level: number;
   type: string | null;
   categorie: string | null;
+  mode?: "upload" | "capture";
   local_image_path: string;
   local_voice_note_path: string | null;
   created_at: string;
@@ -50,6 +51,7 @@ export interface OfflineRecordData {
   level?: number;
   type?: string;
   categorie?: string;
+  mode?: "upload" | "capture";
   imageUri: string;
   voiceNoteUri?: string;
 }

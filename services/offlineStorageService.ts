@@ -131,9 +131,9 @@ export async function createOfflineRecord(
       `INSERT INTO offline_records (
         id, idsource, title, description, kind, author,
         idauthor, iddevice, chantier, audiotxt, iatxt,
-        latitude, longitude, altitude, accuracy, altitudeAccuracy, level, type, categorie,
+        latitude, longitude, altitude, accuracy, altitudeAccuracy, level, type, categorie, mode,
         local_image_path, local_voice_note_path, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         recordId,
         data.idsource,
@@ -154,6 +154,7 @@ export async function createOfflineRecord(
         data.level ?? null,
         data.type || null,
         data.categorie || null,
+        data.mode || null,
         localImagePath,
         localVoiceNotePath,
         createdAt,
@@ -238,6 +239,7 @@ export async function getOfflineRecords(
       level: row.level,
       type: row.type,
       categorie: row.categorie,
+      mode: row.mode,
       local_image_path: row.local_image_path,
       local_voice_note_path: row.local_voice_note_path,
       created_at: row.created_at,
@@ -300,6 +302,7 @@ export async function getPendingSyncRecords(): Promise<OfflineRecord[]> {
       level: row.level,
       type: row.type,
       categorie: row.categorie,
+      mode: row.mode,
       local_image_path: row.local_image_path,
       local_voice_note_path: row.local_voice_note_path,
       created_at: row.created_at,

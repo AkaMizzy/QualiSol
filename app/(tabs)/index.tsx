@@ -44,7 +44,7 @@ const SYSTEM_GRID_ITEMS: {
   },
   {
     title: "Galerie",
-    image: require("../../assets/icons/camera_p.png"),
+    image: require("../../assets/icons/gallery.png"),
     type: "system",
   },
   {
@@ -434,9 +434,9 @@ export default function DashboardScreen() {
         } else if (item.title === "Calendrier") {
           LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
           setIsCalendarVisible((prevState) => !prevState);
-        } else if (item.title === "Constat") {
-          router.push("/galerie");
         } else if (item.title === "Galerie") {
+          router.push("/galerie");
+        } else if (item.title === "Constat") {
           router.push("/constat");
         } else if (item.title === "Paramètres") {
           router.push("/parameters");

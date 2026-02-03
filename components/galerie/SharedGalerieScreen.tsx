@@ -166,6 +166,7 @@ export default function SharedGalerieScreen({
       categorie: string | null;
       audiotxt?: string;
       iatxt?: string;
+      mode?: "upload" | "capture";
     },
     shouldClose: boolean,
   ) => {
@@ -209,7 +210,9 @@ export default function SharedGalerieScreen({
             name: fileName,
           },
           audiotxt: data.audiotxt,
+          
           iatxt: data.iatxt,
+          mode: data.mode,
         });
 
         if (data.voiceNote) {
@@ -239,6 +242,7 @@ export default function SharedGalerieScreen({
           chantier: data.chantier,
           audiotxt: data.audiotxt,
           iatxt: data.iatxt,
+          mode: data.mode,
           latitude: data.latitude?.toString(),
           longitude: data.longitude?.toString(),
           altitude: data.altitude?.toString(),
