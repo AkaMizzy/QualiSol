@@ -216,25 +216,45 @@ function CreateComplementaireQualiPhotoForm({
     }
   };
 
+  const handleTakePhoto = useCallback(async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission",
+        "L'autorisation d'accéder à la caméra est requise.",
+      );
+      return;
+    }
+    launchPicker("camera");
+  }, []);
+
+  const handleRecordVideo = useCallback(async () => {
+    const { status: cameraStatus } =
+      await ImagePicker.requestCameraPermissionsAsync();
+
+    if (cameraStatus !== "granted") {
+      Alert.alert(
+        "Permissions manquantes",
+        "Nous avons besoin de l'accès à la caméra pour enregistrer une vidéo.",
+      );
+      return;
+    }
+
+    launchPicker("video");
+  }, []);
+
   const handlePickPhoto = useCallback(async () => {
     Alert.alert(
       "Choisir un média",
-      "Voulez-vous prendre une photo/vidéo ou choisir depuis la galerie ?",
+      "Voulez-vous prendre une photo, enregistrer une vidéo ou choisir depuis la galerie ?",
       [
         {
-          text: "Caméra",
-          onPress: async () => {
-            const { status } =
-              await ImagePicker.requestCameraPermissionsAsync();
-            if (status !== "granted") {
-              Alert.alert(
-                "Permission",
-                "L'autorisation d'accéder à la caméra est requise.",
-              );
-              return;
-            }
-            launchPicker("camera");
-          },
+          text: "Prendre une photo",
+          onPress: handleTakePhoto,
+        },
+        {
+          text: "Enregistrer une vidéo",
+          onPress: handleRecordVideo,
         },
         {
           text: "Galerie",
@@ -257,17 +277,25 @@ function CreateComplementaireQualiPhotoForm({
         },
       ],
     );
-  }, []);
+  }, [handleTakePhoto, handleRecordVideo]);
 
-  const launchPicker = async (mode: "camera" | "gallery") => {
+  const launchPicker = async (mode: "camera" | "gallery" | "video") => {
     let result;
     const options: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      mediaTypes:
+        mode === "video"
+          ? ImagePicker.MediaTypeOptions.Videos
+          : ImagePicker.MediaTypeOptions.All,
       allowsEditing: false,
       quality: 0.9,
     };
 
     if (mode === "camera") {
+      result = await ImagePicker.launchCameraAsync({
+        ...options,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      });
+    } else if (mode === "video") {
       result = await ImagePicker.launchCameraAsync(options);
     } else {
       result = await ImagePicker.launchImageLibraryAsync(options);
@@ -275,6 +303,20 @@ function CreateComplementaireQualiPhotoForm({
 
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
+
+      // Check file size for videos (limit 50MB)
+      if (
+        (asset.type === "video" || mode === "video") &&
+        asset.fileSize &&
+        asset.fileSize > 50 * 1024 * 1024
+      ) {
+        Alert.alert(
+          "Fichier trop volumineux",
+          "La taille de la vidéo ne doit pas dépasser 50 Mo.",
+        );
+        return;
+      }
+
       const uri = asset.uri;
       const fileName =
         uri.split("/").pop() ||

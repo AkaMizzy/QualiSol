@@ -16,23 +16,23 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Alert,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    Alert,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import {
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
+    PanGestureHandler,
+    PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import CustomAlert from "../CustomAlert";
 import PictureAnnotator from "../PictureAnnotator";
@@ -74,7 +74,6 @@ export default function AddImageModal({
 }: AddImageModalProps) {
   const { token, user } = useAuth();
   const [title, setTitle] = useState("");
-  const [chantier, setChantier] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [voiceNote, setVoiceNote] = useState<{
@@ -201,7 +200,30 @@ export default function AddImageModal({
     }
 
     let result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0]);
+    }
+  }, []);
+
+  const handleRecordVideo = useCallback(async () => {
+    const { status: cameraStatus } =
+      await ImagePicker.requestCameraPermissionsAsync();
+
+    if (cameraStatus !== "granted") {
+      Alert.alert(
+        "Permission refusée",
+        "Nous avons besoin de l'accès à la caméra pour enregistrer une vidéo.",
+      );
+      return;
+    }
+
+    let result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
       allowsEditing: false,
       quality: 1,
     });
@@ -210,11 +232,7 @@ export default function AddImageModal({
       const selectedAsset = result.assets[0];
 
       // Check file size for videos (limit 50MB)
-      if (
-        selectedAsset.type === "video" &&
-        selectedAsset.fileSize &&
-        selectedAsset.fileSize > 50 * 1024 * 1024
-      ) {
+      if (selectedAsset.fileSize && selectedAsset.fileSize > 50 * 1024 * 1024) {
         Alert.alert(
           "Fichier trop volumineux",
           "La taille de la vidéo ne doit pas dépasser 50 Mo.",
@@ -267,12 +285,16 @@ export default function AddImageModal({
 
   const showImagePickerOptions = useCallback(() => {
     Alert.alert(
-      "Choisir une image",
-      "Voulez-vous prendre une nouvelle photo ou en choisir une depuis votre galerie ?",
+      "Choisir un média",
+      "Voulez-vous prendre une photo, enregistrer une vidéo ou choisir depuis la galerie ?",
       [
         {
           text: "Prendre une photo",
           onPress: handleTakePhoto,
+        },
+        {
+          text: "Enregistrer une vidéo",
+          onPress: handleRecordVideo,
         },
         {
           text: "Choisir depuis la galerie",
@@ -284,7 +306,7 @@ export default function AddImageModal({
         },
       ],
     );
-  }, [handleTakePhoto, handlePickFromGallery]);
+  }, [handleTakePhoto, handleRecordVideo, handlePickFromGallery]);
 
   useEffect(() => {
     const prevVisible = prevVisibleRef.current;
@@ -300,7 +322,6 @@ export default function AddImageModal({
     } else if (!visible && prevVisible) {
       // Modal just closed, reset form
       setTitle("");
-      setChantier("");
       setDescription("");
       setImage(null);
       setVoiceNote(null);
@@ -451,7 +472,6 @@ export default function AddImageModal({
 
   const resetForm = () => {
     setTitle("");
-    setChantier("");
     setDescription("");
     setImage(null);
     setVoiceNote(null);
@@ -538,7 +558,6 @@ export default function AddImageModal({
       onAdd(
         {
           title,
-          chantier,
           description,
           image,
           voiceNote,
@@ -963,18 +982,6 @@ export default function AddImageModal({
                       placeholderTextColor={COLORS.gray}
                       value={title}
                       onChangeText={setTitle}
-                    />
-                  </View>
-
-                  {/* Chantier Field */}
-                  <View style={[styles.form, { marginTop: 15 }]}>
-                    <Text style={styles.label}>Chantier (optionnel)</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="ex: 'Maison M. Dupont'"
-                      placeholderTextColor={COLORS.gray}
-                      value={chantier}
-                      onChangeText={setChantier}
                     />
                   </View>
 
