@@ -3,15 +3,15 @@ import { Audio, ResizeMode, Video } from "expo-av";
 import { Image } from "expo-image";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Linking,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Linking,
+    Modal,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 
 interface PreviewModalProps {
@@ -21,6 +21,7 @@ interface PreviewModalProps {
   mediaType?: "image" | "video" | "file" | "voice";
   title?: string;
   onEdit?: () => void;
+  onDelete?: () => void;
   onAnnotate?: () => void;
   onAutoDescribe?: () => Promise<void>;
   isDescribing?: boolean;
@@ -45,6 +46,7 @@ export default function PreviewModal({
   mediaType,
   title,
   onEdit,
+  onDelete,
   onAnnotate,
   onAutoDescribe,
   isDescribing,
@@ -358,6 +360,17 @@ export default function PreviewModal({
                 accessibilityLabel="Annoter"
               >
                 <Ionicons name="brush-outline" size={24} color="#f87b1b" />
+              </Pressable>
+            )}
+
+            {onDelete && (
+              <Pressable
+                style={styles.actionButton}
+                onPress={onDelete}
+                accessibilityRole="button"
+                accessibilityLabel="Delete"
+              >
+                <Ionicons name="trash-outline" size={24} color="#FF3B30" />
               </Pressable>
             )}
 

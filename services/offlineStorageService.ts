@@ -346,16 +346,29 @@ export async function updateSyncStatus(
     );
     console.log(`Sync status updated for ${recordId}: ${status}`);
   } catch (error) {
-    console.error("Failed to update sync status:", error);
+    console.error("Error confirming sync:", error);
     throw error;
   }
 }
+
+export const deleteOfflineRecord = async (id: string): Promise<void> => {
+  try {
+    const db = await getDatabase();
+    await db.runAsync("DELETE FROM offline_records WHERE id = ?", [id]);
+    console.log("Deleted offline record:", id);
+  } catch (error) {
+    console.error("Error deleting offline record:", error);
+    throw error;
+  }
+};
 
 /**
  * Delete an offline record and its local files
  * @param recordId - Record ID to delete
  */
-export async function deleteOfflineRecord(recordId: string): Promise<void> {
+export async function deleteOfflineRecordAndFiles(
+  recordId: string,
+): Promise<void> {
   const db = await getDatabase();
 
   try {

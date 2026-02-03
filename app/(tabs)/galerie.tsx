@@ -11,11 +11,13 @@ import { getConnectivity } from "@/services/connectivity";
 import {
   Ged,
   createGed,
+  deleteGed,
   getAllGeds,
   updateGedFile,
 } from "@/services/gedService";
 import {
   createOfflineRecord,
+  deleteOfflineRecord,
   getOfflineRecords,
 } from "@/services/offlineStorageService";
 import { startSyncMonitoring } from "@/services/syncService";
@@ -348,6 +350,45 @@ export default function GalerieScreen() {
 
   const totalPages = Math.ceil(allImages.length / IMAGES_PER_PAGE);
 
+  const handleDeleteGed = async () => {
+    if (!selectedItem || !token) return;
+
+    Alert.alert(
+      "Supprimer",
+      "Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.",
+      [
+        {
+          text: "Annuler",
+          style: "cancel",
+        },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const item = selectedItem as any; // Cast to access isOffline
+              if (item.isOffline && item.id) {
+                // Offline deletion
+                await deleteOfflineRecord(item.id);
+              } else if (item.id) {
+                // Online deletion
+                await deleteGed(token, item.id);
+              }
+
+              setModalVisible(false); // Close preview
+              closePreview(); // Also close preview modal state
+              await onRefresh(); // Refresh list
+              Alert.alert("Succès", "Élément supprimé avec succès");
+            } catch (error) {
+              console.error("Error deleting item:", error);
+              Alert.alert("Erreur", "Impossible de supprimer l'élément");
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const paginatedData = useMemo(() => {
     const pages = [];
     for (let i = 0; i < allImages.length; i += IMAGES_PER_PAGE) {
@@ -532,6 +573,12 @@ export default function GalerieScreen() {
           }
           title={selectedItem.title}
           onAnnotate={handleOpenAnnotator}
+          onDelete={
+            // Only allow delete if user is author or super admin (logic could be refined)
+            // For now, allow delete for everyone on their own device context or simple authorized check
+            // assuming backend handles auth checks too.
+            handleDeleteGed
+          }
           description={selectedItem.description}
           author={selectedItem.author}
           createdAt={selectedItem.created_at}

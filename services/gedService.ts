@@ -22,7 +22,7 @@ export type CreateGedInput = {
   audiotxt?: string;
   iatxt?: string;
   file?: {
-    uri: string | File; 
+    uri: string | File;
     type: string;
     name: string;
   };
@@ -158,6 +158,27 @@ export async function createGed(
     throw new Error(data.error || "Failed to create GED");
   }
   return data;
+}
+
+export async function deleteGed(token: string, id: string): Promise<void> {
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/geds/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Failed to delete GED: ${response.status} ${response.statusText} - ${errorText}`,
+      );
+    }
+  } catch (error) {
+    console.error("Error deleting GED:", error);
+    throw error;
+  }
 }
 
 export async function describeImage(
