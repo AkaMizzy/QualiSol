@@ -9,6 +9,7 @@ import {
     Linking,
     Modal,
     Pressable,
+    Share,
     StyleSheet,
     Text,
     View,
@@ -35,6 +36,8 @@ interface PreviewModalProps {
   latitude?: string | null;
   longitude?: string | null;
   voiceNoteUrl?: string; // New prop for associated voice note
+  companyTitle?: string;
+  level?: number;
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
@@ -59,6 +62,8 @@ export default function PreviewModal({
   latitude,
   longitude,
   voiceNoteUrl,
+  companyTitle,
+  level,
 }: PreviewModalProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -103,6 +108,54 @@ export default function PreviewModal({
   const handleSeek = async (value: number) => {
     if (!sound) return;
     await sound.setPositionAsync(value);
+  };
+
+  const handleShare = async () => {
+    try {
+      // Build rich metadata message
+      const parts = [];
+      if (title) parts.push(`📸 ${title}`);
+      parts.push("");
+
+      if (level !== undefined && level !== null) {
+        parts.push(`⚠️ Sévérité: ${level}`);
+      }
+
+      if (description) {
+        parts.push(`📝 Description: ${description}`);
+      }
+
+      if (companyTitle) {
+        parts.push(`🏢 Entreprise: ${companyTitle}`);
+      }
+
+      if (chantier) {
+        parts.push(`🏗️ Chantier: ${chantier}`);
+      }
+
+      if (author) {
+        parts.push(`👤 Auteur: ${author}`);
+      }
+
+      parts.push("");
+
+      if (mediaUrl) {
+        parts.push(`🔗 ${mediaUrl}`);
+      }
+
+      parts.push("");
+      parts.push("━━━━━━━━━━━");
+      parts.push("📱 Qualisol | Muntadaacom");
+
+      const message = parts.join("\n");
+
+      await Share.share({
+        message: message,
+      });
+    } catch (error) {
+      console.error("Error sharing photo:", error);
+      Alert.alert("Erreur", "Impossible de partager l'élément.");
+    }
   };
 
   const formatTime = (milliseconds: number) => {
@@ -312,6 +365,16 @@ export default function PreviewModal({
           <View style={styles.headerContent}></View>
 
           <View style={styles.headerActions}>
+            {/* Share Button moved here or beside others */}
+            <Pressable
+              style={styles.actionButton}
+              onPress={handleShare}
+              accessibilityRole="button"
+              accessibilityLabel="Partager"
+            >
+              <Ionicons name="share-social-outline" size={24} color="#f87b1b" />
+            </Pressable>
+
             {mediaType === "image" && hasMetadata && (
               <Pressable
                 style={styles.actionButton}
@@ -408,6 +471,18 @@ export default function PreviewModal({
                     />
                     <Text style={styles.metadataSmallValue}>
                       {formatDate(createdAt)}
+                    </Text>
+                  </View>
+                )}
+                {level !== undefined && (
+                  <View style={styles.metadataItem}>
+                    <Ionicons
+                      name="warning-outline"
+                      size={16}
+                      color="#f87b1b"
+                    />
+                    <Text style={styles.metadataSmallValue}>
+                      Sévérité: {level}
                     </Text>
                   </View>
                 )}

@@ -587,6 +587,7 @@ export default function GalerieScreen() {
           chantier={selectedItem.chantier}
           latitude={selectedItem.latitude}
           longitude={selectedItem.longitude}
+          level={selectedItem.level}
           voiceNoteUrl={
             geds.find(
               (g) =>
