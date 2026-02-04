@@ -1,7 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { transcribeAudio } from "@/services/gedService";
 import { Ionicons } from "@expo/vector-icons";
-import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import { Audio } from "expo-av";
 import React, { useEffect, useState } from "react";
 import {
@@ -15,14 +13,10 @@ import {
 
 type VoiceNoteRecorderProps = {
   onRecordingComplete: (uri: string | null) => void;
-  onTranscriptionComplete?: (text: string) => void;
-  showTranscribeButton?: boolean;
 };
 
 export default function VoiceNoteRecorder({
   onRecordingComplete,
-  onTranscriptionComplete,
-  showTranscribeButton = true,
 }: VoiceNoteRecorderProps) {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -33,9 +27,6 @@ export default function VoiceNoteRecorder({
   >("idle");
   const [duration, setDuration] = useState(0);
   const { token } = useAuth();
-
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [transcribedText, setTranscribedText] = useState<string | null>(null);
 
   useEffect(() => {
     return sound
@@ -133,47 +124,12 @@ export default function VoiceNoteRecorder({
     setStatus("idle");
     setDuration(0);
     onRecordingComplete(null);
-    setTranscribedText(null);
-    setIsTranscribing(false);
   }
 
   function formatDuration(seconds: number) {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
-  }
-
-  async function handleTranscribe() {
-    if (!recordingUri || !token) return;
-
-    setIsTranscribing(true);
-    setTranscribedText(null);
-
-    try {
-      const fileName = recordingUri.split("/").pop() || "voicememo.m4a";
-      const file = {
-        uri: recordingUri,
-        type: "audio/m4a",
-        name: fileName,
-      };
-
-      const text = await transcribeAudio(token, file);
-      setTranscribedText(text);
-      if (onTranscriptionComplete) {
-        onTranscriptionComplete(text);
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Une erreur inconnue est survenue.";
-      Alert.alert(
-        "Erreur de Transcription",
-        `La transcription a échoué: ${errorMessage}`,
-      );
-    } finally {
-      setIsTranscribing(false);
-    }
   }
 
   if (status === "recording") {
@@ -211,37 +167,6 @@ export default function VoiceNoteRecorder({
           <Text style={styles.recordedText}>{formatDuration(duration)}</Text>
         </TouchableOpacity>
 
-        {showTranscribeButton &&
-          (isTranscribing ? (
-            <View
-              style={[
-                styles.container,
-                {
-                  marginTop: 0,
-                  paddingHorizontal: 16,
-                  backgroundColor: "#fff",
-                },
-              ]}
-            >
-              <ActivityIndicator color="#11224e" />
-            </View>
-          ) : (
-            !transcribedText && (
-              <TouchableOpacity
-                style={[
-                  styles.container,
-                  {
-                    marginTop: 0,
-                    paddingHorizontal: 50,
-                    backgroundColor: "#fff",
-                  },
-                ]}
-                onPress={handleTranscribe}
-              >
-                <FontAwesome5 name="file-audio" size={25} color="#f87b1b" />
-              </TouchableOpacity>
-            )
-          ))}
         <TouchableOpacity
           style={[
             styles.container,
@@ -314,7 +239,4 @@ const styles = StyleSheet.create({
   },
   playButton: {},
   deleteButton: {},
-  transcribeButton: {
-    marginLeft: 10,
-  },
 });

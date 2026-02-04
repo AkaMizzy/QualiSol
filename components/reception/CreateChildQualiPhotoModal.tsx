@@ -512,6 +512,15 @@ export function CreateChildQualiPhotoForm({
             title: `Note vocale pour ${title || "Situation Avant"}`,
             kind: "audio",
             author: authorName,
+            idauthor: user?.id,
+            iddevice: deviceId,
+            captudedate: new Date().toISOString(),
+            chantier: projectTitle,
+            latitude: latitude?.toString(),
+            longitude: longitude?.toString(),
+            altitude: altitude?.toString(),
+            accuracy: accuracy?.toString(),
+            altitudeAccuracy: altitudeAccuracy?.toString(),
             level: level,
             type: selectedType || undefined,
             categorie: selectedCategorie || undefined,
@@ -678,33 +687,6 @@ export function CreateChildQualiPhotoForm({
               <TouchableOpacity onPress={() => setError(null)}>
                 <Ionicons name="close" size={16} color="#b45309" />
               </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Limit Info Banner */}
-          {/* Storage Quota Banner */}
-          {!loadingLimits && companyInfo && (
-            <View
-              style={[
-                styles.limitInfoBanner,
-                isStorageQuotaReached && styles.limitInfoBannerWarning,
-              ]}
-            >
-              <Ionicons
-                name={isStorageQuotaReached ? "warning" : "cloud-outline"}
-                size={16}
-                color={isStorageQuotaReached ? "#b45309" : "#f59e0b"}
-              />
-              <Text
-                style={[
-                  styles.limitInfoText,
-                  isStorageQuotaReached && styles.limitInfoTextWarning,
-                ]}
-              >
-                Stockage: {currentStorageGB.toFixed(2)}GB /{" "}
-                {storageQuotaGB.toFixed(2)}GB
-                {isStorageQuotaReached && " - Quota dépassé"}
-              </Text>
             </View>
           )}
 

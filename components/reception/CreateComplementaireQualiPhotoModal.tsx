@@ -355,6 +355,13 @@ function CreateComplementaireQualiPhotoForm({
             iddevice: deviceId,
             captudedate: new Date().toISOString(),
             chantier: childItem.project_title || parentTitle || undefined,
+            latitude: latitude ? String(latitude) : undefined,
+            longitude: longitude ? String(longitude) : undefined,
+            altitude: altitude ? String(altitude) : undefined,
+            accuracy: accuracy ? String(accuracy) : undefined,
+            altitudeAccuracy: altitudeAccuracy
+              ? String(altitudeAccuracy)
+              : undefined,
             file: {
               uri: audioUri,
               name: `note_${Date.now()}.m4a`,
@@ -443,31 +450,6 @@ function CreateComplementaireQualiPhotoForm({
         )}
 
         {/* Limit Info Banner */}
-        {/* Storage Quota Banner */}
-        {!loadingLimits && companyInfo && (
-          <View
-            style={[
-              styles.limitInfoBanner,
-              isStorageQuotaReached && styles.limitInfoBannerWarning,
-            ]}
-          >
-            <Ionicons
-              name={isStorageQuotaReached ? "warning" : "cloud-outline"}
-              size={16}
-              color={isStorageQuotaReached ? "#b45309" : "#f59e0b"}
-            />
-            <Text
-              style={[
-                styles.limitInfoText,
-                isStorageQuotaReached && styles.limitInfoTextWarning,
-              ]}
-            >
-              Stockage: {currentStorageGB.toFixed(2)}GB /{" "}
-              {storageQuotaGB.toFixed(2)}GB
-              {isStorageQuotaReached && " - Quota dépassé"}
-            </Text>
-          </View>
-        )}
 
         <ScrollView
           ref={scrollViewRef}

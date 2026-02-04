@@ -272,46 +272,68 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     setCreateAfterModalVisible(false);
   };
 
-  const handleShareBothPhotos = async () => {
+  const getSeverityEmoji = (level: number) => {
+    if (level < 3) return "🟢"; // Low (0-2)
+    if (level < 6) return "🔵"; // Normal (3-5)
+    if (level < 8) return "🟠"; // Medium (6-7)
+    return "🔴"; // High (8-10)
+  };
+
+  const handleShare = async () => {
     try {
-      if (afterPhotos.length === 0) {
-        Alert.alert(
-          "Information",
-          'Veuillez ajouter une photo "après" avant de partager.',
-        );
-        return;
-      }
-
-      const avantUrl = `${API_CONFIG.BASE_URL}${item.url}`;
-      const apresUrl = `${API_CONFIG.BASE_URL}${afterPhotos[0].url}`;
-
-      // Build rich metadata message
       const parts = [];
-      parts.push("📸 Situation Avant / Situation Après");
+
+      // Header
+      parts.push(
+        afterPhotos.length > 0
+          ? "📸 Situation Avant / Situation Après"
+          : "📸 Situation QualiPhoto",
+      );
       parts.push("");
 
-      if (companyTitle) {
-        parts.push(`🏢 Entreprise: ${companyTitle}`);
-      }
-
+      // Chantier
       if (projectTitle) {
-        parts.push(`🏗️ Projet: ${projectTitle}`);
+        parts.push(`🏗️ Chantier: ${projectTitle}`);
       }
-
       if (zoneTitle) {
         parts.push(`📍 Zone: ${zoneTitle}`);
       }
 
-      if (item.author) {
-        parts.push(`👤 Auteur: ${item.author}`);
+      // Date, Auteur (Use item date/author)
+      const dateStr = item.created_at
+        ? new Date(item.created_at).toLocaleDateString("fr-FR")
+        : "";
+      parts.push(`📅 Date: ${dateStr} | 👤 Auteur: ${item.author || "N/A"}`);
+
+      // Titre
+      parts.push(`📝 Titre: ${item.title}`);
+
+      // Severite
+      if (item.level !== undefined && item.level !== null) {
+        parts.push(
+          `Severite: ${getSeverityEmoji(item.level)} (Niveau ${item.level})`,
+        );
       }
 
+      // Description (Avant)
+      parts.push(`📄 Description: ${item.description || "Aucune"}`);
+
       parts.push("");
-      parts.push("📷 Situation Avant:");
-      parts.push(avantUrl);
-      parts.push("");
-      parts.push("📷 Situation Après:");
-      parts.push(apresUrl);
+
+      // Photos
+      const avantUrl = `${API_CONFIG.BASE_URL}${item.url}`;
+      if (afterPhotos.length > 0) {
+        const apresUrl = `${API_CONFIG.BASE_URL}${afterPhotos[0].url}`;
+        parts.push("📷 Situation Avant:");
+        parts.push(avantUrl);
+        parts.push("");
+        parts.push("📷 Situation Après:");
+        parts.push(apresUrl);
+      } else {
+        parts.push("📷 Photo:");
+        parts.push(avantUrl);
+      }
+
       parts.push("");
       parts.push("━━━━━━━━━━━");
       parts.push("📱 Qualisol | Muntadaacom");
@@ -696,15 +718,13 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
         >
           <Ionicons name="arrow-back" size={28} color="#f87b1b" />
         </Pressable>
-        {afterPhotos.length > 0 && (
-          <TouchableOpacity
-            style={styles.shareIconButton}
-            onPress={handleShareBothPhotos}
-            accessibilityLabel="Partager les deux photos"
-          >
-            <Ionicons name="share-social-outline" size={24} color="#f87b1b" />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={styles.shareIconButton}
+          onPress={handleShare}
+          accessibilityLabel="Partager"
+        >
+          <Ionicons name="share-social-outline" size={24} color="#f87b1b" />
+        </TouchableOpacity>
       </View>
       <View style={styles.headerTitles}>
         <Text style={styles.title}>{item.title}</Text>
