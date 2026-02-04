@@ -36,7 +36,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import {
   GestureHandlerRootView,
@@ -120,6 +120,9 @@ export function CreateChildQualiPhotoForm({
 
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // Popup modal states
+  const [editingField, setEditingField] = useState<"description" | null>(null);
+  const [tempFieldValue, setTempFieldValue] = useState<string>("");
   const canSave = useMemo(
     () => !!photo && !submitting && !isUploadingAudio && !isStorageQuotaReached,
     [photo, submitting, isUploadingAudio, isStorageQuotaReached],
@@ -1013,16 +1016,29 @@ export function CreateChildQualiPhotoForm({
 
               <View style={{ marginTop: 16, gap: 12 }}>
                 <Text style={styles.label}>Description</Text>
-                <TextInput
-                  placeholder="Entrez une description..."
-                  placeholderTextColor="#9ca3af"
-                  value={comment}
-                  onChangeText={setComment}
-                  style={[styles.input, styles.textArea]}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                />
+                <TouchableOpacity
+                  style={styles.fieldPreview}
+                  onPress={() => {
+                    setEditingField("description");
+                    setTempFieldValue(comment);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.fieldPreviewText,
+                      !comment && styles.fieldPreviewPlaceholder,
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {comment || "Ajoutez une description..."}
+                  </Text>
+                  <Ionicons
+                    name="create-outline"
+                    size={20}
+                    color="#f87b1b"
+                    style={styles.fieldEditIcon}
+                  />
+                </TouchableOpacity>
               </View>
             </View>
           </ScrollView>
