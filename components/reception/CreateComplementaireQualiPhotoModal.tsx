@@ -35,6 +35,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -103,6 +104,8 @@ function CreateComplementaireQualiPhotoForm({
 
   const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
   const [mode, setMode] = useState<"upload" | "capture">("upload");
+  const [editingField, setEditingField] = useState<"description" | null>(null);
+  const [tempFieldValue, setTempFieldValue] = useState<string>("");
 
   // Storage quota state
   const [currentStorageGB, setCurrentStorageGB] = useState(0);
@@ -543,7 +546,7 @@ function CreateComplementaireQualiPhotoForm({
               <View
                 style={[
                   styles.inputWrap,
-                  { height: 120, alignItems: "flex-start", paddingTop: 12 },
+                  { minHeight: 120, alignItems: "flex-start", paddingTop: 12 },
                 ]}
               >
                 <Ionicons
@@ -552,17 +555,31 @@ function CreateComplementaireQualiPhotoForm({
                   color="#6b7280"
                   style={{ marginTop: 4 }}
                 />
-                <TextInput
-                  placeholder="Description"
-                  placeholderTextColor="#9ca3af"
-                  value={comment}
-                  onChangeText={setComment}
-                  style={[
-                    styles.input,
-                    { height: "100%", textAlignVertical: "top" },
-                  ]}
-                  multiline
-                />
+                <TouchableOpacity
+                  style={{ flex: 1, paddingVertical: 4 }}
+                  onPress={() => {
+                    setTempFieldValue(comment);
+                    setEditingField("description");
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 16,
+                      color: comment ? "#111827" : "#9ca3af",
+                    }}
+                    numberOfLines={4}
+                  >
+                    {comment || "Description"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setTempFieldValue(comment);
+                    setEditingField("description");
+                  }}
+                >
+                  <Ionicons name="create-outline" size={20} color="#f87b1b" />
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -591,6 +608,89 @@ function CreateComplementaireQualiPhotoForm({
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+
+      {/* Description Editor Modal */}
+      <Modal
+        visible={!!editingField}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => {
+          setEditingField(null);
+          Keyboard.dismiss();
+        }}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1, backgroundColor: "#F8FAFC" }}
+        >
+          <View style={{ flex: 1 }}>
+            <View style={styles.header}>
+              <View style={{ width: 50 }} />
+              <View style={styles.headerCenter}>
+                <Text style={styles.headerTitle}>
+                  {editingField === "description" ? "Description" : "Édition"}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setEditingField(null);
+                }}
+                style={styles.headerStopButton}
+              >
+                <Ionicons name="close" size={24} color="#11224e" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.textEditorScrollContainer}
+              contentContainerStyle={styles.textEditorScrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <View style={styles.textEditorInputContainer}>
+                  <TextInput
+                    style={styles.textEditorInput}
+                    placeholder="Saisissez votre description..."
+                    placeholderTextColor="#9ca3af"
+                    value={tempFieldValue}
+                    onChangeText={setTempFieldValue}
+                    multiline
+                    autoFocus
+                  />
+                </View>
+              </TouchableWithoutFeedback>
+            </ScrollView>
+
+            <View style={styles.textEditorButtons}>
+              <TouchableOpacity
+                style={[styles.textEditorButton, styles.textEditorCancelButton]}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setEditingField(null);
+                  setTempFieldValue("");
+                }}
+              >
+                <Text style={styles.textEditorCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.textEditorButton, styles.textEditorSaveButton]}
+                onPress={() => {
+                  if (editingField === "description") {
+                    setComment(tempFieldValue);
+                  }
+                  Keyboard.dismiss();
+                  setEditingField(null);
+                  setTempFieldValue("");
+                }}
+              >
+                <Text style={styles.textEditorSaveText}>Enregistrer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
       {isAnnotatorVisible && annotatorBaseUri && (
         <Modal
           animationType="fade"
@@ -881,5 +981,58 @@ const styles = StyleSheet.create({
   fullScreenImage: {
     width: "100%",
     height: "100%",
+  },
+  // Text Editor Modal Styles
+  textEditorScrollContainer: {
+    padding: 16,
+  },
+  textEditorScrollContent: {
+    paddingBottom: 24,
+  },
+  textEditorInputContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    padding: 16,
+    minHeight: 200,
+  },
+  textEditorInput: {
+    fontSize: 16,
+    color: "#11224e",
+    textAlignVertical: "top",
+    lineHeight: 24,
+    minHeight: 180,
+  },
+  textEditorButtons: {
+    flexDirection: "row",
+    gap: 12,
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+    backgroundColor: "#fff",
+  },
+  textEditorButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  textEditorCancelButton: {
+    backgroundColor: "#f1f5f9",
+  },
+  textEditorSaveButton: {
+    backgroundColor: "#f87b1b",
+  },
+  textEditorCancelText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  textEditorSaveText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#ffffff",
   },
 });
