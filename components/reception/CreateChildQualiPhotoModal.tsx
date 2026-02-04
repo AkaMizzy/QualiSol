@@ -14,7 +14,10 @@ import {
 import { Company } from "@/types/company";
 import { isVideoFile } from "@/utils/mediaUtils";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ResizeMode, Video } from "expo-av";
+import { randomUUID } from "expo-crypto";
+import * as Device from "expo-device";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, {
@@ -25,7 +28,6 @@ import React, {
   useState,
 } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Keyboard,
@@ -78,6 +80,9 @@ export function CreateChildQualiPhotoForm({
   const [error, setError] = useState<string | null>(null);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  const [altitude, setAltitude] = useState<number | null>(null);
+  const [accuracy, setAccuracy] = useState<number | null>(null);
+  const [altitudeAccuracy, setAltitudeAccuracy] = useState<number | null>(null);
   const [, setLocationStatus] = useState<
     "idle" | "fetching" | "success" | "error"
   >("idle");
@@ -435,6 +440,23 @@ export function CreateChildQualiPhotoForm({
     setAnnotatorBaseUri(null);
   };
 
+  const getDeviceId = async () => {
+    try {
+      let deviceId = await AsyncStorage.getItem("device_id");
+      if (!deviceId) {
+        deviceId = randomUUID();
+        await AsyncStorage.setItem("device_id", deviceId);
+      }
+      // Combine model name with unique ID for better traceability
+      const brand = Device.brand || "Brand";
+      const modelName = Device.modelName || "Device";
+      return `${brand} ${modelName} - ${deviceId}`;
+    } catch (e) {
+      console.error("Error getting device ID", e);
+      return "Unknown Device";
+    }
+  };
+
   const handleSubmit = async () => {
     if (!token || !photo || !user) {
       setError(
@@ -455,14 +477,23 @@ export function CreateChildQualiPhotoForm({
     setError(null);
 
     try {
+      const deviceId = await getDeviceId();
+
       const payload: CreateGedInput = {
         idsource: parentItem.id,
-        title: title || "Situation Avant",
+        title: title || "",
         kind: "photoavant",
         description: comment,
         author: authorName,
+        idauthor: user?.id,
+        iddevice: deviceId,
+        captudedate: new Date().toISOString(),
+        chantier: projectTitle,
         latitude: latitude?.toString(),
         longitude: longitude?.toString(),
+        altitude: altitude?.toString(),
+        accuracy: accuracy?.toString(),
+        altitudeAccuracy: altitudeAccuracy?.toString(),
         level: level,
         type: selectedType || undefined,
         categorie: selectedCategorie || undefined,
@@ -552,6 +583,9 @@ export function CreateChildQualiPhotoForm({
         });
         setLatitude(location.coords.latitude);
         setLongitude(location.coords.longitude);
+        setAltitude(location.coords.altitude);
+        setAccuracy(location.coords.accuracy);
+        setAltitudeAccuracy(location.coords.altitudeAccuracy);
         setLocationStatus("success");
       } catch (error) {
         console.warn("Could not fetch location automatically.", error);
@@ -869,16 +903,10 @@ export function CreateChildQualiPhotoForm({
                 />
               </View>
 
-              {/* Anomaly Type Selection (from anomalie1) */}
-              <View style={styles.sectionContainer}>
-                <Text style={styles.sectionTitle}>Type d&apos;anomalie</Text>
-                {loadingAnomalies ? (
-                  <ActivityIndicator size="small" color="#f59e0b" />
-                ) : anomalieTypes.length === 0 ? (
-                  <Text style={{ color: "#6b7280", fontSize: 12 }}>
-                    Aucun type disponible
-                  </Text>
-                ) : (
+              {/* Anomaly Type Selection (from anomalie1) - Only show if there are types available */}
+              {!loadingAnomalies && anomalieTypes.length > 0 && (
+                <View style={styles.sectionContainer}>
+                  <Text style={styles.sectionTitle}>Type d&apos;anomalie</Text>
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -915,21 +943,15 @@ export function CreateChildQualiPhotoForm({
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
-                )}
-              </View>
+                </View>
+              )}
 
-              {/* Anomaly Category Selection (from anomalie2) */}
-              <View style={styles.sectionContainer}>
-                <Text style={styles.sectionTitle}>
-                  Catégorie d&apos;anomalie
-                </Text>
-                {loadingAnomalies ? (
-                  <ActivityIndicator size="small" color="#ef4444" />
-                ) : anomalieCategories.length === 0 ? (
-                  <Text style={{ color: "#6b7280", fontSize: 12 }}>
-                    Aucune catégorie disponible
+              {/* Anomaly Category Selection (from anomalie2) - Only show if there are categories available */}
+              {!loadingAnomalies && anomalieCategories.length > 0 && (
+                <View style={styles.sectionContainer}>
+                  <Text style={styles.sectionTitle}>
+                    Catégorie d&apos;anomalie
                   </Text>
-                ) : (
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -947,6 +969,15 @@ export function CreateChildQualiPhotoForm({
                           setSelectedCategorie(category.anomalie || null)
                         }
                       >
+                        <Ionicons
+                          name="pricetag-outline"
+                          size={20}
+                          color={
+                            selectedCategorie === category.anomalie
+                              ? "#FFFFFF"
+                              : "#11224e"
+                          }
+                        />
                         <Text
                           style={[
                             styles.categoryButtonText,
@@ -959,8 +990,8 @@ export function CreateChildQualiPhotoForm({
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
-                )}
-              </View>
+                </View>
+              )}
 
               {/* Severity Slider */}
               <View style={styles.sectionContainer}>

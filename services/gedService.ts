@@ -9,6 +9,7 @@ export type CreateGedInput = {
   author: string;
   idauthor?: string;
   iddevice?: string;
+  captudedate?: string;
   chantier?: string;
   latitude?: string;
   longitude?: string;
@@ -78,6 +79,9 @@ export async function createGed(
   if (input.iddevice) {
     formData.append("iddevice", input.iddevice);
   }
+  if (input.captudedate) {
+    formData.append("captudedate", input.captudedate);
+  }
   if (input.chantier) {
     formData.append("chantier", input.chantier);
   }
@@ -143,8 +147,8 @@ export async function createGed(
     } else {
       // React Native: Append as object with uri, type, name
       formData.append("file", {
-        uri: input.file.uri,
-        type: input.file.type,
+        uri: input.file.uri, // Keep uri for RN
+        type: input.file.type, // Keep type for RN
         name: input.file.name,
       } as any);
     }
