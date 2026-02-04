@@ -28,14 +28,17 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import {
@@ -43,7 +46,6 @@ import {
   PanGestureHandler,
   PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
-import { SafeAreaView } from "react-native-safe-area-context";
 import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
 import VoiceNoteRecorder from "../VoiceNoteRecorder";
@@ -1094,6 +1096,79 @@ export function CreateChildQualiPhotoForm({
         </Modal>
       )}
 
+      {/* Text Field Editor Popup Modal */}
+      <Modal
+        visible={editingField !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setEditingField(null)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.textEditorModalContainer}
+        >
+          <TouchableOpacity
+            style={styles.textEditorBackdrop}
+            activeOpacity={1}
+            onPress={() => setEditingField(null)}
+          />
+          <View style={styles.textEditorModalContent}>
+            <View style={styles.textEditorHeader}>
+              <Text style={styles.textEditorTitle}>Description</Text>
+              <TouchableOpacity onPress={() => setEditingField(null)}>
+                <Ionicons name="close" size={24} color="#11224e" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.textEditorScrollContainer}
+              contentContainerStyle={styles.textEditorScrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <View style={styles.textEditorInputContainer}>
+                  <TextInput
+                    style={styles.textEditorInput}
+                    placeholder="Saisissez votre description..."
+                    placeholderTextColor="#9ca3af"
+                    value={tempFieldValue}
+                    onChangeText={setTempFieldValue}
+                    multiline
+                  />
+                </View>
+              </TouchableWithoutFeedback>
+            </ScrollView>
+
+            <View style={styles.textEditorButtons}>
+              <TouchableOpacity
+                style={[styles.textEditorButton, styles.textEditorCancelButton]}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setEditingField(null);
+                  setTempFieldValue("");
+                }}
+              >
+                <Text style={styles.textEditorCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.textEditorButton, styles.textEditorSaveButton]}
+                onPress={() => {
+                  if (editingField === "description") {
+                    setComment(tempFieldValue);
+                  }
+                  Keyboard.dismiss();
+                  setEditingField(null);
+                  setTempFieldValue("");
+                }}
+              >
+                <Text style={styles.textEditorSaveText}>Enregistrer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       <CustomAlert
         visible={alertInfo.visible}
         title={alertInfo.title}
@@ -1609,7 +1684,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#f87b1b",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
