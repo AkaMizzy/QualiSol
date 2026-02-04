@@ -6,13 +6,10 @@ import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
 import companyService from "@/services/companyService";
 import { Folder } from "@/services/folderService";
 import {
-    CreateGedInput,
-    Ged,
-    analyzeImageWithAnnotation,
-    combineTextDescription,
-    createGed,
-    describeImage,
-    getAllGeds,
+  CreateGedInput,
+  Ged,
+  createGed,
+  getAllGeds,
 } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { isVideoFile } from "@/utils/mediaUtils";
@@ -21,32 +18,30 @@ import { ResizeMode, Video } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
 import {
-    GestureHandlerRootView,
-    PanGestureHandler,
-    PanGestureHandlerGestureEvent,
+  GestureHandlerRootView,
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CaptureModal from "../CaptureModal";
@@ -81,15 +76,9 @@ export function CreateChildQualiPhotoForm({
   const [error, setError] = useState<string | null>(null);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
-  const [iaText, setIaText] = useState<string>("");
-  const [audioText, setAudioText] = useState<string>("");
-  const [isCombiningText, setIsCombiningText] = useState(false);
-  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [, setLocationStatus] = useState<
     "idle" | "fetching" | "success" | "error"
   >("idle");
-  const [annotatedImage, setAnnotatedImage] = useState<string | null>(null);
-  const [fullScreenImageVisible, setFullScreenImageVisible] = useState(false);
   const [creationCount, setCreationCount] = useState(0);
   const [authorName, setAuthorName] = useState("");
   const [audioUri, setAudioUri] = useState<string | null>(null);
@@ -131,26 +120,9 @@ export function CreateChildQualiPhotoForm({
 
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Popup modal states
-  const [editingField, setEditingField] = useState<
-    "audio" | "ia" | "comment" | null
-  >(null);
-  const [tempFieldValue, setTempFieldValue] = useState<string>("");
-
   const canSave = useMemo(
-    () =>
-      !!photo &&
-      !submitting &&
-      !isGeneratingDescription &&
-      !isUploadingAudio &&
-      !isStorageQuotaReached,
-    [
-      photo,
-      submitting,
-      isGeneratingDescription,
-      isUploadingAudio,
-      isStorageQuotaReached,
-    ],
+    () => !!photo && !submitting && !isUploadingAudio && !isStorageQuotaReached,
+    [photo, submitting, isUploadingAudio, isStorageQuotaReached],
   );
 
   useEffect(() => {
@@ -264,80 +236,6 @@ export function CreateChildQualiPhotoForm({
     loadAuthorName();
   }, [token, user]);
 
-  const handleGenerateDescription = useCallback(async () => {
-    if (!photo || !token) {
-      return;
-    }
-    setIsGeneratingDescription(true);
-    setError(null);
-    try {
-      // Use the new analyzeImageWithAnnotation endpoint
-      const result = await analyzeImageWithAnnotation(token, photo);
-      setIaText(result.description);
-      setAnnotatedImage(result.annotatedImage);
-    } catch (e: any) {
-      console.error("AI Description Error:", e);
-
-      // Try fallback to simple description if annotation fails
-      try {
-        console.log("Falling back to standard description...");
-        const description = await describeImage(token, photo);
-        setIaText(description);
-        setAnnotatedImage(null);
-        return;
-      } catch (fallbackErr) {
-        console.error("Fallback failed:", fallbackErr);
-      }
-
-      // Check if it's an AI refusal
-      const errorData = e?.response?.data;
-      if (errorData?.refusal) {
-        setError(
-          `IA: ${errorData.error || "L'IA ne peut pas analyser cette image."}`,
-        );
-      } else if (errorData?.error) {
-        // Use the backend's specific error message
-        setError(errorData.error);
-      } else {
-        // Fallback error message
-        setError(
-          e?.message ||
-            "Échec de la génération de description. Réessayez ou décrivez manuellement.",
-        );
-      }
-    } finally {
-      setIsGeneratingDescription(false);
-    }
-  }, [token, photo]);
-
-  const handleCombineText = async () => {
-    if (!audioText && !iaText) {
-      setError("Au moins une source de texte (Audio ou IA) est nécessaire.");
-      return;
-    }
-
-    if (!token) return;
-
-    setIsCombiningText(true);
-    setError(null);
-    try {
-      const combinedDescription = await combineTextDescription(
-        token,
-        audioText,
-        iaText,
-      );
-      setComment(combinedDescription);
-    } catch (error: any) {
-      console.error("Combine text error:", error);
-      setError(
-        error.message ||
-          "Impossible de combiner les textes. Veuillez réessayer.",
-      );
-    } finally {
-      setIsCombiningText(false);
-    }
-  };
-
   const resetForm = () => {
     setTitle("");
     setComment("");
@@ -351,14 +249,10 @@ export function CreateChildQualiPhotoForm({
     setSelectedType(null);
     setSelectedCategorie(null);
     setAssigned("");
-    setAudioText("");
-    setIaText("");
-    setAnnotatedImage(null);
-    setFullScreenImageVisible(false);
-    setAnnotatorVisible(false); // Reset annotator state
-    setAnnotatorBaseUri(null); // Reset annotator state
+    setAnnotatorVisible(false);
+    setAnnotatorBaseUri(null);
     setMode("upload");
-    scrollViewRef.current?.scrollTo({ y: 0, animated: true }); // Scroll to top
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const handleTakePhoto = useCallback(async () => {
@@ -569,8 +463,6 @@ export function CreateChildQualiPhotoForm({
         categorie: selectedCategorie || undefined,
         assigned: assigned || undefined,
         file: photo,
-        audiotxt: audioText,
-        iatxt: iaText,
         mode: mode,
       };
 
@@ -810,21 +702,7 @@ export function CreateChildQualiPhotoForm({
                         color="#11224e"
                       />
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.iconButton, styles.iconButtonSecondary]}
-                      onPress={handleGenerateDescription}
-                      disabled={isGeneratingDescription}
-                    >
-                      {isGeneratingDescription ? (
-                        <ActivityIndicator size="small" color="#11224e" />
-                      ) : (
-                        <Ionicons
-                          name="sparkles-outline"
-                          size={20}
-                          color="#11224e"
-                        />
-                      )}
-                    </TouchableOpacity>
+
                     <TouchableOpacity
                       style={[styles.iconButton, styles.iconButtonSecondary]}
                       onPress={openAnnotatorForExisting}
@@ -857,38 +735,6 @@ export function CreateChildQualiPhotoForm({
                     Ajouter une Situation avant (Photo/Vidéo)
                   </Text>
                 </TouchableOpacity>
-              )}
-
-              {/* Annotated Image Preview */}
-              {annotatedImage && photo?.type !== "video" && (
-                <View style={styles.annotatedImageContainer}>
-                  <View style={styles.annotatedImageHeader}>
-                    <Ionicons
-                      name="analytics-outline"
-                      size={20}
-                      color="#ef4444"
-                    />
-                    <Text style={styles.annotatedImageTitle}>
-                      Analyse IA - Anomalies Détectées
-                    </Text>
-                  </View>
-                  <View style={styles.annotatedImageWrapper}>
-                    <TouchableOpacity
-                      onPress={() => setFullScreenImageVisible(true)}
-                      activeOpacity={0.9}
-                      style={{ width: "100%", height: "100%" }}
-                    >
-                      <Image
-                        source={{ uri: annotatedImage }}
-                        style={styles.annotatedImagePreview}
-                        resizeMode="contain"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={styles.annotatedImageNote}>
-                    Appuyez l'image pour l'agrandir 🔍
-                  </Text>
-                </View>
               )}
 
               <View style={{ marginTop: 16, gap: 12 }}>
@@ -1015,7 +861,6 @@ export function CreateChildQualiPhotoForm({
                 <VoiceNoteRecorder
                   key={creationCount}
                   onRecordingComplete={setAudioUri}
-                  onTranscriptionComplete={setAudioText}
                 />
               </View>
 
@@ -1167,113 +1012,17 @@ export function CreateChildQualiPhotoForm({
               </View>
 
               <View style={{ marginTop: 16, gap: 12 }}>
-                <Text style={styles.label}>Transcription Audio</Text>
-                <TouchableOpacity
-                  style={styles.fieldPreview}
-                  onPress={() => {
-                    setEditingField("audio");
-                    setTempFieldValue(audioText);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.fieldPreviewText,
-                      !audioText && styles.fieldPreviewPlaceholder,
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {audioText || "Transcription automatique..."}
-                  </Text>
-                  <Ionicons
-                    name="create-outline"
-                    size={20}
-                    color="#f87b1b"
-                    style={styles.fieldEditIcon}
-                  />
-                </TouchableOpacity>
-
-                <Text style={styles.label}>Description IA</Text>
-                <TouchableOpacity
-                  style={styles.fieldPreview}
-                  onPress={() => {
-                    setEditingField("ia");
-                    setTempFieldValue(iaText);
-                  }}
-                >
-                  {isGeneratingDescription ? (
-                    <View style={styles.fieldPreviewLoading}>
-                      <ActivityIndicator size="small" color="#11224e" />
-                      <Text style={styles.fieldPreviewLoadingText}>
-                        Analyse en cours...
-                      </Text>
-                    </View>
-                  ) : (
-                    <>
-                      <Text
-                        style={[
-                          styles.fieldPreviewText,
-                          !iaText && styles.fieldPreviewPlaceholder,
-                        ]}
-                        numberOfLines={2}
-                      >
-                        {iaText || "Description générée par l'IA..."}
-                      </Text>
-                      <Ionicons
-                        name="create-outline"
-                        size={20}
-                        color="#f87b1b"
-                        style={styles.fieldEditIcon}
-                      />
-                    </>
-                  )}
-                </TouchableOpacity>
-
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Text style={styles.label}>Description finale</Text>
-                  <TouchableOpacity
-                    style={styles.combineButton}
-                    onPress={handleCombineText}
-                    disabled={isCombiningText || (!audioText && !iaText)}
-                  >
-                    {isCombiningText ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <>
-                        <Ionicons name="sparkles" size={16} color="#fff" />
-                        <Text style={styles.combineButtonText}>Combiner</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity
-                  style={styles.fieldPreview}
-                  onPress={() => {
-                    setEditingField("comment");
-                    setTempFieldValue(comment);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.fieldPreviewText,
-                      !comment && styles.fieldPreviewPlaceholder,
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {comment || "Description finale..."}
-                  </Text>
-                  <Ionicons
-                    name="create-outline"
-                    size={20}
-                    color="#f87b1b"
-                    style={styles.fieldEditIcon}
-                  />
-                </TouchableOpacity>
+                <Text style={styles.label}>Description</Text>
+                <TextInput
+                  placeholder="Entrez une description..."
+                  placeholderTextColor="#9ca3af"
+                  value={comment}
+                  onChangeText={setComment}
+                  style={[styles.input, styles.textArea]}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
               </View>
             </View>
           </ScrollView>
@@ -1295,11 +1044,6 @@ export function CreateChildQualiPhotoForm({
                 <>
                   <Ionicons name="hourglass" size={18} color="#FFFFFF" />
                   <Text style={styles.submitButtonText}>Enregistrement...</Text>
-                </>
-              ) : isGeneratingDescription ? (
-                <>
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                  <Text style={styles.submitButtonText}>Génération IA...</Text>
                 </>
               ) : isUploadingAudio ? (
                 <>
@@ -1334,112 +1078,6 @@ export function CreateChildQualiPhotoForm({
         </Modal>
       )}
 
-      {/* Full Screen Image Modal */}
-      <Modal
-        visible={fullScreenImageVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setFullScreenImageVisible(false)}
-      >
-        <View style={styles.fullScreenModalContainer}>
-          <TouchableOpacity
-            style={styles.fullScreenModalCloseButton}
-            onPress={() => setFullScreenImageVisible(false)}
-          >
-            <Ionicons name="close-circle" size={40} color="white" />
-          </TouchableOpacity>
-          {annotatedImage && (
-            <Image
-              source={{ uri: annotatedImage }}
-              style={styles.fullScreenImage}
-              resizeMode="contain"
-            />
-          )}
-        </View>
-      </Modal>
-
-      {/* Text Field Editor Popup Modal */}
-      <Modal
-        visible={editingField !== null}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setEditingField(null)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.textEditorModalContainer}
-        >
-          <TouchableOpacity
-            style={styles.textEditorBackdrop}
-            activeOpacity={1}
-            onPress={() => setEditingField(null)}
-          />
-          <View style={styles.textEditorModalContent}>
-            <View style={styles.textEditorHeader}>
-              <Text style={styles.textEditorTitle}>
-                {editingField === "audio"
-                  ? "Transcription Audio"
-                  : editingField === "ia"
-                    ? "Description IA"
-                    : "Description finale"}
-              </Text>
-              <TouchableOpacity onPress={() => setEditingField(null)}>
-                <Ionicons name="close" size={24} color="#11224e" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView
-              style={styles.textEditorScrollContainer}
-              contentContainerStyle={styles.textEditorScrollContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <View style={styles.textEditorInputContainer}>
-                  <TextInput
-                    style={styles.textEditorInput}
-                    placeholder="Saisissez votre texte..."
-                    placeholderTextColor="#9ca3af"
-                    value={tempFieldValue}
-                    onChangeText={setTempFieldValue}
-                    multiline
-                  />
-                </View>
-              </TouchableWithoutFeedback>
-            </ScrollView>
-
-            <View style={styles.textEditorButtons}>
-              <TouchableOpacity
-                style={[styles.textEditorButton, styles.textEditorCancelButton]}
-                onPress={() => {
-                  Keyboard.dismiss();
-                  setEditingField(null);
-                  setTempFieldValue("");
-                }}
-              >
-                <Text style={styles.textEditorCancelText}>Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.textEditorButton, styles.textEditorSaveButton]}
-                onPress={() => {
-                  if (editingField === "audio") {
-                    setAudioText(tempFieldValue);
-                  } else if (editingField === "ia") {
-                    setIaText(tempFieldValue);
-                  } else if (editingField === "comment") {
-                    setComment(tempFieldValue);
-                  }
-                  Keyboard.dismiss();
-                  setEditingField(null);
-                  setTempFieldValue("");
-                }}
-              >
-                <Text style={styles.textEditorSaveText}>Enregistrer</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
       <CustomAlert
         visible={alertInfo.visible}
         title={alertInfo.title}
