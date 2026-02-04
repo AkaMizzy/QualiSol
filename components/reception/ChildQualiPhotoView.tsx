@@ -1152,6 +1152,10 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
           categorie={previewedItem?.categorie}
           latitude={previewedItem?.latitude}
           longitude={previewedItem?.longitude}
+          zoneTitle={zoneTitle}
+          chantier={projectTitle}
+          companyTitle={companyTitle}
+          level={previewedItem?.level}
         />
       )}
       <Modal visible={isAnnotatorVisible} animationType="slide">

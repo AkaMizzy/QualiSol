@@ -39,6 +39,7 @@ interface PreviewModalProps {
   companyTitle?: string;
   level?: number;
   mode?: "upload" | "capture";
+  zoneTitle?: string;
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
@@ -66,6 +67,7 @@ export default function PreviewModal({
   companyTitle,
   level,
   mode,
+  zoneTitle,
 }: PreviewModalProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -112,37 +114,63 @@ export default function PreviewModal({
     await sound.setPositionAsync(value);
   };
 
+  const getSeverityEmoji = (level: number) => {
+    if (level < 3) return "🟢"; // Low (0-2)
+    if (level < 6) return "🔵"; // Normal (3-5)
+    if (level < 8) return "🟠"; // Medium (6-7)
+    return "🔴"; // High (8-10)
+  };
+
   const handleShare = async () => {
     try {
       // Build rich metadata message
       const parts = [];
-      if (title) parts.push(`📸 ${title}`);
+      parts.push(`📸 ${title || "Photo"}`);
       parts.push("");
-
-      if (level !== undefined && level !== null) {
-        parts.push(`⚠️ Sévérité: ${level}`);
-      }
-
-      if (description) {
-        parts.push(`📝 Description: ${description}`);
-      }
-
-      if (companyTitle) {
-        parts.push(`🏢 Entreprise: ${companyTitle}`);
-      }
 
       if (chantier) {
         parts.push(`🏗️ Chantier: ${chantier}`);
       }
+      if (zoneTitle) {
+        parts.push(`📍 Zone: ${zoneTitle}`);
+      }
 
-      if (author) {
-        parts.push(`👤 Auteur: ${author}`);
+      // Date, Auteur
+      const dateStr = createdAt
+        ? new Date(createdAt).toLocaleDateString("fr-FR")
+        : "";
+      parts.push(`� Date: ${dateStr} | 👤 Auteur: ${author || "N/A"}`);
+
+      // Titre (already in header but format requires it explicitly?)
+      // User format: Header, Chantier, Zone, Date/Author, Title...
+      // Let's stick to the requested structure:
+      // Chantier
+      // Date, auteur
+      // Titre
+      // Severite
+      // Description
+      // Photo
+
+      // I'll assume header "📸 ..." is good, then:
+      // (Lines already added above for Chantier/Zone/Date/Author)
+
+      if (title) {
+        parts.push(`📝 Titre: ${title}`);
+      }
+
+      if (level !== undefined && level !== null) {
+        parts.push(`Severite: ${getSeverityEmoji(level)} (Niveau ${level})`);
+      }
+
+      if (description) {
+        parts.push(`� Description: ${description}`);
       }
 
       parts.push("");
 
       if (mediaUrl) {
-        parts.push(`🔗 ${mediaUrl}`);
+        parts.push(`� Photo:`);
+        parts.push(mediaUrl);
       }
 
       parts.push("");

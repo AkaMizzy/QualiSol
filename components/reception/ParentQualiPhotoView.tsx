@@ -234,33 +234,51 @@ export const ParentQualiPhotoView: React.FC<ParentQualiPhotoViewProps> = ({
   const canValidate =
     childGeds.length > 0 && childGeds.length === childrenWithAfterPhotos.size;
 
+  const getSeverityEmoji = (level: number) => {
+    if (level < 3) return "🟢"; // Low (0-2)
+    if (level < 6) return "🔵"; // Normal (3-5)
+    if (level < 8) return "🟠"; // Medium (6-7)
+    return "🔴"; // High (8-10)
+  };
+
   const handleSharePhoto = async (ged: Ged) => {
     try {
       const imageUrl = `${API_CONFIG.BASE_URL}${ged.url}`;
 
       // Build rich metadata message
       const parts = [];
-      parts.push(`📸 ${ged.title}`);
+      parts.push(`📸 ${ged.title || "Photo"}`);
       parts.push("");
 
-      if (companyTitle) {
-        parts.push(`🏢 Entreprise: ${companyTitle}`);
-      }
-
       if (projectTitle) {
-        parts.push(`🏗️ Projet: ${projectTitle}`);
+        parts.push(`🏗️ Chantier: ${projectTitle}`);
       }
-
       if (zoneTitle) {
         parts.push(`📍 Zone: ${zoneTitle}`);
       }
 
-      if (ged.author) {
-        parts.push(`👤 Auteur: ${ged.author}`);
+      // Date, Auteur
+      const dateStr = ged.created_at
+        ? new Date(ged.created_at).toLocaleDateString("fr-FR")
+        : "";
+      parts.push(`📅 Date: ${dateStr} | 👤 Auteur: ${ged.author || "N/A"}`);
+
+      // Titre
+      parts.push(`📝 Titre: ${ged.title}`);
+
+      // Severite
+      if (ged.level !== undefined && ged.level !== null) {
+        parts.push(
+          `Severite: ${getSeverityEmoji(ged.level)} (Niveau ${ged.level})`,
+        );
       }
 
+      // Description
+      parts.push(`📄 Description: ${ged.description || "Aucune"}`);
+
       parts.push("");
-      parts.push(`🔗 ${imageUrl}`);
+      parts.push("📷 Photo:");
+      parts.push(imageUrl);
       parts.push("");
       parts.push("━━━━━━━━━━━");
       parts.push("📱 Qualisol | Muntadaacom");
