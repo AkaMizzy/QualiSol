@@ -462,6 +462,65 @@ export const ParentQualiPhotoView: React.FC<ParentQualiPhotoViewProps> = ({
                                 ]}
                               />
                             )}
+
+                            {/* Top Right Badges Container */}
+                            <View style={styles.topRightContainer}>
+                              {/* Mode Indicator */}
+                              {ged.mode && (
+                                <View
+                                  style={[
+                                    styles.badge,
+                                    { backgroundColor: "rgba(0,0,0,0.5)" },
+                                  ]}
+                                >
+                                  <Ionicons
+                                    name={
+                                      ged.mode === "capture"
+                                        ? "camera"
+                                        : "cloud-upload"
+                                    }
+                                    size={16}
+                                    color="#f87b1b"
+                                  />
+                                </View>
+                              )}
+                            </View>
+
+                            {/* GPS Status Indicator */}
+                            {(() => {
+                              const lat = ged.latitude;
+                              const long = ged.longitude;
+                              const accuracy = ged.accuracy
+                                ? parseFloat(ged.accuracy)
+                                : null;
+
+                              let iconColor = "#FF3B30"; // Default Red (No GPS)
+
+                              if (lat && long) {
+                                if (accuracy === null || isNaN(accuracy)) {
+                                  iconColor = "#007AFF"; // Blue (Position exists, unknown accuracy)
+                                } else if (accuracy <= 20) {
+                                  iconColor = "#34C759"; // Green (Good accuracy <= 20m)
+                                } else {
+                                  iconColor = "#FF9500"; // Orange (Poor accuracy > 20m)
+                                }
+                              }
+
+                              return (
+                                <View
+                                  style={[
+                                    styles.gpsStatusBadge,
+                                    { backgroundColor: "rgba(0,0,0,0.5)" },
+                                  ]}
+                                >
+                                  <Ionicons
+                                    name="location-sharp"
+                                    size={16}
+                                    color={iconColor}
+                                  />
+                                </View>
+                              );
+                            })()}
                             <View style={styles.childGridOverlay}>
                               <Text
                                 style={styles.childGridTitle}
@@ -548,6 +607,65 @@ export const ParentQualiPhotoView: React.FC<ParentQualiPhotoViewProps> = ({
                                     {formatDate(apresPhotos[0].created_at)}
                                   </Text>
                                 )}
+
+                                {/* Top Right Badges Container */}
+                                <View style={styles.topRightContainer}>
+                                  {/* Mode Indicator */}
+                                  {apresPhotos[0].mode && (
+                                    <View
+                                      style={[
+                                        styles.badge,
+                                        { backgroundColor: "rgba(0,0,0,0.5)" },
+                                      ]}
+                                    >
+                                      <Ionicons
+                                        name={
+                                          apresPhotos[0].mode === "capture"
+                                            ? "camera"
+                                            : "cloud-upload"
+                                        }
+                                        size={16}
+                                        color="#f87b1b"
+                                      />
+                                    </View>
+                                  )}
+                                </View>
+
+                                {/* GPS Status Indicator */}
+                                {(() => {
+                                  const lat = apresPhotos[0].latitude;
+                                  const long = apresPhotos[0].longitude;
+                                  const accuracy = apresPhotos[0].accuracy
+                                    ? parseFloat(apresPhotos[0].accuracy)
+                                    : null;
+
+                                  let iconColor = "#FF3B30"; // Default Red (No GPS)
+
+                                  if (lat && long) {
+                                    if (accuracy === null || isNaN(accuracy)) {
+                                      iconColor = "#007AFF"; // Blue (Position exists, unknown accuracy)
+                                    } else if (accuracy <= 20) {
+                                      iconColor = "#34C759"; // Green (Good accuracy <= 20m)
+                                    } else {
+                                      iconColor = "#FF9500"; // Orange (Poor accuracy > 20m)
+                                    }
+                                  }
+
+                                  return (
+                                    <View
+                                      style={[
+                                        styles.gpsStatusBadge,
+                                        { backgroundColor: "rgba(0,0,0,0.5)" },
+                                      ]}
+                                    >
+                                      <Ionicons
+                                        name="location-sharp"
+                                        size={16}
+                                        color={iconColor}
+                                      />
+                                    </View>
+                                  );
+                                })()}
                                 <TouchableOpacity
                                   onPress={(e) => {
                                     e.stopPropagation();
@@ -640,6 +758,65 @@ export const ParentQualiPhotoView: React.FC<ParentQualiPhotoViewProps> = ({
                             ]}
                           />
                         )}
+
+                        {/* Top Right Badges Container */}
+                        <View style={styles.topRightContainer}>
+                          {/* Mode Indicator */}
+                          {ged.mode && (
+                            <View
+                              style={[
+                                styles.badge,
+                                { backgroundColor: "rgba(0,0,0,0.5)" },
+                              ]}
+                            >
+                              <Ionicons
+                                name={
+                                  ged.mode === "capture"
+                                    ? "camera"
+                                    : "cloud-upload"
+                                }
+                                size={16}
+                                color="#f87b1b"
+                              />
+                            </View>
+                          )}
+                        </View>
+
+                        {/* GPS Status Indicator */}
+                        {(() => {
+                          const lat = ged.latitude;
+                          const long = ged.longitude;
+                          const accuracy = ged.accuracy
+                            ? parseFloat(ged.accuracy)
+                            : null;
+
+                          let iconColor = "#FF3B30"; // Default Red (No GPS)
+
+                          if (lat && long) {
+                            if (accuracy === null || isNaN(accuracy)) {
+                              iconColor = "#007AFF"; // Blue (Position exists, unknown accuracy)
+                            } else if (accuracy <= 20) {
+                              iconColor = "#34C759"; // Green (Good accuracy <= 20m)
+                            } else {
+                              iconColor = "#FF9500"; // Orange (Poor accuracy > 20m)
+                            }
+                          }
+
+                          return (
+                            <View
+                              style={[
+                                styles.gpsStatusBadge,
+                                { backgroundColor: "rgba(0,0,0,0.5)" },
+                              ]}
+                            >
+                              <Ionicons
+                                name="location-sharp"
+                                size={16}
+                                color={iconColor}
+                              />
+                            </View>
+                          );
+                        })()}
                         <View style={styles.childGridOverlay}>
                           <Text style={styles.childGridTitle} numberOfLines={1}>
                             {ged.title}
@@ -1153,5 +1330,30 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1,
+  },
+  topRightContainer: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    flexDirection: "row",
+    gap: 4,
+    zIndex: 10,
+  },
+  badge: {
+    backgroundColor: "rgba(0,0,0,0.6)",
+    borderRadius: 12,
+    padding: 4,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  gpsStatusBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    borderRadius: 12,
+    padding: 4,
+    zIndex: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

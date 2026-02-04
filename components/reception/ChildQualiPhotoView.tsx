@@ -3,19 +3,19 @@ import { Audio, ResizeMode, Video } from "expo-av";
 import * as Linking from "expo-linking";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    Share,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
 
 import API_CONFIG from "@/app/config/api";
@@ -23,11 +23,11 @@ import { ICONS } from "@/constants/Icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { Folder } from "@/services/folderService";
 import {
-    describeImage,
-    Ged,
-    getGedsBySource,
-    updateGed,
-    updateGedFile,
+  describeImage,
+  Ged,
+  getGedsBySource,
+  updateGed,
+  updateGedFile,
 } from "@/services/gedService";
 import { getAllStatuses, Status } from "@/services/statusService";
 import { isVideoFile } from "@/utils/mediaUtils";
@@ -767,6 +767,64 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                       style={styles.childThumbnail}
                     />
                   )}
+
+                  {/* Top Right Badges Container */}
+                  <View style={styles.topRightContainer}>
+                    {/* Mode Indicator */}
+                    {item.mode && (
+                      <View
+                        style={[
+                          styles.badge,
+                          { backgroundColor: "rgba(0,0,0,0.5)" },
+                        ]}
+                      >
+                        <Ionicons
+                          name={
+                            item.mode === "capture" ? "camera" : "cloud-upload"
+                          }
+                          size={16}
+                          color="#f87b1b"
+                        />
+                      </View>
+                    )}
+                  </View>
+
+                  {/* GPS Status Indicator */}
+                  {(() => {
+                    const lat = item.latitude;
+                    const long = item.longitude;
+                    const accuracy = item.accuracy
+                      ? parseFloat(item.accuracy)
+                      : null;
+
+                    let iconColor = "#FF3B30"; // Default Red (No GPS)
+
+                    if (lat && long) {
+                      if (accuracy === null || isNaN(accuracy)) {
+                        iconColor = "#007AFF"; // Blue (Position exists, unknown accuracy)
+                      } else if (accuracy <= 20) {
+                        iconColor = "#34C759"; // Green (Good accuracy <= 20m)
+                      } else {
+                        iconColor = "#FF9500"; // Orange (Poor accuracy > 20m)
+                      }
+                    }
+
+                    return (
+                      <View
+                        style={[
+                          styles.gpsStatusBadge,
+                          { backgroundColor: "rgba(0,0,0,0.5)" },
+                        ]}
+                      >
+                        <Ionicons
+                          name="location-sharp"
+                          size={16}
+                          color={iconColor}
+                        />
+                      </View>
+                    );
+                  })()}
+
                   <View style={styles.childGridOverlay}>
                     <Text style={styles.childGridTitle} numberOfLines={1}>
                       {item.title}
@@ -826,6 +884,66 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                         style={styles.childThumbnail}
                       />
                     )}
+
+                    {/* Top Right Badges Container */}
+                    <View style={styles.topRightContainer}>
+                      {/* Mode Indicator */}
+                      {photo.mode && (
+                        <View
+                          style={[
+                            styles.badge,
+                            { backgroundColor: "rgba(0,0,0,0.5)" },
+                          ]}
+                        >
+                          <Ionicons
+                            name={
+                              photo.mode === "capture"
+                                ? "camera"
+                                : "cloud-upload"
+                            }
+                            size={16}
+                            color="#f87b1b"
+                          />
+                        </View>
+                      )}
+                    </View>
+
+                    {/* GPS Status Indicator */}
+                    {(() => {
+                      const lat = photo.latitude;
+                      const long = photo.longitude;
+                      const accuracy = photo.accuracy
+                        ? parseFloat(photo.accuracy)
+                        : null;
+
+                      let iconColor = "#FF3B30"; // Default Red (No GPS)
+
+                      if (lat && long) {
+                        if (accuracy === null || isNaN(accuracy)) {
+                          iconColor = "#007AFF"; // Blue (Position exists, unknown accuracy)
+                        } else if (accuracy <= 20) {
+                          iconColor = "#34C759"; // Green (Good accuracy <= 20m)
+                        } else {
+                          iconColor = "#FF9500"; // Orange (Poor accuracy > 20m)
+                        }
+                      }
+
+                      return (
+                        <View
+                          style={[
+                            styles.gpsStatusBadge,
+                            { backgroundColor: "rgba(0,0,0,0.5)" },
+                          ]}
+                        >
+                          <Ionicons
+                            name="location-sharp"
+                            size={16}
+                            color={iconColor}
+                          />
+                        </View>
+                      );
+                    })()}
+
                     <View style={styles.childGridOverlay}>
                       <Text style={styles.childGridTitle} numberOfLines={1}>
                         {photo.title}
@@ -1367,5 +1485,30 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1,
+  },
+  topRightContainer: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    flexDirection: "row",
+    gap: 4,
+    zIndex: 10,
+  },
+  badge: {
+    backgroundColor: "rgba(0,0,0,0.6)",
+    borderRadius: 12,
+    padding: 4,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  gpsStatusBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    borderRadius: 12,
+    padding: 4,
+    zIndex: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

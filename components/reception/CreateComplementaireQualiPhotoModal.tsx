@@ -1,44 +1,46 @@
 import { useAuth } from "@/contexts/AuthContext";
 import companyService from "@/services/companyService";
 import {
-    createGed,
-    CreateGedInput,
-    Ged,
-    getAllGeds,
+  createGed,
+  CreateGedInput,
+  Ged,
+  getAllGeds,
 } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { isVideoFile } from "@/utils/mediaUtils";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ResizeMode, Video } from "expo-av";
+import * as Crypto from "expo-crypto";
+import * as Device from "expo-device";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CaptureModal from "../CaptureModal";
 import PictureAnnotator from "../PictureAnnotator";
 import VoiceNoteRecorder from "../VoiceNoteRecorder";
-import { COLORS } from "@/constants/theme";
 
 export type QualiPhotoItem = {
   id: string;
@@ -62,6 +64,20 @@ function CreateComplementaireQualiPhotoForm({
   childItem,
   parentTitle,
 }: FormProps) {
+  const getDeviceId = async () => {
+    try {
+      let uniqueId = await AsyncStorage.getItem("device_unique_id");
+      if (!uniqueId) {
+        uniqueId = Crypto.randomUUID();
+        await AsyncStorage.setItem("device_unique_id", uniqueId);
+      }
+      const deviceName = `${Device.brand || "Unknown"} ${Device.modelName || "Device"}`;
+      return `${deviceName}-${uniqueId}`;
+    } catch (e) {
+      return `Unknown-${Crypto.randomUUID()}`;
+    }
+  };
+
   const { token, user } = useAuth();
   const [title, setTitle] = useState("");
   const [photo, setPhoto] = useState<{
@@ -73,9 +89,12 @@ function CreateComplementaireQualiPhotoForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [comment, setComment] = useState("");
-  
+
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  const [altitude, setAltitude] = useState<number | null>(null);
+  const [accuracy, setAccuracy] = useState<number | null>(null);
+  const [altitudeAccuracy, setAltitudeAccuracy] = useState<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const [isAnnotatorVisible, setAnnotatorVisible] = useState(false);
@@ -92,10 +111,7 @@ function CreateComplementaireQualiPhotoForm({
   const [loadingLimits, setLoadingLimits] = useState(true);
 
   const canSave = useMemo(
-    () =>
-      !!photo &&
-      !submitting &&
-      !isStorageQuotaReached,
+    () => !!photo && !submitting && !isStorageQuotaReached,
     [photo, submitting, isStorageQuotaReached],
   );
 
@@ -302,14 +318,25 @@ function CreateComplementaireQualiPhotoForm({
     setSubmitting(true);
     setError(null);
     try {
+      const deviceId = await getDeviceId();
+
       const result = await createGed(token, {
         idsource: childItem.id,
         title: title || "Situation Après",
         kind: "photoapres",
         author: `${user.firstname} ${user.lastname}`,
+        idauthor: user.id,
+        iddevice: deviceId,
+        captudedate: new Date().toISOString(),
+        chantier: childItem.project_title || parentTitle || undefined,
         description: comment || undefined,
         latitude: latitude ? String(latitude) : undefined,
         longitude: longitude ? String(longitude) : undefined,
+        altitude: altitude ? String(altitude) : undefined,
+        accuracy: accuracy ? String(accuracy) : undefined,
+        altitudeAccuracy: altitudeAccuracy
+          ? String(altitudeAccuracy)
+          : undefined,
         file: photo,
         mode: mode,
       });
@@ -321,6 +348,10 @@ function CreateComplementaireQualiPhotoForm({
             title: `Note vocale pour ${title || "Situation Après"}`,
             kind: "audio",
             author: `${user.firstname} ${user.lastname}`,
+            idauthor: user.id,
+            iddevice: deviceId,
+            captudedate: new Date().toISOString(),
+            chantier: childItem.project_title || parentTitle || undefined,
             file: {
               uri: audioUri,
               name: `note_${Date.now()}.m4a`,
@@ -358,6 +389,9 @@ function CreateComplementaireQualiPhotoForm({
         });
         setLatitude(location.coords.latitude);
         setLongitude(location.coords.longitude);
+        setAltitude(location.coords.altitude);
+        setAccuracy(location.coords.accuracy);
+        setAltitudeAccuracy(location.coords.altitudeAccuracy);
       } catch (error) {
         console.warn("Could not fetch location automatically.", error);
       }
@@ -467,7 +501,7 @@ function CreateComplementaireQualiPhotoForm({
                       color="#11224e"
                     />
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity
                     style={[styles.iconButton, styles.iconButtonSecondary]}
                     onPress={openAnnotatorForExisting}
@@ -505,17 +539,28 @@ function CreateComplementaireQualiPhotoForm({
                   style={styles.input}
                 />
               </View>
-              <VoiceNoteRecorder
-                onRecordingComplete={setAudioUri}
-              />
-              <View style={[styles.inputWrap, { height: 120, alignItems: 'flex-start', paddingTop: 12 }]}>
-                <Ionicons name="document-text-outline" size={16} color="#6b7280" style={{ marginTop: 4 }} />
+              <VoiceNoteRecorder onRecordingComplete={setAudioUri} />
+              <View
+                style={[
+                  styles.inputWrap,
+                  { height: 120, alignItems: "flex-start", paddingTop: 12 },
+                ]}
+              >
+                <Ionicons
+                  name="document-text-outline"
+                  size={16}
+                  color="#6b7280"
+                  style={{ marginTop: 4 }}
+                />
                 <TextInput
                   placeholder="Description"
                   placeholderTextColor="#9ca3af"
                   value={comment}
                   onChangeText={setComment}
-                  style={[styles.input, { height: '100%', textAlignVertical: 'top' }]}
+                  style={[
+                    styles.input,
+                    { height: "100%", textAlignVertical: "top" },
+                  ]}
                   multiline
                 />
               </View>
