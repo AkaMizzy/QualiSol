@@ -1,18 +1,19 @@
 import {
-  createContext,
-  ReactNode,
-  useContext,
-  useEffect,
-  useState,
+    createContext,
+    ReactNode,
+    useContext,
+    useEffect,
+    useState,
 } from "react";
+import CustomAlert from "../components/CustomAlert";
 import { setAuthToken, setOnUnauthorized } from "../services/api";
 import {
-  clearAuthToken,
-  clearUser,
-  getAuthToken,
-  getUser,
-  saveAuthToken,
-  saveUser,
+    clearAuthToken,
+    clearUser,
+    getAuthToken,
+    getUser,
+    saveAuthToken,
+    saveUser,
 } from "../services/secureStore";
 
 // Types
@@ -40,6 +41,7 @@ interface AuthContextType extends AuthState {
   logout: () => Promise<void>;
   updateUser: (userData: Partial<User>) => void;
   completePostLoginLoading: () => void;
+  showSessionExpiredAlert: boolean;
 }
 
 // Create context
@@ -54,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: false,
     isPostLoginLoading: false,
   });
+  const [showSessionExpiredAlert, setShowSessionExpiredAlert] = useState(false);
 
   // Initialize auth state from storage
   useEffect(() => {
@@ -64,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setOnUnauthorized(() => {
       console.log("Token expired - auto logout triggered");
+      setShowSessionExpiredAlert(true);
       logout();
     });
   }, []);
@@ -206,9 +210,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     updateUser,
     completePostLoginLoading,
+    showSessionExpiredAlert,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <CustomAlert
+        visible={showSessionExpiredAlert}
+        type="error"
+        title="Session Expirée"
+        message="Votre session a expiré. Veuillez vous reconnecter."
+        duration={2500}
+        onClose={() => setShowSessionExpiredAlert(false)}
+      />
+    </AuthContext.Provider>
+  );
 }
 
 // Hook to use auth context
