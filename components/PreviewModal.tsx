@@ -125,7 +125,7 @@ export default function PreviewModal({
     try {
       // Build rich metadata message
       const parts = [];
-      parts.push(`📸 ${title || "Photo"}`);
+      parts.push(`📝 ${title}`);
       parts.push("");
 
       if (chantier) {
@@ -139,7 +139,7 @@ export default function PreviewModal({
       const dateStr = createdAt
         ? new Date(createdAt).toLocaleDateString("fr-FR")
         : "";
-      parts.push(`� Date: ${dateStr} | 👤 Auteur: ${author || "N/A"}`);
+      parts.push(`Date: ${dateStr} | 👤 Auteur: ${author || "N/A"}`);
 
       // Titre (already in header but format requires it explicitly?)
       // User format: Header, Chantier, Zone, Date/Author, Title...
@@ -154,22 +154,18 @@ export default function PreviewModal({
       // I'll assume header "📸 ..." is good, then:
       // (Lines already added above for Chantier/Zone/Date/Author)
 
-      if (title) {
-        parts.push(`📝 Titre: ${title}`);
-      }
-
       if (level !== undefined && level !== null) {
         parts.push(`Severite: ${getSeverityEmoji(level)} (Niveau ${level})`);
       }
 
       if (description) {
-        parts.push(`� Description: ${description}`);
+        parts.push(`Description: ${description}`);
       }
 
       parts.push("");
 
       if (mediaUrl) {
-        parts.push(`� Photo:`);
+        parts.push(`📷 Photo:`);
         parts.push(mediaUrl);
       }
 

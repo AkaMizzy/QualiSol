@@ -65,6 +65,7 @@ interface AddImageModalProps {
   ) => void;
   openCameraOnShow?: boolean;
   allowedMode?: "upload" | "capture" | "both";
+  placeholderText?: string;
 }
 
 export default function AddImageModal({
@@ -73,6 +74,7 @@ export default function AddImageModal({
   onAdd,
   openCameraOnShow = false,
   allowedMode = "both",
+  placeholderText = "Prendre une photo ou vidéo",
 }: AddImageModalProps) {
   const { token, user } = useAuth();
   const [title, setTitle] = useState("");
@@ -673,6 +675,7 @@ export default function AddImageModal({
               showsVerticalScrollIndicator={false}
               keyboardDismissMode="on-drag"
               keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.scrollViewContent}
             >
               <View style={styles.headerContainer}>
                 <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -735,7 +738,7 @@ export default function AddImageModal({
                         color={COLORS.gray}
                       />
                       <Text style={styles.imagePickerText}>
-                        Prendre une photo ou vidéo
+                        {placeholderText}
                       </Text>
                     </View>
                   )}
@@ -1209,6 +1212,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: SIZES.xLarge,
     borderTopRightRadius: SIZES.xLarge,
     padding: SIZES.large,
+  },
+  scrollViewContent: {
+    paddingBottom: Platform.OS === "android" ? 80 : 40,
   },
   headerContainer: {
     position: "relative",

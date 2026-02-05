@@ -579,6 +579,11 @@ export default function SharedGalerieScreen({
         onAdd={handleAddImage}
         openCameraOnShow={true}
         allowedMode={creationMode}
+        placeholderText={
+          creationMode === "capture"
+            ? "Prendre un constat"
+            : "Prendre une photo ou vidéo"
+        }
       />
       {selectedItem && (
         <PreviewModal
