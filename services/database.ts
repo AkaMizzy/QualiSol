@@ -67,6 +67,9 @@ async function initializeDatabase(db: any): Promise<void> {
     await safeAddColumn("audiotxt", "TEXT");
     await safeAddColumn("iatxt", "TEXT");
     await safeAddColumn("mode", "TEXT");
+    await safeAddColumn("altitude", "TEXT");
+    await safeAddColumn("accuracy", "TEXT");
+    await safeAddColumn("altitudeAccuracy", "TEXT");
 
     // Create sync_queue table
     await db.execAsync(`
