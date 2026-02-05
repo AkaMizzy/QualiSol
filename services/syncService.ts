@@ -51,7 +51,7 @@ export async function syncPendingRecords(token: string): Promise<SyncResult> {
         const fileType = fileName.split(".").pop() || "jpeg";
 
         // Upload image (qualiphoto)
-        await createGed(token, {
+        const createdGedResponse = await createGed(token, {
           idsource: record.id, // Use client UUID as idsource for idempotency
           title: record.title,
           description: record.description || undefined,
@@ -83,7 +83,7 @@ export async function syncPendingRecords(token: string): Promise<SyncResult> {
             record.local_voice_note_path.split("/").pop() ||
             `voice_${Date.now()}.m4a`;
           await createGed(token, {
-            idsource: record.id,
+            idsource: createdGedResponse.data.id, // Use backend-generated ID from parent image
             title: `${record.title} Voice Note`,
             kind: "voice_note",
             author: record.author,

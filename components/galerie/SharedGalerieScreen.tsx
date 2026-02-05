@@ -41,7 +41,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const IMAGES_PER_PAGE = 4;
+const IMAGES_PER_PAGE = 2;
 
 interface SharedGalerieScreenProps {
   creationMode: "upload" | "capture";
