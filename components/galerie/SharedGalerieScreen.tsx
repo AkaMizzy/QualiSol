@@ -9,16 +9,16 @@ import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { getConnectivity } from "@/services/connectivity";
 import {
-    Ged,
-    createGed,
-    deleteGed,
-    getAllGeds,
-    updateGedFile,
+  Ged,
+  createGed,
+  deleteGed,
+  getAllGeds,
+  updateGedFile,
 } from "@/services/gedService";
 import {
-    createOfflineRecord,
-    deleteOfflineRecord,
-    getOfflineRecords,
+  createOfflineRecord,
+  deleteOfflineRecord,
+  getOfflineRecords,
 } from "@/services/offlineStorageService";
 import { startSyncMonitoring } from "@/services/syncService";
 import { OfflineRecord } from "@/types/offlineTypes";
@@ -29,26 +29,28 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    Alert,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  Alert,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const IMAGES_PER_PAGE = 2;
+const IMAGES_PER_PAGE = 4;
 
 interface SharedGalerieScreenProps {
   creationMode: "upload" | "capture";
+  customButtonIcon?: any;
 }
 
 export default function SharedGalerieScreen({
   creationMode,
+  customButtonIcon,
 }: SharedGalerieScreenProps) {
   const { token, user } = useAuth();
   const { width } = useWindowDimensions();
@@ -210,7 +212,7 @@ export default function SharedGalerieScreen({
             name: fileName,
           },
           audiotxt: data.audiotxt,
-          
+
           iatxt: data.iatxt,
           mode: data.mode,
         });
@@ -565,7 +567,10 @@ export default function SharedGalerieScreen({
         style={styles.addButton}
         onPress={() => setModalVisible(true)}
       >
-        <Image source={ICONS.cameraPng} style={{ width: 32, height: 32 }} />
+        <Image
+          source={customButtonIcon || ICONS.cameraPng}
+          style={{ width: 32, height: 32 }}
+        />
       </TouchableOpacity>
       <AddImageModal
         visible={modalVisible}

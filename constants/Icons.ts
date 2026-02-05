@@ -3,6 +3,7 @@ export const ICONS = {
   // PNG icons
   icon: require('@/assets/icons/icon.png'),
   cameraPng: require('@/assets/icons/camera_p.png'),
+  galeriePNG: require('@/assets/icons/gallery.png'),
   planning: require('@/assets/icons/planning.png'),
   calendar: require('@/assets/icons/calendar.png'),
   pv: require('@/assets/icons/pv.png'),
