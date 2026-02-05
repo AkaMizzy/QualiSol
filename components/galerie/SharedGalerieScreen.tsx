@@ -561,6 +561,7 @@ export default function SharedGalerieScreen({
               </TouchableOpacity>
             </View>
           )}
+          <View style={{ height: 70 }} />
         </ScrollView>
       )}
       <TouchableOpacity
@@ -656,15 +657,20 @@ const styles = StyleSheet.create({
   },
   addButton: {
     position: "absolute",
-    bottom: 50,
-    right: 30,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    bottom: 30, // Lower it slightly to be more accessible
+    right: 20, // Move slightly closer to edge
+    width: 64, // Slightly larger
+    height: 64,
+    borderRadius: 32,
     backgroundColor: COLORS.primary,
     justifyContent: "center",
     alignItems: "center",
     elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    zIndex: 999, // Ensure it stays on top
   },
   emptyText: {
     fontFamily: FONT.medium,
