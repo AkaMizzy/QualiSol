@@ -186,7 +186,7 @@ export default function SharedGalerieScreen({
         const fileName = uri.split("/").pop() || `qualiphoto_${Date.now()}.jpg`;
         const fileType = fileName.split(".").pop() || "jpeg";
 
-        await createGed(token, {
+        const createdGedResponse = await createGed(token, {
           idsource,
           title: data.title,
           description: data.description,
@@ -219,7 +219,7 @@ export default function SharedGalerieScreen({
 
         if (data.voiceNote) {
           await createGed(token, {
-            idsource,
+            idsource: createdGedResponse.data.id,
             title: `${data.title} - Voice Note`,
             kind: "voice_note",
             author: data.author,
@@ -608,20 +608,14 @@ export default function SharedGalerieScreen({
           latitude={selectedItem.latitude}
           longitude={selectedItem.longitude}
           level={selectedItem.level}
-          voiceNoteUrl={
-            geds.find(
-              (g) =>
-                g.kind === "voice_note" && g.idsource === selectedItem.idsource,
-            )?.url
-              ? `${API_CONFIG.BASE_URL}${
-                  geds.find(
-                    (g) =>
-                      g.kind === "voice_note" &&
-                      g.idsource === selectedItem.idsource,
-                  )?.url
-                }`
-              : undefined
-          }
+          voiceNoteUrl={(() => {
+            const voiceNote = geds.find(
+              (g) => g.kind === "voice_note" && g.idsource === selectedItem.id,
+            );
+            return voiceNote?.url
+              ? `${API_CONFIG.BASE_URL}${voiceNote.url}`
+              : undefined;
+          })()}
         />
       )}
       <Modal visible={isAnnotatorVisible} animationType="slide">
