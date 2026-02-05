@@ -74,7 +74,7 @@ export default function PreviewModal({
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [showMetadata, setShowMetadata] = useState(true);
+  const [showMetadata, setShowMetadata] = useState(mediaType === "image");
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   useEffect(() => {
@@ -405,20 +405,21 @@ export default function PreviewModal({
               <Ionicons name="share-social-outline" size={24} color="#f87b1b" />
             </Pressable>
 
-            {mediaType === "image" && hasMetadata && (
-              <Pressable
-                style={styles.actionButton}
-                onPress={() => setShowMetadata(!showMetadata)}
-                accessibilityRole="button"
-                accessibilityLabel="Toggle metadata"
-              >
-                <Ionicons
-                  name={showMetadata ? "information" : "information-outline"}
-                  size={24}
-                  color="#FFFFFF"
-                />
-              </Pressable>
-            )}
+            {(mediaType === "image" || mediaType === "video") &&
+              hasMetadata && (
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={() => setShowMetadata(!showMetadata)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Toggle metadata"
+                >
+                  <Ionicons
+                    name={showMetadata ? "information" : "information-outline"}
+                    size={24}
+                    color="#FFFFFF"
+                  />
+                </Pressable>
+              )}
             {mediaType === "image" && onAutoDescribe && (
               <Pressable
                 style={styles.actionButton}
@@ -445,7 +446,7 @@ export default function PreviewModal({
               </Pressable>
             )}
 
-            {mediaType === "image" && onAnnotate && (
+            {(mediaType === "image" || mediaType === "video") && onAnnotate && (
               <Pressable
                 style={styles.actionButton}
                 onPress={onAnnotate}
@@ -482,166 +483,176 @@ export default function PreviewModal({
         <View style={styles.mediaContainer}>{renderMedia()}</View>
 
         {/* Metadata Overlay */}
-        {mediaType === "image" && showMetadata && hasMetadata && (
-          <View style={styles.metadataOverlay}>
-            <View style={styles.metadataCard}>
-              <View style={styles.metadataRow}>
-                {author && (
-                  <View style={styles.metadataItem}>
-                    <Ionicons name="person-outline" size={16} color="#f87b1b" />
-                    <Text style={styles.metadataSmallValue}>{author}</Text>
+        {(mediaType === "image" || mediaType === "video") &&
+          showMetadata &&
+          hasMetadata && (
+            <View style={styles.metadataOverlay}>
+              <View style={styles.metadataCard}>
+                <View style={styles.metadataRow}>
+                  {author && (
+                    <View style={styles.metadataItem}>
+                      <Ionicons
+                        name="person-outline"
+                        size={16}
+                        color="#f87b1b"
+                      />
+                      <Text style={styles.metadataSmallValue}>{author}</Text>
+                    </View>
+                  )}
+                  {createdAt && (
+                    <View style={styles.metadataItem}>
+                      <Ionicons
+                        name="calendar-outline"
+                        size={16}
+                        color="#f87b1b"
+                      />
+                      <Text style={styles.metadataSmallValue}>
+                        {formatDate(createdAt)}
+                      </Text>
+                    </View>
+                  )}
+                  {level !== undefined && (
+                    <View style={styles.metadataItem}>
+                      <Ionicons
+                        name="warning-outline"
+                        size={16}
+                        color="#f87b1b"
+                      />
+                      <Text style={styles.metadataSmallValue}>
+                        Sévérité: {level}
+                      </Text>
+                    </View>
+                  )}
+                  {mode && (
+                    <View style={styles.metadataItem}>
+                      <Ionicons
+                        name={
+                          mode === "capture"
+                            ? "camera-outline"
+                            : "cloud-upload-outline"
+                        }
+                        size={16}
+                        color="#f87b1b"
+                      />
+                      <Text style={styles.metadataSmallValue}>
+                        {mode === "capture" ? "Capturé" : "Importé"}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                {voiceNoteUrl && (
+                  <View style={styles.metadataSection}>
+                    <Text style={styles.metadataLabel}>Note Vocale</Text>
+                    <View style={styles.miniPlayerContainer}>
+                      <Pressable
+                        style={styles.miniPlayButton}
+                        onPress={handlePlayPause}
+                        disabled={isLoading}
+                      >
+                        <Ionicons
+                          name={isPlaying ? "pause" : "play"}
+                          size={20}
+                          color="#FFFFFF"
+                        />
+                      </Pressable>
+                      <View style={styles.miniProgressContainer}>
+                        <View style={styles.miniProgressBar}>
+                          <View
+                            style={[
+                              styles.miniProgressFill,
+                              {
+                                width: `${duration > 0 ? (position / duration) * 100 : 0}%`,
+                              },
+                            ]}
+                          />
+                        </View>
+                        <Pressable
+                          style={styles.progressTouchable}
+                          onPress={(event) => {
+                            const { locationX } = event.nativeEvent;
+                            const progressBarWidth = screenWidth * 0.5; // Approximate width (adjust based on layouts)
+                            const percentage = locationX / progressBarWidth;
+                            const newPosition = percentage * duration;
+                            handleSeek(newPosition);
+                          }}
+                        />
+                      </View>
+                      <Text style={styles.miniTimeText}>
+                        {formatTime(position)} / {formatTime(duration)}
+                      </Text>
+                    </View>
                   </View>
                 )}
-                {createdAt && (
-                  <View style={styles.metadataItem}>
-                    <Ionicons
-                      name="calendar-outline"
-                      size={16}
-                      color="#f87b1b"
-                    />
-                    <Text style={styles.metadataSmallValue}>
-                      {formatDate(createdAt)}
-                    </Text>
+                {/* Title Section (Moved here as requested) */}
+                {title && (
+                  <View style={styles.metadataSection}>
+                    <Text style={styles.metadataValue}>{title}</Text>
                   </View>
                 )}
-                {level !== undefined && (
-                  <View style={styles.metadataItem}>
-                    <Ionicons
-                      name="warning-outline"
-                      size={16}
-                      color="#f87b1b"
-                    />
-                    <Text style={styles.metadataSmallValue}>
-                      Sévérité: {level}
-                    </Text>
+
+                {chantier && (
+                  <View style={styles.metadataSection}>
+                    <Text style={styles.metadataLabel}>Chantier</Text>
+                    <Text style={styles.metadataValue}>{chantier}</Text>
                   </View>
                 )}
-                {mode && (
-                  <View style={styles.metadataItem}>
-                    <Ionicons
-                      name={
-                        mode === "capture"
-                          ? "camera-outline"
-                          : "cloud-upload-outline"
+
+                {description && (
+                  <View style={styles.metadataSection}>
+                    <Text style={styles.metadataLabel}>Description</Text>
+                    <Pressable
+                      onPress={() =>
+                        setIsDescriptionExpanded(!isDescriptionExpanded)
                       }
-                      size={16}
-                      color="#f87b1b"
-                    />
-                    <Text style={styles.metadataSmallValue}>
-                      {mode === "capture" ? "Capturé" : "Importé"}
-                    </Text>
+                    >
+                      <Text
+                        style={styles.metadataValue}
+                        numberOfLines={isDescriptionExpanded ? undefined : 2}
+                      >
+                        {description}
+                      </Text>
+                      {description.length > 50 && (
+                        <Text
+                          style={{
+                            color: "#007AFF",
+                            fontSize: 12,
+                            marginTop: 4,
+                          }}
+                        >
+                          {isDescriptionExpanded ? "Voir moins" : "Voir plus"}
+                        </Text>
+                      )}
+                    </Pressable>
+                  </View>
+                )}
+
+                {(type || categorie) && (
+                  <View style={styles.metadataRow}>
+                    {type && (
+                      <View style={styles.badge}>
+                        <Ionicons
+                          name="pricetag-outline"
+                          size={14}
+                          color="#007AFF"
+                        />
+                        <Text style={styles.badgeText}>{type}</Text>
+                      </View>
+                    )}
+                    {categorie && (
+                      <View style={styles.badge}>
+                        <Ionicons
+                          name="folder-outline"
+                          size={14}
+                          color="#007AFF"
+                        />
+                        <Text style={styles.badgeText}>{categorie}</Text>
+                      </View>
+                    )}
                   </View>
                 )}
               </View>
-              {voiceNoteUrl && (
-                <View style={styles.metadataSection}>
-                  <Text style={styles.metadataLabel}>Note Vocale</Text>
-                  <View style={styles.miniPlayerContainer}>
-                    <Pressable
-                      style={styles.miniPlayButton}
-                      onPress={handlePlayPause}
-                      disabled={isLoading}
-                    >
-                      <Ionicons
-                        name={isPlaying ? "pause" : "play"}
-                        size={20}
-                        color="#FFFFFF"
-                      />
-                    </Pressable>
-                    <View style={styles.miniProgressContainer}>
-                      <View style={styles.miniProgressBar}>
-                        <View
-                          style={[
-                            styles.miniProgressFill,
-                            {
-                              width: `${duration > 0 ? (position / duration) * 100 : 0}%`,
-                            },
-                          ]}
-                        />
-                      </View>
-                      <Pressable
-                        style={styles.progressTouchable}
-                        onPress={(event) => {
-                          const { locationX } = event.nativeEvent;
-                          const progressBarWidth = screenWidth * 0.5; // Approximate width (adjust based on layouts)
-                          const percentage = locationX / progressBarWidth;
-                          const newPosition = percentage * duration;
-                          handleSeek(newPosition);
-                        }}
-                      />
-                    </View>
-                    <Text style={styles.miniTimeText}>
-                      {formatTime(position)} / {formatTime(duration)}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              {/* Title Section (Moved here as requested) */}
-              {title && (
-                <View style={styles.metadataSection}>
-                  <Text style={styles.metadataValue}>{title}</Text>
-                </View>
-              )}
-
-              {chantier && (
-                <View style={styles.metadataSection}>
-                  <Text style={styles.metadataLabel}>Chantier</Text>
-                  <Text style={styles.metadataValue}>{chantier}</Text>
-                </View>
-              )}
-
-              {description && (
-                <View style={styles.metadataSection}>
-                  <Text style={styles.metadataLabel}>Description</Text>
-                  <Pressable
-                    onPress={() =>
-                      setIsDescriptionExpanded(!isDescriptionExpanded)
-                    }
-                  >
-                    <Text
-                      style={styles.metadataValue}
-                      numberOfLines={isDescriptionExpanded ? undefined : 2}
-                    >
-                      {description}
-                    </Text>
-                    {description.length > 50 && (
-                      <Text
-                        style={{ color: "#007AFF", fontSize: 12, marginTop: 4 }}
-                      >
-                        {isDescriptionExpanded ? "Voir moins" : "Voir plus"}
-                      </Text>
-                    )}
-                  </Pressable>
-                </View>
-              )}
-
-              {(type || categorie) && (
-                <View style={styles.metadataRow}>
-                  {type && (
-                    <View style={styles.badge}>
-                      <Ionicons
-                        name="pricetag-outline"
-                        size={14}
-                        color="#007AFF"
-                      />
-                      <Text style={styles.badgeText}>{type}</Text>
-                    </View>
-                  )}
-                  {categorie && (
-                    <View style={styles.badge}>
-                      <Ionicons
-                        name="folder-outline"
-                        size={14}
-                        color="#007AFF"
-                      />
-                      <Text style={styles.badgeText}>{categorie}</Text>
-                    </View>
-                  )}
-                </View>
-              )}
             </View>
-          </View>
-        )}
+          )}
 
         {/* Backdrop for closing */}
         <Pressable style={styles.backdrop} onPress={onClose} />
