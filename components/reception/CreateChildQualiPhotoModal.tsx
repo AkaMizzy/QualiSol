@@ -6,47 +6,45 @@ import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
 import companyService from "@/services/companyService";
 import { Folder } from "@/services/folderService";
 import {
-  CreateGedInput,
-  Ged,
-  createGed,
-  getAllGeds,
+    CreateGedInput,
+    Ged,
+    createGed,
+    getAllGeds,
 } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { isVideoFile } from "@/utils/mediaUtils";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ResizeMode, Video } from "expo-av";
 import { randomUUID } from "expo-crypto";
-import * as Device from "expo-device";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
 import {
-  Alert,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    Alert,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import {
-  GestureHandlerRootView,
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
+    GestureHandlerRootView,
+    PanGestureHandler,
+    PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
@@ -441,20 +439,9 @@ export function CreateChildQualiPhotoForm({
   };
 
   const getDeviceId = async () => {
-    try {
-      let deviceId = await AsyncStorage.getItem("device_id");
-      if (!deviceId) {
-        deviceId = randomUUID();
-        await AsyncStorage.setItem("device_id", deviceId);
-      }
-      // Combine model name with unique ID for better traceability
-      const brand = Device.brand || "Brand";
-      const modelName = Device.modelName || "Device";
-      return `${brand} ${modelName} - ${deviceId}`;
-    } catch (e) {
-      console.error("Error getting device ID", e);
-      return "Unknown Device";
-    }
+    // Generate a random UUID for this specific creation session
+    // This ensures anonymity and consistency across related records (image + voice)
+    return randomUUID();
   };
 
   const handleSubmit = async () => {

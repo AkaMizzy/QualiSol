@@ -8,10 +8,8 @@ import { getConnectivity } from "@/services/connectivity";
 import { getAllGeds } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ResizeMode, Video } from "expo-av";
 import { randomUUID } from "expo-crypto";
-import * as Device from "expo-device";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -577,21 +575,11 @@ export default function AddImageModal({
     }
 
     // Get Device ID
+    // Get Device ID
     const getDeviceId = async () => {
-      try {
-        let deviceId = await AsyncStorage.getItem("device_id");
-        if (!deviceId) {
-          deviceId = randomUUID();
-          await AsyncStorage.setItem("device_id", deviceId);
-        }
-        // Combine model name with unique ID for better traceability
-        const brand = Device.brand || "Brand";
-        const modelName = Device.modelName || "Device";
-        return `${brand} ${modelName} - ${deviceId}`;
-      } catch (e) {
-        console.error("Error getting device ID", e);
-        return "Unknown Device";
-      }
+      // Generate a random UUID for this specific creation session
+      // This ensures anonymity and consistency across related records (image + voice)
+      return randomUUID();
     };
 
     getDeviceId().then((deviceId) => {
@@ -829,7 +817,6 @@ export default function AddImageModal({
               <View style={styles.compactSection}>
                 <VoiceNoteRecorder
                   onRecordingComplete={handleRecordingComplete}
-                  showTranscribeButton={false}
                 />
 
                 {/* First Button Set - Compact Section */}

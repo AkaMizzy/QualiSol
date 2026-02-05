@@ -84,7 +84,7 @@ export async function syncPendingRecords(token: string): Promise<SyncResult> {
             `voice_${Date.now()}.m4a`;
           await createGed(token, {
             idsource: record.id,
-            title: `${record.title} - Voice Note`,
+            title: `${record.title} Voice Note`,
             kind: "voice_note",
             author: record.author,
             file: {

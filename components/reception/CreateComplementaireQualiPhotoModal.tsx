@@ -1,42 +1,40 @@
 import { useAuth } from "@/contexts/AuthContext";
 import companyService from "@/services/companyService";
 import {
-  createGed,
-  CreateGedInput,
-  Ged,
-  getAllGeds,
+    createGed,
+    CreateGedInput,
+    Ged,
+    getAllGeds,
 } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { isVideoFile } from "@/utils/mediaUtils";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ResizeMode, Video } from "expo-av";
 import * as Crypto from "expo-crypto";
-import * as Device from "expo-device";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CaptureModal from "../CaptureModal";
@@ -66,17 +64,9 @@ function CreateComplementaireQualiPhotoForm({
   parentTitle,
 }: FormProps) {
   const getDeviceId = async () => {
-    try {
-      let uniqueId = await AsyncStorage.getItem("device_unique_id");
-      if (!uniqueId) {
-        uniqueId = Crypto.randomUUID();
-        await AsyncStorage.setItem("device_unique_id", uniqueId);
-      }
-      const deviceName = `${Device.brand || "Unknown"} ${Device.modelName || "Device"}`;
-      return `${deviceName}-${uniqueId}`;
-    } catch (e) {
-      return `Unknown-${Crypto.randomUUID()}`;
-    }
+    // Generate a random UUID for this specific creation session
+    // This ensures anonymity and consistency across related records (image + voice)
+    return Crypto.randomUUID();
   };
 
   const { token, user } = useAuth();

@@ -220,7 +220,7 @@ export default function SharedGalerieScreen({
         if (data.voiceNote) {
           await createGed(token, {
             idsource: createdGedResponse.data.id,
-            title: `${data.title} - Voice Note`,
+            title: `${data.title} Voice Note`,
             kind: "voice_note",
             author: data.author,
             idauthor: data.idauthor,
