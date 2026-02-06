@@ -13,22 +13,23 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    PanGestureHandler,
-    PanGestureHandlerGestureEvent,
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
+import VoiceNoteRecorder, { VoiceNoteRecorderRef } from "../VoiceNoteRecorder";
 
 const MAX_IMAGES = 20;
 
@@ -87,7 +88,14 @@ export default function BulkAddImageModal({
     null,
   );
   const [severitySliderWidth, setSeveritySliderWidth] = useState(0);
-  const [chantier, setChantier] = useState("");
+
+  // Voice note state - shared across all images
+  const [voiceNote, setVoiceNote] = useState<{
+    uri: string;
+    type: string;
+    name: string;
+  } | null>(null);
+  const voiceNoteRecorderRef = useRef<VoiceNoteRecorderRef>(null);
 
   const [anomalieTypes, setAnomalieTypes] = useState<Anomalie1[]>([]);
   const [anomalieCategories, setAnomalieCategories] = useState<Anomalie2[]>([]);
@@ -340,6 +348,19 @@ export default function BulkAddImageModal({
     return "Basse";
   };
 
+  const handleRecordingComplete = useCallback((uri: string | null) => {
+    if (uri) {
+      const voiceNoteData = {
+        uri,
+        type: "audio/m4a",
+        name: `voicenote-${Date.now()}.m4a`,
+      };
+      setVoiceNote(voiceNoteData);
+    } else {
+      setVoiceNote(null);
+    }
+  }, []);
+
   const resetForm = () => {
     setSelectedImages([]);
     setTitle("");
@@ -347,7 +368,8 @@ export default function BulkAddImageModal({
     setLevel(5);
     setSelectedType(null);
     setSelectedCategorie(null);
-    setChantier("");
+    setVoiceNote(null);
+    voiceNoteRecorderRef.current?.forceStopAndCleanup();
   };
 
   const handleBulkUpload = async () => {
@@ -441,11 +463,11 @@ export default function BulkAddImageModal({
             title: title || `Transfert ${i + 1}`,
             description: description,
             image: image,
-            voiceNote: null,
+            voiceNote: voiceNote, // Shared voice note for all images
             author: authorName,
             idauthor: user?.id,
             iddevice: deviceId,
-            chantier: chantier,
+            chantier: "",
             latitude: latitude,
             longitude: longitude,
             altitude: altitude,
@@ -543,17 +565,13 @@ export default function BulkAddImageModal({
                 )}
               </View>
 
-              {/* Image Selection Button */}
+              {/* Image Selection Frame */}
               <TouchableOpacity
-                style={styles.selectButton}
+                style={styles.imagePickerPlaceholder}
                 onPress={handlePickImages}
               >
-                <Ionicons
-                  name="images-outline"
-                  size={24}
-                  color={COLORS.white}
-                />
-                <Text style={styles.selectButtonText}>
+                <Ionicons name="images-outline" size={48} color={COLORS.gray} />
+                <Text style={styles.imagePickerText}>
                   {selectedImages.length === 0
                     ? "Sélectionner les images"
                     : `${selectedImages.length} image(s) sélectionnée(s)`}
@@ -600,208 +618,210 @@ export default function BulkAddImageModal({
                       </View>
                     ))}
                   </ScrollView>
-
-                  {/* Metadata Form */}
-                  {/* Severity Slider */}
-                  <View style={styles.sectionContainer}>
-                    <Text style={styles.severityTitle}>Niveau de sévérité</Text>
-                    <PanGestureHandler onGestureEvent={onSeverityPan}>
-                      <View
-                        style={styles.severityContainer}
-                        onLayout={(event) =>
-                          setSeveritySliderWidth(event.nativeEvent.layout.width)
-                        }
-                      >
-                        <View style={styles.severityHeader}>
-                          <Text
-                            style={[
-                              styles.severityValue,
-                              { color: getSeverityColor(level) },
-                            ]}
-                          >
-                            {level}/10
-                          </Text>
-                          <View
-                            style={[
-                              styles.severityBadge,
-                              { backgroundColor: getSeverityColor(level) },
-                            ]}
-                          >
-                            <Text style={styles.severityBadgeText}>
-                              {getSeverityText(level)}
-                            </Text>
-                          </View>
-                        </View>
-                        <View style={styles.severitySlider}>
-                          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
-                            <TouchableOpacity
-                              key={value}
-                              style={[
-                                styles.severityDot,
-                                level >= value && [
-                                  styles.severityDotActive,
-                                  {
-                                    backgroundColor: getSeverityColor(level),
-                                  },
-                                ],
-                                level === value && [
-                                  styles.severityDotSelected,
-                                  {
-                                    borderColor: getSeverityColor(level),
-                                  },
-                                ],
-                              ]}
-                              onPress={() => setLevel(value)}
-                              activeOpacity={0.7}
-                            />
-                          ))}
-                        </View>
-                      </View>
-                    </PanGestureHandler>
-                  </View>
-
-                  {/* Type Selection */}
-                  {!loadingAnomalies && anomalieTypes.length > 0 && (
-                    <View style={styles.sectionContainer}>
-                      <Text style={styles.sectionTitle}>
-                        Type d&apos;anomalie
-                      </Text>
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.typeScrollView}
-                      >
-                        {anomalieTypes.map((type) => (
-                          <TouchableOpacity
-                            key={type.id}
-                            style={[
-                              styles.typeButton,
-                              selectedType === type.anomalie &&
-                                styles.typeButtonSelected,
-                            ]}
-                            onPress={() =>
-                              setSelectedType(type.anomalie || null)
-                            }
-                          >
-                            <Ionicons
-                              name="alert-circle-outline"
-                              size={20}
-                              color={
-                                selectedType === type.anomalie
-                                  ? "#FFFFFF"
-                                  : "#11224e"
-                              }
-                            />
-                            <Text
-                              style={[
-                                styles.typeButtonText,
-                                selectedType === type.anomalie &&
-                                  styles.typeButtonTextSelected,
-                              ]}
-                            >
-                              {type.anomalie || "Sans nom"}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    </View>
-                  )}
-
-                  {/* Category Selection */}
-                  {!loadingAnomalies && anomalieCategories.length > 0 && (
-                    <View style={styles.sectionContainer}>
-                      <Text style={styles.sectionTitle}>
-                        Catégorie d&apos;anomalie
-                      </Text>
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.categoryScrollView}
-                      >
-                        {anomalieCategories.map((category) => (
-                          <TouchableOpacity
-                            key={category.id}
-                            style={[
-                              styles.categoryButton,
-                              selectedCategorie === category.anomalie &&
-                                styles.categoryButtonSelected,
-                            ]}
-                            onPress={() =>
-                              setSelectedCategorie(category.anomalie || null)
-                            }
-                          >
-                            <Text
-                              style={[
-                                styles.categoryButtonText,
-                                selectedCategorie === category.anomalie &&
-                                  styles.categoryButtonTextSelected,
-                              ]}
-                            >
-                              {category.anomalie || "Sans nom"}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    </View>
-                  )}
-
-                  {/* Title */}
-                  <View style={styles.form}>
-                    <Text style={styles.label}>Titre (optionnel)</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="ex: 'Transfert inspection site'"
-                      placeholderTextColor={COLORS.gray}
-                      value={title}
-                      onChangeText={setTitle}
-                    />
-                  </View>
-
-                  {/* Chantier */}
-                  <View style={styles.form}>
-                    <Text style={styles.label}>Chantier (optionnel)</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="ex: 'Chantier A'"
-                      placeholderTextColor={COLORS.gray}
-                      value={chantier}
-                      onChangeText={setChantier}
-                    />
-                  </View>
-
-                  {/* Description */}
-                  <View style={styles.form}>
-                    <Text style={styles.label}>Description (optionnel)</Text>
-                    <TextInput
-                      style={[styles.input, styles.textArea]}
-                      placeholder="Description commune à toutes les images"
-                      placeholderTextColor={COLORS.gray}
-                      value={description}
-                      onChangeText={setDescription}
-                      multiline
-                      numberOfLines={4}
-                    />
-                  </View>
-
-                  {/* Upload Button */}
-                  <View style={styles.buttonContainer}>
-                    <TouchableOpacity
-                      style={[
-                        styles.button,
-                        styles.addButton,
-                        (isStorageQuotaReached || isUploading) &&
-                          styles.addButtonDisabled,
-                      ]}
-                      onPress={handleBulkUpload}
-                      disabled={isStorageQuotaReached || isUploading}
-                    >
-                      <Text style={styles.buttonText}>
-                        {isUploading ? "Transfert en cours..." : buttonText}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
                 </>
               )}
+
+              {/* Metadata Form - Always visible */}
+              {/* Severity Slider */}
+              <View style={styles.sectionContainer}>
+                <Text style={styles.severityTitle}>Niveau de sévérité</Text>
+                <PanGestureHandler onGestureEvent={onSeverityPan}>
+                  <View
+                    style={styles.severityContainer}
+                    onLayout={(event) =>
+                      setSeveritySliderWidth(event.nativeEvent.layout.width)
+                    }
+                  >
+                    <View style={styles.severityHeader}>
+                      <Text
+                        style={[
+                          styles.severityValue,
+                          { color: getSeverityColor(level) },
+                        ]}
+                      >
+                        {level}/10
+                      </Text>
+                      <View
+                        style={[
+                          styles.severityBadge,
+                          { backgroundColor: getSeverityColor(level) },
+                        ]}
+                      >
+                        <Text style={styles.severityBadgeText}>
+                          {getSeverityText(level)}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.severitySlider}>
+                      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
+                        <TouchableOpacity
+                          key={value}
+                          style={[
+                            styles.severityDot,
+                            level >= value && [
+                              styles.severityDotActive,
+                              {
+                                backgroundColor: getSeverityColor(level),
+                              },
+                            ],
+                            level === value && [
+                              styles.severityDotSelected,
+                              {
+                                borderColor: getSeverityColor(level),
+                              },
+                            ],
+                          ]}
+                          onPress={() => setLevel(value)}
+                          activeOpacity={0.7}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                </PanGestureHandler>
+              </View>
+
+              {/* Type Selection */}
+              {!loadingAnomalies && anomalieTypes.length > 0 && (
+                <View style={styles.sectionContainer}>
+                  <Text style={styles.sectionTitle}>Type d&apos;anomalie</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.typeScrollView}
+                  >
+                    {anomalieTypes.map((type) => (
+                      <TouchableOpacity
+                        key={type.id}
+                        style={[
+                          styles.typeButton,
+                          selectedType === type.anomalie &&
+                            styles.typeButtonSelected,
+                        ]}
+                        onPress={() => setSelectedType(type.anomalie || null)}
+                      >
+                        <Ionicons
+                          name="alert-circle-outline"
+                          size={20}
+                          color={
+                            selectedType === type.anomalie
+                              ? "#FFFFFF"
+                              : "#11224e"
+                          }
+                        />
+                        <Text
+                          style={[
+                            styles.typeButtonText,
+                            selectedType === type.anomalie &&
+                              styles.typeButtonTextSelected,
+                          ]}
+                        >
+                          {type.anomalie || "Sans nom"}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* Category Selection */}
+              {!loadingAnomalies && anomalieCategories.length > 0 && (
+                <View style={styles.sectionContainer}>
+                  <Text style={styles.sectionTitle}>
+                    Catégorie d&apos;anomalie
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.categoryScrollView}
+                  >
+                    {anomalieCategories.map((category) => (
+                      <TouchableOpacity
+                        key={category.id}
+                        style={[
+                          styles.categoryButton,
+                          selectedCategorie === category.anomalie &&
+                            styles.categoryButtonSelected,
+                        ]}
+                        onPress={() =>
+                          setSelectedCategorie(category.anomalie || null)
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.categoryButtonText,
+                            selectedCategorie === category.anomalie &&
+                              styles.categoryButtonTextSelected,
+                          ]}
+                        >
+                          {category.anomalie || "Sans nom"}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* Title */}
+              <View style={styles.form}>
+                <Text style={styles.label}>Titre (optionnel)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="ex: 'Transfert inspection site'"
+                  placeholderTextColor={COLORS.gray}
+                  value={title}
+                  onChangeText={setTitle}
+                />
+              </View>
+
+              {/* Description */}
+              <View style={styles.form}>
+                <Text style={styles.label}>Description (optionnel)</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Description commune à toutes les images"
+                  placeholderTextColor={COLORS.gray}
+                  value={description}
+                  onChangeText={setDescription}
+                  multiline
+                  numberOfLines={4}
+                />
+              </View>
+
+              {/* Voice Note - Shared for all images */}
+              <View style={styles.voiceNoteSection}>
+                <View style={styles.voiceNoteHeader}>
+                  <Ionicons
+                    name="mic-outline"
+                    size={20}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.voiceNoteTitle}>
+                    Note vocale (commune à toutes les images)
+                  </Text>
+                </View>
+                <VoiceNoteRecorder
+                  ref={voiceNoteRecorderRef}
+                  onRecordingComplete={handleRecordingComplete}
+                />
+              </View>
+
+              {/* Upload Button */}
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.button,
+                    styles.addButton,
+                    (isStorageQuotaReached || isUploading) &&
+                      styles.addButtonDisabled,
+                  ]}
+                  onPress={handleBulkUpload}
+                  disabled={isStorageQuotaReached || isUploading}
+                >
+                  <Text style={styles.buttonText}>
+                    {isUploading ? "Transfert en cours..." : buttonText}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </ScrollView>
           </View>
         </View>
@@ -1196,5 +1216,37 @@ const styles = StyleSheet.create({
     fontFamily: FONT.medium,
     fontSize: SIZES.medium,
     color: COLORS.gray,
+  },
+  imagePickerPlaceholder: {
+    width: "100%",
+    height: 200,
+    backgroundColor: COLORS.lightWhite,
+    borderRadius: SIZES.medium,
+    borderWidth: 2,
+    borderColor: COLORS.gray2,
+    borderStyle: "dashed",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: SIZES.medium,
+  },
+  imagePickerText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.medium,
+    color: COLORS.gray,
+    marginTop: SIZES.small,
+  },
+  voiceNoteSection: {
+    marginBottom: SIZES.medium,
+  },
+  voiceNoteHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SIZES.small,
+    marginBottom: SIZES.small,
+  },
+  voiceNoteTitle: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.medium,
+    color: COLORS.primary,
   },
 });
