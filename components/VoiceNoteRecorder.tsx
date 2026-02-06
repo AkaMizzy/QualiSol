@@ -1,7 +1,12 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Audio } from "expo-av";
-import React, { useEffect, useState } from "react";
+import React, {
+    forwardRef,
+    useEffect,
+    useImperativeHandle,
+    useState,
+} from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -11,13 +16,18 @@ import {
     View,
 } from "react-native";
 
+export interface VoiceNoteRecorderRef {
+  forceStopAndCleanup: () => Promise<void>;
+}
+
 type VoiceNoteRecorderProps = {
   onRecordingComplete: (uri: string | null) => void;
 };
 
-export default function VoiceNoteRecorder({
-  onRecordingComplete,
-}: VoiceNoteRecorderProps) {
+const VoiceNoteRecorder = forwardRef<
+  VoiceNoteRecorderRef,
+  VoiceNoteRecorderProps
+>(({ onRecordingComplete }, ref) => {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [recordingUri, setRecordingUri] = useState<string | null>(null);
@@ -47,6 +57,39 @@ export default function VoiceNoteRecorder({
     }
     return () => clearInterval(interval);
   }, [status]);
+
+  // Expose cleanup method to parent via ref
+  useImperativeHandle(ref, () => ({
+    forceStopAndCleanup: async () => {
+      // Force stop any active recording
+      if (recording) {
+        try {
+          await recording.stopAndUnloadAsync();
+          await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+        } catch (err) {
+          console.error("Error force-stopping recording:", err);
+        }
+        setRecording(null);
+      }
+
+      // Cleanup sound
+      if (sound) {
+        try {
+          await sound.stopAsync();
+          await sound.unloadAsync();
+        } catch (err) {
+          console.error("Error cleaning up sound:", err);
+        }
+        setSound(null);
+      }
+
+      // Reset all state
+      setRecordingUri(null);
+      setStatus("idle");
+      setDuration(0);
+      onRecordingComplete(null);
+    },
+  }));
 
   async function startRecording() {
     try {
@@ -186,7 +229,9 @@ export default function VoiceNoteRecorder({
       <Text style={styles.text}>Ajouter une note vocale</Text>
     </TouchableOpacity>
   );
-}
+});
+
+export default VoiceNoteRecorder;
 
 const styles = StyleSheet.create({
   actionsContainer: {

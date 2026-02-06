@@ -1,4 +1,6 @@
-import VoiceNoteRecorder from "@/components/VoiceNoteRecorder";
+import VoiceNoteRecorder, {
+  VoiceNoteRecorderRef,
+} from "@/components/VoiceNoteRecorder";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { Anomalie1, getAllAnomalies1 } from "@/services/anomalie1Service";
@@ -14,23 +16,23 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    Alert,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Alert,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import {
-    PanGestureHandler,
-    PanGestureHandlerGestureEvent,
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
@@ -139,6 +141,9 @@ export default function AddImageModal({
   const [annotatorBaseUri, setAnnotatorBaseUri] = useState<string | null>(null);
 
   const [captureModalVisible, setCaptureModalVisible] = useState(false);
+
+  // Ref for voice note recorder cleanup
+  const voiceNoteRecorderRef = useRef<VoiceNoteRecorderRef>(null);
 
   const handleCombineText = async () => {
     if (!iaText) {
@@ -364,7 +369,10 @@ export default function AddImageModal({
 
       return () => clearTimeout(timer);
     } else if (!visible && prevVisible) {
-      // Modal just closed, reset form
+      // Modal just closed, force cleanup any active recording
+      voiceNoteRecorderRef.current?.forceStopAndCleanup();
+
+      // Reset form
       setTitle("");
       setDescription("");
       setImage(null);
@@ -514,7 +522,10 @@ export default function AddImageModal({
     return "Basse";
   };
 
-  const resetForm = () => {
+  const resetForm = async () => {
+    // Force cleanup recording first
+    await voiceNoteRecorderRef.current?.forceStopAndCleanup();
+
     setTitle("");
     setDescription("");
     setImage(null);
@@ -529,7 +540,10 @@ export default function AddImageModal({
     setMode("upload");
   };
 
-  const handleAdd = (shouldClose: boolean) => {
+  const handleAdd = async (shouldClose: boolean) => {
+    // Force stop any active recording before submission
+    await voiceNoteRecorderRef.current?.forceStopAndCleanup();
+
     if (!image) {
       Alert.alert("Informations manquantes", "Veuillez fournir une image.");
       return;
@@ -673,7 +687,13 @@ export default function AddImageModal({
         style={styles.keyboardAvoidingView}
       >
         <View style={styles.modalContainer}>
-          <TouchableOpacity style={styles.modalBackdrop} onPress={onClose} />
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            onPress={async () => {
+              await voiceNoteRecorderRef.current?.forceStopAndCleanup();
+              onClose();
+            }}
+          />
           <View style={styles.modalContent}>
             <ScrollView
               showsVerticalScrollIndicator={false}
@@ -682,7 +702,13 @@ export default function AddImageModal({
               contentContainerStyle={styles.scrollViewContent}
             >
               <View style={styles.headerContainer}>
-                <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={async () => {
+                    await voiceNoteRecorderRef.current?.forceStopAndCleanup();
+                    onClose();
+                  }}
+                >
                   <Ionicons name="close" size={32} color={COLORS.primary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{modalTitle}</Text>
@@ -823,6 +849,7 @@ export default function AddImageModal({
               {/* COMPACT SECTION - Always Visible */}
               <View style={styles.compactSection}>
                 <VoiceNoteRecorder
+                  ref={voiceNoteRecorderRef}
                   onRecordingComplete={handleRecordingComplete}
                 />
 
@@ -830,7 +857,10 @@ export default function AddImageModal({
                 <View style={styles.buttonContainer}>
                   <TouchableOpacity
                     style={[styles.button, styles.cancelButton]}
-                    onPress={onClose}
+                    onPress={async () => {
+                      await voiceNoteRecorderRef.current?.forceStopAndCleanup();
+                      onClose();
+                    }}
                   >
                     <Text style={[styles.buttonText, styles.cancelButtonText]}>
                       Arrêt
@@ -1052,7 +1082,10 @@ export default function AddImageModal({
                   <View style={styles.buttonContainer}>
                     <TouchableOpacity
                       style={[styles.button, styles.cancelButton]}
-                      onPress={onClose}
+                      onPress={async () => {
+                        await voiceNoteRecorderRef.current?.forceStopAndCleanup();
+                        onClose();
+                      }}
                     >
                       <Text
                         style={[styles.buttonText, styles.cancelButtonText]}
