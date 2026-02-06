@@ -480,7 +480,12 @@ export default function SharedGalerieScreen({
           </View>
 
           {/* Add Button first */}
-          <View style={{ alignItems: "center", paddingVertical: 20 }}>
+          <View
+            style={{
+              alignItems: "center",
+              paddingVertical: 20,
+            }}
+          >
             <TouchableOpacity
               style={{
                 width: 60,
