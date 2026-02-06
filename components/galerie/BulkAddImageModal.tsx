@@ -59,7 +59,7 @@ interface BulkAddImageModalProps {
       mode?: "upload" | "capture";
     },
     shouldClose: boolean,
-  ) => void;
+  ) => Promise<void>;
   modalTitle?: string;
   buttonText?: string;
 }
@@ -485,8 +485,8 @@ export default function BulkAddImageModal({
 
         const deviceId = randomUUID();
 
-        // Call onAdd for each image
-        onAdd(
+        // Call onAdd for each image and wait for completion
+        await onAdd(
           {
             title: title || `Transfert ${i + 1}`,
             description: description,
@@ -670,16 +670,6 @@ export default function BulkAddImageModal({
 
               {/* Voice Note - Shared for all images */}
               <View style={styles.voiceNoteSection}>
-                <View style={styles.voiceNoteHeader}>
-                  <Ionicons
-                    name="mic-outline"
-                    size={20}
-                    color={COLORS.primary}
-                  />
-                  <Text style={styles.voiceNoteTitle}>
-                    Note vocale (commune \u00e0 toutes les images)
-                  </Text>
-                </View>
                 <VoiceNoteRecorder
                   ref={voiceNoteRecorderRef}
                   onRecordingComplete={handleRecordingComplete}
@@ -1365,7 +1355,7 @@ const styles = StyleSheet.create({
     marginTop: SIZES.small,
   },
   voiceNoteSection: {
-    marginBottom: SIZES.medium,
+    marginBottom: SIZES.small,
   },
   voiceNoteHeader: {
     flexDirection: "row",
