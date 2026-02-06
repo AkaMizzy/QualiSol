@@ -33,10 +33,7 @@ export default function GalerieCard({
   isVideo,
 }: GalerieCardProps) {
   const GofG = API_CONFIG.BASE_URL;
-  const formattedDate = new Date(item.created_at).toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
+  const formattedTime = new Date(item.created_at).toLocaleTimeString("fr-FR", {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -146,38 +143,21 @@ export default function GalerieCard({
         })()}
 
         <View style={styles.overlay}>
-          <Text style={styles.title} numberOfLines={1}>
-            {item.author}
+          {item.author && (
+            <Text style={styles.overlayText} numberOfLines={1}>
+              {item.author}
+            </Text>
+          )}
+          {item.chantier && (
+            <Text style={styles.overlayText} numberOfLines={1}>
+              {item.chantier}
+            </Text>
+          )}
+          <Text style={styles.overlayTime} numberOfLines={1}>
+            {formattedTime}
           </Text>
-          <Text style={styles.date}>{formattedDate}</Text>
         </View>
       </View>
-      {item.author && (
-        <View style={styles.content}>
-          <View style={styles.detailsContainer}>
-            {item.chantier && (
-              <Text style={styles.detailText} numberOfLines={1}>
-                {item.chantier}
-              </Text>
-            )}
-            {item.title && (
-              <Text style={styles.author} numberOfLines={1}>
-                {item.title}
-              </Text>
-            )}
-            {item.type && (
-              <Text style={styles.detailText} numberOfLines={1}>
-                {item.type}
-              </Text>
-            )}
-            {item.categorie && (
-              <Text style={styles.detailText} numberOfLines={1}>
-                {item.categorie}
-              </Text>
-            )}
-          </View>
-        </View>
-      )}
     </TouchableOpacity>
   );
 }
@@ -186,8 +166,8 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     margin: 8,
-    backgroundColor: COLORS.white,
     borderRadius: SIZES.medium,
+    overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -195,61 +175,35 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   imageContainer: {
-    borderTopLeftRadius: SIZES.medium,
-    borderTopRightRadius: SIZES.medium,
+    borderRadius: SIZES.medium,
     overflow: "hidden",
   },
   image: {
     width: "100%",
-    height: 150,
+    height: 220,
   },
   overlay: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    paddingHorizontal: SIZES.medium,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    paddingHorizontal: SIZES.small + 2,
     paddingVertical: SIZES.small,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  content: {
-    padding: SIZES.medium,
-  },
-  detailsContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-  },
-  title: {
-    fontFamily: FONT.bold,
-    fontSize: SIZES.medium,
-    color: COLORS.primary,
-    flex: 1,
-    marginRight: SIZES.small,
-  },
-  date: {
-    fontWeight: "600",
-    fontSize: SIZES.small,
+  overlayText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.small + 1,
     color: "#f87b1b",
+    flex: 1,
   },
-  author: {
-    fontFamily: FONT.regular,
-    fontSize: SIZES.medium,
-    color: COLORS.gray,
-    marginRight: SIZES.small,
-  },
-  detailText: {
-    fontFamily: FONT.regular,
-    fontSize: SIZES.small,
-    color: COLORS.primary,
-    marginRight: SIZES.small,
-    backgroundColor: COLORS.lightWhite,
-    paddingHorizontal: SIZES.small / 2,
-    paddingVertical: 2,
-    borderRadius: 4,
+  overlayTime: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.small + 1,
+    color: "#f87b1b",
   },
   voiceNoteIcon: {
     position: "absolute",

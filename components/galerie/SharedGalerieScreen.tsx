@@ -584,6 +584,14 @@ export default function SharedGalerieScreen({
             ? "Prendre un constat"
             : "Prendre une photo ou vidéo"
         }
+        modalTitle={
+          creationMode === "capture"
+            ? "Ajouter un constat"
+            : "Ajouter une image"
+        }
+        buttonText={
+          creationMode === "capture" ? "Ajouter le constat" : "Ajouter l'image"
+        }
       />
       {selectedItem && (
         <PreviewModal

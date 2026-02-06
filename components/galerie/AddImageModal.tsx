@@ -14,23 +14,23 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Alert,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    Alert,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import {
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
+    PanGestureHandler,
+    PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
@@ -66,6 +66,8 @@ interface AddImageModalProps {
   openCameraOnShow?: boolean;
   allowedMode?: "upload" | "capture" | "both";
   placeholderText?: string;
+  modalTitle?: string;
+  buttonText?: string;
 }
 
 export default function AddImageModal({
@@ -75,6 +77,8 @@ export default function AddImageModal({
   openCameraOnShow = false,
   allowedMode = "both",
   placeholderText = "Prendre une photo ou vidéo",
+  modalTitle = "Ajouter",
+  buttonText = "Ajouter l'image",
 }: AddImageModalProps) {
   const { token, user } = useAuth();
   const [title, setTitle] = useState("");
@@ -681,7 +685,7 @@ export default function AddImageModal({
                 <TouchableOpacity style={styles.closeButton} onPress={onClose}>
                   <Ionicons name="close" size={32} color={COLORS.primary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Constat</Text>
+                <Text style={styles.headerTitle}>{modalTitle}</Text>
                 {/* Network Status Indicator - only show when offline */}
                 {networkStatus === "offline" && (
                   <View style={styles.networkStatusBadge}>
@@ -841,7 +845,7 @@ export default function AddImageModal({
                     onPress={() => handleAdd(false)}
                     disabled={isStorageQuotaReached}
                   >
-                    <Text style={styles.buttonText}>Ajouter l&apos;image</Text>
+                    <Text style={styles.buttonText}>{buttonText}</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -1065,9 +1069,7 @@ export default function AddImageModal({
                       onPress={() => handleAdd(false)}
                       disabled={isStorageQuotaReached}
                     >
-                      <Text style={styles.buttonText}>
-                        Ajouter l&apos;image
-                      </Text>
+                      <Text style={styles.buttonText}>{buttonText}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
