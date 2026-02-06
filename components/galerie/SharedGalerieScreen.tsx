@@ -479,6 +479,32 @@ export default function SharedGalerieScreen({
             )}
           </View>
 
+          {/* Add Button first */}
+          <View style={{ alignItems: "center", paddingVertical: 20 }}>
+            <TouchableOpacity
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: 30,
+                backgroundColor: COLORS.primary,
+                justifyContent: "center",
+                alignItems: "center",
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 3.84,
+                elevation: 5,
+              }}
+              onPress={() => setModalVisible(true)}
+            >
+              <Image
+                source={customButtonIcon || ICONS.cameraPng}
+                style={{ width: 32, height: 32 }}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Pagination at the bottom */}
           {totalPages > 1 && (
             <View style={styles.paginationContainer}>
               <TouchableOpacity
@@ -545,18 +571,6 @@ export default function SharedGalerieScreen({
               </TouchableOpacity>
             </View>
           )}
-          {/* Add Button now above pagination */}
-          <View style={{ alignItems: "center", paddingVertical: 20 }}>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setModalVisible(true)}
-            >
-              <Image
-                source={customButtonIcon || ICONS.cameraPng}
-                style={{ width: 32, height: 32 }}
-              />
-            </TouchableOpacity>
-          </View>
           <View style={{ height: 100 }} />
         </ScrollView>
       )}
