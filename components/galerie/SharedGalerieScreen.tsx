@@ -428,9 +428,16 @@ export default function SharedGalerieScreen({
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader user={user || undefined} />
-      <View style={styles.filterContainer}>
-        {/* Network status indicator - only show when offline */}
-        {networkStatus === "offline" && (
+
+      {/* Network status indicator - only show when offline */}
+      {networkStatus === "offline" && (
+        <View
+          style={{
+            flexDirection: "row",
+            paddingHorizontal: SIZES.medium,
+            paddingVertical: SIZES.small,
+          }}
+        >
           <View style={styles.networkBadge}>
             <Ionicons
               name="cloud-offline-outline"
@@ -439,8 +446,8 @@ export default function SharedGalerieScreen({
             />
             <Text style={styles.networkText}>Hors ligne</Text>
           </View>
-        )}
-      </View>
+        </View>
+      )}
 
       {loading && !refreshing ? (
         <View style={styles.skeletonContainer}>
