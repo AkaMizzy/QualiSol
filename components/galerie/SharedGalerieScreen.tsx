@@ -545,18 +545,21 @@ export default function SharedGalerieScreen({
               </TouchableOpacity>
             </View>
           )}
-          <View style={{ height: 70 }} />
+          {/* Add Button now above pagination */}
+          <View style={{ alignItems: "center", paddingVertical: 20 }}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setModalVisible(true)}
+            >
+              <Image
+                source={customButtonIcon || ICONS.cameraPng}
+                style={{ width: 32, height: 32 }}
+              />
+            </TouchableOpacity>
+          </View>
+          <View style={{ height: 100 }} />
         </ScrollView>
       )}
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setModalVisible(true)}
-      >
-        <Image
-          source={customButtonIcon || ICONS.cameraPng}
-          style={{ width: 32, height: 32 }}
-        />
-      </TouchableOpacity>
       <AddImageModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
