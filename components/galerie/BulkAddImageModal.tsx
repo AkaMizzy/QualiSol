@@ -239,25 +239,37 @@ export default function BulkAddImageModal({
     }
   }, [visible]);
 
-  // Reset form when modal closes
+  // Auto-open image picker when modal opens, show modal content only after images selected
   useEffect(() => {
     const prevVisible = prevVisibleRef.current;
     prevVisibleRef.current = visible;
 
     if (!visible && prevVisible) {
-      // Modal just closed
+      // Modal just closed - reset form
       resetForm();
     }
+
+    // Auto-open image picker immediately when modal opens
+    if (visible && !prevVisible && selectedImages.length === 0) {
+      // Open picker immediately without delay
+      handlePickImages().then((cancelled) => {
+        // If user cancelled without selecting any images, close the modal
+        if (cancelled || selectedImages.length === 0) {
+          onClose();
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  const handlePickImages = useCallback(async () => {
+  const handlePickImages = useCallback(async (): Promise<boolean> => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       Alert.alert(
         "Permission refusée",
         "Nous avons besoin des autorisations de la galerie pour sélectionner les images.",
       );
-      return;
+      return true; // Return true to indicate cancellation/failure
     }
 
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -279,7 +291,9 @@ export default function BulkAddImageModal({
       } else {
         setSelectedImages(images);
       }
+      return false; // Return false to indicate images were selected
     }
+    return true; // Return true to indicate user cancelled
   }, []);
 
   const handleRemoveImage = (index: number) => {
@@ -534,259 +548,287 @@ export default function BulkAddImageModal({
                 )}
               </View>
 
-              {/* Image Selection Button */}
-              <TouchableOpacity
-                style={styles.selectButton}
-                onPress={handlePickImages}
-              >
-                <Ionicons
-                  name="images-outline"
-                  size={24}
-                  color={COLORS.white}
-                />
-                <Text style={styles.selectButtonText}>
-                  {selectedImages.length === 0
-                    ? "Sélectionner les images"
-                    : `${selectedImages.length} image(s) sélectionnée(s)`}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Image Preview Grid */}
-              {selectedImages.length > 0 && (
+              {/* Only show content if images are selected */}
+              {selectedImages.length === 0 ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>
+                    Sélection des images...
+                  </Text>
+                </View>
+              ) : (
                 <>
-                  <View style={styles.imageGridHeader}>
-                    <Text style={styles.imageCount}>
-                      {selectedImages.length} / {MAX_IMAGES}
-                    </Text>
-                    <TouchableOpacity onPress={handleClearAll}>
-                      <Text style={styles.clearAllText}>Tout supprimer</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.imageGrid}
-                    contentContainerStyle={styles.imageGridContent}
+                  {/* Image Selection Button */}
+                  <TouchableOpacity
+                    style={styles.selectButton}
+                    onPress={handlePickImages}
                   >
-                    {selectedImages.map((image, index) => (
-                      <View
-                        key={`${image.uri}-${index}`}
-                        style={styles.imageThumbnailContainer}
-                      >
-                        <Image
-                          source={{ uri: image.uri }}
-                          style={styles.imageThumbnail}
-                        />
-                        <TouchableOpacity
-                          style={styles.removeImageButton}
-                          onPress={() => handleRemoveImage(index)}
-                        >
-                          <Ionicons
-                            name="close-circle"
-                            size={24}
-                            color="#FF3B30"
-                          />
+                    <Ionicons
+                      name="images-outline"
+                      size={24}
+                      color={COLORS.white}
+                    />
+                    <Text style={styles.selectButtonText}>
+                      {selectedImages.length === 0
+                        ? "Sélectionner les images"
+                        : `${selectedImages.length} image(s) sélectionnée(s)`}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Image Preview Grid */}
+                  {selectedImages.length > 0 && (
+                    <>
+                      <View style={styles.imageGridHeader}>
+                        <Text style={styles.imageCount}>
+                          {selectedImages.length} / {MAX_IMAGES}
+                        </Text>
+                        <TouchableOpacity onPress={handleClearAll}>
+                          <Text style={styles.clearAllText}>
+                            Tout supprimer
+                          </Text>
                         </TouchableOpacity>
                       </View>
-                    ))}
-                  </ScrollView>
 
-                  {/* Metadata Form */}
-                  {/* Severity Slider */}
-                  <View style={styles.sectionContainer}>
-                    <Text style={styles.severityTitle}>Niveau de sévérité</Text>
-                    <PanGestureHandler onGestureEvent={onSeverityPan}>
-                      <View
-                        style={styles.severityContainer}
-                        onLayout={(event) =>
-                          setSeveritySliderWidth(event.nativeEvent.layout.width)
-                        }
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.imageGrid}
+                        contentContainerStyle={styles.imageGridContent}
                       >
-                        <View style={styles.severityHeader}>
-                          <Text
-                            style={[
-                              styles.severityValue,
-                              { color: getSeverityColor(level) },
-                            ]}
-                          >
-                            {level}/10
-                          </Text>
+                        {selectedImages.map((image, index) => (
                           <View
-                            style={[
-                              styles.severityBadge,
-                              { backgroundColor: getSeverityColor(level) },
-                            ]}
+                            key={`${image.uri}-${index}`}
+                            style={styles.imageThumbnailContainer}
                           >
-                            <Text style={styles.severityBadgeText}>
-                              {getSeverityText(level)}
-                            </Text>
-                          </View>
-                        </View>
-                        <View style={styles.severitySlider}>
-                          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
+                            <Image
+                              source={{ uri: image.uri }}
+                              style={styles.imageThumbnail}
+                            />
                             <TouchableOpacity
-                              key={value}
-                              style={[
-                                styles.severityDot,
-                                level >= value && [
-                                  styles.severityDotActive,
+                              style={styles.removeImageButton}
+                              onPress={() => handleRemoveImage(index)}
+                            >
+                              <Ionicons
+                                name="close-circle"
+                                size={24}
+                                color="#FF3B30"
+                              />
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                      </ScrollView>
+
+                      {/* Metadata Form */}
+                      {/* Severity Slider */}
+                      <View style={styles.sectionContainer}>
+                        <Text style={styles.severityTitle}>
+                          Niveau de sévérité
+                        </Text>
+                        <PanGestureHandler onGestureEvent={onSeverityPan}>
+                          <View
+                            style={styles.severityContainer}
+                            onLayout={(event) =>
+                              setSeveritySliderWidth(
+                                event.nativeEvent.layout.width,
+                              )
+                            }
+                          >
+                            <View style={styles.severityHeader}>
+                              <Text
+                                style={[
+                                  styles.severityValue,
+                                  { color: getSeverityColor(level) },
+                                ]}
+                              >
+                                {level}/10
+                              </Text>
+                              <View
+                                style={[
+                                  styles.severityBadge,
                                   { backgroundColor: getSeverityColor(level) },
-                                ],
-                                level === value && [
-                                  styles.severityDotSelected,
-                                  { borderColor: getSeverityColor(level) },
-                                ],
-                              ]}
-                              onPress={() => setLevel(value)}
-                              activeOpacity={0.7}
-                            />
-                          ))}
-                        </View>
+                                ]}
+                              >
+                                <Text style={styles.severityBadgeText}>
+                                  {getSeverityText(level)}
+                                </Text>
+                              </View>
+                            </View>
+                            <View style={styles.severitySlider}>
+                              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(
+                                (value) => (
+                                  <TouchableOpacity
+                                    key={value}
+                                    style={[
+                                      styles.severityDot,
+                                      level >= value && [
+                                        styles.severityDotActive,
+                                        {
+                                          backgroundColor:
+                                            getSeverityColor(level),
+                                        },
+                                      ],
+                                      level === value && [
+                                        styles.severityDotSelected,
+                                        {
+                                          borderColor: getSeverityColor(level),
+                                        },
+                                      ],
+                                    ]}
+                                    onPress={() => setLevel(value)}
+                                    activeOpacity={0.7}
+                                  />
+                                ),
+                              )}
+                            </View>
+                          </View>
+                        </PanGestureHandler>
                       </View>
-                    </PanGestureHandler>
-                  </View>
 
-                  {/* Type Selection */}
-                  {!loadingAnomalies && anomalieTypes.length > 0 && (
-                    <View style={styles.sectionContainer}>
-                      <Text style={styles.sectionTitle}>
-                        Type d&apos;anomalie
-                      </Text>
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.typeScrollView}
-                      >
-                        {anomalieTypes.map((type) => (
-                          <TouchableOpacity
-                            key={type.id}
-                            style={[
-                              styles.typeButton,
-                              selectedType === type.anomalie &&
-                                styles.typeButtonSelected,
-                            ]}
-                            onPress={() =>
-                              setSelectedType(type.anomalie || null)
-                            }
+                      {/* Type Selection */}
+                      {!loadingAnomalies && anomalieTypes.length > 0 && (
+                        <View style={styles.sectionContainer}>
+                          <Text style={styles.sectionTitle}>
+                            Type d&apos;anomalie
+                          </Text>
+                          <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.typeScrollView}
                           >
-                            <Ionicons
-                              name="alert-circle-outline"
-                              size={20}
-                              color={
-                                selectedType === type.anomalie
-                                  ? "#FFFFFF"
-                                  : "#11224e"
-                              }
-                            />
-                            <Text
-                              style={[
-                                styles.typeButtonText,
-                                selectedType === type.anomalie &&
-                                  styles.typeButtonTextSelected,
-                              ]}
-                            >
-                              {type.anomalie || "Sans nom"}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    </View>
-                  )}
+                            {anomalieTypes.map((type) => (
+                              <TouchableOpacity
+                                key={type.id}
+                                style={[
+                                  styles.typeButton,
+                                  selectedType === type.anomalie &&
+                                    styles.typeButtonSelected,
+                                ]}
+                                onPress={() =>
+                                  setSelectedType(type.anomalie || null)
+                                }
+                              >
+                                <Ionicons
+                                  name="alert-circle-outline"
+                                  size={20}
+                                  color={
+                                    selectedType === type.anomalie
+                                      ? "#FFFFFF"
+                                      : "#11224e"
+                                  }
+                                />
+                                <Text
+                                  style={[
+                                    styles.typeButtonText,
+                                    selectedType === type.anomalie &&
+                                      styles.typeButtonTextSelected,
+                                  ]}
+                                >
+                                  {type.anomalie || "Sans nom"}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+                        </View>
+                      )}
 
-                  {/* Category Selection */}
-                  {!loadingAnomalies && anomalieCategories.length > 0 && (
-                    <View style={styles.sectionContainer}>
-                      <Text style={styles.sectionTitle}>
-                        Catégorie d&apos;anomalie
-                      </Text>
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.categoryScrollView}
-                      >
-                        {anomalieCategories.map((category) => (
-                          <TouchableOpacity
-                            key={category.id}
-                            style={[
-                              styles.categoryButton,
-                              selectedCategorie === category.anomalie &&
-                                styles.categoryButtonSelected,
-                            ]}
-                            onPress={() =>
-                              setSelectedCategorie(category.anomalie || null)
-                            }
+                      {/* Category Selection */}
+                      {!loadingAnomalies && anomalieCategories.length > 0 && (
+                        <View style={styles.sectionContainer}>
+                          <Text style={styles.sectionTitle}>
+                            Catégorie d&apos;anomalie
+                          </Text>
+                          <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.categoryScrollView}
                           >
-                            <Text
-                              style={[
-                                styles.categoryButtonText,
-                                selectedCategorie === category.anomalie &&
-                                  styles.categoryButtonTextSelected,
-                              ]}
-                            >
-                              {category.anomalie || "Sans nom"}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    </View>
+                            {anomalieCategories.map((category) => (
+                              <TouchableOpacity
+                                key={category.id}
+                                style={[
+                                  styles.categoryButton,
+                                  selectedCategorie === category.anomalie &&
+                                    styles.categoryButtonSelected,
+                                ]}
+                                onPress={() =>
+                                  setSelectedCategorie(
+                                    category.anomalie || null,
+                                  )
+                                }
+                              >
+                                <Text
+                                  style={[
+                                    styles.categoryButtonText,
+                                    selectedCategorie === category.anomalie &&
+                                      styles.categoryButtonTextSelected,
+                                  ]}
+                                >
+                                  {category.anomalie || "Sans nom"}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+                        </View>
+                      )}
+
+                      {/* Title */}
+                      <View style={styles.form}>
+                        <Text style={styles.label}>Titre (optionnel)</Text>
+                        <TextInput
+                          style={styles.input}
+                          placeholder="ex: 'Transfert inspection site'"
+                          placeholderTextColor={COLORS.gray}
+                          value={title}
+                          onChangeText={setTitle}
+                        />
+                      </View>
+
+                      {/* Chantier */}
+                      <View style={styles.form}>
+                        <Text style={styles.label}>Chantier (optionnel)</Text>
+                        <TextInput
+                          style={styles.input}
+                          placeholder="ex: 'Chantier A'"
+                          placeholderTextColor={COLORS.gray}
+                          value={chantier}
+                          onChangeText={setChantier}
+                        />
+                      </View>
+
+                      {/* Description */}
+                      <View style={styles.form}>
+                        <Text style={styles.label}>
+                          Description (optionnel)
+                        </Text>
+                        <TextInput
+                          style={[styles.input, styles.textArea]}
+                          placeholder="Description commune à toutes les images"
+                          placeholderTextColor={COLORS.gray}
+                          value={description}
+                          onChangeText={setDescription}
+                          multiline
+                          numberOfLines={4}
+                        />
+                      </View>
+
+                      {/* Upload Button */}
+                      <View style={styles.buttonContainer}>
+                        <TouchableOpacity
+                          style={[
+                            styles.button,
+                            styles.addButton,
+                            (isStorageQuotaReached || isUploading) &&
+                              styles.addButtonDisabled,
+                          ]}
+                          onPress={handleBulkUpload}
+                          disabled={isStorageQuotaReached || isUploading}
+                        >
+                          <Text style={styles.buttonText}>
+                            {isUploading ? "Transfert en cours..." : buttonText}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
                   )}
-
-                  {/* Title */}
-                  <View style={styles.form}>
-                    <Text style={styles.label}>Titre (optionnel)</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="ex: 'Transfert inspection site'"
-                      placeholderTextColor={COLORS.gray}
-                      value={title}
-                      onChangeText={setTitle}
-                    />
-                  </View>
-
-                  {/* Chantier */}
-                  <View style={styles.form}>
-                    <Text style={styles.label}>Chantier (optionnel)</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="ex: 'Chantier A'"
-                      placeholderTextColor={COLORS.gray}
-                      value={chantier}
-                      onChangeText={setChantier}
-                    />
-                  </View>
-
-                  {/* Description */}
-                  <View style={styles.form}>
-                    <Text style={styles.label}>Description (optionnel)</Text>
-                    <TextInput
-                      style={[styles.input, styles.textArea]}
-                      placeholder="Description commune à toutes les images"
-                      placeholderTextColor={COLORS.gray}
-                      value={description}
-                      onChangeText={setDescription}
-                      multiline
-                      numberOfLines={4}
-                    />
-                  </View>
-
-                  {/* Upload Button */}
-                  <View style={styles.buttonContainer}>
-                    <TouchableOpacity
-                      style={[
-                        styles.button,
-                        styles.addButton,
-                        (isStorageQuotaReached || isUploading) &&
-                          styles.addButtonDisabled,
-                      ]}
-                      onPress={handleBulkUpload}
-                      disabled={isStorageQuotaReached || isUploading}
-                    >
-                      <Text style={styles.buttonText}>
-                        {isUploading ? "Transfert en cours..." : buttonText}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
                 </>
               )}
             </ScrollView>
@@ -1172,5 +1214,16 @@ const styles = StyleSheet.create({
     fontFamily: FONT.regular,
     fontSize: SIZES.medium,
     color: COLORS.secondary,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  loadingText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.medium,
+    color: COLORS.gray,
   },
 });
