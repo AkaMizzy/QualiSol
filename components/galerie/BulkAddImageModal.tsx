@@ -97,6 +97,10 @@ export default function BulkAddImageModal({
   } | null>(null);
   const voiceNoteRecorderRef = useRef<VoiceNoteRecorderRef>(null);
 
+  // Progressive layout state
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
   const [anomalieTypes, setAnomalieTypes] = useState<Anomalie1[]>([]);
   const [anomalieCategories, setAnomalieCategories] = useState<Anomalie2[]>([]);
   const [loadingAnomalies, setLoadingAnomalies] = useState(true);
@@ -265,6 +269,16 @@ export default function BulkAddImageModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
+  // Reset image index if it's out of bounds
+  useEffect(() => {
+    if (
+      currentImageIndex >= selectedImages.length &&
+      selectedImages.length > 0
+    ) {
+      setCurrentImageIndex(0);
+    }
+  }, [selectedImages.length, currentImageIndex]);
+
   const handlePickImages = useCallback(async (): Promise<boolean> => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -369,7 +383,21 @@ export default function BulkAddImageModal({
     setSelectedType(null);
     setSelectedCategorie(null);
     setVoiceNote(null);
+    setIsExpanded(false);
+    setCurrentImageIndex(0);
     voiceNoteRecorderRef.current?.forceStopAndCleanup();
+  };
+
+  const handlePrevImage = () => {
+    setCurrentImageIndex((prev) =>
+      prev === 0 ? selectedImages.length - 1 : prev - 1,
+    );
+  };
+
+  const handleNextImage = () => {
+    setCurrentImageIndex((prev) =>
+      prev === selectedImages.length - 1 ? 0 : prev + 1,
+    );
   };
 
   const handleBulkUpload = async () => {
@@ -565,226 +593,79 @@ export default function BulkAddImageModal({
                 )}
               </View>
 
-              {/* Image Selection Frame */}
-              <TouchableOpacity
-                style={styles.imagePickerPlaceholder}
-                onPress={handlePickImages}
-              >
-                <Ionicons name="images-outline" size={48} color={COLORS.gray} />
-                <Text style={styles.imagePickerText}>
-                  {selectedImages.length === 0
-                    ? "Sélectionner les images"
-                    : `${selectedImages.length} image(s) sélectionnée(s)`}
-                </Text>
-              </TouchableOpacity>
+              {/* Image Display - Slider/Carousel */}
+              <View style={styles.imageContainer}>
+                {selectedImages.length > 0 ? (
+                  <View style={styles.imageSliderContainer}>
+                    {/* Current image preview */}
+                    <Image
+                      source={{ uri: selectedImages[currentImageIndex].uri }}
+                      style={styles.imagePreview}
+                      resizeMode="contain"
+                    />
 
-              {/* Image Preview Grid */}
-              {selectedImages.length > 0 && (
-                <>
-                  <View style={styles.imageGridHeader}>
-                    <Text style={styles.imageCount}>
-                      {selectedImages.length} / {MAX_IMAGES}
-                    </Text>
-                    <TouchableOpacity onPress={handleClearAll}>
-                      <Text style={styles.clearAllText}>Tout supprimer</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.imageGrid}
-                    contentContainerStyle={styles.imageGridContent}
-                  >
-                    {selectedImages.map((image, index) => (
-                      <View
-                        key={`${image.uri}-${index}`}
-                        style={styles.imageThumbnailContainer}
-                      >
-                        <Image
-                          source={{ uri: image.uri }}
-                          style={styles.imageThumbnail}
-                        />
+                    {/* Navigation controls */}
+                    {selectedImages.length > 1 && (
+                      <View style={styles.imageNavigation}>
                         <TouchableOpacity
-                          style={styles.removeImageButton}
-                          onPress={() => handleRemoveImage(index)}
+                          onPress={handlePrevImage}
+                          style={styles.navButton}
                         >
                           <Ionicons
-                            name="close-circle"
+                            name="chevron-back"
                             size={24}
-                            color="#FF3B30"
+                            color={COLORS.primary}
+                          />
+                        </TouchableOpacity>
+
+                        <Text style={styles.imageCounter}>
+                          {currentImageIndex + 1} / {selectedImages.length}
+                        </Text>
+
+                        <TouchableOpacity
+                          onPress={handleNextImage}
+                          style={styles.navButton}
+                        >
+                          <Ionicons
+                            name="chevron-forward"
+                            size={24}
+                            color={COLORS.primary}
                           />
                         </TouchableOpacity>
                       </View>
-                    ))}
-                  </ScrollView>
-                </>
-              )}
+                    )}
 
-              {/* Metadata Form - Always visible */}
-              {/* Severity Slider */}
-              <View style={styles.sectionContainer}>
-                <Text style={styles.severityTitle}>Niveau de sévérité</Text>
-                <PanGestureHandler onGestureEvent={onSeverityPan}>
-                  <View
-                    style={styles.severityContainer}
-                    onLayout={(event) =>
-                      setSeveritySliderWidth(event.nativeEvent.layout.width)
-                    }
-                  >
-                    <View style={styles.severityHeader}>
-                      <Text
-                        style={[
-                          styles.severityValue,
-                          { color: getSeverityColor(level) },
-                        ]}
-                      >
-                        {level}/10
+                    {/* Change/Add images button */}
+                    <TouchableOpacity
+                      style={styles.changeImagesButton}
+                      onPress={handlePickImages}
+                    >
+                      <Ionicons
+                        name="images-outline"
+                        size={20}
+                        color={COLORS.primary}
+                      />
+                      <Text style={styles.changeImagesText}>
+                        Modifier la sélection ({selectedImages.length}/
+                        {MAX_IMAGES})
                       </Text>
-                      <View
-                        style={[
-                          styles.severityBadge,
-                          { backgroundColor: getSeverityColor(level) },
-                        ]}
-                      >
-                        <Text style={styles.severityBadgeText}>
-                          {getSeverityText(level)}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.severitySlider}>
-                      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
-                        <TouchableOpacity
-                          key={value}
-                          style={[
-                            styles.severityDot,
-                            level >= value && [
-                              styles.severityDotActive,
-                              {
-                                backgroundColor: getSeverityColor(level),
-                              },
-                            ],
-                            level === value && [
-                              styles.severityDotSelected,
-                              {
-                                borderColor: getSeverityColor(level),
-                              },
-                            ],
-                          ]}
-                          onPress={() => setLevel(value)}
-                          activeOpacity={0.7}
-                        />
-                      ))}
-                    </View>
+                    </TouchableOpacity>
                   </View>
-                </PanGestureHandler>
-              </View>
-
-              {/* Type Selection */}
-              {!loadingAnomalies && anomalieTypes.length > 0 && (
-                <View style={styles.sectionContainer}>
-                  <Text style={styles.sectionTitle}>Type d&apos;anomalie</Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.typeScrollView}
+                ) : (
+                  <TouchableOpacity
+                    style={styles.imagePickerPlaceholder}
+                    onPress={handlePickImages}
                   >
-                    {anomalieTypes.map((type) => (
-                      <TouchableOpacity
-                        key={type.id}
-                        style={[
-                          styles.typeButton,
-                          selectedType === type.anomalie &&
-                            styles.typeButtonSelected,
-                        ]}
-                        onPress={() => setSelectedType(type.anomalie || null)}
-                      >
-                        <Ionicons
-                          name="alert-circle-outline"
-                          size={20}
-                          color={
-                            selectedType === type.anomalie
-                              ? "#FFFFFF"
-                              : "#11224e"
-                          }
-                        />
-                        <Text
-                          style={[
-                            styles.typeButtonText,
-                            selectedType === type.anomalie &&
-                              styles.typeButtonTextSelected,
-                          ]}
-                        >
-                          {type.anomalie || "Sans nom"}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-
-              {/* Category Selection */}
-              {!loadingAnomalies && anomalieCategories.length > 0 && (
-                <View style={styles.sectionContainer}>
-                  <Text style={styles.sectionTitle}>
-                    Catégorie d&apos;anomalie
-                  </Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.categoryScrollView}
-                  >
-                    {anomalieCategories.map((category) => (
-                      <TouchableOpacity
-                        key={category.id}
-                        style={[
-                          styles.categoryButton,
-                          selectedCategorie === category.anomalie &&
-                            styles.categoryButtonSelected,
-                        ]}
-                        onPress={() =>
-                          setSelectedCategorie(category.anomalie || null)
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.categoryButtonText,
-                            selectedCategorie === category.anomalie &&
-                              styles.categoryButtonTextSelected,
-                          ]}
-                        >
-                          {category.anomalie || "Sans nom"}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-
-              {/* Title */}
-              <View style={styles.form}>
-                <Text style={styles.label}>Titre (optionnel)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="ex: 'Transfert inspection site'"
-                  placeholderTextColor={COLORS.gray}
-                  value={title}
-                  onChangeText={setTitle}
-                />
-              </View>
-
-              {/* Description */}
-              <View style={styles.form}>
-                <Text style={styles.label}>Description (optionnel)</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder="Description commune à toutes les images"
-                  placeholderTextColor={COLORS.gray}
-                  value={description}
-                  onChangeText={setDescription}
-                  multiline
-                  numberOfLines={4}
-                />
+                    <Ionicons
+                      name="images-outline"
+                      size={48}
+                      color={COLORS.gray}
+                    />
+                    <Text style={styles.imagePickerText}>
+                      Sélectionner les images
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               {/* Voice Note - Shared for all images */}
@@ -796,7 +677,7 @@ export default function BulkAddImageModal({
                     color={COLORS.primary}
                   />
                   <Text style={styles.voiceNoteTitle}>
-                    Note vocale (commune à toutes les images)
+                    Note vocale (commune \u00e0 toutes les images)
                   </Text>
                 </View>
                 <VoiceNoteRecorder
@@ -805,23 +686,271 @@ export default function BulkAddImageModal({
                 />
               </View>
 
-              {/* Upload Button */}
+              {/* Primary Action Buttons */}
               <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                  style={[styles.button, styles.cancelButton]}
+                  onPress={async () => {
+                    await voiceNoteRecorderRef.current?.forceStopAndCleanup();
+                    onClose();
+                  }}
+                >
+                  <Text style={[styles.buttonText, styles.cancelButtonText]}>
+                    Annuler
+                  </Text>
+                </TouchableOpacity>
+
                 <TouchableOpacity
                   style={[
                     styles.button,
                     styles.addButton,
-                    (isStorageQuotaReached || isUploading) &&
+                    (isStorageQuotaReached ||
+                      isUploading ||
+                      selectedImages.length === 0) &&
                       styles.addButtonDisabled,
                   ]}
                   onPress={handleBulkUpload}
-                  disabled={isStorageQuotaReached || isUploading}
+                  disabled={
+                    isStorageQuotaReached ||
+                    isUploading ||
+                    selectedImages.length === 0
+                  }
                 >
                   <Text style={styles.buttonText}>
                     {isUploading ? "Transfert en cours..." : buttonText}
                   </Text>
                 </TouchableOpacity>
               </View>
+
+              {/* Expand/Collapse Toggle */}
+              <TouchableOpacity
+                style={styles.expandToggle}
+                onPress={() => setIsExpanded(!isExpanded)}
+              >
+                <Text style={styles.expandToggleText}>
+                  {isExpanded
+                    ? "Masquer les d\u00e9tails"
+                    : "Voir plus de d\u00e9tails"}
+                </Text>
+                <Ionicons
+                  name={isExpanded ? "chevron-up" : "chevron-down"}
+                  size={20}
+                  color={COLORS.primary}
+                />
+              </TouchableOpacity>
+
+              {/*Expandable Metadata Section */}
+              {isExpanded && (
+                <View style={styles.expandableSection}>
+                  {/* Metadata Form - Always visible */}
+                  {/* Severity Slider */}
+                  <View style={styles.sectionContainer}>
+                    <Text style={styles.severityTitle}>Niveau de sévérité</Text>
+                    <PanGestureHandler onGestureEvent={onSeverityPan}>
+                      <View
+                        style={styles.severityContainer}
+                        onLayout={(event) =>
+                          setSeveritySliderWidth(event.nativeEvent.layout.width)
+                        }
+                      >
+                        <View style={styles.severityHeader}>
+                          <Text
+                            style={[
+                              styles.severityValue,
+                              { color: getSeverityColor(level) },
+                            ]}
+                          >
+                            {level}/10
+                          </Text>
+                          <View
+                            style={[
+                              styles.severityBadge,
+                              { backgroundColor: getSeverityColor(level) },
+                            ]}
+                          >
+                            <Text style={styles.severityBadgeText}>
+                              {getSeverityText(level)}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.severitySlider}>
+                          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
+                            <TouchableOpacity
+                              key={value}
+                              style={[
+                                styles.severityDot,
+                                level >= value && [
+                                  styles.severityDotActive,
+                                  {
+                                    backgroundColor: getSeverityColor(level),
+                                  },
+                                ],
+                                level === value && [
+                                  styles.severityDotSelected,
+                                  {
+                                    borderColor: getSeverityColor(level),
+                                  },
+                                ],
+                              ]}
+                              onPress={() => setLevel(value)}
+                              activeOpacity={0.7}
+                            />
+                          ))}
+                        </View>
+                      </View>
+                    </PanGestureHandler>
+                  </View>
+
+                  {/* Type Selection */}
+                  {!loadingAnomalies && anomalieTypes.length > 0 && (
+                    <View style={styles.sectionContainer}>
+                      <Text style={styles.sectionTitle}>
+                        Type d&apos;anomalie
+                      </Text>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.typeScrollView}
+                      >
+                        {anomalieTypes.map((type) => (
+                          <TouchableOpacity
+                            key={type.id}
+                            style={[
+                              styles.typeButton,
+                              selectedType === type.anomalie &&
+                                styles.typeButtonSelected,
+                            ]}
+                            onPress={() =>
+                              setSelectedType(type.anomalie || null)
+                            }
+                          >
+                            <Ionicons
+                              name="alert-circle-outline"
+                              size={20}
+                              color={
+                                selectedType === type.anomalie
+                                  ? "#FFFFFF"
+                                  : "#11224e"
+                              }
+                            />
+                            <Text
+                              style={[
+                                styles.typeButtonText,
+                                selectedType === type.anomalie &&
+                                  styles.typeButtonTextSelected,
+                              ]}
+                            >
+                              {type.anomalie || "Sans nom"}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+
+                  {/* Category Selection */}
+                  {!loadingAnomalies && anomalieCategories.length > 0 && (
+                    <View style={styles.sectionContainer}>
+                      <Text style={styles.sectionTitle}>
+                        Catégorie d&apos;anomalie
+                      </Text>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.categoryScrollView}
+                      >
+                        {anomalieCategories.map((category) => (
+                          <TouchableOpacity
+                            key={category.id}
+                            style={[
+                              styles.categoryButton,
+                              selectedCategorie === category.anomalie &&
+                                styles.categoryButtonSelected,
+                            ]}
+                            onPress={() =>
+                              setSelectedCategorie(category.anomalie || null)
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.categoryButtonText,
+                                selectedCategorie === category.anomalie &&
+                                  styles.categoryButtonTextSelected,
+                              ]}
+                            >
+                              {category.anomalie || "Sans nom"}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+
+                  {/* Title */}
+                  <View style={styles.form}>
+                    <Text style={styles.label}>Titre (optionnel)</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="ex: 'Transfert inspection site'"
+                      placeholderTextColor={COLORS.gray}
+                      value={title}
+                      onChangeText={setTitle}
+                    />
+                  </View>
+
+                  {/* Description */}
+                  <View style={styles.form}>
+                    <Text style={styles.label}>Description (optionnel)</Text>
+                    <TextInput
+                      style={[styles.input, styles.textArea]}
+                      placeholder="Description commune à toutes les images"
+                      placeholderTextColor={COLORS.gray}
+                      value={description}
+                      onChangeText={setDescription}
+                      multiline
+                      numberOfLines={4}
+                    />
+                  </View>
+
+                  {/* Secondary Action Buttons (Bottom) */}
+                  <View style={styles.buttonContainer}>
+                    <TouchableOpacity
+                      style={[styles.button, styles.cancelButton]}
+                      onPress={async () => {
+                        await voiceNoteRecorderRef.current?.forceStopAndCleanup();
+                        onClose();
+                      }}
+                    >
+                      <Text
+                        style={[styles.buttonText, styles.cancelButtonText]}
+                      >
+                        Annuler
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.button,
+                        styles.addButton,
+                        (isStorageQuotaReached ||
+                          isUploading ||
+                          selectedImages.length === 0) &&
+                          styles.addButtonDisabled,
+                      ]}
+                      onPress={handleBulkUpload}
+                      disabled={
+                        isStorageQuotaReached ||
+                        isUploading ||
+                        selectedImages.length === 0
+                      }
+                    >
+                      <Text style={styles.buttonText}>
+                        {isUploading ? "Transfert en cours..." : buttonText}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -1248,5 +1377,79 @@ const styles = StyleSheet.create({
     fontFamily: FONT.medium,
     fontSize: SIZES.medium,
     color: COLORS.primary,
+  },
+  imageContainer: {
+    width: "100%",
+    marginBottom: SIZES.large,
+  },
+  imageSliderContainer: {
+    width: "100%",
+    alignItems: "center",
+  },
+  imagePreview: {
+    width: "100%",
+    height: 200,
+    borderRadius: SIZES.medium,
+    backgroundColor: COLORS.lightWhite,
+  },
+  imageNavigation: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    marginTop: SIZES.small,
+    paddingHorizontal: SIZES.medium,
+  },
+  navButton: {
+    padding: SIZES.small,
+  },
+  imageCounter: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.medium,
+    color: COLORS.gray,
+  },
+  changeImagesButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SIZES.small,
+    marginTop: SIZES.small,
+    paddingVertical: SIZES.small,
+    paddingHorizontal: SIZES.medium,
+    borderRadius: SIZES.small,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  changeImagesText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.small,
+    color: COLORS.primary,
+  },
+  cancelButton: {
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.gray2,
+  },
+  cancelButtonText: {
+    color: COLORS.gray,
+  },
+  expandToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SIZES.small,
+    paddingVertical: SIZES.medium,
+    marginVertical: SIZES.small,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.gray2,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray2,
+  },
+  expandToggleText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.medium,
+    color: COLORS.primary,
+  },
+  expandableSection: {
+    // Container for expandable metadata
   },
 });
