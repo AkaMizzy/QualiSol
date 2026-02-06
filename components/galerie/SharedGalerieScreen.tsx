@@ -211,23 +211,17 @@ export default function SharedGalerieScreen({
                 : `image/${fileType}`,
             name: fileName,
           },
+          audioFile: data.voiceNote // NEW - pass audio directly
+            ? {
+                uri: data.voiceNote.uri,
+                type: data.voiceNote.type,
+                name: data.voiceNote.name,
+              }
+            : undefined,
           audiotxt: data.audiotxt,
-
           iatxt: data.iatxt,
           mode: data.mode,
         });
-
-        if (data.voiceNote) {
-          await createGed(token, {
-            idsource: createdGedResponse.data.id,
-            title: `${data.title} Voice Note`,
-            kind: "voice_note",
-            author: data.author,
-            idauthor: data.idauthor,
-            iddevice: data.iddevice,
-            file: data.voiceNote,
-          });
-        }
 
         // Refresh the gallery to show the newly uploaded picture
         await fetchGeds();
@@ -417,17 +411,7 @@ export default function SharedGalerieScreen({
     return paginatedData[currentPage] || [];
   }, [paginatedData, currentPage]);
 
-  const voiceNotesBySource = useMemo(() => {
-    return geds.reduce(
-      (acc, curr) => {
-        if (curr.kind === "voice_note") {
-          acc[curr.idsource] = true;
-        }
-        return acc;
-      },
-      {} as Record<string, boolean>,
-    );
-  }, [geds]);
+  // Voice notes are now stored in urlvoice field - no need for separate lookup
 
   const handleNextPage = () => {
     if (currentPage < totalPages - 1) {
@@ -484,7 +468,7 @@ export default function SharedGalerieScreen({
                   <GalerieCard
                     item={item}
                     onPress={() => handleCardPress(item)}
-                    hasVoiceNote={voiceNotesBySource[item.idsource]}
+                    hasVoiceNote={!!item.urlvoice}
                     isOffline={item.isOffline}
                     localImagePath={item.localImagePath}
                     syncStatus={item.syncStatus}
@@ -622,14 +606,11 @@ export default function SharedGalerieScreen({
           latitude={selectedItem.latitude}
           longitude={selectedItem.longitude}
           level={selectedItem.level}
-          voiceNoteUrl={(() => {
-            const voiceNote = geds.find(
-              (g) => g.kind === "voice_note" && g.idsource === selectedItem.id,
-            );
-            return voiceNote?.url
-              ? `${API_CONFIG.BASE_URL}${voiceNote.url}`
-              : undefined;
-          })()}
+          voiceNoteUrl={
+            selectedItem?.urlvoice
+              ? `${API_CONFIG.BASE_URL}${selectedItem.urlvoice}`
+              : undefined
+          }
         />
       )}
       <Modal visible={isAnnotatorVisible} animationType="slide">

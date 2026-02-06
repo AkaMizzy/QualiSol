@@ -28,6 +28,12 @@ export type CreateGedInput = {
     type: string;
     name: string;
   };
+  audioFile?: {
+    // NEW - for voice note
+    uri: string | File;
+    type: string;
+    name: string;
+  };
 };
 
 export interface Ged {
@@ -49,6 +55,7 @@ export interface Ged {
   accuracy: string | null;
   altitudeAccuracy: string | null;
   url: string | null;
+  urlvoice: string | null; // NEW - voice note URL
   size: number | null;
   status_id: string;
   company_id: string;
@@ -150,6 +157,24 @@ export async function createGed(
         uri: input.file.uri, // Keep uri for RN
         type: input.file.type, // Keep type for RN
         name: input.file.name,
+      } as any);
+    }
+  }
+
+  // Append audio file if provided (NEW)
+  if (input.audioFile) {
+    if (
+      typeof input.audioFile.uri === "object" &&
+      input.audioFile.uri instanceof File
+    ) {
+      // Web: Append the actual File object
+      formData.append("audiofile", input.audioFile.uri);
+    } else {
+      // React Native: Append as object with uri, type, name
+      formData.append("audiofile", {
+        uri: input.audioFile.uri,
+        type: input.audioFile.type,
+        name: input.audioFile.name,
       } as any);
     }
   }
