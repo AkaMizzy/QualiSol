@@ -1,4 +1,3 @@
-import CustomAlert from "@/components/CustomAlert";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { Anomalie1, getAllAnomalies1 } from "@/services/anomalie1Service";
@@ -115,21 +114,6 @@ export default function BulkAddImageModal({
   );
 
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({
-    current: 0,
-    total: 0,
-    failed: 0,
-    succeeded: 0,
-  });
-  const [uploadModalVisible, setUploadModalVisible] = useState(false);
-
-  const [alertInfo, setAlertInfo] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: "success" | "error";
-    buttons?: any[];
-  }>({ visible: false, title: "", message: "", type: "success" });
 
   const prevVisibleRef = useRef(visible);
 
@@ -466,13 +450,6 @@ export default function BulkAddImageModal({
 
     // Start upload
     setIsUploading(true);
-    setUploadProgress({
-      current: 0,
-      total: selectedImages.length,
-      failed: 0,
-      succeeded: 0,
-    });
-    setUploadModalVisible(true);
 
     let succeeded = 0;
     let failed = 0;
@@ -481,8 +458,6 @@ export default function BulkAddImageModal({
       const image = selectedImages[i];
 
       try {
-        setUploadProgress((prev) => ({ ...prev, current: i + 1 }));
-
         const deviceId = randomUUID();
 
         // Call onAdd for each image and wait for completion
@@ -510,55 +485,17 @@ export default function BulkAddImageModal({
         );
 
         succeeded++;
-        setUploadProgress((prev) => ({ ...prev, succeeded: succeeded }));
       } catch (error: any) {
         console.error(`Failed to upload image ${i + 1}:`, error);
         failed++;
-        setUploadProgress((prev) => ({ ...prev, failed: failed }));
       }
     }
 
     setIsUploading(false);
 
-    // Show summary
-    const totalImages = selectedImages.length;
-    if (failed === 0) {
-      setAlertInfo({
-        visible: true,
-        title: "Succès",
-        message: `Toutes les ${totalImages} images ont été transférées avec succès !`,
-        type: "success",
-        buttons: [
-          {
-            text: "OK",
-            onPress: () => {
-              setUploadModalVisible(false);
-              resetForm();
-              onClose();
-            },
-            style: "primary",
-          },
-        ],
-      });
-    } else {
-      setAlertInfo({
-        visible: true,
-        title: "Transfert terminé",
-        message: `${succeeded} image(s) transférée(s) avec succès.\n${failed} échec(s).`,
-        type: failed === totalImages ? "error" : "success",
-        buttons: [
-          {
-            text: "OK",
-            onPress: () => {
-              setUploadModalVisible(false);
-              resetForm();
-              onClose();
-            },
-            style: "primary",
-          },
-        ],
-      });
-    }
+    // Close modal and reset form
+    resetForm();
+    onClose();
   };
 
   return (
@@ -945,53 +882,6 @@ export default function BulkAddImageModal({
           </View>
         </View>
       </KeyboardAvoidingView>
-
-      {/* Upload Progress Modal */}
-      <Modal visible={uploadModalVisible} transparent animationType="fade">
-        <View style={styles.progressModalContainer}>
-          <View style={styles.progressModalContent}>
-            <Text style={styles.progressTitle}>Transfert en cours</Text>
-            <View style={styles.progressBarContainer}>
-              <View
-                style={[
-                  styles.progressBar,
-                  {
-                    width: `${(uploadProgress.current / uploadProgress.total) * 100}%`,
-                  },
-                ]}
-              />
-            </View>
-            <Text style={styles.progressText}>
-              {uploadProgress.current} / {uploadProgress.total}
-            </Text>
-            <View style={styles.progressStats}>
-              <View style={styles.progressStat}>
-                <Ionicons name="checkmark-circle" size={20} color="#34C759" />
-                <Text style={styles.progressStatText}>
-                  {uploadProgress.succeeded} réussi(s)
-                </Text>
-              </View>
-              {uploadProgress.failed > 0 && (
-                <View style={styles.progressStat}>
-                  <Ionicons name="close-circle" size={20} color="#FF3B30" />
-                  <Text style={styles.progressStatText}>
-                    {uploadProgress.failed} échoué(s)
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <CustomAlert
-        visible={alertInfo.visible}
-        title={alertInfo.title}
-        message={alertInfo.message}
-        type={alertInfo.type}
-        onClose={() => setAlertInfo({ ...alertInfo, visible: false })}
-        buttons={alertInfo.buttons}
-      />
     </Modal>
   );
 }

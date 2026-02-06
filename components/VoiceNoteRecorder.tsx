@@ -2,18 +2,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Audio } from "expo-av";
 import React, {
-    forwardRef,
-    useEffect,
-    useImperativeHandle,
-    useState,
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useState,
 } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export interface VoiceNoteRecorderRef {
@@ -77,8 +77,11 @@ const VoiceNoteRecorder = forwardRef<
         try {
           await sound.stopAsync();
           await sound.unloadAsync();
-        } catch (err) {
-          console.error("Error cleaning up sound:", err);
+        } catch (err: any) {
+          // Ignore "sound is not loaded" error as we are unloading anyway
+          if (!err.message || !err.message.includes("sound is not loaded")) {
+            console.error("Error cleaning up sound:", err);
+          }
         }
         setSound(null);
       }
