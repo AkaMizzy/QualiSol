@@ -7,6 +7,7 @@ export default function GalerieScreen() {
     <SharedGalerieScreen
       creationMode="upload"
       customButtonIcon={ICONS.galeriePNG}
+      allowOffline={false}
     />
   );
 }

@@ -46,11 +46,13 @@ const IMAGES_PER_PAGE = 2;
 interface SharedGalerieScreenProps {
   creationMode: "upload" | "capture";
   customButtonIcon?: any;
+  allowOffline?: boolean; // Default: false - controls offline storage/sync functionality
 }
 
 export default function SharedGalerieScreen({
   creationMode,
   customButtonIcon,
+  allowOffline = false,
 }: SharedGalerieScreenProps) {
   const { token, user } = useAuth();
   const { width } = useWindowDimensions();
@@ -88,18 +90,23 @@ export default function SharedGalerieScreen({
   }, [token]);
 
   const fetchOfflineRecords = useCallback(async () => {
+    if (!allowOffline) return; // Skip if offline mode disabled
     try {
       const records = await getOfflineRecords();
       setOfflineRecords(records);
     } catch (error) {
       console.error("Failed to fetch offline records:", error);
     }
-  }, []);
+  }, [allowOffline]);
 
   const checkNetworkStatus = useCallback(async () => {
+    if (!allowOffline) {
+      setNetworkStatus("online"); // Always assume online when offline mode disabled
+      return;
+    }
     const connectivity = await getConnectivity();
     setNetworkStatus(connectivity.status);
-  }, []);
+  }, [allowOffline]);
 
   useEffect(() => {
     fetchGeds();
@@ -110,6 +117,7 @@ export default function SharedGalerieScreen({
   // Start sync monitoring when token is available
   useEffect(() => {
     if (!token) return;
+    if (!allowOffline) return; // Skip sync monitoring if offline mode disabled
 
     const stopSyncMonitoring = startSyncMonitoring(token, (result) => {
       console.log(
@@ -123,7 +131,7 @@ export default function SharedGalerieScreen({
     return () => {
       stopSyncMonitoring();
     };
-  }, [token, fetchGeds, fetchOfflineRecords]);
+  }, [token, allowOffline, fetchGeds, fetchOfflineRecords]);
 
   useFocusEffect(
     useCallback(() => {
@@ -178,6 +186,16 @@ export default function SharedGalerieScreen({
     const connectivity = await getConnectivity();
     const isOnline = connectivity.status === "online";
 
+    // If offline mode disabled and we're offline, show error and return
+    if (!allowOffline && !isOnline) {
+      Alert.alert(
+        "Connexion requise",
+        "Cette fonctionnalité nécessite une connexion Internet. Veuillez vous connecter et réessayer.",
+        [{ text: "OK" }],
+      );
+      return;
+    }
+
     try {
       if (isOnline) {
         // ONLINE: Upload directly to backend
@@ -225,8 +243,8 @@ export default function SharedGalerieScreen({
 
         // Refresh the gallery to show the newly uploaded picture
         await fetchGeds();
-      } else {
-        // OFFLINE: Save to SQLite
+      } else if (allowOffline) {
+        // OFFLINE: Save to SQLite (only if allowed)
         await createOfflineRecord({
           idsource: "00000000-0000-0000-0000-000000 000000",
           title: data.title,
@@ -429,8 +447,8 @@ export default function SharedGalerieScreen({
     <SafeAreaView style={styles.container}>
       <AppHeader user={user || undefined} />
 
-      {/* Network status indicator - only show when offline */}
-      {networkStatus === "offline" && (
+      {/* Network status indicator - only show when offline AND allowOffline enabled */}
+      {allowOffline && networkStatus === "offline" && (
         <View
           style={{
             flexDirection: "row",
