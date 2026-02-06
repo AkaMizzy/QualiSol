@@ -3,9 +3,9 @@ import { AppState, AppStateStatus } from "react-native";
 import { getConnectivity, startConnectivityMonitoring } from "./connectivity";
 import { createGed } from "./gedService";
 import {
-    deleteOfflineRecord,
-    getPendingSyncRecords,
-    updateSyncStatus,
+  deleteOfflineRecord,
+  getPendingSyncRecords,
+  updateSyncStatus,
 } from "./offlineStorageService";
 
 let syncInProgress = false;
@@ -50,7 +50,7 @@ export async function syncPendingRecords(token: string): Promise<SyncResult> {
           record.local_image_path.split("/").pop() || `image_${Date.now()}.jpg`;
         const fileType = fileName.split(".").pop() || "jpeg";
 
-        // Upload image (qualiphoto)
+        // Upload image with optional audio file (unified approach)
         const createdGedResponse = await createGed(token, {
           idsource: record.id, // Use client UUID as idsource for idempotency
           title: record.title,
@@ -70,30 +70,23 @@ export async function syncPendingRecords(token: string): Promise<SyncResult> {
           level: record.level,
           type: record.type || undefined,
           categorie: record.categorie || undefined,
+          mode: record.mode,
           file: {
             uri: record.local_image_path,
             type: `image/${fileType}`,
             name: fileName,
           },
+          // Include audio file in same request if present
+          audioFile: record.local_voice_note_path
+            ? {
+                uri: record.local_voice_note_path,
+                type: "audio/m4a",
+                name:
+                  record.local_voice_note_path.split("/").pop() ||
+                  `voice_${Date.now()}.m4a`,
+              }
+            : undefined,
         });
-
-        // Upload voice note if exists
-        if (record.local_voice_note_path) {
-          const voiceFileName =
-            record.local_voice_note_path.split("/").pop() ||
-            `voice_${Date.now()}.m4a`;
-          await createGed(token, {
-            idsource: createdGedResponse.data.id, // Use backend-generated ID from parent image
-            title: `${record.title} Voice Note`,
-            kind: "voice_note",
-            author: record.author,
-            file: {
-              uri: record.local_voice_note_path,
-              type: "audio/m4a",
-              name: voiceFileName,
-            },
-          });
-        }
 
         // Mark as completed and delete local record
         await updateSyncStatus(record.id, "completed");
