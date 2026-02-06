@@ -48,6 +48,11 @@ const SYSTEM_GRID_ITEMS: {
     type: "system",
   },
   {
+    title: "transfert",
+    image: require("../../assets/icons/transfer.png"),
+    type: "system",
+  },
+  {
     title: "Suivi",
     image: require("../../assets/icons/folder.png"),
     type: "system",
@@ -438,6 +443,8 @@ export default function DashboardScreen() {
           router.push("/galerie");
         } else if (item.title === "Constat") {
           router.push("/constat");
+        } else if (item.title === "transfert") {
+          router.push("/transfert");
         } else if (item.title === "Paramètres") {
           router.push("/parameters");
         } else {

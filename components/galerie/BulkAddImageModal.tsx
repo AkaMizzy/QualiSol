@@ -1,0 +1,1176 @@
+import CustomAlert from "@/components/CustomAlert";
+import { COLORS, FONT, SIZES } from "@/constants/theme";
+import { useAuth } from "@/contexts/AuthContext";
+import { Anomalie1, getAllAnomalies1 } from "@/services/anomalie1Service";
+import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
+import companyService from "@/services/companyService";
+import { getConnectivity } from "@/services/connectivity";
+import { getAllGeds } from "@/services/gedService";
+import { Company } from "@/types/company";
+import { Ionicons } from "@expo/vector-icons";
+import { randomUUID } from "expo-crypto";
+import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import {
+    PanGestureHandler,
+    PanGestureHandlerGestureEvent,
+} from "react-native-gesture-handler";
+
+const MAX_IMAGES = 20;
+
+interface BulkAddImageModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onAdd: (
+    data: {
+      title: string;
+      description: string;
+      image: ImagePicker.ImagePickerAsset | null;
+      voiceNote: { uri: string; type: string; name: string } | null;
+      author: string;
+      idauthor?: string;
+      iddevice?: string;
+      latitude: number | null;
+      longitude: number | null;
+      altitude: number | null;
+      accuracy: number | null;
+      altitudeAccuracy: number | null;
+      level: number;
+      type: string | null;
+      categorie: string | null;
+      chantier?: string;
+      audiotxt?: string;
+      iatxt?: string;
+      mode?: "upload" | "capture";
+    },
+    shouldClose: boolean,
+  ) => void;
+  modalTitle?: string;
+  buttonText?: string;
+}
+
+export default function BulkAddImageModal({
+  visible,
+  onClose,
+  onAdd,
+  modalTitle = "Transfert en masse",
+  buttonText = "Transférer les images",
+}: BulkAddImageModalProps) {
+  const { token, user } = useAuth();
+  const [selectedImages, setSelectedImages] = useState<
+    ImagePicker.ImagePickerAsset[]
+  >([]);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [altitude, setAltitude] = useState<number | null>(null);
+  const [accuracy, setAccuracy] = useState<number | null>(null);
+  const [altitudeAccuracy, setAltitudeAccuracy] = useState<number | null>(null);
+  const [level, setLevel] = useState(5);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedCategorie, setSelectedCategorie] = useState<string | null>(
+    null,
+  );
+  const [severitySliderWidth, setSeveritySliderWidth] = useState(0);
+  const [chantier, setChantier] = useState("");
+
+  const [anomalieTypes, setAnomalieTypes] = useState<Anomalie1[]>([]);
+  const [anomalieCategories, setAnomalieCategories] = useState<Anomalie2[]>([]);
+  const [loadingAnomalies, setLoadingAnomalies] = useState(true);
+
+  const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
+  const [currentStorageGB, setCurrentStorageGB] = useState(0);
+  const [storageQuotaGB, setStorageQuotaGB] = useState(0);
+  const [isStorageQuotaReached, setIsStorageQuotaReached] = useState(false);
+  const [loadingLimits, setLoadingLimits] = useState(true);
+  const [networkStatus, setNetworkStatus] = useState<"online" | "offline">(
+    "online",
+  );
+
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({
+    current: 0,
+    total: 0,
+    failed: 0,
+    succeeded: 0,
+  });
+  const [uploadModalVisible, setUploadModalVisible] = useState(false);
+
+  const [alertInfo, setAlertInfo] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error";
+    buttons?: any[];
+  }>({ visible: false, title: "", message: "", type: "success" });
+
+  const prevVisibleRef = useRef(visible);
+
+  // Fetch anomalie types and categories
+  useEffect(() => {
+    async function loadAnomalies() {
+      if (!token) return;
+      setLoadingAnomalies(true);
+      try {
+        const [types, categories] = await Promise.all([
+          getAllAnomalies1(token),
+          getAllAnomalies2(token),
+        ]);
+        setAnomalieTypes(types);
+        setAnomalieCategories(categories);
+      } catch (e) {
+        console.error("Failed to load anomalies", e);
+      } finally {
+        setLoadingAnomalies(false);
+      }
+    }
+    if (visible) {
+      loadAnomalies();
+    }
+  }, [token, visible]);
+
+  // Fetch storage limits
+  useEffect(() => {
+    const fetchLimitInfo = async () => {
+      try {
+        setLoadingLimits(true);
+        if (!token) return;
+
+        const [company, geds] = await Promise.all([
+          companyService.getCompany(),
+          getAllGeds(token),
+        ]);
+
+        setCompanyInfo(company);
+
+        const storageUsedGB = company.nbimagetake || 0;
+        const storageQuotaGB = company.sizeimages || 1;
+
+        setCurrentStorageGB(storageUsedGB);
+        setStorageQuotaGB(storageQuotaGB);
+        setIsStorageQuotaReached(storageUsedGB >= storageQuotaGB);
+      } catch (error) {
+        console.error("Error fetching limit info:", error);
+      } finally {
+        setLoadingLimits(false);
+      }
+    };
+
+    if (visible) {
+      fetchLimitInfo();
+    }
+  }, [token, visible]);
+
+  // Fetch location
+  useEffect(() => {
+    const fetchLocation = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          console.log("Location permission denied.");
+          return;
+        }
+
+        const lastKnown = await Location.getLastKnownPositionAsync({});
+        if (lastKnown) {
+          setLatitude(lastKnown.coords.latitude);
+          setLongitude(lastKnown.coords.longitude);
+          setAltitude(lastKnown.coords.altitude);
+          setAccuracy(lastKnown.coords.accuracy);
+          setAltitudeAccuracy(lastKnown.coords.altitudeAccuracy);
+        }
+
+        const freshLocationPromise = Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Location timeout")), 5000),
+        );
+
+        try {
+          const freshLocation = (await Promise.race([
+            freshLocationPromise,
+            timeoutPromise,
+          ])) as Location.LocationObject;
+
+          if (freshLocation) {
+            setLatitude(freshLocation.coords.latitude);
+            setLongitude(freshLocation.coords.longitude);
+            setAltitude(freshLocation.coords.altitude);
+            setAccuracy(freshLocation.coords.accuracy);
+            setAltitudeAccuracy(freshLocation.coords.altitudeAccuracy);
+          }
+        } catch (e) {
+          console.log("Could not fetch fresh location");
+        }
+      } catch (error) {
+        console.warn("Could not fetch location automatically.", error);
+      }
+    };
+    if (visible) {
+      fetchLocation();
+    }
+  }, [visible]);
+
+  // Check network status
+  useEffect(() => {
+    const checkNetwork = async () => {
+      const connectivity = await getConnectivity();
+      setNetworkStatus(connectivity.status);
+    };
+    if (visible) {
+      checkNetwork();
+    }
+  }, [visible]);
+
+  // Reset form when modal closes
+  useEffect(() => {
+    const prevVisible = prevVisibleRef.current;
+    prevVisibleRef.current = visible;
+
+    if (!visible && prevVisible) {
+      // Modal just closed
+      resetForm();
+    }
+  }, [visible]);
+
+  const handlePickImages = useCallback(async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission refusée",
+        "Nous avons besoin des autorisations de la galerie pour sélectionner les images.",
+      );
+      return;
+    }
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 1,
+      selectionLimit: MAX_IMAGES,
+    });
+
+    if (!result.canceled) {
+      const images = result.assets;
+
+      if (images.length > MAX_IMAGES) {
+        Alert.alert(
+          "Limite dépassée",
+          `Vous ne pouvez sélectionner que ${MAX_IMAGES} images maximum. Les ${MAX_IMAGES} premières ont été sélectionnées.`,
+        );
+        setSelectedImages(images.slice(0, MAX_IMAGES));
+      } else {
+        setSelectedImages(images);
+      }
+    }
+  }, []);
+
+  const handleRemoveImage = (index: number) => {
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleClearAll = () => {
+    Alert.alert(
+      "Confirmer",
+      "Voulez-vous vraiment supprimer toutes les images sélectionnées ?",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer tout",
+          style: "destructive",
+          onPress: () => setSelectedImages([]),
+        },
+      ],
+    );
+  };
+
+  const onSeverityPan = useCallback(
+    (event: PanGestureHandlerGestureEvent) => {
+      if (severitySliderWidth <= 0) return;
+      const x = event.nativeEvent.x;
+      const newLevel = Math.max(
+        0,
+        Math.min(10, Math.round((x / severitySliderWidth) * 10)),
+      );
+      setLevel((prevLevel) => {
+        if (newLevel !== prevLevel) {
+          return newLevel;
+        }
+        return prevLevel;
+      });
+    },
+    [severitySliderWidth],
+  );
+
+  const getSeverityColor = (severity: number) => {
+    if (severity >= 7) return "#FF3B30";
+    if (severity >= 5) return "#FF9500";
+    return "#34C759";
+  };
+
+  const getSeverityText = (severity: number) => {
+    if (severity >= 7) return "Haute";
+    if (severity >= 5) return "Moyenne";
+    return "Basse";
+  };
+
+  const resetForm = () => {
+    setSelectedImages([]);
+    setTitle("");
+    setDescription("");
+    setLevel(5);
+    setSelectedType(null);
+    setSelectedCategorie(null);
+    setChantier("");
+  };
+
+  const handleBulkUpload = async () => {
+    if (selectedImages.length === 0) {
+      Alert.alert("Aucune image", "Veuillez sélectionner au moins une image.");
+      return;
+    }
+
+    // Check online
+    const connectivity = await getConnectivity();
+    const isOnline = connectivity.status === "online";
+
+    if (!isOnline) {
+      Alert.alert(
+        "Connexion requise",
+        "Cette fonctionnalité nécessite une connexion Internet. Veuillez vous connecter et réessayer.",
+        [{ text: "OK" }],
+      );
+      return;
+    }
+
+    if (isStorageQuotaReached) {
+      Alert.alert(
+        "Quota de stockage dépassé",
+        `Vous avez atteint votre quota de stockage de ${storageQuotaGB.toFixed(2)}GB. Utilisation actuelle: ${currentStorageGB.toFixed(2)}GB. Veuillez mettre à niveau votre plan.`,
+      );
+      return;
+    }
+
+    // Get author info
+    let authorName = "Unknown User";
+    if (token) {
+      try {
+        const payload = token.split(".")[1];
+        if (payload) {
+          let base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+          while (base64.length % 4) {
+            base64 += "=";
+          }
+          const decodedString = atob(base64);
+          const decodedPayload = JSON.parse(decodedString);
+          if (decodedPayload.username) {
+            authorName = decodedPayload.username;
+          } else if (decodedPayload.email) {
+            authorName = decodedPayload.email;
+          } else if (decodedPayload.identifier) {
+            authorName = decodedPayload.identifier;
+          }
+        }
+      } catch (err) {
+        console.error("Error decoding token:", err);
+      }
+    }
+
+    if (authorName === "Unknown User" && user) {
+      const name = [user.firstname, user.lastname]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      if (name) {
+        authorName = name;
+      } else if (user.email) {
+        authorName = user.email;
+      }
+    }
+
+    // Start upload
+    setIsUploading(true);
+    setUploadProgress({
+      current: 0,
+      total: selectedImages.length,
+      failed: 0,
+      succeeded: 0,
+    });
+    setUploadModalVisible(true);
+
+    let succeeded = 0;
+    let failed = 0;
+
+    for (let i = 0; i < selectedImages.length; i++) {
+      const image = selectedImages[i];
+
+      try {
+        setUploadProgress((prev) => ({ ...prev, current: i + 1 }));
+
+        const deviceId = randomUUID();
+
+        // Call onAdd for each image
+        onAdd(
+          {
+            title: title || `Transfert ${i + 1}`,
+            description: description,
+            image: image,
+            voiceNote: null,
+            author: authorName,
+            idauthor: user?.id,
+            iddevice: deviceId,
+            chantier: chantier,
+            latitude: latitude,
+            longitude: longitude,
+            altitude: altitude,
+            accuracy: accuracy,
+            altitudeAccuracy: altitudeAccuracy,
+            level: level,
+            type: selectedType,
+            categorie: selectedCategorie,
+            mode: "upload",
+          },
+          false, // Don't close modal after each upload
+        );
+
+        succeeded++;
+        setUploadProgress((prev) => ({ ...prev, succeeded: succeeded }));
+      } catch (error: any) {
+        console.error(`Failed to upload image ${i + 1}:`, error);
+        failed++;
+        setUploadProgress((prev) => ({ ...prev, failed: failed }));
+      }
+    }
+
+    setIsUploading(false);
+
+    // Show summary
+    const totalImages = selectedImages.length;
+    if (failed === 0) {
+      setAlertInfo({
+        visible: true,
+        title: "Succès",
+        message: `Toutes les ${totalImages} images ont été transférées avec succès !`,
+        type: "success",
+        buttons: [
+          {
+            text: "OK",
+            onPress: () => {
+              setUploadModalVisible(false);
+              resetForm();
+              onClose();
+            },
+            style: "primary",
+          },
+        ],
+      });
+    } else {
+      setAlertInfo({
+        visible: true,
+        title: "Transfert terminé",
+        message: `${succeeded} image(s) transférée(s) avec succès.\n${failed} échec(s).`,
+        type: failed === totalImages ? "error" : "success",
+        buttons: [
+          {
+            text: "OK",
+            onPress: () => {
+              setUploadModalVisible(false);
+              resetForm();
+              onClose();
+            },
+            style: "primary",
+          },
+        ],
+      });
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardAvoidingView}
+      >
+        <View style={styles.modalContainer}>
+          <TouchableOpacity style={styles.modalBackdrop} onPress={onClose} />
+          <View style={styles.modalContent}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardDismissMode="on-drag"
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.scrollViewContent}
+            >
+              <View style={styles.headerContainer}>
+                <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                  <Ionicons name="close" size={32} color={COLORS.primary} />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>{modalTitle}</Text>
+                {networkStatus === "offline" && (
+                  <View style={styles.networkStatusBadge}>
+                    <Ionicons
+                      name="wifi-outline"
+                      size={12}
+                      color={COLORS.white}
+                    />
+                    <Text style={styles.networkStatusText}>Hors ligne</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Image Selection Button */}
+              <TouchableOpacity
+                style={styles.selectButton}
+                onPress={handlePickImages}
+              >
+                <Ionicons
+                  name="images-outline"
+                  size={24}
+                  color={COLORS.white}
+                />
+                <Text style={styles.selectButtonText}>
+                  {selectedImages.length === 0
+                    ? "Sélectionner les images"
+                    : `${selectedImages.length} image(s) sélectionnée(s)`}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Image Preview Grid */}
+              {selectedImages.length > 0 && (
+                <>
+                  <View style={styles.imageGridHeader}>
+                    <Text style={styles.imageCount}>
+                      {selectedImages.length} / {MAX_IMAGES}
+                    </Text>
+                    <TouchableOpacity onPress={handleClearAll}>
+                      <Text style={styles.clearAllText}>Tout supprimer</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.imageGrid}
+                    contentContainerStyle={styles.imageGridContent}
+                  >
+                    {selectedImages.map((image, index) => (
+                      <View
+                        key={`${image.uri}-${index}`}
+                        style={styles.imageThumbnailContainer}
+                      >
+                        <Image
+                          source={{ uri: image.uri }}
+                          style={styles.imageThumbnail}
+                        />
+                        <TouchableOpacity
+                          style={styles.removeImageButton}
+                          onPress={() => handleRemoveImage(index)}
+                        >
+                          <Ionicons
+                            name="close-circle"
+                            size={24}
+                            color="#FF3B30"
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </ScrollView>
+
+                  {/* Metadata Form */}
+                  {/* Severity Slider */}
+                  <View style={styles.sectionContainer}>
+                    <Text style={styles.severityTitle}>Niveau de sévérité</Text>
+                    <PanGestureHandler onGestureEvent={onSeverityPan}>
+                      <View
+                        style={styles.severityContainer}
+                        onLayout={(event) =>
+                          setSeveritySliderWidth(event.nativeEvent.layout.width)
+                        }
+                      >
+                        <View style={styles.severityHeader}>
+                          <Text
+                            style={[
+                              styles.severityValue,
+                              { color: getSeverityColor(level) },
+                            ]}
+                          >
+                            {level}/10
+                          </Text>
+                          <View
+                            style={[
+                              styles.severityBadge,
+                              { backgroundColor: getSeverityColor(level) },
+                            ]}
+                          >
+                            <Text style={styles.severityBadgeText}>
+                              {getSeverityText(level)}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.severitySlider}>
+                          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
+                            <TouchableOpacity
+                              key={value}
+                              style={[
+                                styles.severityDot,
+                                level >= value && [
+                                  styles.severityDotActive,
+                                  { backgroundColor: getSeverityColor(level) },
+                                ],
+                                level === value && [
+                                  styles.severityDotSelected,
+                                  { borderColor: getSeverityColor(level) },
+                                ],
+                              ]}
+                              onPress={() => setLevel(value)}
+                              activeOpacity={0.7}
+                            />
+                          ))}
+                        </View>
+                      </View>
+                    </PanGestureHandler>
+                  </View>
+
+                  {/* Type Selection */}
+                  {!loadingAnomalies && anomalieTypes.length > 0 && (
+                    <View style={styles.sectionContainer}>
+                      <Text style={styles.sectionTitle}>
+                        Type d&apos;anomalie
+                      </Text>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.typeScrollView}
+                      >
+                        {anomalieTypes.map((type) => (
+                          <TouchableOpacity
+                            key={type.id}
+                            style={[
+                              styles.typeButton,
+                              selectedType === type.anomalie &&
+                                styles.typeButtonSelected,
+                            ]}
+                            onPress={() =>
+                              setSelectedType(type.anomalie || null)
+                            }
+                          >
+                            <Ionicons
+                              name="alert-circle-outline"
+                              size={20}
+                              color={
+                                selectedType === type.anomalie
+                                  ? "#FFFFFF"
+                                  : "#11224e"
+                              }
+                            />
+                            <Text
+                              style={[
+                                styles.typeButtonText,
+                                selectedType === type.anomalie &&
+                                  styles.typeButtonTextSelected,
+                              ]}
+                            >
+                              {type.anomalie || "Sans nom"}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+
+                  {/* Category Selection */}
+                  {!loadingAnomalies && anomalieCategories.length > 0 && (
+                    <View style={styles.sectionContainer}>
+                      <Text style={styles.sectionTitle}>
+                        Catégorie d&apos;anomalie
+                      </Text>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.categoryScrollView}
+                      >
+                        {anomalieCategories.map((category) => (
+                          <TouchableOpacity
+                            key={category.id}
+                            style={[
+                              styles.categoryButton,
+                              selectedCategorie === category.anomalie &&
+                                styles.categoryButtonSelected,
+                            ]}
+                            onPress={() =>
+                              setSelectedCategorie(category.anomalie || null)
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.categoryButtonText,
+                                selectedCategorie === category.anomalie &&
+                                  styles.categoryButtonTextSelected,
+                              ]}
+                            >
+                              {category.anomalie || "Sans nom"}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+
+                  {/* Title */}
+                  <View style={styles.form}>
+                    <Text style={styles.label}>Titre (optionnel)</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="ex: 'Transfert inspection site'"
+                      placeholderTextColor={COLORS.gray}
+                      value={title}
+                      onChangeText={setTitle}
+                    />
+                  </View>
+
+                  {/* Chantier */}
+                  <View style={styles.form}>
+                    <Text style={styles.label}>Chantier (optionnel)</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="ex: 'Chantier A'"
+                      placeholderTextColor={COLORS.gray}
+                      value={chantier}
+                      onChangeText={setChantier}
+                    />
+                  </View>
+
+                  {/* Description */}
+                  <View style={styles.form}>
+                    <Text style={styles.label}>Description (optionnel)</Text>
+                    <TextInput
+                      style={[styles.input, styles.textArea]}
+                      placeholder="Description commune à toutes les images"
+                      placeholderTextColor={COLORS.gray}
+                      value={description}
+                      onChangeText={setDescription}
+                      multiline
+                      numberOfLines={4}
+                    />
+                  </View>
+
+                  {/* Upload Button */}
+                  <View style={styles.buttonContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.button,
+                        styles.addButton,
+                        (isStorageQuotaReached || isUploading) &&
+                          styles.addButtonDisabled,
+                      ]}
+                      onPress={handleBulkUpload}
+                      disabled={isStorageQuotaReached || isUploading}
+                    >
+                      <Text style={styles.buttonText}>
+                        {isUploading ? "Transfert en cours..." : buttonText}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+
+      {/* Upload Progress Modal */}
+      <Modal visible={uploadModalVisible} transparent animationType="fade">
+        <View style={styles.progressModalContainer}>
+          <View style={styles.progressModalContent}>
+            <Text style={styles.progressTitle}>Transfert en cours</Text>
+            <View style={styles.progressBarContainer}>
+              <View
+                style={[
+                  styles.progressBar,
+                  {
+                    width: `${(uploadProgress.current / uploadProgress.total) * 100}%`,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.progressText}>
+              {uploadProgress.current} / {uploadProgress.total}
+            </Text>
+            <View style={styles.progressStats}>
+              <View style={styles.progressStat}>
+                <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+                <Text style={styles.progressStatText}>
+                  {uploadProgress.succeeded} réussi(s)
+                </Text>
+              </View>
+              {uploadProgress.failed > 0 && (
+                <View style={styles.progressStat}>
+                  <Ionicons name="close-circle" size={20} color="#FF3B30" />
+                  <Text style={styles.progressStatText}>
+                    {uploadProgress.failed} échoué(s)
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <CustomAlert
+        visible={alertInfo.visible}
+        title={alertInfo.title}
+        message={alertInfo.message}
+        type={alertInfo.type}
+        onClose={() => setAlertInfo({ ...alertInfo, visible: false })}
+        buttons={alertInfo.buttons}
+      />
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalContent: {
+    maxHeight: "90%",
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: SIZES.xLarge,
+    borderTopRightRadius: SIZES.xLarge,
+    padding: SIZES.large,
+  },
+  scrollViewContent: {
+    paddingBottom: Platform.OS === "android" ? 80 : 40,
+  },
+  headerContainer: {
+    position: "relative",
+    marginBottom: SIZES.large,
+  },
+  closeButton: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.white,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+  },
+  headerTitle: {
+    textAlign: "center",
+    fontFamily: FONT.bold,
+    fontSize: SIZES.xLarge,
+    color: "#f87b1b",
+  },
+  networkStatusBadge: {
+    position: "absolute",
+    right: 0,
+    top: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FF9500",
+    paddingHorizontal: SIZES.small,
+    paddingVertical: 4,
+    borderRadius: SIZES.small,
+    gap: 4,
+  },
+  networkStatusText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.small - 2,
+    color: COLORS.white,
+  },
+  selectButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.primary,
+    paddingVertical: SIZES.medium,
+    paddingHorizontal: SIZES.large,
+    borderRadius: SIZES.medium,
+    gap: SIZES.small,
+    marginBottom: SIZES.medium,
+  },
+  selectButtonText: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.medium,
+    color: COLORS.white,
+  },
+  imageGridHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: SIZES.small,
+  },
+  imageCount: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.medium,
+    color: COLORS.secondary,
+  },
+  clearAllText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.medium,
+    color: "#FF3B30",
+  },
+  imageGrid: {
+    marginBottom: SIZES.medium,
+  },
+  imageGridContent: {
+    gap: SIZES.small,
+  },
+  imageThumbnailContainer: {
+    position: "relative",
+    marginRight: SIZES.small,
+  },
+  imageThumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: SIZES.small,
+    backgroundColor: COLORS.gray2,
+  },
+  removeImageButton: {
+    position: "absolute",
+    top: -8,
+    right: -8,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+  },
+  sectionContainer: {
+    marginBottom: SIZES.medium,
+  },
+  severityContainer: {
+    backgroundColor: COLORS.lightWhite,
+    padding: SIZES.medium,
+    borderRadius: SIZES.medium,
+    borderWidth: 1,
+    borderColor: COLORS.gray2,
+  },
+  severityTitle: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.medium,
+    color: "#f87b1b",
+    marginBottom: SIZES.small,
+  },
+  severityHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: SIZES.medium,
+  },
+  severityValue: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.xLarge,
+  },
+  severityBadge: {
+    paddingHorizontal: SIZES.medium,
+    paddingVertical: SIZES.small - 2,
+    borderRadius: SIZES.medium,
+  },
+  severityBadgeText: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.small,
+    color: COLORS.white,
+  },
+  severitySlider: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  severityDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.gray2,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  severityDotActive: {},
+  severityDotSelected: {
+    borderWidth: 3,
+  },
+  sectionTitle: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.medium,
+    color: "#f87b1b",
+    marginBottom: SIZES.small,
+  },
+  typeScrollView: {
+    gap: SIZES.small,
+  },
+  typeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SIZES.small,
+    paddingHorizontal: SIZES.medium,
+    paddingVertical: SIZES.small,
+    backgroundColor: COLORS.lightWhite,
+    borderRadius: SIZES.medium,
+    borderWidth: 1,
+    borderColor: COLORS.gray2,
+  },
+  typeButtonSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  typeButtonText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.small,
+    color: "#11224e",
+  },
+  typeButtonTextSelected: {
+    color: COLORS.white,
+  },
+  categoryScrollView: {
+    gap: SIZES.small,
+  },
+  categoryButton: {
+    paddingHorizontal: SIZES.medium,
+    paddingVertical: SIZES.small,
+    backgroundColor: COLORS.lightWhite,
+    borderRadius: SIZES.medium,
+    borderWidth: 1,
+    borderColor: COLORS.gray2,
+  },
+  categoryButtonSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  categoryButtonText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.small,
+    color: COLORS.secondary,
+  },
+  categoryButtonTextSelected: {
+    color: COLORS.white,
+  },
+  form: {
+    marginBottom: SIZES.medium,
+  },
+  label: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.medium,
+    color: "#f87b1b",
+    marginBottom: SIZES.small,
+  },
+  input: {
+    backgroundColor: COLORS.lightWhite,
+    paddingHorizontal: SIZES.medium,
+    paddingVertical: SIZES.medium,
+    borderRadius: SIZES.small,
+    borderWidth: 1,
+    borderColor: COLORS.gray2,
+    fontFamily: FONT.regular,
+    fontSize: SIZES.medium,
+    color: COLORS.secondary,
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: "top",
+  },
+  buttonContainer: {
+    marginTop: SIZES.medium,
+  },
+  button: {
+    paddingVertical: SIZES.medium,
+    borderRadius: SIZES.medium,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addButton: {
+    backgroundColor: COLORS.primary,
+  },
+  addButtonDisabled: {
+    backgroundColor: COLORS.gray,
+    opacity: 0.5,
+  },
+  buttonText: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.medium,
+    color: COLORS.white,
+  },
+  progressModalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: SIZES.large,
+  },
+  progressModalContent: {
+    backgroundColor: COLORS.white,
+    padding: SIZES.xLarge,
+    borderRadius: SIZES.medium,
+    width: "100%",
+    maxWidth: 400,
+  },
+  progressTitle: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.large,
+    color: COLORS.primary,
+    textAlign: "center",
+    marginBottom: SIZES.large,
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: COLORS.gray2,
+    borderRadius: 4,
+    overflow: "hidden",
+    marginBottom: SIZES.medium,
+  },
+  progressBar: {
+    height: "100%",
+    backgroundColor: COLORS.primary,
+    borderRadius: 4,
+  },
+  progressText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.medium,
+    color: COLORS.secondary,
+    textAlign: "center",
+    marginBottom: SIZES.medium,
+  },
+  progressStats: {
+    gap: SIZES.small,
+  },
+  progressStat: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SIZES.small,
+  },
+  progressStatText: {
+    fontFamily: FONT.regular,
+    fontSize: SIZES.medium,
+    color: COLORS.secondary,
+  },
+});

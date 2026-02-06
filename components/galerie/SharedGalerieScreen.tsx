@@ -40,6 +40,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import BulkAddImageModal from "./BulkAddImageModal";
 
 const IMAGES_PER_PAGE = 2;
 
@@ -47,12 +48,14 @@ interface SharedGalerieScreenProps {
   creationMode: "upload" | "capture";
   customButtonIcon?: any;
   allowOffline?: boolean; // Default: false - controls offline storage/sync functionality
+  useBulkModal?: boolean; // Default: false - use BulkAddImageModal instead of AddImageModal
 }
 
 export default function SharedGalerieScreen({
   creationMode,
   customButtonIcon,
   allowOffline = false,
+  useBulkModal = false,
 }: SharedGalerieScreenProps) {
   const { token, user } = useAuth();
   const { width } = useWindowDimensions();
@@ -604,26 +607,38 @@ export default function SharedGalerieScreen({
           <View style={{ height: 100 }} />
         </ScrollView>
       )}
-      <AddImageModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onAdd={handleAddImage}
-        openCameraOnShow={true}
-        allowedMode={creationMode}
-        placeholderText={
-          creationMode === "capture"
-            ? "Prendre un constat"
-            : "Prendre une photo ou vidéo"
-        }
-        modalTitle={
-          creationMode === "capture"
-            ? "Ajouter un constat"
-            : "Ajouter une image"
-        }
-        buttonText={
-          creationMode === "capture" ? "Ajouter le constat" : "Ajouter l'image"
-        }
-      />
+      {useBulkModal ? (
+        <BulkAddImageModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          onAdd={handleAddImage}
+          modalTitle="Transfert en masse"
+          buttonText="Transférer les images"
+        />
+      ) : (
+        <AddImageModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          onAdd={handleAddImage}
+          openCameraOnShow={true}
+          allowedMode={creationMode}
+          placeholderText={
+            creationMode === "capture"
+              ? "Prendre un constat"
+              : "Prendre une photo ou vidéo"
+          }
+          modalTitle={
+            creationMode === "capture"
+              ? "Ajouter un constat"
+              : "Ajouter une image"
+          }
+          buttonText={
+            creationMode === "capture"
+              ? "Ajouter le constat"
+              : "Ajouter l'image"
+          }
+        />
+      )}
       {selectedItem && (
         <PreviewModal
           visible={!!selectedItem && !isAnnotatorVisible}
