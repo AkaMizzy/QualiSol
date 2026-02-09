@@ -1,34 +1,42 @@
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Linking,
-    Modal,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import API_CONFIG from '@/app/config/api';
-import { ICONS } from '@/constants/Icons';
-import { useAuth, User } from '@/contexts/AuthContext';
-import folderService from '@/services/folderService';
-import * as gedService from '@/services/gedService';
-import { CreateGedInput, Ged } from '@/services/gedService';
-import { Audio } from 'expo-av';
-import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
-import { WebView } from 'react-native-webview';
-import MapSelectionModal from './MapSelectionModal';
+import { useAuth } from "@/contexts/AuthContext";
+import * as gedService from "@/services/gedService";
+import { Ged } from "@/services/gedService";
+import { Audio } from "expo-av";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
+import MapSelectionModal from "./MapSelectionModal";
 
-const SUPPORTED_TYPES = ['long_text', 'text', 'list', 'boolean', 'date', 'number', 'taux', 'photo', 'voice', 'GPS'];
+const SUPPORTED_TYPES = [
+  "long_text",
+  "text",
+  "list",
+  "boolean",
+  "date",
+  "number",
+  "taux",
+  "photo",
+  "voice",
+  "GPS",
+];
 
 interface FolderQuestionsModalProps {
   folderId: string | null;
@@ -37,70 +45,85 @@ interface FolderQuestionsModalProps {
   onDelete?: () => void;
 }
 
-function QuestionInput({
+interface AnswerData {
+  value?: string;
+  quantity?: number;
+  price?: number;
+  latitude?: string;
+  longitude?: string;
+  image?: ImagePicker.ImagePickerAsset;
+  recordingUri?: string;
+  boolValue?: boolean;
+}
+
+// Helper for mini-map HTML
+const getMiniMapHtml = (lat: number, lng: number) => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+      <style>
+        html, body, #miniMap { height: 100%; }
+        body { margin: 0; padding: 0; }
+        #miniMap { width: 100%; }
+      </style>
+    </head>
+    <body>
+      <div id="miniMap"></div>
+      <script>
+        const miniMap = L.map('miniMap', { zoomControl: false, attributionControl: false }).setView([${lat}, ${lng}], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(miniMap);
+        L.marker([${lat}, ${lng}]).addTo(miniMap);
+        setTimeout(() => { miniMap.invalidateSize(); }, 100);
+      </script>
+    </body>
+    </html>
+  `;
+};
+
+function QuestionRow({
   item,
-  token,
-  user,
   answer,
-  onAnswerCreated,
+  onChange,
 }: {
   item: Ged;
-  token: string | null;
-  user: User | null;
-  answer?: Ged;
-  onAnswerCreated: (newAnswer: Ged) => void;
+  answer?: AnswerData;
+  onChange: (data: Partial<AnswerData>) => void;
 }) {
-  const [value, setValue] = useState(answer?.description || item.value || '');
-  const [boolValue, setBoolValue] = useState(answer?.description === 'true' || item.value === 'true');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(!!answer);
+  const [localValue, setLocalValue] = useState(answer?.value || "");
+  const [localQuantity, setLocalQuantity] = useState(
+    answer?.quantity?.toString() || "",
+  );
+  const [localPrice, setLocalPrice] = useState(answer?.price?.toString() || "");
+
+  // Specific states for complex types
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [recordingUri, setRecordingUri] = useState<string | null>(null);
-  const [status, setStatus] = useState<'idle' | 'recording' | 'recorded' | 'playing'>('idle');
-  const [duration, setDuration] = useState(0);
+  const [status, setStatus] = useState<
+    "idle" | "recording" | "recorded" | "playing"
+  >("idle");
   const [isMapVisible, setMapVisible] = useState(false);
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(
-    answer?.latitude && answer?.longitude
-      ? { latitude: parseFloat(answer.latitude), longitude: parseFloat(answer.longitude) }
-      : null
-  );
 
-  const getMiniMapHtml = () => {
-    const latNum = location ? location.latitude : null;
-    const lngNum = location ? location.longitude : null;
-    const lat = Number.isFinite(latNum as number) ? (latNum as number) : 33.5731; // Casablanca default
-    const lng = Number.isFinite(lngNum as number) ? (lngNum as number) : -7.5898;
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-        <style>
-          html, body, #miniMap { height: 100%; }
-          body { margin: 0; padding: 0; }
-          #miniMap { width: 100%; }
-        </style>
-      </head>
-      <body>
-        <div id="miniMap"></div>
-        <script>
-          const miniMap = L.map('miniMap', { zoomControl: false, attributionControl: false }).setView([${lat}, ${lng}], 14);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-          }).addTo(miniMap);
-          L.marker([${lat}, ${lng}]).addTo(miniMap);
-          setTimeout(() => { miniMap.invalidateSize(); }, 100);
-        </script>
-      </body>
-      </html>
-    `;
-  };
+  // Sync local state if prop changes (e.g. initial load)
+  useEffect(() => {
+    if (answer?.value !== undefined && answer.value !== localValue)
+      setLocalValue(answer.value);
+    if (
+      answer?.quantity !== undefined &&
+      answer.quantity.toString() !== localQuantity
+    )
+      setLocalQuantity(answer.quantity.toString());
+    if (answer?.price !== undefined && answer.price.toString() !== localPrice)
+      setLocalPrice(answer.price.toString());
+  }, [answer]);
 
+  // Audio cleanup
   useEffect(() => {
     return sound
       ? () => {
@@ -109,943 +132,586 @@ function QuestionInput({
       : undefined;
   }, [sound]);
 
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (status === 'recording') {
-      interval = setInterval(() => {
-        setDuration(prev => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [status]);
-
-  const requestAudioPermissions = async () => {
-    const { status } = await Audio.requestPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Désolé, nous avons besoin des autorisations du microphone pour que cela fonctionne !');
-      return false;
-    }
-    return true;
+  const handleTextChange = (text: string) => {
+    setLocalValue(text);
+    onChange({ value: text });
   };
 
-  const startRecording = async () => {
-    const hasPermission = await requestAudioPermissions();
-    if (!hasPermission) return;
-
-    try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-      setStatus('recording');
-      setDuration(0);
-      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-      setRecording(recording);
-    } catch (err) {
-      console.error('Failed to start recording', err);
-      setStatus('idle');
-    }
+  const handleQuantityChange = (text: string) => {
+    setLocalQuantity(text);
+    const qty = parseFloat(text);
+    onChange({ quantity: isNaN(qty) ? undefined : qty });
   };
 
-  const stopRecording = async () => {
-    if (!recording) return;
-
-    try {
-      const status = await recording.getStatusAsync();
-      await recording.stopAndUnloadAsync();
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
-      const uri = recording.getURI();
-      setRecordingUri(uri);
-      setRecording(null);
-      if (status.isRecording && status.durationMillis) {
-        setDuration(Math.round(status.durationMillis / 1000));
-      }
-      setStatus('recorded');
-    } catch (err) {
-      console.error('Failed to stop recording', err);
-      setStatus('idle');
-    }
+  const handlePriceChange = (text: string) => {
+    setLocalPrice(text);
+    const prc = parseFloat(text);
+    onChange({ price: isNaN(prc) ? undefined : prc });
   };
 
-  const playSound = async () => {
-    if (!sound) {
-      const { sound: newSound } = await Audio.Sound.createAsync({ uri: recordingUri! });
-      setSound(newSound);
-      await newSound.replayAsync();
-      setStatus('playing');
-      newSound.setOnPlaybackStatusUpdate(playbackStatus => {
-        if (playbackStatus.isLoaded && playbackStatus.didJustFinish) {
-          setStatus('recorded');
-        }
-      });
+  const handleBooleanChange = (val: boolean) => {
+    onChange({ boolValue: val, value: String(val) });
+  };
+
+  // --- Photo Logic ---
+  const handleSelectImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      alert("Permission refusée");
       return;
     }
-
-    const currentStatus = await sound.getStatusAsync();
-    if (currentStatus.isLoaded && currentStatus.isPlaying) {
-      await sound.pauseAsync();
-      setStatus('recorded');
-    } else {
-      await sound.replayAsync();
-      setStatus('playing');
-    }
-  };
-
-  const handleRerecord = () => {
-    if (sound) {
-      sound.unloadAsync();
-    }
-    setRecordingUri(null);
-    setSound(null);
-    setDuration(0);
-    setStatus('idle');
-  };
-
-  const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  const requestCameraPermissions = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Désolé, nous avons besoin des autorisations de la caméra pour que cela fonctionne !');
-      return false;
-    }
-    return true;
-  };
-
-  const requestGalleryPermissions = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Désolé, nous avons besoin des autorisations de la galerie pour que cela fonctionne !');
-      return false;
-    }
-    return true;
-  };
-
-  const handleTakePhoto = async () => {
-    const hasPermission = await requestCameraPermissions();
-    if (!hasPermission) return;
-
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.5,
-    });
-
-    if (!result.canceled) {
-      setImage(result.assets[0]);
-    }
-  };
-
-  const handleChooseFromGallery = async () => {
-    const hasPermission = await requestGalleryPermissions();
-    if (!hasPermission) return;
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.5,
     });
-
     if (!result.canceled) {
-      setImage(result.assets[0]);
+      onChange({ image: result.assets[0], value: "Photo sélectionnée" });
     }
   };
 
-  const handleSelectImage = () => {
-    Alert.alert(
-      'Sélectionner une image',
-      'Choisissez une option',
-      [
-        {
-          text: 'Prendre une photo',
-          onPress: handleTakePhoto,
-        },
-        {
-          text: 'Choisir de la galerie',
-          onPress: handleChooseFromGallery,
-        },
-        {
-          text: 'Annuler',
-          style: 'cancel',
-        },
-      ],
-      { cancelable: true }
-    );
+  // --- Audio Logic ---
+  const startRecording = async () => {
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      );
+      setRecording(recording);
+      setStatus("recording");
+    } catch (err) {
+      console.error("Failed to start recording", err);
+    }
   };
 
-  const showDatePicker = () => setDatePickerVisibility(true);
-  const hideDatePicker = () => setDatePickerVisibility(false);
-
-  const handleConfirm = (date: Date) => {
-    setValue(date.toISOString().split('T')[0]);
-    hideDatePicker();
+  const stopRecording = async () => {
+    if (!recording) return;
+    await recording.stopAndUnloadAsync();
+    const uri = recording.getURI();
+    setRecording(null);
+    setStatus("recorded");
+    if (uri) onChange({ recordingUri: uri, value: "Audio enregistré" });
   };
 
-  const handleSubmit = async () => {
-    if (!token || !user || isSubmitting || isSubmitted) return;
+  const playSound = async () => {
+    if (!answer?.recordingUri) return;
+    const { sound: newSound } = await Audio.Sound.createAsync({
+      uri: answer.recordingUri,
+    });
+    setSound(newSound);
+    await newSound.playAsync();
+  };
 
+  // --- GPS Logic ---
+  const handleLocationSelect = (loc: {
+    latitude: number;
+    longitude: number;
+  }) => {
+    onChange({
+      latitude: String(loc.latitude),
+      longitude: String(loc.longitude),
+      value: `Lat: ${loc.latitude.toFixed(4)}, Lon: ${loc.longitude.toFixed(4)}`,
+    });
+    setMapVisible(false);
+  };
+
+  // Render Answer Input based on type
+  const renderAnswerInput = () => {
+    switch (item.type) {
+      case "boolean":
+        return (
+          <Switch
+            value={answer?.boolValue || localValue === "true"}
+            onValueChange={handleBooleanChange}
+            trackColor={{ false: "#767577", true: "#f87b1b" }}
+          />
+        );
+      case "date":
+        return (
+          <>
+            <TouchableOpacity
+              onPress={() => setDatePickerVisibility(true)}
+              style={styles.dateButton}
+            >
+              <Text style={styles.dateText}>{localValue || "YYYY-MM-DD"}</Text>
+              <Ionicons name="calendar-outline" size={20} color="#666" />
+            </TouchableOpacity>
+            <DateTimePickerModal
+              isVisible={isDatePickerVisible}
+              mode="date"
+              onConfirm={(date) => {
+                const val = date.toISOString().split("T")[0];
+                setLocalValue(val);
+                onChange({ value: val });
+                setDatePickerVisibility(false);
+              }}
+              onCancel={() => setDatePickerVisibility(false)}
+            />
+          </>
+        );
+      case "photo":
+        return (
+          <TouchableOpacity
+            onPress={handleSelectImage}
+            style={styles.mediaButton}
+          >
+            {answer?.image ? (
+              <Image
+                source={{ uri: answer.image.uri }}
+                style={styles.thumbnail}
+              />
+            ) : localValue && localValue.startsWith("http") ? (
+              // Existing image from server
+              <Image source={{ uri: localValue }} style={styles.thumbnail} />
+            ) : (
+              <Ionicons name="camera-outline" size={24} color="#f87b1b" />
+            )}
+          </TouchableOpacity>
+        );
+      case "voice":
+        return (
+          <View style={styles.rowCenter}>
+            {status === "recording" ? (
+              <TouchableOpacity onPress={stopRecording}>
+                <Ionicons name="stop-circle" size={28} color="#ef4444" />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity onPress={startRecording}>
+                <Ionicons name="mic-outline" size={24} color="#f87b1b" />
+              </TouchableOpacity>
+            )}
+            {(answer?.recordingUri ||
+              (localValue && localValue.endsWith(".m4a"))) && (
+              <TouchableOpacity onPress={playSound} style={{ marginLeft: 10 }}>
+                <Ionicons
+                  name="play-circle-outline"
+                  size={24}
+                  color="#11224e"
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+        );
+      case "GPS":
+        return (
+          <>
+            <TouchableOpacity
+              onPress={() => setMapVisible(true)}
+              style={styles.rowCenter}
+            >
+              <Ionicons name="location-outline" size={24} color="#f87b1b" />
+              <Text style={styles.smallText}>
+                {answer?.latitude ? "Modifier" : "Définir"}
+              </Text>
+            </TouchableOpacity>
+            <MapSelectionModal
+              visible={isMapVisible}
+              onClose={() => setMapVisible(false)}
+              onLocationSelect={handleLocationSelect}
+            />
+          </>
+        );
+      case "long_text":
+        return (
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={localValue}
+            onChangeText={handleTextChange}
+            placeholder="Saisir..."
+            multiline
+          />
+        );
+      default: // text, number, taux, list
+        return (
+          <TextInput
+            style={styles.input}
+            value={localValue}
+            onChangeText={handleTextChange}
+            placeholder="Saisir..."
+            keyboardType={
+              item.type === "number" || item.type === "taux"
+                ? "numeric"
+                : "default"
+            }
+          />
+        );
+    }
+  };
+
+  // Determine if we show Quantity/Price inputs
+  // Note: Model has `quantity` and `price` as integers (1 or 0 likely) acting as flags
+  const showQuantity = !!item.quantity;
+  const showPrice = !!item.price;
+
+  return (
+    <View style={styles.row}>
+      {/* Title & Desc */}
+      <View style={styles.colTitle}>
+        <Text style={styles.questionTitle}>{item.title}</Text>
+        {item.description ? (
+          <Text style={styles.questionDesc}>{item.description}</Text>
+        ) : null}
+      </View>
+
+      {/* Quantity (Conditional) */}
+      <View style={styles.colQty}>
+        {showQuantity ? (
+          <TextInput
+            style={styles.numberInput}
+            value={localQuantity}
+            onChangeText={handleQuantityChange}
+            placeholder="0"
+            keyboardType="numeric"
+          />
+        ) : null}
+      </View>
+
+      {/* Price (Conditional) */}
+      <View style={styles.colPrice}>
+        {showPrice ? (
+          <TextInput
+            style={styles.numberInput}
+            value={localPrice}
+            onChangeText={handlePriceChange}
+            placeholder="0.00"
+            keyboardType="numeric"
+          />
+        ) : null}
+      </View>
+
+      {/* Answer Input */}
+      <View style={styles.colAnswer}>{renderAnswerInput()}</View>
+    </View>
+  );
+}
+
+export default function FolderQuestionsModal({
+  folderId,
+  visible,
+  onClose,
+  onDelete,
+}: FolderQuestionsModalProps) {
+  const { token, user } = useAuth();
+  const [geds, setGeds] = useState<Ged[]>([]);
+  const [initialAnswers, setInitialAnswers] = useState<Map<string, Ged>>(
+    new Map(),
+  );
+  const [pendingChanges, setPendingChanges] = useState<
+    Record<string, AnswerData>
+  >({});
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    async function loadData() {
+      if (!token || !folderId || !visible) return;
+      setIsLoading(true);
+      try {
+        const fetchedGeds = await gedService.getGedsBySource(
+          token,
+          folderId,
+          "question",
+        );
+        const validQuestions = fetchedGeds.filter(
+          (g) => g.type && SUPPORTED_TYPES.includes(g.type),
+        );
+
+        // Fetch existing answers
+        const questionIds = validQuestions.map((q) => q.id);
+        const fetchedAnswers =
+          questionIds.length > 0
+            ? await gedService.getGedsBySource(token, questionIds, "answer")
+            : [];
+
+        const answersMap = new Map<string, Ged>();
+        const initialPending: Record<string, AnswerData> = {};
+
+        fetchedAnswers.forEach((a) => {
+          if (a.idsource) {
+            answersMap.set(a.idsource, a);
+            // Pre-populate pending changes with existing values so we know what they are
+            initialPending[a.idsource] = {
+              value: a.description || a.value || "",
+              quantity: a.quantity ?? undefined, // Model update needed for reading
+              price: a.price ?? undefined, // Model update needed for reading
+              latitude: a.latitude || undefined,
+              longitude: a.longitude || undefined,
+              // For images/voice, we don't download blob, just keep ref in value/url
+              boolValue: a.description === "true",
+            };
+          }
+        });
+
+        setGeds(validQuestions);
+        setInitialAnswers(answersMap);
+        setPendingChanges(initialPending);
+      } catch (err) {
+        console.error(err);
+        setError("Erreur de chargement");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, [folderId, token, visible]);
+
+  const handleRowChange = (questionId: string, data: Partial<AnswerData>) => {
+    setPendingChanges((prev) => ({
+      ...prev,
+      [questionId]: { ...(prev[questionId] || {}), ...data },
+    }));
+  };
+
+  const handleGlobalSubmit = async () => {
+    if (!token || !user) return;
     setIsSubmitting(true);
     try {
-      let answerPayload: CreateGedInput;
+      const promises = geds.map(async (question) => {
+        const changes = pendingChanges[question.id];
+        if (!changes) return; // No changes or initial value
 
-      if (item.type === 'photo') {
-        if (!image) {
-          setIsSubmitting(false);
-          return;
-        }
-        answerPayload = {
-          idsource: item.id,
-          title: `Réponse: ${item.title}`,
-          kind: 'answer',
-          author: user.id,
-          type: 'answer',
-          file: {
-            uri: image.uri,
-            type: image.mimeType || 'image/jpeg',
-            name: image.fileName || 'photo.jpg',
-          },
-        };
-      } else if (item.type === 'voice') {
-        if (!recordingUri) {
-          setIsSubmitting(false);
-          return;
-        }
-        answerPayload = {
-          idsource: item.id,
-          title: `Réponse: ${item.title}`,
-          kind: 'answer',
-          author: user.id,
-          type: 'answer',
-          file: {
-            uri: recordingUri,
-            type: 'audio/m4a',
-            name: `voice-answer-${Date.now()}.m4a`,
-          },
-        };
-      } else if (item.type === 'GPS') {
-        if (!location) {
-          setIsSubmitting(false);
-          return;
-        }
-        answerPayload = {
-          idsource: item.id,
-          title: `Réponse: ${item.title}`,
-          kind: 'answer',
-          author: user.id,
-          type: 'answer',
-          latitude: String(location.latitude),
-          longitude: String(location.longitude),
-        };
-      } else {
-        const answerValue = item.type === 'boolean' ? String(boolValue) : value;
-        if (!answerValue) {
-          setIsSubmitting(false);
-          return;
-        }
-        answerPayload = {
-          idsource: item.id,
-          title: `Réponse: ${item.title}`,
-          kind: 'answer',
-          author: user.id,
-          description: answerValue,
-          type: 'answer',
-        };
-      }
+        const existingAnswer = initialAnswers.get(question.id);
 
-      const result = await gedService.createGed(token, answerPayload);
-      onAnswerCreated(result.data);
-      setIsSubmitted(true);
+        // Construct shared payload base
+        const basePayload: any = {
+          idsource: question.id,
+          title: `Réponse: ${question.title}`,
+          kind: "answer",
+          author: user.id,
+          type: "answer",
+          quantity: changes.quantity,
+          price: changes.price,
+        };
+
+        // Handle specific types data
+        if (question.type === "GPS" && changes.latitude) {
+          basePayload.latitude = changes.latitude;
+          basePayload.longitude = changes.longitude;
+        } else if (question.type !== "photo" && question.type !== "voice") {
+          basePayload.description = changes.value;
+        }
+
+        if (existingAnswer) {
+          // UPDATE
+          if (question.type === "photo" && changes.image) {
+            await gedService.updateGedFile(
+              token,
+              existingAnswer.id,
+              {
+                uri: changes.image.uri,
+                type: changes.image.mimeType || "image/jpeg",
+                name: changes.image.fileName || "photo.jpg",
+              },
+              basePayload,
+            );
+          } else if (question.type === "voice" && changes.recordingUri) {
+            await gedService.updateGedFile(
+              token,
+              existingAnswer.id,
+              {
+                uri: changes.recordingUri,
+                type: "audio/m4a",
+                name: `voice-${Date.now()}.m4a`,
+              },
+              basePayload,
+            );
+          } else {
+            await gedService.updateGed(token, existingAnswer.id, basePayload);
+          }
+        } else {
+          // CREATE
+          const createPayload = { ...basePayload };
+          if (question.type === "photo" && changes.image) {
+            createPayload.file = {
+              uri: changes.image.uri,
+              type: changes.image.mimeType || "image/jpeg",
+              name: changes.image.fileName || "photo.jpg",
+            };
+          } else if (question.type === "voice" && changes.recordingUri) {
+            createPayload.file = {
+              uri: changes.recordingUri,
+              type: "audio/m4a",
+              name: `voice-${Date.now()}.m4a`,
+            };
+          } else {
+            if (!createPayload.description && !createPayload.latitude) {
+              createPayload.description = changes.value || "";
+            }
+          }
+          await gedService.createGed(token, createPayload);
+        }
+      });
+
+      await Promise.all(promises);
+      Alert.alert("Succès", "Réponses enregistrées");
+      onClose();
     } catch (err) {
-      console.error('Submission failed:', err);
+      Alert.alert("Erreur", "Echec de l'enregistrement");
+      console.error(err);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const getIconName = (type: Ged['type']): keyof typeof Ionicons.glyphMap => {
-    switch (type) {
-      case 'text':
-        return 'text';
-      case 'long_text':
-        return 'document-text-outline';
-      case 'number':
-        return 'calculator-outline';
-      case 'taux':
-        return 'analytics-outline';
-      case 'date':
-        return 'calendar-outline';
-      case 'list':
-        return 'list-outline';
-      default:
-        return 'help-circle-outline';
-    }
-  };
-
-  const renderSubmitButton = () => {
-    if (isSubmitting) {
-      return <ActivityIndicator size="small" color="#f87b1b" style={styles.submitButton} />;
-    }
-    if (isSubmitted) {
-      return <Ionicons name="checkmark-circle" size={24} color="#22c55e" style={styles.submitButton} />;
-    }
-    const canSubmit =
-      item.type === 'photo'
-        ? !!image
-        : item.type === 'voice'
-          ? !!recordingUri
-          : item.type === 'GPS'
-            ? !!location
-            : !!value || item.type === 'boolean';
-    return (
-      <TouchableOpacity onPress={handleSubmit} disabled={isSubmitting || isSubmitted || !canSubmit}>
-        <Ionicons
-          name="send-outline"
-          size={24}
-          color={canSubmit ? '#f87b1b' : '#d1d5db'}
-          style={styles.submitButton}
-        />
-      </TouchableOpacity>
-    );
-  };
-
-  if (item.type === 'GPS') {
-    return (
-      <>
-        <TouchableOpacity
-          style={styles.gpsContainer}
-          onPress={() => !isSubmitted && setMapVisible(true)}
-          disabled={isSubmitted}>
-          <View style={styles.gpsContent}>
-            {location ? (
-              <View style={styles.gpsDetailsContainer}>
-                <View style={styles.miniMapContainer}>
-                  <WebView
-                    source={{ html: getMiniMapHtml() }}
-                    style={styles.miniMap}
-                    javaScriptEnabled={true}
-                    scrollEnabled={false}
-                    bounces={false}
-                    pointerEvents="none"
-                  />
-                </View>
-
-                <Text style={styles.gpsCoordinates}>
-                  Lat: {location.latitude.toFixed(4)}, Lon: {location.longitude.toFixed(4)}
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.gpsDetailsContainer}>
-                <Ionicons name="location-outline" size={28} color="#f87b1b" />
-                <Text style={styles.gpsPlaceholder}>choisir un emplacement</Text>
-              </View>
-            )}
-          </View>
-          {renderSubmitButton()}
-        </TouchableOpacity>
-        <MapSelectionModal
-          visible={isMapVisible}
-          onClose={() => setMapVisible(false)}
-          onLocationSelect={selectedLocation => {
-            setLocation(selectedLocation);
-            setMapVisible(false);
-          }}
-        />
-      </>
-    );
-  }
-
-  if (item.type === 'voice') {
-    // Submitted view
-    if (isSubmitted && answer?.url) {
-      return (
-        <View style={styles.audioPlayerContainer}>
-          <Text>Réponse enregistrée.</Text>
-          <Ionicons name="checkmark-circle" size={24} color="#22c55e" />
-        </View>
-      );
-    }
-
-    // Recording view
-    if (status === 'recording') {
-      return (
-        <View style={[styles.voiceContainer, styles.recordingContainer]}>
-          <ActivityIndicator size="small" color="#dc2626" />
-          <Text style={styles.timerText}>{formatDuration(duration)}</Text>
-          <TouchableOpacity style={styles.stopButton} onPress={stopRecording}>
-            <Ionicons name="stop-circle" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    // Recorded / Preview view
-    if (status === 'recorded' || status === 'playing') {
-      return (
-        <View style={styles.voiceContainer}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={[styles.audioPlayerContainer, styles.recordedContainer]}>
-              <TouchableOpacity onPress={playSound} style={styles.playerButton}>
-                <Ionicons name={status === 'playing' ? 'pause-circle' : 'play-circle'} size={32} color="#11224e" />
-              </TouchableOpacity>
-              <Text style={styles.recordedText}>{formatDuration(duration)}</Text>
-            </View>
-            <TouchableOpacity onPress={handleRerecord} style={styles.playerButton}>
-              <Ionicons name="trash-outline" size={28} color="#ef4444" />
-            </TouchableOpacity>
-          </View>
-          {renderSubmitButton()}
-        </View>
-      );
-    }
-
-    // Idle view
-    return (
-      <TouchableOpacity style={styles.voiceIdleContainer} onPress={startRecording}>
-        <Ionicons name="mic-outline" size={24} color="#f87b1b" />
-        <Text style={styles.voiceButtonText}>Ajouter une note vocale</Text>
-      </TouchableOpacity>
-    );
-  }
-
-  if (item.type === 'photo') {
-    return (
-      <View style={styles.photoContainer}>
-        <View style={styles.photoContent}>
-          {isSubmitted && answer?.url ? (
-            <Image source={{ uri: `${API_CONFIG.BASE_URL}${answer.url}` }} style={styles.previewImage} />
-          ) : image ? (
-            <Image source={{ uri: image.uri }} style={styles.previewImage} />
-          ) : (
-            <TouchableOpacity style={styles.photoButton} onPress={handleSelectImage} disabled={isSubmitted}>
-              <Ionicons name="add-circle-outline" size={32} color="#11224e" />
-              <Text style={styles.photoButtonText}>Ajouter une photo</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-        {renderSubmitButton()}
-      </View>
-    );
-  }
-
-  if (item.type === 'boolean') {
-    return (
-      <View style={[styles.inputContainer, styles.switchContainer]}>
-        <Switch
-          value={boolValue}
-          onValueChange={setBoolValue}
-          trackColor={{ false: '#767577', true: '#f87b1b' }}
-          thumbColor={boolValue ? '#ffffff' : '#f4f3f4'}
-          disabled={isSubmitted}
-        />
-        <View style={styles.submitButtonContainer}>{renderSubmitButton()}</View>
-      </View>
-    );
-  }
-
-  if (item.type === 'date') {
-    return (
-      <>
-        <TouchableOpacity onPress={showDatePicker} style={styles.inputContainer} disabled={isSubmitted}>
-          <Ionicons name={getIconName(item.type)} size={22} style={styles.inputIcon} />
-          <Text style={[styles.input, !value && styles.placeholderText]}>
-            {value || 'YYYY-MM-DD'}
-          </Text>
-          {renderSubmitButton()}
-        </TouchableOpacity>
-        <DateTimePickerModal
-          isVisible={isDatePickerVisible}
-          mode="date"
-          onConfirm={handleConfirm}
-          onCancel={hideDatePicker}
-        />
-      </>
-    );
-  }
-
-  const input = (
-    <TextInput
-      style={styles.input}
-      value={value}
-      onChangeText={setValue}
-      placeholderTextColor="#9ca3af"
-      editable={!isSubmitted}
-      keyboardType={
-        item.type === 'number' ? 'numeric' : item.type === 'taux' ? 'decimal-pad' : 'default'
-      }
-      multiline={item.type === 'long_text'}
-      placeholder={
-        item.type === 'date'
-          ? 'YYYY-MM-DD'
-          : item.type === 'list'
-            ? 'Sélectionnez une option'
-            : 'Saisissez la réponse'
-      }
-    />
-  );
-
   return (
-    <View style={styles.inputContainer}>
-      <Ionicons name={getIconName(item.type)} size={22} style={styles.inputIcon} />
-      {input}
-      {item.type === 'taux' && <Text style={styles.tauxSymbol}>%</Text>}
-      {renderSubmitButton()}
-    </View>
-  );
-}
-
-export default function FolderQuestionsModal({ folderId, visible, onClose, onDelete }: FolderQuestionsModalProps) {
-  const { token, user } = useAuth();
-  const [geds, setGeds] = useState<Ged[]>([]);
-  const [answers, setAnswers] = useState<Map<string, Ged>>(new Map());
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    async function fetchGedsAndAnswers() {
-      if (!token || !folderId || !visible) {
-        setGeds([]);
-        setAnswers(new Map());
-        return;
-      }
-
-      setIsLoading(true);
-      setError(null);
-      try {
-        const fetchedGeds = await gedService.getGedsBySource(token, folderId, 'question');
-        const filteredGeds = fetchedGeds.filter(ged => ged.type && SUPPORTED_TYPES.includes(ged.type));
-        setGeds(filteredGeds);
-
-        if (filteredGeds.length > 0) {
-          const questionIds = filteredGeds.map(q => q.id);
-          const fetchedAnswers = await gedService.getGedsBySource(token, questionIds, 'answer');
-          const answersMap = new Map<string, Ged>();
-          fetchedAnswers.forEach(ans => {
-            if (ans.idsource) {
-              answersMap.set(ans.idsource, ans);
-            }
-          });
-          setAnswers(answersMap);
-        }
-      } catch (err) {
-        setError('Impossible de charger les questions ou les réponses.');
-        console.error('Failed to fetch geds or answers:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchGedsAndAnswers();
-  }, [folderId, token, visible]);
-
-  const handleAnswerCreated = (newAnswer: Ged) => {
-    if (newAnswer.idsource) {
-      setAnswers(prevAnswers => new Map(prevAnswers).set(newAnswer.idsource!, newAnswer));
-    }
-  };
-
-  const handleGeneratePdf = async () => {
-    if (!token || !folderId) return;
-
-    setIsGeneratingPdf(true);
-    try {
-      const result = await gedService.generateFolderReport(token, folderId);
-      Alert.alert(
-        'Succès',
-        'Le rapport PDF a été généré avec succès. Voulez-vous le voir?',
-        [
-          { text: 'Annuler', style: 'cancel' },
-          { 
-            text: 'Ouvrir', 
-            onPress: () => {
-              if (result.data.url) {
-                const fileUrl = `${API_CONFIG.BASE_URL}${result.data.url}`;
-                Linking.openURL(fileUrl);
-              }
-            }
-          }
-        ]
-      );
-    } catch (error) {
-      console.error('Failed to generate PDF:', error);
-      Alert.alert('Erreur', 'Impossible de générer le rapport PDF.');
-    } finally {
-      setIsGeneratingPdf(false);
-    }
-  };
-
-  const handleDeleteFolder = () => {
-    Alert.alert(
-      'Supprimer le dossier',
-      'Êtes-vous sûr de vouloir supprimer ce dossier ? Cette action est irréversible.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            if (!token || !folderId) return;
-            setIsDeleting(true);
-            try {
-              await folderService.deleteFolder(folderId, token);
-              Alert.alert('Succès', 'Le dossier a été supprimé avec succès.');
-              onClose();
-              if (onDelete) {
-                onDelete();
-              }
-            } catch (error) {
-              console.error('Failed to delete folder:', error);
-              Alert.alert('Erreur', 'Impossible de supprimer le dossier.');
-            } finally {
-              setIsDeleting(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  return (
-    <Modal animationType="slide" transparent={false} visible={visible} onRequestClose={onClose}>
-      <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.closeIcon}>
-            <Ionicons name="close-circle" size={32} color="#f87b1b" />
+          <TouchableOpacity onPress={onClose}>
+            <Ionicons name="close" size={28} color="#11224e" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Questions du Dossier</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity onPress={handleGeneratePdf} style={styles.headerActionButton} disabled={isGeneratingPdf}>
-              {isGeneratingPdf ? (
-                <ActivityIndicator color="#f87b1b" />
-              ) : (
-                <Image source={ICONS.pdf} style={{ width: 28, height: 28 }} />
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleDeleteFolder} style={styles.headerActionButton} disabled={isDeleting}>
-              {isDeleting ? (
-                <ActivityIndicator color="#ef4444" />
-              ) : (
-                <Ionicons name="trash-outline" size={26} color="#ef4444" />
-              )}
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.headerTitle}>Questions</Text>
+          <View style={{ width: 28 }} />
+        </View>
+
+        {/* Table Header */}
+        <View style={styles.tableHeader}>
+          <Text style={[styles.headerCell, styles.colTitle]}>Question</Text>
+          <Text style={[styles.headerCell, styles.colQty]}>Qté</Text>
+          <Text style={[styles.headerCell, styles.colPrice]}>Prix</Text>
+          <Text style={[styles.headerCell, styles.colAnswer]}>Réponse</Text>
         </View>
 
         {isLoading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color="#11224e" />
-          </View>
-        ) : error ? (
-          <View style={styles.center}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={geds}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => (
-              <View style={styles.questionContainer}>
-                <Text style={styles.questionLabel}>{item.title}</Text>
-                <QuestionInput
-                  item={item}
-                  token={token}
-                  user={user}
-                  answer={answers.get(item.id)}
-                  onAnswerCreated={handleAnswerCreated}
-                />
-              </View>
-            )}
-            ListEmptyComponent={
-              <View style={styles.center}>
-                <Text>Aucune question pour ce dossier.</Text>
-              </View>
-            }
-            contentContainerStyle={styles.listContent}
+          <ActivityIndicator
+            size="large"
+            color="#f87b1b"
+            style={{ marginTop: 20 }}
           />
+        ) : (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={{ flex: 1 }}
+          >
+            <ScrollView contentContainerStyle={styles.listContent}>
+              {geds.map((question) => (
+                <QuestionRow
+                  key={question.id}
+                  item={question}
+                  answer={pendingChanges[question.id]}
+                  onChange={(data) => handleRowChange(question.id, data)}
+                />
+              ))}
+            </ScrollView>
+          </KeyboardAvoidingView>
         )}
+
+        {/* Footer */}
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>
+          <TouchableOpacity
+            style={[styles.saveButton, isSubmitting && styles.disabledBtn]}
+            onPress={handleGlobalSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.saveBtnText}>Enregistrer tout</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f4f5f7',
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    position: 'relative',
+    borderColor: "#eee",
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#11224e',
+  headerTitle: { fontSize: 18, fontWeight: "bold", color: "#11224e" },
+
+  tableHeader: {
+    flexDirection: "row",
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    backgroundColor: "#f9fafb",
+    borderBottomWidth: 1,
+    borderColor: "#eee",
   },
-  headerActions: {
-    position: 'absolute',
-    right: 16,
-    top: '50%',
-    transform: [{ translateY: -4 }],
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  headerCell: { fontWeight: "600", color: "#6b7280", fontSize: 12 },
+
+  // Columns
+  colTitle: { flex: 2, paddingRight: 8 },
+  colQty: { width: 50, textAlign: "center" },
+  colPrice: { width: 60, textAlign: "center" },
+  colAnswer: { flex: 2, paddingLeft: 8 },
+
+  listContent: { paddingBottom: 100 },
+  row: {
+    flexDirection: "row",
+    padding: 12,
+    borderBottomWidth: 1,
+    borderColor: "#f3f4f6",
+    alignItems: "center",
   },
-  headerActionButton: {
-    padding: 4,
-  },
-  closeIcon: {
-    position: 'absolute',
-    left: 16,
-    top: '50%',
-    transform: [{ translateY: -4 }], // Adjust based on icon size and padding
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 20,
-  },
-  questionContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: '#f87b1b',
-  },
-  questionLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#11224e',
-    marginBottom: 12,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#f87b1b',
-    paddingHorizontal: 12,
-  },
-  inputIcon: {
-    color: '#f87b1b',
-    marginRight: 8,
-  },
+
+  questionTitle: { fontSize: 14, fontWeight: "500", color: "#1f2937" },
+  questionDesc: { fontSize: 12, color: "#9ca3af", marginTop: 2 },
+
   input: {
-    flex: 1,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 4,
+    padding: 6,
+    fontSize: 13,
+    minHeight: 36,
+    backgroundColor: "#fff",
+  },
+  textArea: { height: 60, textAlignVertical: "top" },
+  numberInput: {
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 4,
+    padding: 4,
+    fontSize: 13,
+    textAlign: "center",
+    minHeight: 32,
+  },
+
+  mediaButton: { justifyContent: "center", alignItems: "center", padding: 4 },
+  thumbnail: { width: 40, height: 40, borderRadius: 4 },
+  rowCenter: { flexDirection: "row", alignItems: "center" },
+
+  dateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 4,
+    padding: 6,
+    justifyContent: "space-between",
+  },
+  dateText: { fontSize: 12, color: "#374151" },
+  smallText: { fontSize: 11, marginLeft: 4, color: "#4b5563" },
+
+  footer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderColor: "#eee",
+    backgroundColor: "#fff",
+  },
+  saveButton: {
+    backgroundColor: "#f87b1b",
     paddingVertical: 12,
-    fontSize: 16,
-    color: '#111827',
-  },
-  placeholderText: {
-    color: '#9ca3af',
-  },
-  textArea: {
-    height: 120,
-    textAlignVertical: 'top',
-  },
-  switchContainer: {
-    alignItems: 'center',
-    paddingVertical: 6,
-    justifyContent: 'space-between',
-  },
-  photoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 150,
-    backgroundColor: '#f9fafb',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#f87b1b',
-    padding: 12,
+    alignItems: "center",
   },
-  voiceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 80,
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#f87b1b',
-    padding: 12,
-  },
-  voiceRecordButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 10,
-  },
-  voiceButtonText: {
-    marginLeft: 10,
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#11224e',
-  },
-  audioPlayerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 12,
-  },
-  recordedContainer: {
-    backgroundColor: '#e0e7ff',
-    borderColor: '#a5b4fc',
-    padding: 8,
-    borderRadius: 8,
-    marginRight: 8,
-  },
-  recordedText: {
-    color: '#3730a3',
-    fontWeight: '600',
-  },
-  playerButton: {
-    padding: 8,
-  },
-  audioText: {
-    fontSize: 14,
-    color: '#374151',
-  },
-  gpsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#f87b1b',
-    padding: 12,
-    minHeight: 80,
-  },
-  gpsContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  gpsDetailsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  miniMapContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 6,
-    marginRight: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  miniMap: {
-    width: '100%',
-    height: '100%',
-  },
-  gpsCoordinates: {
-    fontSize: 14,
-    color: '#11224e',
-    flexShrink: 1,
-  },
-  gpsPlaceholder: {
-    marginLeft: 10,
-    fontSize: 14,
-    color: '#9ca3af',
-  },
-  photoContent: {
-    flex: 1,
-    marginRight: 8,
-  },
-  photoButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    borderRadius: 8,
-    backgroundColor: '#e5e7eb',
-    width: '100%',
-  },
-  photoButtonText: {
-    marginTop: 8,
-    color: '#11224e',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  previewImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 8,
-  },
-  tauxSymbol: {
-    fontSize: 16,
-    color: '#6b7280',
-    marginLeft: 4,
-  },
-  submitButton: {
-    paddingLeft: 8,
-  },
-  submitButtonContainer: {
-    position: 'absolute',
-    right: 0,
-    height: '100%',
-    justifyContent: 'center',
-    paddingRight: 12,
-    zIndex: 1,
-  },
-  recordingContainer: {
-    justifyContent: 'space-between',
-    backgroundColor: '#fee2e2',
-    borderColor: '#fca5a5',
-  },
-  timerText: {
-    color: '#b91c1c',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  stopButton: {
-    backgroundColor: '#dc2626',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 99,
-  },
-  voiceIdleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 80,
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#f87b1b',
-    padding: 12,
-  },
+  disabledBtn: { opacity: 0.7 },
+  saveBtnText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });

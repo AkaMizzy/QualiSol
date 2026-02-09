@@ -22,6 +22,8 @@ export type CreateGedInput = {
   assigned?: string;
   audiotxt?: string;
   iatxt?: string;
+  quantity?: number;
+  price?: number;
   mode?: "upload" | "capture";
   file?: {
     uri: string | File;
@@ -64,6 +66,8 @@ export interface Ged {
   assigned?: string;
   audiotxt?: string;
   iatxt?: string;
+  quantity?: number;
+  price?: number;
   mode?: "upload" | "capture";
   created_at: string;
   value?: string;
@@ -139,6 +143,18 @@ export async function createGed(
 
   if (input.iatxt) {
     formData.append("iatxt", input.iatxt);
+  }
+
+  if (input.iatxt) {
+    formData.append("iatxt", input.iatxt);
+  }
+
+  if (input.price !== undefined) {
+    formData.append("price", input.price.toString());
+  }
+
+  if (input.quantity !== undefined) {
+    formData.append("quantity", input.quantity.toString());
   }
 
   if (input.mode) {
