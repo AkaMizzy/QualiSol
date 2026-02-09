@@ -532,14 +532,33 @@ export default function BulkAddImageModal({
 
               {/* Image Display - Slider/Carousel */}
               <View style={styles.imageContainer}>
-                {selectedImages.length > 0 ? (
+                {selectedImages.length > 0 &&
+                selectedImages[currentImageIndex] ? (
                   <View style={styles.imageSliderContainer}>
-                    {/* Current image preview */}
-                    <Image
-                      source={{ uri: selectedImages[currentImageIndex].uri }}
-                      style={styles.imagePreview}
-                      resizeMode="contain"
-                    />
+                    {/* Current image preview with Delete Overlay */}
+                    <View style={styles.previewContainer}>
+                      <Image
+                        source={{ uri: selectedImages[currentImageIndex]?.uri }}
+                        style={styles.imagePreview}
+                        resizeMode="contain"
+                      />
+                      <TouchableOpacity
+                        style={styles.deleteButtonOverlay}
+                        onPress={() => handleRemoveImage(currentImageIndex)}
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={30}
+                          color={COLORS.white}
+                          style={{
+                            shadowColor: "#000",
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.5,
+                            shadowRadius: 2,
+                          }}
+                        />
+                      </TouchableOpacity>
+                    </View>
 
                     {/* Navigation controls */}
                     {selectedImages.length > 1 && (
@@ -583,8 +602,8 @@ export default function BulkAddImageModal({
                         color={COLORS.primary}
                       />
                       <Text style={styles.changeImagesText}>
-                        Modifier la sélection ({selectedImages.length}/
-                        {MAX_IMAGES})
+                        Ajouter des images ({selectedImages.length}/{MAX_IMAGES}
+                        )
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -1331,5 +1350,19 @@ const styles = StyleSheet.create({
   },
   expandableSection: {
     // Container for expandable metadata
+  },
+  previewContainer: {
+    position: "relative",
+    width: "100%",
+    alignItems: "center",
+  },
+  deleteButtonOverlay: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 10,
+    backgroundColor: "#FF3B30",
+    borderRadius: 20,
+    padding: 4,
   },
 });

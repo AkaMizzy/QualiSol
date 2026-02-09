@@ -6,7 +6,7 @@ export default function TransfertScreen() {
   return (
     <SharedGalerieScreen
       creationMode="upload"
-      customButtonIcon={ICONS.galeriePNG}
+      customButtonIcon={ICONS.transfertPNG}
       allowOffline={false}
       useBulkModal={true}
     />

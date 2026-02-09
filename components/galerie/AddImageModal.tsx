@@ -850,7 +850,7 @@ export default function AddImageModal({
                     onPress={() => handleAdd(true)}
                   >
                     <Text style={[styles.buttonText, styles.cancelButtonText]}>
-                      Arrêt
+                      Enregistrer
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -1074,7 +1074,7 @@ export default function AddImageModal({
                       <Text
                         style={[styles.buttonText, styles.cancelButtonText]}
                       >
-                        Arrêt
+                        Enregistrer
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
