@@ -733,7 +733,6 @@ const styles = StyleSheet.create({
   centerAddButtonIcon: {
     width: 32,
     height: 32,
-    tintColor: COLORS.white,
   },
   pageInfoContainer: {
     alignItems: "center",
