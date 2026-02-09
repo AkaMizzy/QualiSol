@@ -59,14 +59,89 @@ interface AnswerData {
 
 // ... helper functions ...
 
+function AnswerTextInputModal({
+  visible,
+  onClose,
+  onSubmit,
+  initialValue,
+  title,
+  keyboardType = "default",
+  multiline = false,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSubmit: (val: string) => void;
+  initialValue: string;
+  title: string;
+  keyboardType?: "default" | "numeric" | "email-address" | "phone-pad";
+  multiline?: boolean;
+}) {
+  const [val, setVal] = useState(initialValue);
+  const insets = useSafeAreaInsets(); // Ensure correct hook usage if needed, or pass from parent
+
+  useEffect(() => {
+    if (visible) setVal(initialValue);
+  }, [visible, initialValue]);
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalContentWrapper}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{title}</Text>
+            <TextInput
+              style={[
+                styles.modalInput,
+                multiline && { height: 120, textAlignVertical: "top" },
+              ]}
+              value={val}
+              onChangeText={setVal}
+              placeholder="Saisir votre réponse..."
+              multiline={multiline}
+              keyboardType={keyboardType}
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity onPress={onClose} style={styles.modalBtnCancel}>
+                <Text style={styles.modalBtnTextCancel}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => onSubmit(val)}
+                style={styles.modalBtnSave}
+              >
+                <Text style={styles.modalBtnTextSave}>Enregistrer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+}
+
 function QuestionRow({
   item,
   answer,
   onChange,
+  onOpenTextModal,
 }: {
   item: Ged;
   answer?: AnswerData;
   onChange: (data: Partial<AnswerData>) => void;
+  onOpenTextModal: (
+    item: Ged,
+    currentValue: string,
+    isMultiline: boolean,
+    keyboardType: "default" | "numeric",
+  ) => void;
 }) {
   // Use 'answer' field if available, fallback to 'value'
   const [localValue, setLocalValue] = useState(
@@ -306,27 +381,45 @@ function QuestionRow({
         );
       case "long_text":
         return (
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={localValue}
-            onChangeText={handleTextChange}
-            placeholder="Saisir..."
-            multiline
-          />
+          <TouchableOpacity
+            style={[styles.input, styles.inputTrigger]}
+            onPress={() => onOpenTextModal(item, localValue, true, "default")}
+          >
+            <Text
+              style={[
+                styles.inputTextDisplay,
+                !localValue && styles.placeholderText,
+              ]}
+              numberOfLines={2}
+            >
+              {localValue || "Saisir..."}
+            </Text>
+          </TouchableOpacity>
         );
       default: // text, number, taux, list
+        const isNumeric = item.type === "number" || item.type === "taux";
         return (
-          <TextInput
-            style={styles.input}
-            value={localValue}
-            onChangeText={handleTextChange}
-            placeholder="Saisir..."
-            keyboardType={
-              item.type === "number" || item.type === "taux"
-                ? "numeric"
-                : "default"
+          <TouchableOpacity
+            style={[styles.input, styles.inputTrigger]}
+            onPress={() =>
+              onOpenTextModal(
+                item,
+                localValue,
+                false,
+                isNumeric ? "numeric" : "default",
+              )
             }
-          />
+          >
+            <Text
+              style={[
+                styles.inputTextDisplay,
+                !localValue && styles.placeholderText,
+              ]}
+              numberOfLines={1}
+            >
+              {localValue || "Saisir..."}
+            </Text>
+          </TouchableOpacity>
         );
     }
   };
@@ -399,6 +492,16 @@ export default function FolderQuestionsModal({
   const [pendingChanges, setPendingChanges] = useState<
     Record<string, AnswerData>
   >({});
+
+  // Modal State
+  const [textModalVisible, setTextModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState<{
+    id: string;
+    title: string;
+    value: string;
+    multiline: boolean;
+    keyboardType: "default" | "numeric";
+  } | null>(null);
 
   // ... state ...
   const [isLoading, setIsLoading] = useState(false);
@@ -568,8 +671,43 @@ export default function FolderQuestionsModal({
     }
   };
 
+  const handleOpenTextModal = (
+    item: Ged,
+    currentValue: string,
+    isMultiline: boolean,
+    keyboardType: "default" | "numeric",
+  ) => {
+    setEditingItem({
+      id: item.id,
+      title: item.title,
+      value: currentValue,
+      multiline: isMultiline,
+      keyboardType,
+    });
+    setTextModalVisible(true);
+  };
+
+  const handleTextModalSubmit = (val: string) => {
+    if (editingItem) {
+      handleRowChange(editingItem.id, { answer: val, value: val });
+    }
+    setTextModalVisible(false);
+    setEditingItem(null);
+  };
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      {editingItem && (
+        <AnswerTextInputModal
+          visible={textModalVisible}
+          onClose={() => setTextModalVisible(false)}
+          onSubmit={handleTextModalSubmit}
+          initialValue={editingItem.value}
+          title={editingItem.title}
+          multiline={editingItem.multiline}
+          keyboardType={editingItem.keyboardType}
+        />
+      )}
       <View style={[styles.container, { paddingTop: insets.top }]}>
         {/* Header */}
         <View style={styles.header}>
@@ -606,6 +744,7 @@ export default function FolderQuestionsModal({
                   item={question}
                   answer={pendingChanges[question.id]}
                   onChange={(data) => handleRowChange(question.id, data)}
+                  onOpenTextModal={handleOpenTextModal}
                 />
               ))}
             </ScrollView>
@@ -735,4 +874,77 @@ const styles = StyleSheet.create({
   },
   disabledBtn: { opacity: 0.7 },
   saveBtnText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalContentWrapper: {
+    justifyContent: "center",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+    color: "#11224e",
+    textAlign: "center",
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 20,
+    backgroundColor: "#f9f9f9",
+    minHeight: 50,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  modalBtnCancel: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: "#f3f4f6",
+    marginRight: 10,
+    alignItems: "center",
+  },
+  modalBtnSave: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: "#f87b1b",
+    marginLeft: 10,
+    alignItems: "center",
+  },
+  modalBtnTextCancel: { color: "#374151", fontWeight: "600" },
+  modalBtnTextSave: { color: "#fff", fontWeight: "600" },
+
+  // Input Trigger Styles
+  inputTrigger: {
+    justifyContent: "center",
+  },
+  inputTextDisplay: {
+    color: "#1f2937",
+    fontSize: 13,
+  },
+  placeholderText: {
+    color: "#9ca3af",
+    fontStyle: "italic",
+  },
 });

@@ -553,8 +553,20 @@ export default function AddImageModal({
   };
 
   const handleAdd = async (shouldClose: boolean) => {
-    // Force stop any active recording before submission
-    await voiceNoteRecorderRef.current?.forceStopAndCleanup();
+    // Check if recording is active and stop it gracefully to get the URI
+    let currentVoiceNote = voiceNote;
+    if (voiceNoteRecorderRef.current) {
+      const uri = await voiceNoteRecorderRef.current.stopAndReturnRecording();
+      if (uri) {
+        currentVoiceNote = {
+          uri,
+          type: "audio/m4a",
+          name: `voicenote-${Date.now()}.m4a`,
+        };
+        // Update state as well for consistency, though we use local variable for immediate submission
+        setVoiceNote(currentVoiceNote);
+      }
+    }
 
     if (!image) {
       Alert.alert("Informations manquantes", "Veuillez fournir une image.");
@@ -621,7 +633,7 @@ export default function AddImageModal({
           title,
           description,
           image,
-          voiceNote,
+          voiceNote: currentVoiceNote, // Use the locally resolved voice note
           author: authorName,
           idauthor: user?.id,
           iddevice: deviceId,

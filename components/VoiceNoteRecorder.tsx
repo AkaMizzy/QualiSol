@@ -19,6 +19,7 @@ import {
 export interface VoiceNoteRecorderRef {
   forceStopAndCleanup: () => Promise<void>;
   startRecording: () => Promise<void>;
+  stopAndReturnRecording: () => Promise<string | null>;
 }
 
 type VoiceNoteRecorderProps = {
@@ -103,6 +104,9 @@ const VoiceNoteRecorder = forwardRef<
     startRecording: async () => {
       await startRecording();
     },
+    stopAndReturnRecording: async () => {
+      return await stopRecording();
+    },
   }));
 
   async function startRecording() {
@@ -127,8 +131,8 @@ const VoiceNoteRecorder = forwardRef<
     }
   }
 
-  async function stopRecording() {
-    if (!recording) return;
+  async function stopRecording(): Promise<string | null> {
+    if (!recording) return null;
     try {
       const status = await recording.getStatusAsync();
       await recording.stopAndUnloadAsync();
@@ -141,10 +145,12 @@ const VoiceNoteRecorder = forwardRef<
       }
       setStatus("recorded");
       onRecordingComplete(uri);
+      return uri;
     } catch (err) {
       console.error("Failed to stop recording", err);
       Alert.alert("Erreur", "Impossible d'arrêter l'enregistrement.");
       setStatus("idle");
+      return null;
     }
   }
 
