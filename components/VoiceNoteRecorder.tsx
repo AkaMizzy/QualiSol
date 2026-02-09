@@ -67,8 +67,15 @@ const VoiceNoteRecorder = forwardRef<
         try {
           await recording.stopAndUnloadAsync();
           await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
-        } catch (err) {
-          console.error("Error force-stopping recording:", err);
+        } catch (err: any) {
+          if (
+            !err.message ||
+            !err.message.includes(
+              "Cannot unload a Recording that has already been unloaded",
+            )
+          ) {
+            console.error("Error force-stopping recording:", err);
+          }
         }
         setRecording(null);
       }

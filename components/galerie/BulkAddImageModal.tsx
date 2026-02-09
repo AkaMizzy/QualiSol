@@ -97,6 +97,17 @@ export default function BulkAddImageModal({
   } | null>(null);
   const voiceNoteRecorderRef = useRef<VoiceNoteRecorderRef>(null);
 
+  // Auto-start recording when images are selected
+  useEffect(() => {
+    if (selectedImages.length > 0 && !voiceNote) {
+      // Small delay to ensure modal/component is fully ready
+      const timer = setTimeout(() => {
+        voiceNoteRecorderRef.current?.startRecording();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedImages, voiceNote]);
+
   // Progressive layout state
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
