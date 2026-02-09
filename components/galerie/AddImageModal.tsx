@@ -1,5 +1,5 @@
 import VoiceNoteRecorder, {
-  VoiceNoteRecorderRef,
+    VoiceNoteRecorderRef,
 } from "@/components/VoiceNoteRecorder";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,23 +16,23 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Alert,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    Alert,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import {
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
+    PanGestureHandler,
+    PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
@@ -602,6 +602,7 @@ export default function AddImageModal({
       return randomUUID();
     };
 
+    // Submit the data
     getDeviceId().then((deviceId) => {
       onAdd(
         {
@@ -627,29 +628,18 @@ export default function AddImageModal({
       );
     });
 
-    // Show success alert asking if user wants to continue
-    setAlertInfo({
-      visible: true,
-      title: "Enregistré",
-      message:
-        "La photo a été enregistrée avec succès. Voulez-vous en ajouter une autre ?",
-      type: "success",
-      buttons: [
-        {
-          text: "Non, Arrêter",
-          onPress: onClose,
-          style: "destructive",
-        },
-        {
-          text: "Oui",
-          onPress: () => {
-            resetForm();
-            showImagePickerOptions();
-          },
-          style: "primary",
-        },
-      ],
-    });
+    if (shouldClose) {
+      // Flow 1: Submit & Exit
+      // The parent component (SharedGalerieScreen) handles closing via the `shouldClose` prop passed to `onAdd`
+      // But we can also force close here if we want to be sure, though `onAdd` usually handles it.
+      // We'll rely on `onAdd` to respect `shouldClose`.
+    } else {
+      // Flow 2: Submit & Continue
+      // Reset the form immediately for the next entry
+      resetForm();
+      // Show picker options again (or open camera if preferred) to keep the flow going
+      showImagePickerOptions();
+    }
   };
 
   // Annotation handlers
@@ -857,10 +847,7 @@ export default function AddImageModal({
                 <View style={styles.buttonContainer}>
                   <TouchableOpacity
                     style={[styles.button, styles.cancelButton]}
-                    onPress={async () => {
-                      await voiceNoteRecorderRef.current?.forceStopAndCleanup();
-                      onClose();
-                    }}
+                    onPress={() => handleAdd(true)}
                   >
                     <Text style={[styles.buttonText, styles.cancelButtonText]}>
                       Arrêt
@@ -1082,10 +1069,7 @@ export default function AddImageModal({
                   <View style={styles.buttonContainer}>
                     <TouchableOpacity
                       style={[styles.button, styles.cancelButton]}
-                      onPress={async () => {
-                        await voiceNoteRecorderRef.current?.forceStopAndCleanup();
-                        onClose();
-                      }}
+                      onPress={() => handleAdd(true)}
                     >
                       <Text
                         style={[styles.buttonText, styles.cancelButtonText]}
