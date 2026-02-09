@@ -47,6 +47,7 @@ interface FolderQuestionsModalProps {
 
 interface AnswerData {
   value?: string;
+  answer?: string;
   quantity?: number;
   price?: number;
   latitude?: string;
@@ -56,35 +57,7 @@ interface AnswerData {
   boolValue?: boolean;
 }
 
-// Helper for mini-map HTML
-const getMiniMapHtml = (lat: number, lng: number) => {
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-      <style>
-        html, body, #miniMap { height: 100%; }
-        body { margin: 0; padding: 0; }
-        #miniMap { width: 100%; }
-      </style>
-    </head>
-    <body>
-      <div id="miniMap"></div>
-      <script>
-        const miniMap = L.map('miniMap', { zoomControl: false, attributionControl: false }).setView([${lat}, ${lng}], 14);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors'
-        }).addTo(miniMap);
-        L.marker([${lat}, ${lng}]).addTo(miniMap);
-        setTimeout(() => { miniMap.invalidateSize(); }, 100);
-      </script>
-    </body>
-    </html>
-  `;
-};
+// ... helper functions ...
 
 function QuestionRow({
   item,
@@ -95,13 +68,16 @@ function QuestionRow({
   answer?: AnswerData;
   onChange: (data: Partial<AnswerData>) => void;
 }) {
-  const [localValue, setLocalValue] = useState(answer?.value || "");
+  // Use 'answer' field if available, fallback to 'value'
+  const [localValue, setLocalValue] = useState(
+    answer?.answer || answer?.value || "",
+  );
   const [localQuantity, setLocalQuantity] = useState(
     answer?.quantity?.toString() || "",
   );
   const [localPrice, setLocalPrice] = useState(answer?.price?.toString() || "");
 
-  // Specific states for complex types
+  // ... state for complex types ...
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -112,8 +88,9 @@ function QuestionRow({
 
   // Sync local state if prop changes (e.g. initial load)
   useEffect(() => {
-    if (answer?.value !== undefined && answer.value !== localValue)
-      setLocalValue(answer.value);
+    const newVal = answer?.answer || answer?.value;
+    if (newVal !== undefined && newVal !== localValue) setLocalValue(newVal);
+
     if (
       answer?.quantity !== undefined &&
       answer.quantity.toString() !== localQuantity
@@ -123,7 +100,7 @@ function QuestionRow({
       setLocalPrice(answer.price.toString());
   }, [answer]);
 
-  // Audio cleanup
+  // ... audio cleanup ...
   useEffect(() => {
     return sound
       ? () => {
@@ -134,7 +111,7 @@ function QuestionRow({
 
   const handleTextChange = (text: string) => {
     setLocalValue(text);
-    onChange({ value: text });
+    onChange({ answer: text, value: text }); // Update both for compatibility/display
   };
 
   const handleQuantityChange = (text: string) => {
@@ -150,7 +127,8 @@ function QuestionRow({
   };
 
   const handleBooleanChange = (val: boolean) => {
-    onChange({ boolValue: val, value: String(val) });
+    const strVal = String(val);
+    onChange({ boolValue: val, answer: strVal, value: strVal });
   };
 
   // --- Photo Logic ---
@@ -167,7 +145,11 @@ function QuestionRow({
       quality: 0.5,
     });
     if (!result.canceled) {
-      onChange({ image: result.assets[0], value: "Photo sélectionnée" });
+      onChange({
+        image: result.assets[0],
+        answer: "Photo sélectionnée",
+        value: "Photo sélectionnée",
+      });
     }
   };
 
@@ -194,7 +176,12 @@ function QuestionRow({
     const uri = recording.getURI();
     setRecording(null);
     setStatus("recorded");
-    if (uri) onChange({ recordingUri: uri, value: "Audio enregistré" });
+    if (uri)
+      onChange({
+        recordingUri: uri,
+        answer: "Audio enregistré",
+        value: "Audio enregistré",
+      });
   };
 
   const playSound = async () => {
@@ -211,15 +198,17 @@ function QuestionRow({
     latitude: number;
     longitude: number;
   }) => {
+    const val = `Lat: ${loc.latitude.toFixed(4)}, Lon: ${loc.longitude.toFixed(4)}`;
     onChange({
       latitude: String(loc.latitude),
       longitude: String(loc.longitude),
-      value: `Lat: ${loc.latitude.toFixed(4)}, Lon: ${loc.longitude.toFixed(4)}`,
+      answer: val,
+      value: val,
     });
     setMapVisible(false);
   };
 
-  // Render Answer Input based on type
+  // ... renderAnswerInput ...
   const renderAnswerInput = () => {
     switch (item.type) {
       case "boolean":
@@ -246,7 +235,7 @@ function QuestionRow({
               onConfirm={(date) => {
                 const val = date.toISOString().split("T")[0];
                 setLocalValue(val);
-                onChange({ value: val });
+                onChange({ answer: val, value: val });
                 setDatePickerVisibility(false);
               }}
               onCancel={() => setDatePickerVisibility(false)}
@@ -342,8 +331,8 @@ function QuestionRow({
     }
   };
 
+  // ... render ...
   // Determine if we show Quantity/Price inputs
-  // Note: Model has `quantity` and `price` as integers (1 or 0 likely) acting as flags
   const showQuantity = !!item.quantity;
   const showPrice = !!item.price;
 
@@ -404,6 +393,7 @@ export default function FolderQuestionsModal({
     Record<string, AnswerData>
   >({});
 
+  // ... state ...
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -437,15 +427,18 @@ export default function FolderQuestionsModal({
         fetchedAnswers.forEach((a) => {
           if (a.idsource) {
             answersMap.set(a.idsource, a);
-            // Pre-populate pending changes with existing values so we know what they are
+            // Pre-populate pending changes
+            // Prioritize 'answer' field, fallback to 'description'/'value' for backward compatibility
+            const val = a.answer || a.description || a.value || "";
             initialPending[a.idsource] = {
-              value: a.description || a.value || "",
-              quantity: a.quantity ?? undefined, // Model update needed for reading
-              price: a.price ?? undefined, // Model update needed for reading
+              answer: val,
+              value: val,
+              quantity: a.quantity ?? undefined,
+              price: a.price ?? undefined,
               latitude: a.latitude || undefined,
               longitude: a.longitude || undefined,
               // For images/voice, we don't download blob, just keep ref in value/url
-              boolValue: a.description === "true",
+              boolValue: val === "true",
             };
           }
         });
@@ -463,6 +456,7 @@ export default function FolderQuestionsModal({
     loadData();
   }, [folderId, token, visible]);
 
+  // ... handleRowChange ...
   const handleRowChange = (questionId: string, data: Partial<AnswerData>) => {
     setPendingChanges((prev) => ({
       ...prev,
@@ -495,8 +489,13 @@ export default function FolderQuestionsModal({
         if (question.type === "GPS" && changes.latitude) {
           basePayload.latitude = changes.latitude;
           basePayload.longitude = changes.longitude;
+          // If we have an answer text for GPS (like raw lat/lon string), save it too
+          if (changes.answer) basePayload.answer = changes.answer;
         } else if (question.type !== "photo" && question.type !== "voice") {
-          basePayload.description = changes.value;
+          // Use 'answer' field instead of description
+          basePayload.answer = changes.answer || changes.value;
+          // IMPORTANT: User requested to use 'answer' instead of 'description'.
+          // We can leave description null or put a summary there if needed.
         }
 
         if (existingAnswer) {
@@ -542,8 +541,9 @@ export default function FolderQuestionsModal({
               name: `voice-${Date.now()}.m4a`,
             };
           } else {
-            if (!createPayload.description && !createPayload.latitude) {
-              createPayload.description = changes.value || "";
+            // Logic for 'answer' fallback
+            if (!createPayload.answer && !createPayload.latitude) {
+              createPayload.answer = changes.answer || changes.value || "";
             }
           }
           await gedService.createGed(token, createPayload);

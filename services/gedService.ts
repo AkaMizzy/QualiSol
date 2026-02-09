@@ -149,6 +149,10 @@ export async function createGed(
     formData.append("iatxt", input.iatxt);
   }
 
+  if (input.answer) {
+    formData.append("answer", input.answer);
+  }
+
   if (input.price !== undefined) {
     formData.append("price", input.price.toString());
   }
