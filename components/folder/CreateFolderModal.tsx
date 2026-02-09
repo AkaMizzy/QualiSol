@@ -55,10 +55,6 @@ export default function CreateFolderModal({
   >([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [ownerId, setOwnerId] = useState("");
-  const [controlId, setControlId] = useState("");
-  const [technicienId, setTechnicienId] = useState("");
-  const [controlOpen, setControlOpen] = useState(false);
-  const [technicienOpen, setTechnicienOpen] = useState(false);
 
   const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
   const [currentFoldersCount, setCurrentFoldersCount] = useState(0);
@@ -69,14 +65,6 @@ export default function CreateFolderModal({
   const adminUser = useMemo(
     () => companyUsers.find((u) => u.id === ownerId),
     [companyUsers, ownerId],
-  );
-  const controlUsers = useMemo(
-    () => companyUsers.filter((u) => u.id !== ownerId),
-    [companyUsers, ownerId],
-  );
-  const technicienUsers = useMemo(
-    () => companyUsers.filter((u) => u.id !== ownerId && u.id !== controlId),
-    [companyUsers, ownerId, controlId],
   );
 
   // Auto-set admin to assignedOwnerId or current user when modal opens
@@ -196,17 +184,6 @@ export default function CreateFolderModal({
       return;
     }
 
-    // Validate that controller and technician are not the same user
-    const roles = [ownerId, controlId, technicienId].filter(Boolean);
-    const uniqueRoles = new Set(roles);
-
-    if (roles.length !== uniqueRoles.size) {
-      setError(
-        "Un utilisateur ne peut pas être assigné à plusieurs rôles (Admin, Contrôleur, Technicien).",
-      );
-      return;
-    }
-
     setSubmitting(true);
     try {
       const payload: CreateFolderPayload = {
@@ -215,10 +192,7 @@ export default function CreateFolderModal({
         description,
         foldertype: folderTypeId,
         owner_id: ownerId || undefined,
-        control_id: controlId || undefined,
-        technicien_id: technicienId || undefined,
         project_id: projectId,
-        // zone_id: zoneId, // Zone is removed
       };
       const created = await folderService.createFolder(payload, token);
       onSuccess && onSuccess();
@@ -246,10 +220,6 @@ export default function CreateFolderModal({
     setDescription("");
     setFolderTypeId("");
     setOwnerId("");
-    setControlId("");
-    setTechnicienId("");
-    setControlOpen(false);
-    setTechnicienOpen(false);
     setError(null);
     onClose();
   };
@@ -467,216 +437,6 @@ export default function CreateFolderModal({
                     color="#9ca3af"
                   />
                 </TouchableOpacity>
-              </View>
-
-              {/* Control Select */}
-              <View style={{ gap: 8, marginTop: 12 }}>
-                <Text style={{ fontSize: 12, color: "#6b7280", marginLeft: 2 }}>
-                  Contrôleur
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    styles.inputWrap,
-                    { justifyContent: "space-between" },
-                  ]}
-                  onPress={() => setControlOpen((v) => !v)}
-                >
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                      flex: 1,
-                    }}
-                  >
-                    <Ionicons
-                      name="shield-checkmark-outline"
-                      size={16}
-                      color="#f87b1b"
-                    />
-                    <Text
-                      style={[
-                        styles.input,
-                        { color: controlId ? "#111827" : "#9ca3af" },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {controlId
-                        ? companyUsers.find(
-                            (u) => String(u.id) === String(controlId),
-                          )?.firstname
-                          ? `${companyUsers.find((u) => String(controlId) === String(u.id))?.firstname} ${companyUsers.find((u) => String(controlId) === String(u.id))?.lastname || ""}`
-                          : controlId
-                        : "Choisir un contrôleur"}
-                    </Text>
-                  </View>
-                  <Ionicons
-                    name={controlOpen ? "chevron-up" : "chevron-down"}
-                    size={16}
-                    color="#f87b1b"
-                  />
-                </TouchableOpacity>
-                {controlOpen && (
-                  <View
-                    style={{
-                      maxHeight: 200,
-                      borderWidth: 1,
-                      borderColor: "#e5e7eb",
-                      borderRadius: 10,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <ScrollView keyboardShouldPersistTaps="handled">
-                      {loadingUsers ? (
-                        <View style={{ padding: 12 }}>
-                          <Text style={{ color: "#6b7280" }}>
-                            Chargement...
-                          </Text>
-                        </View>
-                      ) : controlUsers.length === 0 ? (
-                        <View style={{ padding: 12 }}>
-                          <Text style={{ color: "#6b7280" }}>
-                            Aucun utilisateur
-                          </Text>
-                        </View>
-                      ) : (
-                        controlUsers.map((u) => (
-                          <TouchableOpacity
-                            key={u.id}
-                            onPress={() => {
-                              setControlId(String(u.id));
-                              setControlOpen(false);
-                            }}
-                            style={{
-                              paddingHorizontal: 12,
-                              paddingVertical: 10,
-                              backgroundColor:
-                                String(controlId) === String(u.id)
-                                  ? "#f1f5f9"
-                                  : "#FFFFFF",
-                              borderBottomWidth: 1,
-                              borderBottomColor: "#f3f4f6",
-                            }}
-                          >
-                            <Text style={{ color: "#11224e" }}>
-                              {u.firstname || ""} {u.lastname || ""}
-                            </Text>
-                            {u.email ? (
-                              <Text style={{ color: "#6b7280", fontSize: 12 }}>
-                                {u.email}
-                              </Text>
-                            ) : null}
-                          </TouchableOpacity>
-                        ))
-                      )}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
-
-              {/* Technicien Select */}
-              <View style={{ gap: 8, marginTop: 12 }}>
-                <Text style={{ fontSize: 12, color: "#6b7280", marginLeft: 2 }}>
-                  Technicien
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    styles.inputWrap,
-                    { justifyContent: "space-between" },
-                  ]}
-                  onPress={() => setTechnicienOpen((v) => !v)}
-                >
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                      flex: 1,
-                    }}
-                  >
-                    <Ionicons
-                      name="construct-outline"
-                      size={16}
-                      color="#f87b1b"
-                    />
-                    <Text
-                      style={[
-                        styles.input,
-                        { color: technicienId ? "#111827" : "#9ca3af" },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {technicienId
-                        ? companyUsers.find(
-                            (u) => String(u.id) === String(technicienId),
-                          )?.firstname
-                          ? `${companyUsers.find((u) => String(technicienId) === String(u.id))?.firstname} ${companyUsers.find((u) => String(technicienId) === String(u.id))?.lastname || ""}`
-                          : technicienId
-                        : "Choisir un technicien"}
-                    </Text>
-                  </View>
-                  <Ionicons
-                    name={technicienOpen ? "chevron-up" : "chevron-down"}
-                    size={16}
-                    color="#f87b1b"
-                  />
-                </TouchableOpacity>
-                {technicienOpen && (
-                  <View
-                    style={{
-                      maxHeight: 200,
-                      borderWidth: 1,
-                      borderColor: "#e5e7eb",
-                      borderRadius: 10,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <ScrollView keyboardShouldPersistTaps="handled">
-                      {loadingUsers ? (
-                        <View style={{ padding: 12 }}>
-                          <Text style={{ color: "#6b7280" }}>
-                            Chargement...
-                          </Text>
-                        </View>
-                      ) : technicienUsers.length === 0 ? (
-                        <View style={{ padding: 12 }}>
-                          <Text style={{ color: "#6b7280" }}>
-                            Aucun utilisateur
-                          </Text>
-                        </View>
-                      ) : (
-                        technicienUsers.map((u) => (
-                          <TouchableOpacity
-                            key={u.id}
-                            onPress={() => {
-                              setTechnicienId(String(u.id));
-                              setTechnicienOpen(false);
-                            }}
-                            style={{
-                              paddingHorizontal: 12,
-                              paddingVertical: 10,
-                              backgroundColor:
-                                String(technicienId) === String(u.id)
-                                  ? "#f1f5f9"
-                                  : "#FFFFFF",
-                              borderBottomWidth: 1,
-                              borderBottomColor: "#f3f4f6",
-                            }}
-                          >
-                            <Text style={{ color: "#11224e" }}>
-                              {u.firstname || ""} {u.lastname || ""}
-                            </Text>
-                            {u.email ? (
-                              <Text style={{ color: "#6b7280", fontSize: 12 }}>
-                                {u.email}
-                              </Text>
-                            ) : null}
-                          </TouchableOpacity>
-                        ))
-                      )}
-                    </ScrollView>
-                  </View>
-                )}
               </View>
 
               <View style={{ marginBottom: 16 }}>
