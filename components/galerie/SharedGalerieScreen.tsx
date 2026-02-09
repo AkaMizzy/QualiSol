@@ -13,7 +13,7 @@ import {
   createGed,
   deleteGed,
   getMyGeds, // Import new service
-  updateGedFile
+  updateGedFile,
 } from "@/services/gedService";
 import {
   createOfflineRecord,
@@ -27,7 +27,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Alert,
   Modal,
@@ -59,6 +65,7 @@ export default function SharedGalerieScreen({
 }: SharedGalerieScreenProps) {
   const { token, user } = useAuth();
   const { width } = useWindowDimensions();
+  const scrollViewRef = useRef<ScrollView>(null);
   const [geds, setGeds] = useState<Ged[]>([]);
   const [offlineRecords, setOfflineRecords] = useState<OfflineRecord[]>([]);
   const [networkStatus, setNetworkStatus] = useState<"online" | "offline">(
@@ -182,6 +189,7 @@ export default function SharedGalerieScreen({
       mode?: "upload" | "capture";
     },
     shouldClose: boolean,
+    skipRefresh?: boolean,
   ) => {
     if (!token || !user || !data.image) return;
 
@@ -244,8 +252,12 @@ export default function SharedGalerieScreen({
           mode: data.mode,
         });
 
-        // Refresh the gallery to show the newly uploaded picture
-        await fetchGeds();
+        // Refresh the gallery ONLY if not skipped (e.g. for bulk uploads, only refresh on last item)
+        if (!skipRefresh) {
+          setCurrentPage(0);
+          scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+          await fetchGeds();
+        }
       } else if (allowOffline) {
         // OFFLINE: Save to SQLite (only if allowed)
         await createOfflineRecord({
@@ -273,7 +285,11 @@ export default function SharedGalerieScreen({
         });
 
         // Refresh offline records
-        await fetchOfflineRecords();
+        if (!skipRefresh) {
+          setCurrentPage(0);
+          scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+          await fetchOfflineRecords();
+        }
       }
 
       if (shouldClose) {
@@ -478,6 +494,7 @@ export default function SharedGalerieScreen({
         </View>
       ) : (
         <ScrollView
+          ref={scrollViewRef}
           style={styles.galleryContainer}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

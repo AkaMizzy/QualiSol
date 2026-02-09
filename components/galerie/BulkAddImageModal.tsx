@@ -58,6 +58,7 @@ interface BulkAddImageModalProps {
       mode?: "upload" | "capture";
     },
     shouldClose: boolean,
+    skipRefresh?: boolean,
   ) => Promise<void>;
   modalTitle?: string;
   buttonText?: string;
@@ -384,7 +385,7 @@ export default function BulkAddImageModal({
     );
   };
 
-  const handleBulkUpload = async () => {
+  const handleBulkUpload = async (shouldClose: boolean) => {
     if (selectedImages.length === 0) {
       Alert.alert("Aucune image", "Veuillez sélectionner au moins une image.");
       return;
@@ -406,7 +407,7 @@ export default function BulkAddImageModal({
     if (isStorageQuotaReached) {
       Alert.alert(
         "Quota de stockage dépassé",
-        `Vous avez atteint votre quota de stockage de ${storageQuotaGB.toFixed(2)}GB. Utilisation actuelle: ${currentStorageGB.toFixed(2)}GB. Veuillez mettre à niveau votre plan.`,
+        "Vous avez atteint votre quota de stockage. Veuillez mettre à niveau votre plan.",
       );
       return;
     }
@@ -459,14 +460,15 @@ export default function BulkAddImageModal({
 
       try {
         const deviceId = randomUUID();
+        const isLast = i === selectedImages.length - 1;
 
-        // Call onAdd for each image and wait for completion
+        // Call onAdd for each image
         await onAdd(
           {
             title: title || `Transfert ${i + 1}`,
             description: description,
             image: image,
-            voiceNote: voiceNote, // Shared voice note for all images
+            voiceNote: voiceNote,
             author: authorName,
             idauthor: user?.id,
             iddevice: deviceId,
@@ -481,7 +483,8 @@ export default function BulkAddImageModal({
             categorie: selectedCategorie,
             mode: "upload",
           },
-          false, // Don't close modal after each upload
+          false, // Don't close modal *per image*
+          !isLast, // skipRefresh: true for all except last one
         );
 
         succeeded++;
@@ -493,9 +496,19 @@ export default function BulkAddImageModal({
 
     setIsUploading(false);
 
-    // Close modal and reset form
-    resetForm();
-    onClose();
+    // Navigation logic after bulk upload
+    if (shouldClose) {
+      // Flow 1: Submit & Exit
+      resetForm();
+      onClose();
+    } else {
+      // Flow 2: Submit & Continue
+      resetForm();
+      // Important: Wait a tick or just call it, but ensure form is reset first
+      setTimeout(() => {
+        handlePickImages();
+      }, 500);
+    }
   };
 
   return (
@@ -548,14 +561,8 @@ export default function BulkAddImageModal({
                       >
                         <Ionicons
                           name="trash-outline"
-                          size={30}
-                          color={COLORS.white}
-                          style={{
-                            shadowColor: "#000",
-                            shadowOffset: { width: 0, height: 1 },
-                            shadowOpacity: 0.5,
-                            shadowRadius: 2,
-                          }}
+                          size={24}
+                          color="#ef4444"
                         />
                       </TouchableOpacity>
                     </View>
@@ -636,13 +643,10 @@ export default function BulkAddImageModal({
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
                   style={[styles.button, styles.cancelButton]}
-                  onPress={async () => {
-                    await voiceNoteRecorderRef.current?.forceStopAndCleanup();
-                    onClose();
-                  }}
+                  onPress={() => handleBulkUpload(true)}
                 >
                   <Text style={[styles.buttonText, styles.cancelButtonText]}>
-                    Annuler
+                    Enregistrer
                   </Text>
                 </TouchableOpacity>
 
@@ -655,7 +659,7 @@ export default function BulkAddImageModal({
                       selectedImages.length === 0) &&
                       styles.addButtonDisabled,
                   ]}
-                  onPress={handleBulkUpload}
+                  onPress={() => handleBulkUpload(false)}
                   disabled={
                     isStorageQuotaReached ||
                     isUploading ||
@@ -862,15 +866,12 @@ export default function BulkAddImageModal({
                   <View style={styles.buttonContainer}>
                     <TouchableOpacity
                       style={[styles.button, styles.cancelButton]}
-                      onPress={async () => {
-                        await voiceNoteRecorderRef.current?.forceStopAndCleanup();
-                        onClose();
-                      }}
+                      onPress={() => handleBulkUpload(true)}
                     >
                       <Text
                         style={[styles.buttonText, styles.cancelButtonText]}
                       >
-                        Annuler
+                        Enregistrer
                       </Text>
                     </TouchableOpacity>
 
@@ -883,7 +884,7 @@ export default function BulkAddImageModal({
                           selectedImages.length === 0) &&
                           styles.addButtonDisabled,
                       ]}
-                      onPress={handleBulkUpload}
+                      onPress={() => handleBulkUpload(false)}
                       disabled={
                         isStorageQuotaReached ||
                         isUploading ||
@@ -1028,158 +1029,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: 12,
   },
-  sectionContainer: {
-    marginBottom: SIZES.medium,
-  },
-  severityContainer: {
-    backgroundColor: COLORS.lightWhite,
-    padding: SIZES.medium,
-    borderRadius: SIZES.medium,
-    borderWidth: 1,
-    borderColor: COLORS.gray2,
-  },
-  severityTitle: {
-    fontFamily: FONT.medium,
-    fontSize: SIZES.medium,
-    color: "#f87b1b",
-    marginBottom: SIZES.small,
-  },
-  severityHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: SIZES.medium,
-  },
-  severityValue: {
-    fontFamily: FONT.bold,
-    fontSize: SIZES.xLarge,
-  },
-  severityBadge: {
-    paddingHorizontal: SIZES.medium,
-    paddingVertical: SIZES.small - 2,
-    borderRadius: SIZES.medium,
-  },
-  severityBadgeText: {
-    fontFamily: FONT.bold,
-    fontSize: SIZES.small,
-    color: COLORS.white,
-  },
-  severitySlider: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  severityDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: COLORS.gray2,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  severityDotActive: {},
-  severityDotSelected: {
-    borderWidth: 3,
-  },
-  sectionTitle: {
-    fontFamily: FONT.medium,
-    fontSize: SIZES.medium,
-    color: "#f87b1b",
-    marginBottom: SIZES.small,
-  },
-  typeScrollView: {
-    gap: SIZES.small,
-  },
-  typeButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SIZES.small,
-    paddingHorizontal: SIZES.medium,
-    paddingVertical: SIZES.small,
-    backgroundColor: COLORS.lightWhite,
-    borderRadius: SIZES.medium,
-    borderWidth: 1,
-    borderColor: COLORS.gray2,
-  },
-  typeButtonSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  typeButtonText: {
-    fontFamily: FONT.medium,
-    fontSize: SIZES.small,
-    color: "#11224e",
-  },
-  typeButtonTextSelected: {
-    color: COLORS.white,
-  },
-  categoryScrollView: {
-    gap: SIZES.small,
-  },
-  categoryButton: {
-    paddingHorizontal: SIZES.medium,
-    paddingVertical: SIZES.small,
-    backgroundColor: COLORS.lightWhite,
-    borderRadius: SIZES.medium,
-    borderWidth: 1,
-    borderColor: COLORS.gray2,
-  },
-  categoryButtonSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  categoryButtonText: {
-    fontFamily: FONT.medium,
-    fontSize: SIZES.small,
-    color: COLORS.secondary,
-  },
-  categoryButtonTextSelected: {
-    color: COLORS.white,
-  },
-  form: {
-    marginBottom: SIZES.medium,
-  },
-  label: {
-    fontFamily: FONT.medium,
-    fontSize: SIZES.medium,
-    color: "#f87b1b",
-    marginBottom: SIZES.small,
-  },
-  input: {
-    backgroundColor: COLORS.lightWhite,
-    paddingHorizontal: SIZES.medium,
-    paddingVertical: SIZES.medium,
-    borderRadius: SIZES.small,
-    borderWidth: 1,
-    borderColor: COLORS.gray2,
-    fontFamily: FONT.regular,
-    fontSize: SIZES.medium,
-    color: COLORS.secondary,
-  },
+
   textArea: {
     height: 80,
     textAlignVertical: "top",
-  },
-  buttonContainer: {
-    marginTop: SIZES.medium,
-  },
-  button: {
-    paddingVertical: SIZES.medium,
-    borderRadius: SIZES.medium,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addButton: {
-    backgroundColor: COLORS.primary,
-  },
-  addButtonDisabled: {
-    backgroundColor: COLORS.gray,
-    opacity: 0.5,
-  },
-  buttonText: {
-    fontFamily: FONT.bold,
-    fontSize: SIZES.medium,
-    color: COLORS.white,
   },
   progressModalContainer: {
     flex: 1,
@@ -1323,34 +1176,7 @@ const styles = StyleSheet.create({
     fontSize: SIZES.small,
     color: COLORS.primary,
   },
-  cancelButton: {
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.gray2,
-  },
-  cancelButtonText: {
-    color: COLORS.gray,
-  },
-  expandToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SIZES.small,
-    paddingVertical: SIZES.medium,
-    marginVertical: SIZES.small,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.gray2,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray2,
-  },
-  expandToggleText: {
-    fontFamily: FONT.medium,
-    fontSize: SIZES.medium,
-    color: COLORS.primary,
-  },
-  expandableSection: {
-    // Container for expandable metadata
-  },
+
   previewContainer: {
     position: "relative",
     width: "100%",
@@ -1361,8 +1187,293 @@ const styles = StyleSheet.create({
     top: 10,
     right: 10,
     zIndex: 10,
-    backgroundColor: "#FF3B30",
+    backgroundColor: "#fee2e2", // Red background like AddImageModal
     borderRadius: 20,
-    padding: 4,
+    padding: 8,
+  },
+  sectionContainer: {
+    marginBottom: SIZES.medium,
+  },
+  severityContainer: {
+    backgroundColor: COLORS.lightWhite, // Consistent with AddImageModal
+    padding: SIZES.medium,
+    borderRadius: SIZES.medium,
+  },
+  // ... severity styles ...
+  severityTitle: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.medium,
+    color: "#f87b1b",
+    marginBottom: SIZES.small,
+  },
+  severityHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: SIZES.medium,
+  },
+  severityValue: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.xLarge,
+  },
+  severityBadge: {
+    paddingHorizontal: SIZES.medium,
+    paddingVertical: SIZES.small - 2,
+    borderRadius: SIZES.medium,
+  },
+  severityBadgeText: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.small,
+    color: COLORS.white,
+  },
+  severitySlider: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  severityDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.gray2,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  severityDotActive: {},
+  severityDotSelected: {
+    borderWidth: 3,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#f87b1b",
+    marginBottom: 12,
+  },
+  typeScrollView: {
+    gap: 10,
+    paddingHorizontal: 2,
+  },
+  typeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f1f5f9", // Pill style gray background
+    borderRadius: 99, // Pill shape
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: COLORS.gray2,
+  },
+  typeButtonSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  typeButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.secondary,
+  },
+  typeButtonTextSelected: {
+    color: "#FFFFFF",
+  },
+  categoryScrollView: {
+    gap: 10,
+    paddingHorizontal: 2,
+  },
+  categoryButton: {
+    backgroundColor: "#f1f5f9", // Pill style gray background
+    borderRadius: 99, // Pill shape
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: COLORS.gray2,
+  },
+  categoryButtonSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  categoryButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.secondary,
+  },
+  categoryButtonTextSelected: {
+    color: "#FFFFFF",
+  },
+
+  form: {
+    marginBottom: SIZES.medium,
+  },
+  label: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.medium,
+    color: "#f87b1b",
+    marginBottom: SIZES.small,
+  },
+  input: {
+    backgroundColor: COLORS.lightWhite,
+    paddingHorizontal: SIZES.medium,
+    paddingVertical: SIZES.medium,
+    borderRadius: SIZES.small,
+    borderWidth: 1,
+    borderColor: COLORS.gray2,
+    fontFamily: FONT.regular,
+    fontSize: SIZES.medium,
+    color: COLORS.secondary,
+  },
+  fieldPreview: {
+    width: "100%",
+    minHeight: 60,
+    padding: SIZES.medium,
+    backgroundColor: COLORS.lightWhite,
+    borderRadius: SIZES.small,
+    marginBottom: SIZES.medium,
+    borderWidth: 1,
+    borderColor: COLORS.gray2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  fieldPreviewText: {
+    fontFamily: FONT.regular,
+    fontSize: SIZES.medium,
+    color: COLORS.secondary,
+    flex: 1,
+    marginRight: SIZES.small,
+  },
+  fieldPreviewPlaceholder: {
+    color: COLORS.gray,
+  },
+  fieldEditIcon: {
+    marginLeft: SIZES.small,
+  },
+  expandToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 6,
+    marginTop: 4,
+  },
+  expandToggleText: {
+    color: COLORS.primary,
+    fontFamily: FONT.medium,
+    fontSize: SIZES.medium,
+  },
+  expandableSection: {
+    marginTop: 0,
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    marginTop: SIZES.large,
+    width: "100%",
+  },
+  button: {
+    flex: 1,
+    paddingVertical: SIZES.medium,
+    borderRadius: SIZES.medium,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelButton: {
+    backgroundColor: COLORS.lightWhite,
+    marginRight: SIZES.small,
+    borderWidth: 1,
+    borderColor: COLORS.gray2,
+  },
+  addButton: {
+    backgroundColor: COLORS.primary,
+    marginLeft: SIZES.small,
+  },
+  addButtonDisabled: {
+    opacity: 0.5,
+  },
+  buttonText: {
+    color: COLORS.white,
+    fontFamily: FONT.bold,
+    fontSize: SIZES.medium,
+  },
+  cancelButtonText: {
+    color: COLORS.secondary,
+  },
+  textEditorModalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: SIZES.large,
+  },
+  textEditorBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  textEditorModalContent: {
+    width: "100%",
+    height: "80%",
+    backgroundColor: COLORS.white,
+    borderRadius: SIZES.large,
+    padding: SIZES.large,
+  },
+  textEditorHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: SIZES.medium,
+  },
+  textEditorTitle: {
+    fontFamily: FONT.bold,
+    fontSize: SIZES.large,
+    color: COLORS.primary,
+  },
+  textEditorScrollContainer: {
+    flex: 1,
+    width: "100%",
+  },
+  textEditorScrollContent: {
+    flexGrow: 1,
+  },
+  textEditorInputContainer: {
+    flex: 1,
+  },
+  textEditorInput: {
+    width: "100%",
+    minHeight: 400,
+    padding: SIZES.medium,
+    backgroundColor: COLORS.lightWhite,
+    borderRadius: SIZES.small,
+    fontFamily: FONT.regular,
+    fontSize: SIZES.medium,
+    borderWidth: 1,
+    borderColor: COLORS.gray2,
+    textAlignVertical: "top",
+  },
+  textEditorButtons: {
+    flexDirection: "row",
+    gap: SIZES.small,
+  },
+  textEditorButton: {
+    flex: 1,
+    paddingVertical: SIZES.medium,
+    borderRadius: SIZES.medium,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  textEditorCancelButton: {
+    backgroundColor: COLORS.lightWhite,
+    borderWidth: 1,
+    borderColor: COLORS.gray2,
+  },
+  textEditorSaveButton: {
+    backgroundColor: COLORS.primary,
+  },
+  textEditorCancelText: {
+    color: COLORS.secondary,
+    fontFamily: FONT.bold,
+    fontSize: SIZES.medium,
+  },
+  textEditorSaveText: {
+    color: COLORS.white,
+    fontFamily: FONT.bold,
+    fontSize: SIZES.medium,
   },
 });

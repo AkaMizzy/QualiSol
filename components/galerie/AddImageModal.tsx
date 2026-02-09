@@ -1,5 +1,5 @@
 import VoiceNoteRecorder, {
-    VoiceNoteRecorderRef,
+  VoiceNoteRecorderRef,
 } from "@/components/VoiceNoteRecorder";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,23 +16,23 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    Alert,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Alert,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import {
-    PanGestureHandler,
-    PanGestureHandlerGestureEvent,
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
@@ -64,6 +64,7 @@ interface AddImageModalProps {
       mode?: "upload" | "capture";
     },
     shouldClose: boolean,
+    skipRefresh?: boolean,
   ) => void;
   openCameraOnShow?: boolean;
   allowedMode?: "upload" | "capture" | "both";
@@ -625,6 +626,7 @@ export default function AddImageModal({
           mode: mode,
         },
         shouldClose,
+        false, // skipRefresh = false (always refresh for single add)
       );
     });
 
