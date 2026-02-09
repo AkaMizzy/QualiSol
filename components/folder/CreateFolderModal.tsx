@@ -1,42 +1,62 @@
-import API_CONFIG from '@/app/config/api';
-import { ICONS } from '@/constants/Icons';
-import { useAuth } from '@/contexts/AuthContext';
-import folderService, { CreateFolderPayload } from '@/services/folderService';
-import { FolderType, getAllFolderTypes } from '@/services/folderTypeService';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import VoiceNoteRecorder from '../VoiceNoteRecorder';
-import companyService from '@/services/companyService';
-import { Company } from '@/types/company';
+import API_CONFIG from "@/app/config/api";
+import { ICONS } from "@/constants/Icons";
+import { useAuth } from "@/contexts/AuthContext";
+import companyService from "@/services/companyService";
+import folderService, { CreateFolderPayload } from "@/services/folderService";
+import { FolderType, getAllFolderTypes } from "@/services/folderTypeService";
+import { Company } from "@/types/company";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import VoiceNoteRecorder from "../VoiceNoteRecorder";
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   onSuccess?: () => void;
   projectId?: string;
-  zoneId?: string;
+  assignedOwnerId?: string;
   folderTypeTitle?: string; // Auto-select folder type by title
 };
 
-export default function CreateFolderModal({ visible, onClose, onSuccess, projectId, zoneId, folderTypeTitle }: Props) {
+export default function CreateFolderModal({
+  visible,
+  onClose,
+  onSuccess,
+  projectId,
+  assignedOwnerId,
+  folderTypeTitle,
+}: Props) {
   const { token, user } = useAuth();
-  const [title, setTitle] = useState<string>('');
-  const [description, setDescription] = useState<string>('');
+  const [title, setTitle] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [folderTypes, setFolderTypes] = useState<FolderType[]>([]);
   const [loadingFolderTypes, setLoadingFolderTypes] = useState(false);
-  const [folderTypeId, setFolderTypeId] = useState('');
+  const [folderTypeId, setFolderTypeId] = useState("");
   const [folderTypeOpen, setFolderTypeOpen] = useState(false);
 
-  const [companyUsers, setCompanyUsers] = useState<{ id: string; firstname?: string; lastname?: string; email?: string }[]>([]);
+  const [companyUsers, setCompanyUsers] = useState<
+    { id: string; firstname?: string; lastname?: string; email?: string }[]
+  >([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [ownerId, setOwnerId] = useState('');
-  const [controlId, setControlId] = useState('');
-  const [technicienId, setTechnicienId] = useState('');
+  const [ownerId, setOwnerId] = useState("");
+  const [controlId, setControlId] = useState("");
+  const [technicienId, setTechnicienId] = useState("");
   const [controlOpen, setControlOpen] = useState(false);
   const [technicienOpen, setTechnicienOpen] = useState(false);
 
@@ -46,35 +66,48 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
   const [loadingLimits, setLoadingLimits] = useState(true);
 
   // Filtered user lists to prevent same user in multiple roles
-  const adminUser = useMemo(() => companyUsers.find(u => u.id === ownerId), [companyUsers, ownerId]);
-  const controlUsers = useMemo(() => companyUsers.filter(u => u.id !== ownerId), [companyUsers, ownerId]);
-  const technicienUsers = useMemo(() => companyUsers.filter(u => u.id !== ownerId && u.id !== controlId), [companyUsers, ownerId, controlId]);
+  const adminUser = useMemo(
+    () => companyUsers.find((u) => u.id === ownerId),
+    [companyUsers, ownerId],
+  );
+  const controlUsers = useMemo(
+    () => companyUsers.filter((u) => u.id !== ownerId),
+    [companyUsers, ownerId],
+  );
+  const technicienUsers = useMemo(
+    () => companyUsers.filter((u) => u.id !== ownerId && u.id !== controlId),
+    [companyUsers, ownerId, controlId],
+  );
 
-  // Auto-set admin to current user when modal opens
+  // Auto-set admin to assignedOwnerId or current user when modal opens
   useEffect(() => {
-    if (visible && user?.id) {
-      setOwnerId(user.id);
+    if (visible) {
+      if (assignedOwnerId) {
+        setOwnerId(assignedOwnerId);
+      } else if (user?.id) {
+        setOwnerId(user.id);
+      }
     }
-  }, [visible, user]);
+  }, [visible, user, assignedOwnerId]);
 
   useEffect(() => {
     const fetchLimitInfo = async () => {
       try {
         setLoadingLimits(true);
         if (!token) return;
-        
+
         const [company, folders] = await Promise.all([
           companyService.getCompany(),
-          folderService.getAllFolders(token)
+          folderService.getAllFolders(token),
         ]);
-        
+
         setCompanyInfo(company);
         setCurrentFoldersCount(folders.length);
-        
+
         const limit = company.nbfolders || 2;
         setIsLimitReached(folders.length >= limit);
       } catch (error) {
-        console.error('Error fetching limit info:', error);
+        console.error("Error fetching limit info:", error);
       } finally {
         setLoadingLimits(false);
       }
@@ -92,10 +125,10 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
       try {
         const types = await getAllFolderTypes(token);
         setFolderTypes(types);
-        
+
         // Auto-select folder type if folderTypeTitle is provided
         if (folderTypeTitle) {
-          const matchingType = types.find(ft => ft.title === folderTypeTitle);
+          const matchingType = types.find((ft) => ft.title === folderTypeTitle);
           if (matchingType) {
             setFolderTypeId(String(matchingType.id));
           }
@@ -118,13 +151,19 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
       }
       setLoadingUsers(true);
       try {
-        const baseUrl = API_CONFIG.BASE_URL?.replace(/\/$/, '') || '';
+        const baseUrl = API_CONFIG.BASE_URL?.replace(/\/$/, "") || "";
         const url = `${baseUrl}/api/users`;
         const res = await fetch(url, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         });
-        if (!res.ok) { setCompanyUsers([]); return; }
+        if (!res.ok) {
+          setCompanyUsers([]);
+          return;
+        }
         const data = await res.json();
         if (Array.isArray(data)) setCompanyUsers(data);
         else setCompanyUsers([]);
@@ -137,15 +176,23 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
     loadUsers();
   }, [visible, token]);
 
-  const isDisabled = useMemo(() => !title || !token || submitting || !folderTypeId || isLimitReached, [title, token, submitting, folderTypeId, isLimitReached]);
+  const isDisabled = useMemo(
+    () => !title || !token || submitting || !folderTypeId || isLimitReached,
+    [title, token, submitting, folderTypeId, isLimitReached],
+  );
 
   const handleSubmit = async () => {
     if (!token || !folderTypeId) return;
     setError(null);
-    if (!title || title.trim().length === 0) { setError('Veuillez saisir un titre.'); return; }
+    if (!title || title.trim().length === 0) {
+      setError("Veuillez saisir un titre.");
+      return;
+    }
 
     if (isLimitReached) {
-      setError(`Vous avez atteint la limite de ${companyInfo?.nbfolders || 2} dossiers. Veuillez mettre à niveau votre plan pour ajouter plus de dossiers.`);
+      setError(
+        `Vous avez atteint la limite de ${companyInfo?.nbfolders || 2} dossiers. Veuillez mettre à niveau votre plan pour ajouter plus de dossiers.`,
+      );
       return;
     }
 
@@ -154,7 +201,9 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
     const uniqueRoles = new Set(roles);
 
     if (roles.length !== uniqueRoles.size) {
-      setError('Un utilisateur ne peut pas être assigné à plusieurs rôles (Admin, Contrôleur, Technicien).');
+      setError(
+        "Un utilisateur ne peut pas être assigné à plusieurs rôles (Admin, Contrôleur, Technicien).",
+      );
       return;
     }
 
@@ -169,17 +218,23 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
         control_id: controlId || undefined,
         technicien_id: technicienId || undefined,
         project_id: projectId,
-        zone_id: zoneId,
+        // zone_id: zoneId, // Zone is removed
       };
       const created = await folderService.createFolder(payload, token);
       onSuccess && onSuccess();
       handleClose();
     } catch (e: any) {
       // Handle 403 error specifically for limit reached
-      if (e?.message?.includes('limit') || e?.message?.includes('Folder limit')) {
-        setError(e?.message || `Vous avez atteint la limite de ${companyInfo?.nbfolders || 2} dossiers.`);
+      if (
+        e?.message?.includes("limit") ||
+        e?.message?.includes("Folder limit")
+      ) {
+        setError(
+          e?.message ||
+            `Vous avez atteint la limite de ${companyInfo?.nbfolders || 2} dossiers.`,
+        );
       } else {
-        setError(e?.message || 'Échec de l\'enregistrement');
+        setError(e?.message || "Échec de l'enregistrement");
       }
     } finally {
       setSubmitting(false);
@@ -187,12 +242,12 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
   };
 
   const handleClose = () => {
-    setTitle('');
-    setDescription('');
-    setFolderTypeId('');
-    setOwnerId('');
-    setControlId('');
-    setTechnicienId('');
+    setTitle("");
+    setDescription("");
+    setFolderTypeId("");
+    setOwnerId("");
+    setControlId("");
+    setTechnicienId("");
     setControlOpen(false);
     setTechnicienOpen(false);
     setError(null);
@@ -200,10 +255,15 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={handleClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={handleClose}
+    >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <SafeAreaView style={styles.container}>
           <View style={styles.header}>
@@ -229,21 +289,34 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
 
           {/* Limit Info Banner */}
           {!loadingLimits && companyInfo && (
-            <View style={[styles.limitInfoBanner, isLimitReached && styles.limitInfoBannerWarning]}>
-              <Ionicons 
-                name={isLimitReached ? "warning" : "folder"} 
-                size={16} 
-                color={isLimitReached ? "#b45309" : "#3b82f6"} 
+            <View
+              style={[
+                styles.limitInfoBanner,
+                isLimitReached && styles.limitInfoBannerWarning,
+              ]}
+            >
+              <Ionicons
+                name={isLimitReached ? "warning" : "folder"}
+                size={16}
+                color={isLimitReached ? "#b45309" : "#3b82f6"}
               />
-              <Text style={[styles.limitInfoText, isLimitReached && styles.limitInfoTextWarning]}>
+              <Text
+                style={[
+                  styles.limitInfoText,
+                  isLimitReached && styles.limitInfoTextWarning,
+                ]}
+              >
                 Dossiers: {currentFoldersCount} / {companyInfo.nbfolders || 2}
                 {isLimitReached && " - Nombre des dossiers dépassé"}
               </Text>
             </View>
           )}
 
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            <View style={{paddingTop: 16}}>
+          <ScrollView
+            style={styles.content}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={{ paddingTop: 16 }}>
               <View style={[styles.inputWrap, { marginBottom: 16 }]}>
                 <Ionicons name="text-outline" size={16} color="#f87b1b" />
                 <TextInput
@@ -257,27 +330,88 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
 
               {/* FolderType Select */}
               <View style={{ gap: 8, marginTop: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Type de dossier</Text>
-                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setFolderTypeOpen(v => !v)}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                <Text style={{ fontSize: 12, color: "#6b7280", marginLeft: 2 }}>
+                  Type de dossier
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.inputWrap,
+                    { justifyContent: "space-between" },
+                  ]}
+                  onPress={() => setFolderTypeOpen((v) => !v)}
+                >
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      flex: 1,
+                    }}
+                  >
                     <Ionicons name="folder-outline" size={16} color="#f87b1b" />
-                    <Text style={[styles.input, { color: folderTypeId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {folderTypeId ? (folderTypes.find(ft => String(ft.id) === String(folderTypeId))?.title || folderTypeId) : 'Choisir un type'}
+                    <Text
+                      style={[
+                        styles.input,
+                        { color: folderTypeId ? "#111827" : "#9ca3af" },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {folderTypeId
+                        ? folderTypes.find(
+                            (ft) => String(ft.id) === String(folderTypeId),
+                          )?.title || folderTypeId
+                        : "Choisir un type"}
                     </Text>
                   </View>
-                  <Ionicons name={folderTypeOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#f87b1b" />
+                  <Ionicons
+                    name={folderTypeOpen ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color="#f87b1b"
+                  />
                 </TouchableOpacity>
                 {folderTypeOpen && (
-                  <View style={{ maxHeight: 200, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+                  <View
+                    style={{
+                      maxHeight: 200,
+                      borderWidth: 1,
+                      borderColor: "#e5e7eb",
+                      borderRadius: 10,
+                      overflow: "hidden",
+                    }}
+                  >
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingFolderTypes ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
+                        <View style={{ padding: 12 }}>
+                          <Text style={{ color: "#6b7280" }}>
+                            Chargement...
+                          </Text>
+                        </View>
                       ) : folderTypes.length === 0 ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun type de dossier</Text></View>
+                        <View style={{ padding: 12 }}>
+                          <Text style={{ color: "#6b7280" }}>
+                            Aucun type de dossier
+                          </Text>
+                        </View>
                       ) : (
-                        folderTypes.map(ft => (
-                          <TouchableOpacity key={ft.id} onPress={() => { setFolderTypeId(String(ft.id)); setFolderTypeOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(folderTypeId) === String(ft.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
-                            <Text style={{ color: '#11224e' }}>{ft.title}</Text>
+                        folderTypes.map((ft) => (
+                          <TouchableOpacity
+                            key={ft.id}
+                            onPress={() => {
+                              setFolderTypeId(String(ft.id));
+                              setFolderTypeOpen(false);
+                            }}
+                            style={{
+                              paddingHorizontal: 12,
+                              paddingVertical: 10,
+                              backgroundColor:
+                                String(folderTypeId) === String(ft.id)
+                                  ? "#f1f5f9"
+                                  : "#FFFFFF",
+                              borderBottomWidth: 1,
+                              borderBottomColor: "#f3f4f6",
+                            }}
+                          >
+                            <Text style={{ color: "#11224e" }}>{ft.title}</Text>
                           </TouchableOpacity>
                         ))
                       )}
@@ -288,45 +422,150 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
 
               {/* Owner (Admin) Select - Locked to current user */}
               <View style={{ gap: 8, marginTop: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Admin </Text>
-                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }, styles.disabledInput]} disabled>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="person-circle-outline" size={16} color="#f87b1b" />
-                    <Text style={[styles.input, { color: ownerId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
+                <Text style={{ fontSize: 12, color: "#6b7280", marginLeft: 2 }}>
+                  Admin{" "}
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.inputWrap,
+                    { justifyContent: "space-between" },
+                    styles.disabledInput,
+                  ]}
+                  disabled
+                >
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      flex: 1,
+                    }}
+                  >
+                    <Ionicons
+                      name="person-circle-outline"
+                      size={16}
+                      color="#f87b1b"
+                    />
+                    <Text
+                      style={[
+                        styles.input,
+                        { color: ownerId ? "#111827" : "#9ca3af" },
+                      ]}
+                      numberOfLines={1}
+                    >
                       {adminUser
-                        ? `${adminUser.firstname || ''} ${adminUser.lastname || ''}`.trim() || adminUser.email
-                        : (loadingUsers ? 'Chargement...' : (user?.email || 'Admin non défini'))
-                      }
+                        ? `${adminUser.firstname || ""} ${adminUser.lastname || ""}`.trim() ||
+                          adminUser.email
+                        : loadingUsers
+                          ? "Chargement..."
+                          : user?.email || "Admin non défini"}
                     </Text>
                   </View>
-                  <Ionicons name="lock-closed-outline" size={16} color="#9ca3af" />
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={16}
+                    color="#9ca3af"
+                  />
                 </TouchableOpacity>
               </View>
 
               {/* Control Select */}
               <View style={{ gap: 8, marginTop: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Contrôleur</Text>
-                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setControlOpen(v => !v)}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="shield-checkmark-outline" size={16} color="#f87b1b" />
-                    <Text style={[styles.input, { color: controlId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {controlId ? (companyUsers.find(u => String(u.id) === String(controlId))?.firstname ? `${companyUsers.find(u => String(controlId) === String(u.id))?.firstname} ${companyUsers.find(u => String(controlId) === String(u.id))?.lastname || ''}` : controlId) : 'Choisir un contrôleur'}
+                <Text style={{ fontSize: 12, color: "#6b7280", marginLeft: 2 }}>
+                  Contrôleur
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.inputWrap,
+                    { justifyContent: "space-between" },
+                  ]}
+                  onPress={() => setControlOpen((v) => !v)}
+                >
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      flex: 1,
+                    }}
+                  >
+                    <Ionicons
+                      name="shield-checkmark-outline"
+                      size={16}
+                      color="#f87b1b"
+                    />
+                    <Text
+                      style={[
+                        styles.input,
+                        { color: controlId ? "#111827" : "#9ca3af" },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {controlId
+                        ? companyUsers.find(
+                            (u) => String(u.id) === String(controlId),
+                          )?.firstname
+                          ? `${companyUsers.find((u) => String(controlId) === String(u.id))?.firstname} ${companyUsers.find((u) => String(controlId) === String(u.id))?.lastname || ""}`
+                          : controlId
+                        : "Choisir un contrôleur"}
                     </Text>
                   </View>
-                  <Ionicons name={controlOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#f87b1b" />
+                  <Ionicons
+                    name={controlOpen ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color="#f87b1b"
+                  />
                 </TouchableOpacity>
                 {controlOpen && (
-                  <View style={{ maxHeight: 200, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+                  <View
+                    style={{
+                      maxHeight: 200,
+                      borderWidth: 1,
+                      borderColor: "#e5e7eb",
+                      borderRadius: 10,
+                      overflow: "hidden",
+                    }}
+                  >
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingUsers ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
+                        <View style={{ padding: 12 }}>
+                          <Text style={{ color: "#6b7280" }}>
+                            Chargement...
+                          </Text>
+                        </View>
                       ) : controlUsers.length === 0 ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
+                        <View style={{ padding: 12 }}>
+                          <Text style={{ color: "#6b7280" }}>
+                            Aucun utilisateur
+                          </Text>
+                        </View>
                       ) : (
-                        controlUsers.map(u => (
-                          <TouchableOpacity key={u.id} onPress={() => { setControlId(String(u.id)); setControlOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(controlId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
-                            <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
-                            {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
+                        controlUsers.map((u) => (
+                          <TouchableOpacity
+                            key={u.id}
+                            onPress={() => {
+                              setControlId(String(u.id));
+                              setControlOpen(false);
+                            }}
+                            style={{
+                              paddingHorizontal: 12,
+                              paddingVertical: 10,
+                              backgroundColor:
+                                String(controlId) === String(u.id)
+                                  ? "#f1f5f9"
+                                  : "#FFFFFF",
+                              borderBottomWidth: 1,
+                              borderBottomColor: "#f3f4f6",
+                            }}
+                          >
+                            <Text style={{ color: "#11224e" }}>
+                              {u.firstname || ""} {u.lastname || ""}
+                            </Text>
+                            {u.email ? (
+                              <Text style={{ color: "#6b7280", fontSize: 12 }}>
+                                {u.email}
+                              </Text>
+                            ) : null}
                           </TouchableOpacity>
                         ))
                       )}
@@ -337,28 +576,101 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
 
               {/* Technicien Select */}
               <View style={{ gap: 8, marginTop: 12 }}>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 2 }}>Technicien</Text>
-                <TouchableOpacity style={[styles.inputWrap, { justifyContent: 'space-between' }]} onPress={() => setTechnicienOpen(v => !v)}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="construct-outline" size={16} color="#f87b1b" />
-                    <Text style={[styles.input, { color: technicienId ? '#111827' : '#9ca3af' }]} numberOfLines={1}>
-                      {technicienId ? (companyUsers.find(u => String(u.id) === String(technicienId))?.firstname ? `${companyUsers.find(u => String(technicienId) === String(u.id))?.firstname} ${companyUsers.find(u => String(technicienId) === String(u.id))?.lastname || ''}` : technicienId) : 'Choisir un technicien'}
+                <Text style={{ fontSize: 12, color: "#6b7280", marginLeft: 2 }}>
+                  Technicien
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.inputWrap,
+                    { justifyContent: "space-between" },
+                  ]}
+                  onPress={() => setTechnicienOpen((v) => !v)}
+                >
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      flex: 1,
+                    }}
+                  >
+                    <Ionicons
+                      name="construct-outline"
+                      size={16}
+                      color="#f87b1b"
+                    />
+                    <Text
+                      style={[
+                        styles.input,
+                        { color: technicienId ? "#111827" : "#9ca3af" },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {technicienId
+                        ? companyUsers.find(
+                            (u) => String(u.id) === String(technicienId),
+                          )?.firstname
+                          ? `${companyUsers.find((u) => String(technicienId) === String(u.id))?.firstname} ${companyUsers.find((u) => String(technicienId) === String(u.id))?.lastname || ""}`
+                          : technicienId
+                        : "Choisir un technicien"}
                     </Text>
                   </View>
-                  <Ionicons name={technicienOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#f87b1b" />
+                  <Ionicons
+                    name={technicienOpen ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color="#f87b1b"
+                  />
                 </TouchableOpacity>
                 {technicienOpen && (
-                  <View style={{ maxHeight: 200, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+                  <View
+                    style={{
+                      maxHeight: 200,
+                      borderWidth: 1,
+                      borderColor: "#e5e7eb",
+                      borderRadius: 10,
+                      overflow: "hidden",
+                    }}
+                  >
                     <ScrollView keyboardShouldPersistTaps="handled">
                       {loadingUsers ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Chargement...</Text></View>
+                        <View style={{ padding: 12 }}>
+                          <Text style={{ color: "#6b7280" }}>
+                            Chargement...
+                          </Text>
+                        </View>
                       ) : technicienUsers.length === 0 ? (
-                        <View style={{ padding: 12 }}><Text style={{ color: '#6b7280' }}>Aucun utilisateur</Text></View>
+                        <View style={{ padding: 12 }}>
+                          <Text style={{ color: "#6b7280" }}>
+                            Aucun utilisateur
+                          </Text>
+                        </View>
                       ) : (
-                        technicienUsers.map(u => (
-                          <TouchableOpacity key={u.id} onPress={() => { setTechnicienId(String(u.id)); setTechnicienOpen(false); }} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: String(technicienId) === String(u.id) ? '#f1f5f9' : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
-                            <Text style={{ color: '#11224e' }}>{u.firstname || ''} {u.lastname || ''}</Text>
-                            {u.email ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{u.email}</Text> : null}
+                        technicienUsers.map((u) => (
+                          <TouchableOpacity
+                            key={u.id}
+                            onPress={() => {
+                              setTechnicienId(String(u.id));
+                              setTechnicienOpen(false);
+                            }}
+                            style={{
+                              paddingHorizontal: 12,
+                              paddingVertical: 10,
+                              backgroundColor:
+                                String(technicienId) === String(u.id)
+                                  ? "#f1f5f9"
+                                  : "#FFFFFF",
+                              borderBottomWidth: 1,
+                              borderBottomColor: "#f3f4f6",
+                            }}
+                          >
+                            <Text style={{ color: "#11224e" }}>
+                              {u.firstname || ""} {u.lastname || ""}
+                            </Text>
+                            {u.email ? (
+                              <Text style={{ color: "#6b7280", fontSize: 12 }}>
+                                {u.email}
+                              </Text>
+                            ) : null}
                           </TouchableOpacity>
                         ))
                       )}
@@ -372,14 +684,16 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
                   onRecordingComplete={() => {
                     // Not saving audio file here, just using for transcription
                   }}
-                  onTranscriptionComplete={(text) => {
-                    setDescription(prev => (prev ? `${prev}\n${text}` : text));
-                  }}
                 />
               </View>
 
-              <View style={[styles.inputWrap, { alignItems: 'flex-start' }]}> 
-                <Ionicons name="chatbubble-ellipses-outline" size={16} color="#f87b1b" style={{ marginTop: 4 }} />
+              <View style={[styles.inputWrap, { alignItems: "flex-start" }]}>
+                <Ionicons
+                  name="chatbubble-ellipses-outline"
+                  size={16}
+                  color="#f87b1b"
+                  style={{ marginTop: 4 }}
+                />
                 <TextInput
                   placeholder="Introduction"
                   placeholderTextColor="#9ca3af"
@@ -395,9 +709,12 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
           </ScrollView>
 
           <View style={styles.footer}>
-            <TouchableOpacity 
-              style={[styles.submitButton, isDisabled && styles.submitButtonDisabled]} 
-              disabled={isDisabled} 
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                isDisabled && styles.submitButtonDisabled,
+              ]}
+              disabled={isDisabled}
               onPress={handleSubmit}
             >
               {submitting ? (
@@ -420,45 +737,89 @@ export default function CreateFolderModal({ visible, onClose, onSuccess, project
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+  },
   closeButton: { padding: 8 },
-  headerCenter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, flex: 1 },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#f87b1b' },
+  headerCenter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    flex: 1,
+  },
+  headerTitle: { fontSize: 20, fontWeight: "700", color: "#f87b1b" },
   placeholder: { width: 40 },
   content: { flex: 1, paddingHorizontal: 16 },
-  alertBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fffbeb', borderColor: '#f59e0b', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, marginHorizontal: 16, marginTop: 8, borderRadius: 10 },
-  alertBannerText: { color: '#b45309', flex: 1, fontSize: 12 },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#f87b1b', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
-  input: { flex: 1, color: '#111827' },
-  footer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#e5e7eb' },
-  submitButton: { 
-    backgroundColor: '#f87b1b', 
-    borderRadius: 12, 
-    paddingVertical: 16, 
+  alertBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fffbeb",
+    borderColor: "#f59e0b",
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 10,
+  },
+  alertBannerText: { color: "#b45309", flex: 1, fontSize: 12 },
+  inputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  input: { flex: 1, color: "#111827" },
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+  },
+  submitButton: {
+    backgroundColor: "#f87b1b",
+    borderRadius: 12,
+    paddingVertical: 16,
     paddingHorizontal: 24,
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    flexDirection: 'row', 
-    gap: 8, 
-    shadowColor: '#f87b1b',
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+    shadowColor: "#f87b1b",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
-  submitButtonDisabled: { backgroundColor: '#d1d5db' },
-  submitButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  submitButtonDisabled: { backgroundColor: "#d1d5db" },
+  submitButtonText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
   disabledInput: {
-    backgroundColor: '#f3f4f6',
-    borderColor: '#d1d5db',
+    backgroundColor: "#f3f4f6",
+    borderColor: "#d1d5db",
   },
   limitInfoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
-    backgroundColor: '#eff6ff',
-    borderColor: '#bfdbfe',
+    backgroundColor: "#eff6ff",
+    borderColor: "#bfdbfe",
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -467,16 +828,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   limitInfoBannerWarning: {
-    backgroundColor: '#fffbeb',
-    borderColor: '#f59e0b',
+    backgroundColor: "#fffbeb",
+    borderColor: "#f59e0b",
   },
   limitInfoText: {
-    color: '#1e40af',
+    color: "#1e40af",
     flex: 1,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   limitInfoTextWarning: {
-    color: '#b45309',
+    color: "#b45309",
   },
 });
