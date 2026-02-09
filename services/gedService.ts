@@ -474,6 +474,15 @@ export async function getAllGeds(token: string): Promise<Ged[]> {
   return response.data;
 }
 
+export async function getMyGeds(token: string): Promise<Ged[]> {
+  const response = await api.get("/api/geds/mygeds", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.data;
+}
+
 export async function getGedsByIds(
   token: string,
   ids: string[],

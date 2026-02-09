@@ -12,8 +12,8 @@ import {
   Ged,
   createGed,
   deleteGed,
-  getAllGeds,
-  updateGedFile,
+  getMyGeds, // Import new service
+  updateGedFile
 } from "@/services/gedService";
 import {
   createOfflineRecord,
@@ -82,7 +82,7 @@ export default function SharedGalerieScreen({
     if (token) {
       try {
         setLoading(true);
-        const fetchedGeds = await getAllGeds(token);
+        const fetchedGeds = await getMyGeds(token); // Use getMyGeds instead of getAllGeds
         setGeds(fetchedGeds);
       } catch (error) {
         console.error("Failed to fetch geds:", error);
