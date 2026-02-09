@@ -340,10 +340,17 @@ function QuestionRow({
     <View style={styles.row}>
       {/* Title & Desc */}
       <View style={styles.colTitle}>
-        <Text style={styles.questionTitle}>{item.title}</Text>
-        {item.description ? (
-          <Text style={styles.questionDesc}>{item.description}</Text>
-        ) : null}
+        <View style={styles.titleRow}>
+          <Text style={styles.questionTitle}>{item.title}</Text>
+          {item.description ? (
+            <TouchableOpacity
+              onPress={() => Alert.alert("Description", item.description || "")}
+              style={styles.helpIcon}
+            >
+              <Ionicons name="help-circle-outline" size={20} color="#f87b1b" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
 
       {/* Quantity (Conditional) */}
@@ -661,8 +668,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  questionTitle: { fontSize: 14, fontWeight: "500", color: "#1f2937" },
-  questionDesc: { fontSize: 12, color: "#9ca3af", marginTop: 2 },
+  questionTitle: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#1f2937",
+    flex: 1, // Allow title to take available space
+  },
+  // questionDesc removed
+
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  helpIcon: {
+    marginLeft: 6,
+    padding: 2,
+  },
 
   input: {
     borderWidth: 1,

@@ -2,6 +2,7 @@ import API_CONFIG from "@/app/config/api";
 import api from "./api";
 
 export type CreateGedInput = {
+  answer: any;
   idsource: string;
   title: string;
   description?: string;
@@ -39,6 +40,7 @@ export type CreateGedInput = {
 };
 
 export interface Ged {
+  answer: string | null;
   level: undefined;
   id: string;
   idsource: string;
