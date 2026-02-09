@@ -2,22 +2,23 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Audio } from "expo-av";
 import React, {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useState,
+    forwardRef,
+    useEffect,
+    useImperativeHandle,
+    useState,
 } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 export interface VoiceNoteRecorderRef {
   forceStopAndCleanup: () => Promise<void>;
+  startRecording: () => Promise<void>;
 }
 
 type VoiceNoteRecorderProps = {
@@ -91,6 +92,9 @@ const VoiceNoteRecorder = forwardRef<
       setStatus("idle");
       setDuration(0);
       onRecordingComplete(null);
+    },
+    startRecording: async () => {
+      await startRecording();
     },
   }));
 

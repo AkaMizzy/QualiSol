@@ -146,6 +146,17 @@ export default function AddImageModal({
   // Ref for voice note recorder cleanup
   const voiceNoteRecorderRef = useRef<VoiceNoteRecorderRef>(null);
 
+  // Auto-start recording when image is selected
+  useEffect(() => {
+    if (image && !voiceNote) {
+      // Small delay to ensure modal/component is fully ready
+      const timer = setTimeout(() => {
+        voiceNoteRecorderRef.current?.startRecording();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [image, voiceNote]);
+
   const handleCombineText = async () => {
     if (!iaText) {
       setAlertInfo({
