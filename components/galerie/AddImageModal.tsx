@@ -1533,7 +1533,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: COLORS.white,
     fontFamily: FONT.bold,
-    fontSize: SIZES.medium,
+    fontSize: SIZES.xmedium,
   },
   cancelButtonText: {
     color: COLORS.secondary,

@@ -63,7 +63,7 @@ const FormComponent = ({
 }: FormComponentProps) => {
   const [isPickerVisible, setPickerVisible] = useState(false);
   const typeOptions = [
-    { label: 'Booléen', value: 'boolean' },
+    { label: 'Oui / Non', value: 'boolean' },
     { label: 'Date', value: 'date' },
     { label: 'Fichier', value: 'file' },
     { label: 'GPS', value: 'GPS' },

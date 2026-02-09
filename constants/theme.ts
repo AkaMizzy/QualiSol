@@ -65,6 +65,7 @@ export const COLORS = {
 
 export const SIZES = {
   small: 12,
+  xmedium: 14,
   medium: 16,
   large: 20,
   xLarge: 24,

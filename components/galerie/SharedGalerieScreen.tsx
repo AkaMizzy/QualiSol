@@ -493,136 +493,93 @@ export default function SharedGalerieScreen({
           ))}
         </View>
       ) : (
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.galleryContainer}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          <View style={styles.contentContainer}>
-            {currentPageImages.length === 0 ? (
-              <View style={styles.centered}>
-                <Text style={styles.emptyText}>
-                  Pas d&apos;images trouvées.
-                </Text>
-              </View>
-            ) : (
-              currentPageImages.map((item: any) => (
-                <View key={item.id} style={styles.imageContainer}>
-                  <GalerieCard
-                    item={item}
-                    onPress={() => handleCardPress(item)}
-                    hasVoiceNote={!!item.urlvoice}
-                    isOffline={item.isOffline}
-                    localImagePath={item.localImagePath}
-                    syncStatus={item.syncStatus}
-                    isVideo={isVideoFile(item.url)}
-                  />
-                </View>
-              ))
-            )}
-          </View>
-
-          {/* Add Button first */}
-          <View
-            style={{
-              alignItems: "center",
-              paddingVertical: 20,
-            }}
+        <View style={{ flex: 1 }}>
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.galleryContainer}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
           >
-            <TouchableOpacity
-              style={{
-                width: 60,
-                height: 60,
-                borderRadius: 30,
-                backgroundColor: COLORS.primary,
-                justifyContent: "center",
-                alignItems: "center",
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 3.84,
-                elevation: 5,
-              }}
-              onPress={() => setModalVisible(true)}
-            >
-              <Image
-                source={customButtonIcon || ICONS.cameraPng}
-                style={{ width: 32, height: 32 }}
-              />
-            </TouchableOpacity>
-          </View>
+            <View style={styles.contentContainer}>
+              {currentPageImages.length === 0 ? (
+                <View style={styles.centered}>
+                  <Text style={styles.emptyText}>
+                    Pas d&apos;images trouvées.
+                  </Text>
+                </View>
+              ) : (
+                currentPageImages.map((item: any) => (
+                  <View key={item.id} style={styles.imageContainer}>
+                    <GalerieCard
+                      item={item}
+                      onPress={() => handleCardPress(item)}
+                      hasVoiceNote={!!item.urlvoice}
+                      isOffline={item.isOffline}
+                      localImagePath={item.localImagePath}
+                      syncStatus={item.syncStatus}
+                      isVideo={isVideoFile(item.url)}
+                    />
+                  </View>
+                ))
+              )}
+            </View>
 
-          {/* Pagination at the bottom */}
-          {totalPages > 1 && (
-            <View style={styles.paginationContainer}>
+            <View style={{ height: 150 }} />
+          </ScrollView>
+
+          <View style={styles.bottomBar}>
+            <View style={styles.navigationControls}>
               <TouchableOpacity
                 style={[
-                  styles.pageButton,
-                  currentPage === 0 && styles.pageButtonDisabled,
+                  styles.navButton,
+                  currentPage === 0 && styles.navButtonHidden,
                 ]}
                 onPress={handlePrevPage}
                 disabled={currentPage === 0}
               >
                 <Ionicons
                   name="chevron-back"
-                  size={24}
-                  color={currentPage === 0 ? COLORS.gray : COLORS.primary}
+                  size={28}
+                  color={COLORS.primary}
                 />
               </TouchableOpacity>
 
-              <View style={styles.pageIndicator}>
-                <Text style={styles.pageText}>
-                  {currentPage + 1} / {totalPages}
-                </Text>
-                <View style={styles.dotsContainer}>
-                  {[...Array(Math.min(totalPages, 5))].map((_, index) => {
-                    let dotIndex = index;
-                    if (totalPages > 5) {
-                      if (currentPage < 3) {
-                        dotIndex = index;
-                      } else if (currentPage >= totalPages - 3) {
-                        dotIndex = totalPages - 5 + index;
-                      } else {
-                        dotIndex = currentPage - 2 + index;
-                      }
-                    }
-                    return (
-                      <View
-                        key={index}
-                        style={[
-                          styles.dot,
-                          dotIndex === currentPage && styles.activeDot,
-                        ]}
-                      />
-                    );
-                  })}
-                </View>
-              </View>
+              <TouchableOpacity
+                style={styles.centerAddButton}
+                onPress={() => setModalVisible(true)}
+              >
+                <Image
+                  source={customButtonIcon || ICONS.cameraPng}
+                  style={styles.centerAddButtonIcon}
+                />
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={[
-                  styles.pageButton,
-                  currentPage === totalPages - 1 && styles.pageButtonDisabled,
+                  styles.navButton,
+                  currentPage >= totalPages - 1 && styles.navButtonHidden,
                 ]}
                 onPress={handleNextPage}
-                disabled={currentPage === totalPages - 1}
+                disabled={currentPage >= totalPages - 1}
               >
                 <Ionicons
                   name="chevron-forward"
-                  size={24}
-                  color={
-                    currentPage === totalPages - 1
-                      ? COLORS.gray
-                      : COLORS.primary
-                  }
+                  size={28}
+                  color={COLORS.primary}
                 />
               </TouchableOpacity>
             </View>
-          )}
-          <View style={{ height: 100 }} />
-        </ScrollView>
+
+            {totalPages > 1 && (
+              <View style={styles.pageInfoContainer}>
+                <Text style={styles.pageText}>
+                  Page {currentPage + 1} / {totalPages}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
       )}
       {useBulkModal ? (
         <BulkAddImageModal
@@ -652,7 +609,7 @@ export default function SharedGalerieScreen({
           buttonText={
             creationMode === "capture"
               ? "Ajouter nouveau constat"
-              : "Ajouter l'image"
+              : "Ajouter nouvelle image"
           }
         />
       )}
@@ -728,22 +685,63 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 50,
   },
-  addButton: {
-    position: "absolute",
-    bottom: 30, // Lower it slightly to be more accessible
-    right: 20, // Move slightly closer to edge
-    width: 64, // Slightly larger
+  // ... removed addButton style
+  bottomBar: {
+    backgroundColor: COLORS.white,
+    paddingTop: SIZES.medium,
+    paddingBottom: SIZES.large, // Extra padding for bottom safe area visual
+    borderTopWidth: 1,
+    borderTopColor: COLORS.lightWhite,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  navigationControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: SIZES.large,
+    marginBottom: SIZES.small,
+  },
+  navButton: {
+    padding: SIZES.small,
+    borderRadius: 50,
+    backgroundColor: COLORS.lightWhite,
+  },
+  navButtonHidden: {
+    opacity: 0,
+  },
+  centerAddButton: {
+    width: 64,
     height: 64,
     borderRadius: 32,
     backgroundColor: COLORS.primary,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 8,
+    // Lift it up slightly to break the line
+    marginTop: -20,
+    elevation: 5,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
-    zIndex: 999, // Ensure it stays on top
+    borderWidth: 4,
+    borderColor: COLORS.white, // White border to separate from bar
+  },
+  centerAddButtonIcon: {
+    width: 32,
+    height: 32,
+    tintColor: COLORS.white,
+  },
+  pageInfoContainer: {
+    alignItems: "center",
+  },
+  pageText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.small, // Smaller text for bottom row
+    color: COLORS.gray,
   },
   emptyText: {
     fontFamily: FONT.medium,
@@ -801,50 +799,8 @@ const styles = StyleSheet.create({
     borderRadius: SIZES.medium,
     marginBottom: SIZES.medium,
   },
-  paginationContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: SIZES.large,
-    paddingVertical: SIZES.medium,
-    backgroundColor: COLORS.white,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.lightWhite,
-  },
-  pageButton: {
-    padding: SIZES.small,
-    borderRadius: SIZES.small,
-    backgroundColor: COLORS.lightWhite,
-  },
-  pageButtonDisabled: {
-    opacity: 0.3,
-  },
-  pageIndicator: {
-    alignItems: "center",
-  },
-  pageText: {
-    fontFamily: FONT.bold,
-    fontSize: SIZES.medium,
-    color: COLORS.primary,
-    marginBottom: SIZES.small,
-  },
-  dotsContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.gray2,
-    marginHorizontal: 4,
-  },
-  activeDot: {
-    backgroundColor: COLORS.primary,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
+  // paginationContainer removed
+
   networkBadge: {
     flexDirection: "row",
     alignItems: "center",
