@@ -288,11 +288,13 @@ function QuestionRow({
     switch (item.type) {
       case "boolean":
         return (
-          <Switch
-            value={answer?.boolValue || localValue === "true"}
-            onValueChange={handleBooleanChange}
-            trackColor={{ false: "#767577", true: "#f87b1b" }}
-          />
+          <View style={{ alignItems: "flex-end" }}>
+            <Switch
+              value={answer?.boolValue || localValue === "true"}
+              onValueChange={handleBooleanChange}
+              trackColor={{ false: "#767577", true: "#f87b1b" }}
+            />
+          </View>
         );
       case "date":
         return (
@@ -434,42 +436,28 @@ function QuestionRow({
       {/* Title & Desc */}
       <View style={styles.colTitle}>
         <View style={styles.titleRow}>
-          <Text style={styles.questionTitle}>{item.title}</Text>
-          {item.description ? (
-            <TouchableOpacity
-              onPress={() => Alert.alert("Description", item.description || "")}
-              style={styles.helpIcon}
+          <TouchableOpacity
+            onPress={() => {
+              if (item.description) {
+                Alert.alert("Description", item.description);
+              }
+            }}
+            disabled={!item.description}
+          >
+            <Text
+              style={[
+                styles.questionTitle,
+                item.description && { color: "#f87b1b" },
+              ]}
             >
-              <Ionicons name="help-circle-outline" size={20} color="#f87b1b" />
-            </TouchableOpacity>
-          ) : null}
+              {item.title}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.helpIcon}>
+            <Ionicons name="camera-outline" size={20} color="#f87b1b" />
+          </View>
         </View>
-      </View>
-
-      {/* Quantity (Conditional) */}
-      <View style={styles.colQty}>
-        {showQuantity ? (
-          <TextInput
-            style={styles.numberInput}
-            value={localQuantity}
-            onChangeText={handleQuantityChange}
-            placeholder="0"
-            keyboardType="numeric"
-          />
-        ) : null}
-      </View>
-
-      {/* Price (Conditional) */}
-      <View style={styles.colPrice}>
-        {showPrice ? (
-          <TextInput
-            style={styles.numberInput}
-            value={localPrice}
-            onChangeText={handlePriceChange}
-            placeholder="0.00"
-            keyboardType="numeric"
-          />
-        ) : null}
       </View>
 
       {/* Answer Input */}
@@ -718,11 +706,8 @@ export default function FolderQuestionsModal({
           <View style={{ width: 28 }} />
         </View>
 
-        {/* Table Header */}
         <View style={styles.tableHeader}>
           <Text style={[styles.headerCell, styles.colTitle]}>Question</Text>
-          <Text style={[styles.headerCell, styles.colQty]}>Qté</Text>
-          <Text style={[styles.headerCell, styles.colPrice]}>Prix</Text>
           <Text style={[styles.headerCell, styles.colAnswer]}>Réponse</Text>
         </View>
 
@@ -793,10 +778,8 @@ const styles = StyleSheet.create({
   headerCell: { fontWeight: "600", color: "#6b7280", fontSize: 12 },
 
   // Columns
-  colTitle: { flex: 2, paddingRight: 8 },
-  colQty: { width: 50, textAlign: "center" },
-  colPrice: { width: 60, textAlign: "center" },
-  colAnswer: { flex: 2, paddingLeft: 8 },
+  colTitle: { flex: 3, paddingRight: 8 },
+  colAnswer: { flex: 1, paddingLeft: 8 },
 
   listContent: { paddingBottom: 100 },
   row: {

@@ -18,18 +18,16 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-
-// Form Component
+// Removed react-native-safe-area-context import as we use native SafeAreaView// Form Component
 type FormComponentProps = {
   isEditing: boolean;
   isSubmitting: boolean;
@@ -423,113 +421,110 @@ export default function QuestionTypeManagerModal({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: "#f8fafc" }} // Add background color to cover status bar area
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>
-                Gérer les Questions pour {folderType.title}
-              </Text>
-              <TouchableOpacity onPress={onClose}>
-                <Ionicons name="close" size={24} color="#6b7280" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView
-              style={styles.contentContainer}
-              contentContainerStyle={{ paddingBottom: 20 }}
-            >
-              {isAdding ? (
-                <FormComponent
-                  isEditing={!!isEditing}
-                  isSubmitting={isSubmitting}
-                  title={title}
-                  description={description}
-                  type={type}
-                  quantity={quantity}
-                  price={price}
-                  onTitleChange={setTitle}
-                  onDescriptionChange={setDescription}
-                  onTypeChange={setType}
-                  onQuantityChange={setQuantity}
-                  onPriceChange={setPrice}
-                  onSubmit={handleSubmit}
-                  onCancel={handleCancel}
-                />
-              ) : (
-                <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
-                  <TouchableOpacity
-                    onPress={handleBeginAdd}
-                    style={[styles.addButton, { flex: 1, marginTop: 0 }]}
-                  >
-                    <Ionicons name="add" size={22} color="#f87b1b" />
-                    <Text style={styles.addButtonText}>Ajouter</Text>
-                  </TouchableOpacity>
+        <SafeAreaView style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>
+              Gérer les Questions pour {folderType.title}
+            </Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={24} color="#6b7280" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView
+            style={styles.contentContainer}
+            contentContainerStyle={{ paddingBottom: 20 }}
+          >
+            {isAdding ? (
+              <FormComponent
+                isEditing={!!isEditing}
+                isSubmitting={isSubmitting}
+                title={title}
+                description={description}
+                type={type}
+                quantity={quantity}
+                price={price}
+                onTitleChange={setTitle}
+                onDescriptionChange={setDescription}
+                onTypeChange={setType}
+                onQuantityChange={setQuantity}
+                onPriceChange={setPrice}
+                onSubmit={handleSubmit}
+                onCancel={handleCancel}
+              />
+            ) : (
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
+                <TouchableOpacity
+                  onPress={handleBeginAdd}
+                  style={[styles.addButton, { flex: 1, marginTop: 0 }]}
+                >
+                  <Ionicons name="add" size={22} color="#f87b1b" />
+                  <Text style={styles.addButtonText}>Ajouter</Text>
+                </TouchableOpacity>
 
-                  <TouchableOpacity
-                    onPress={handleImport}
-                    style={[
-                      styles.addButton,
-                      { flex: 1, marginTop: 0, borderColor: "#11224e" },
-                    ]}
-                    disabled={isImporting}
-                  >
-                    {isImporting ? (
-                      <ActivityIndicator size="small" color="#11224e" />
-                    ) : (
-                      <>
-                        <Ionicons
-                          name="cloud-upload-outline"
-                          size={22}
-                          color="#11224e"
-                        />
-                        <Text
-                          style={[styles.addButtonText, { color: "#11224e" }]}
-                        >
-                          Importer Excel
-                        </Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {isLoading && !isAdding ? (
-                <ActivityIndicator
-                  style={{ marginTop: 20 }}
-                  color="#11224e"
-                  size="large"
-                />
-              ) : (
-                <FlatList
-                  data={questionTypes}
-                  keyExtractor={(item) => item.id}
-                  renderItem={renderItem}
-                  scrollEnabled={false}
-                  contentContainerStyle={{ paddingTop: isAdding ? 0 : 16 }}
-                  ListEmptyComponent={
-                    !isLoading ? (
-                      <Text style={styles.emptyText}>
-                        Aucune question. Appuyez sur &quot;Ajouter&quot; pour en
-                        créer une.
+                <TouchableOpacity
+                  onPress={handleImport}
+                  style={[
+                    styles.addButton,
+                    { flex: 1, marginTop: 0, borderColor: "#11224e" },
+                  ]}
+                  disabled={isImporting}
+                >
+                  {isImporting ? (
+                    <ActivityIndicator size="small" color="#11224e" />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name="cloud-upload-outline"
+                        size={22}
+                        color="#11224e"
+                      />
+                      <Text
+                        style={[styles.addButtonText, { color: "#11224e" }]}
+                      >
+                        Importer Excel
                       </Text>
-                    ) : null
-                  }
-                />
-              )}
-            </ScrollView>
-          </SafeAreaView>
-        </TouchableWithoutFeedback>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {isLoading && !isAdding ? (
+              <ActivityIndicator
+                style={{ marginTop: 20 }}
+                color="#11224e"
+                size="large"
+              />
+            ) : (
+              <FlatList
+                data={questionTypes}
+                keyExtractor={(item) => item.id}
+                renderItem={renderItem}
+                scrollEnabled={false}
+                contentContainerStyle={{ paddingTop: isAdding ? 0 : 16 }}
+                ListEmptyComponent={
+                  !isLoading ? (
+                    <Text style={styles.emptyText}>
+                      Aucune question. Appuyez sur &quot;Ajouter&quot; pour en
+                      créer une.
+                    </Text>
+                  ) : null
+                }
+              />
+            )}
+          </ScrollView>
+        </SafeAreaView>
       </KeyboardAvoidingView>
     </Modal>
   );
 }
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
   header: {
