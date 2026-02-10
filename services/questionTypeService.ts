@@ -1,4 +1,4 @@
-import api from './api';
+import api from "./api";
 
 export type QuestionType = {
   id: string;
@@ -6,18 +6,18 @@ export type QuestionType = {
   title: string;
   description?: string | null;
   type?:
-    | 'text'
-    | 'long_text'
-    | 'number'
-    | 'file'
-    | 'photo'
-    | 'video'
-    | 'date'
-    | 'boolean'
-    | 'GPS'
-    | 'list'
-    | 'taux'
-    | 'voice'
+    | "text"
+    | "long_text"
+    | "number"
+    | "file"
+    | "photo"
+    | "video"
+    | "date"
+    | "boolean"
+    | "GPS"
+    | "list"
+    | "taux"
+    | "voice"
     | null;
   mask?: string | null;
   quantity?: number | null;
@@ -30,8 +30,11 @@ export type QuestionType = {
   updated_at: string;
 };
 
-export async function getQuestionTypesByFolder(folderTypeId: string, token: string): Promise<QuestionType[]> {
-  const response = await api.get('/api/questiotypes', {
+export async function getQuestionTypesByFolder(
+  folderTypeId: string,
+  token: string,
+): Promise<QuestionType[]> {
+  const response = await api.get("/api/questiotypes", {
     headers: { Authorization: `Bearer ${token}` },
     params: { foldertype_id: folderTypeId },
   });
@@ -43,27 +46,27 @@ export type CreateQuestionTypeDto = {
   title: string;
   description?: string;
   type?:
-    | 'text'
-    | 'long_text'
-    | 'number'
-    | 'file'
-    | 'photo'
-    | 'video'
-    | 'date'
-    | 'boolean'
-    | 'GPS'
-    | 'list'
-    | 'taux'
-    | 'voice';
+    | "text"
+    | "long_text"
+    | "number"
+    | "file"
+    | "photo"
+    | "video"
+    | "date"
+    | "boolean"
+    | "GPS"
+    | "list"
+    | "taux"
+    | "voice";
   quantity?: number;
   price?: number;
 };
 
 export async function createQuestionType(
   data: CreateQuestionTypeDto,
-  token: string
+  token: string,
 ): Promise<QuestionType> {
-  const response = await api.post('/api/questiotypes', data, {
+  const response = await api.post("/api/questiotypes", data, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return response.data;
@@ -73,18 +76,18 @@ export type UpdateQuestionTypeDto = {
   title?: string;
   description?: string;
   type?:
-    | 'text'
-    | 'long_text'
-    | 'number'
-    | 'file'
-    | 'photo'
-    | 'video'
-    | 'date'
-    | 'boolean'
-    | 'GPS'
-    | 'list'
-    | 'taux'
-    | 'voice';
+    | "text"
+    | "long_text"
+    | "number"
+    | "file"
+    | "photo"
+    | "video"
+    | "date"
+    | "boolean"
+    | "GPS"
+    | "list"
+    | "taux"
+    | "voice";
   quantity?: number;
   price?: number;
 };
@@ -92,7 +95,7 @@ export type UpdateQuestionTypeDto = {
 export async function updateQuestionType(
   id: string,
   data: UpdateQuestionTypeDto,
-  token: string
+  token: string,
 ): Promise<QuestionType> {
   const response = await api.put(`/api/questiotypes/${id}`, data, {
     headers: { Authorization: `Bearer ${token}` },
@@ -100,8 +103,38 @@ export async function updateQuestionType(
   return response.data.data;
 }
 
-export async function deleteQuestionType(id: string, token: string): Promise<void> {
+export async function deleteQuestionType(
+  id: string,
+  token: string,
+): Promise<void> {
   await api.delete(`/api/questiotypes/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+}
+
+export async function bulkImportQuestionTypes(
+  folderTypeId: string,
+  file: any, // DocumentPickerResult asset
+  token: string,
+): Promise<any> {
+  const formData = new FormData();
+  formData.append("foldertype_id", folderTypeId);
+
+  // Append file
+  // React Native FormData expects { uri, name, type }
+  formData.append("file", {
+    uri: file.uri,
+    name: file.name,
+    type:
+      file.mimeType ||
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  } as any);
+
+  const response = await api.post("/api/questiotypes/bulk-import", formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
 }
