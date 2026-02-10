@@ -462,13 +462,41 @@ export default function QuestionTypeManagerModal({
                   onCancel={handleCancel}
                 />
               ) : (
-                <TouchableOpacity
-                  onPress={handleBeginAdd}
-                  style={styles.addButton}
-                >
-                  <Ionicons name="add" size={22} color="#f87b1b" />
-                  <Text style={styles.addButtonText}>Ajouter une question</Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
+                  <TouchableOpacity
+                    onPress={handleBeginAdd}
+                    style={[styles.addButton, { flex: 1, marginTop: 0 }]}
+                  >
+                    <Ionicons name="add" size={22} color="#f87b1b" />
+                    <Text style={styles.addButtonText}>Ajouter</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={handleImport}
+                    style={[
+                      styles.addButton,
+                      { flex: 1, marginTop: 0, borderColor: "#11224e" },
+                    ]}
+                    disabled={isImporting}
+                  >
+                    {isImporting ? (
+                      <ActivityIndicator size="small" color="#11224e" />
+                    ) : (
+                      <>
+                        <Ionicons
+                          name="cloud-upload-outline"
+                          size={22}
+                          color="#11224e"
+                        />
+                        <Text
+                          style={[styles.addButtonText, { color: "#11224e" }]}
+                        >
+                          Importer Excel
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
               )}
 
               {isLoading && !isAdding ? (

@@ -281,6 +281,7 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
             kind: 'folder_type_icon',
             author: user.id,
             file,
+            answer: undefined
           });
           setFolderTypes((prev) =>
             prev.map((t) =>
@@ -365,22 +366,6 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
               <Ionicons name="close" size={24} color="#6b7280" />
             </TouchableOpacity>
           </View>
-
-          {/* Limit Info Banners */}
-          {!loadingLimits && companyInfo && (
-            <View style={styles.limitsContainer}>
-              <View style={[styles.limitInfoBanner, isStorageQuotaReached && styles.limitInfoBannerWarning]}>
-                <Ionicons 
-                  name={isStorageQuotaReached ? "warning" : "cloud-outline"} 
-                  size={14} 
-                  color={isStorageQuotaReached ? "#b45309" : "#f59e0b"} 
-                />
-                <Text style={[styles.limitInfoText, isStorageQuotaReached && styles.limitInfoTextWarning]}>
-                  Stockage: {currentStorageGB.toFixed(2)}GB / {storageQuotaGB.toFixed(2)}GB
-                </Text>
-              </View>
-            </View>
-          )}
 
           <View style={styles.contentContainer}>
             {isAdding || isEditing ? (

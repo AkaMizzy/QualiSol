@@ -875,7 +875,7 @@ export default function AddImageModal({
                     onPress={() => handleAdd(true)}
                   >
                     <Text style={[styles.buttonText, styles.cancelButtonText]}>
-                      Enregistrer
+                      Terminer
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -1099,7 +1099,7 @@ export default function AddImageModal({
                       <Text
                         style={[styles.buttonText, styles.cancelButtonText]}
                       >
-                        Enregistrer
+                        Terminer
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -1191,7 +1191,7 @@ export default function AddImageModal({
                   setTempFieldValue("");
                 }}
               >
-                <Text style={styles.textEditorSaveText}>Enregistrer</Text>
+                <Text style={styles.textEditorSaveText}>Terminer</Text>
               </TouchableOpacity>
             </View>
           </View>

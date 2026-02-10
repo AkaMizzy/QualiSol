@@ -671,7 +671,7 @@ export default function BulkAddImageModal({
                   onPress={() => handleBulkUpload(true)}
                 >
                   <Text style={[styles.buttonText, styles.cancelButtonText]}>
-                    Enregistrer
+                    Terminer
                   </Text>
                 </TouchableOpacity>
 
@@ -896,7 +896,7 @@ export default function BulkAddImageModal({
                       <Text
                         style={[styles.buttonText, styles.cancelButtonText]}
                       >
-                        Enregistrer
+                        Terminer
                       </Text>
                     </TouchableOpacity>
 
