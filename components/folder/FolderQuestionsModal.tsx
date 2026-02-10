@@ -443,6 +443,7 @@ function QuestionRow({
               }
             }}
             disabled={!item.description}
+            style={{ flex: 1 }}
           >
             <Text
               style={[
