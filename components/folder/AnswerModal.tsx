@@ -4,18 +4,18 @@ import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
 import {
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -124,8 +124,22 @@ export default function AnswerModal({
 
     setIsSubmitting(true);
     try {
-      const qty = quantity ? parseFloat(quantity) : undefined;
-      const prc = price ? parseFloat(price) : undefined;
+      let qty: number | undefined;
+      let prc: number | undefined;
+
+      if (quantity !== "") {
+        const parsedQty = parseFloat(quantity.replace(",", "."));
+        if (!isNaN(parsedQty)) {
+          qty = parsedQty;
+        }
+      }
+
+      if (price !== "") {
+        const parsedPrc = parseFloat(price.replace(",", "."));
+        if (!isNaN(parsedPrc)) {
+          prc = parsedPrc;
+        }
+      }
 
       // Construct final answer string based on type if needed
       let finalAnswer = answer;
@@ -138,8 +152,8 @@ export default function AnswerModal({
       await onSave({
         answer: finalAnswer,
         value: finalAnswer,
-        quantity: isNaN(qty as number) ? undefined : qty,
-        price: isNaN(prc as number) ? undefined : prc,
+        quantity: qty,
+        price: prc,
         latitude,
         longitude,
         image,
@@ -337,65 +351,97 @@ export default function AnswerModal({
           style={{ flex: 1 }}
         >
           <ScrollView contentContainerStyle={styles.content}>
-            {/* Main Answer Input */}
-            <View style={styles.section}>{renderInput()}</View>
-
-            {/* Conditional Quantity */}
-            {question.quantity && (
-              <View style={styles.section}>
-                <Text style={styles.label}>Quantité</Text>
-                <TextInput
-                  style={styles.input}
-                  value={quantity}
-                  onChangeText={setQuantity}
-                  keyboardType="numeric"
-                  placeholder="0"
+            {/* Description */}
+            {!!question.description && (
+              <View style={styles.descriptionContainer}>
+                <Ionicons
+                  name="information-circle-outline"
+                  size={20}
+                  color="#f87b1b"
+                  style={{ marginRight: 8 }}
                 />
+                <Text style={styles.descriptionText}>
+                  {question.description}
+                </Text>
               </View>
             )}
 
-            {/* Conditional Price */}
-            {question.price && (
-              <View style={styles.section}>
-                <Text style={styles.label}>Prix (€)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={price}
-                  onChangeText={setPrice}
-                  keyboardType="numeric"
-                  placeholder="0.00"
-                />
-              </View>
-            )}
+            {/* Response Section (Grouped) */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Votre Réponse</Text>
+
+              {renderInput()}
+
+              {/* Conditional Quantity */}
+              {!!question.quantity && (
+                <View style={styles.subInputContainer}>
+                  <Text style={styles.label}>Quantité</Text>
+                  <TextInput
+                    style={[styles.input, { borderColor: "#f87b1b" }]}
+                    value={quantity}
+                    onChangeText={setQuantity}
+                    keyboardType="numeric"
+                    placeholder="0"
+                  />
+                </View>
+              )}
+
+              {/* Conditional Price */}
+              {!!question.price && (
+                <View style={styles.subInputContainer}>
+                  <Text style={styles.label}>Prix</Text>
+                  <TextInput
+                    style={[styles.input, { borderColor: "#f87b1b" }]}
+                    value={price}
+                    onChangeText={setPrice}
+                    keyboardType="numeric"
+                    placeholder="0"
+                  />
+                </View>
+              )}
+            </View>
 
             {/* Media Section */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Multimédia (Optionnel)</Text>
 
-              {/* Image */}
-              <View style={styles.mediaRow}>
+              {/* Image Picker */}
+              <View style={styles.imageContainer}>
                 <TouchableOpacity
+                  style={styles.imagePicker}
                   onPress={handleImagePick}
-                  style={styles.mediaBtn}
                 >
-                  <Ionicons name="camera" size={24} color="#f87b1b" />
-                  <Text style={styles.mediaBtnText}>Photo</Text>
+                  {image ? (
+                    <View style={styles.previewWrapper}>
+                      <Image
+                        source={{ uri: image.uri }}
+                        style={styles.imagePreviewFull}
+                        resizeMode="cover"
+                      />
+                      <TouchableOpacity
+                        style={styles.removeImageBtn}
+                        onPress={() => setImage(undefined)}
+                      >
+                        <Ionicons
+                          name="close-circle"
+                          size={24}
+                          color="#ef4444"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={styles.imagePickerPlaceholder}>
+                      <Ionicons
+                        name="camera-outline"
+                        size={48}
+                        color="#9ca3af" // COLORS.gray
+                      />
+                      <Text style={styles.imagePickerText}>
+                        Ajouter une photo
+                      </Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
-
-                {image && (
-                  <View style={styles.previewContainer}>
-                    <Image
-                      source={{ uri: image.uri }}
-                      style={styles.imagePreview}
-                    />
-                    <TouchableOpacity
-                      style={styles.removeMediaBtn}
-                      onPress={() => setImage(undefined)}
-                    >
-                      <Ionicons name="close-circle" size={20} color="red" />
-                    </TouchableOpacity>
-                  </View>
-                )}
               </View>
 
               {/* Voice Note */}
@@ -484,7 +530,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#f87b1b", // Orange border
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
@@ -494,6 +540,9 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: "top",
+  },
+  subInputContainer: {
+    marginTop: 16,
   },
   switchContainer: {
     flexDirection: "row",
@@ -505,50 +554,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#f87b1b",
     borderRadius: 8,
     padding: 12,
     backgroundColor: "#fff",
   },
 
-  // Media Styling
-  mediaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  mediaBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff7ed",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ffedd5",
-    marginRight: 16,
-  },
-  mediaBtnText: {
-    color: "#f87b1b",
-    fontWeight: "600",
-    marginLeft: 8,
-  },
-  previewContainer: {
-    position: "relative",
-  },
-  imagePreview: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: "#eee",
-  },
-  removeMediaBtn: {
-    position: "absolute",
-    top: -6,
-    right: -6,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-  },
   voiceSection: {
     marginTop: 8,
   },
@@ -609,5 +620,71 @@ const styles = StyleSheet.create({
   },
   disabledBtn: {
     opacity: 0.7,
+  },
+
+  // Description
+  descriptionContainer: {
+    flexDirection: "row",
+    backgroundColor: "#fff7ed",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#ffedd5",
+    alignItems: "flex-start",
+  },
+  descriptionText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#c2410c", // Dark orange
+    lineHeight: 20,
+  },
+
+  // New Image Picker Styles (Matched to AddImageModal)
+  imageContainer: {
+    alignItems: "center",
+  },
+  imagePicker: {
+    width: "100%",
+    height: 150,
+    backgroundColor: "#f9fafb",
+    borderRadius: 12,
+    overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderStyle: "dashed",
+  },
+  imagePickerPlaceholder: {
+    alignItems: "center",
+  },
+  imagePickerText: {
+    marginTop: 10,
+    color: "#6b7280",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  previewWrapper: {
+    width: "100%",
+    height: "100%",
+    position: "relative",
+  },
+  imagePreviewFull: {
+    width: "100%",
+    height: "100%",
+  },
+  removeImageBtn: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    padding: 0,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
 });

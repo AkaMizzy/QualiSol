@@ -62,7 +62,15 @@ function QuestionRow({
   answer?: AnswerData;
   onOpenAnswerModal: (item: Ged) => void;
 }) {
-  const displayValue = answer?.answer || answer?.value || "";
+  const rawValue = answer?.answer || answer?.value || "";
+  const displayValue =
+    item.type === "boolean"
+      ? rawValue === "true"
+        ? "Oui"
+        : rawValue === "false"
+          ? "Non"
+          : rawValue
+      : rawValue;
   const hasImage =
     !!answer?.image ||
     (displayValue.startsWith("http") && item.type === "photo");
@@ -237,26 +245,27 @@ export default function FolderQuestionsModal({
       let savedGed: Ged;
       if (existingAnswer) {
         // UPDATE
+        const filesToUpload: any = {};
         if (data.image) {
-          savedGed = await gedService.updateGedFile(
+          filesToUpload.file = {
+            uri: data.image.uri,
+            type: data.image.mimeType || "image/jpeg",
+            name: data.image.fileName || "photo.jpg",
+          };
+        }
+        if (data.recordingUri) {
+          filesToUpload.audioFile = {
+            uri: data.recordingUri,
+            type: "audio/m4a",
+            name: `voice-${Date.now()}.m4a`,
+          };
+        }
+
+        if (Object.keys(filesToUpload).length > 0) {
+          savedGed = await gedService.uploadGedFiles(
             token,
             existingAnswer.id,
-            {
-              uri: data.image.uri,
-              type: data.image.mimeType || "image/jpeg",
-              name: data.image.fileName || "photo.jpg",
-            },
-            basePayload,
-          );
-        } else if (data.recordingUri) {
-          savedGed = await gedService.updateGedFile(
-            token,
-            existingAnswer.id,
-            {
-              uri: data.recordingUri,
-              type: "audio/m4a",
-              name: `voice-${Date.now()}.m4a`,
-            },
+            filesToUpload,
             basePayload,
           );
         } else {
@@ -275,8 +284,9 @@ export default function FolderQuestionsModal({
             type: data.image.mimeType || "image/jpeg",
             name: data.image.fileName || "photo.jpg",
           };
-        } else if (data.recordingUri) {
-          createPayload.file = {
+        }
+        if (data.recordingUri) {
+          createPayload.audioFile = {
             uri: data.recordingUri,
             type: "audio/m4a",
             name: `voice-${Date.now()}.m4a`,

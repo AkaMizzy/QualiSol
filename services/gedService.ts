@@ -155,11 +155,11 @@ export async function createGed(
     formData.append("answer", input.answer);
   }
 
-  if (input.price !== undefined) {
+  if (input.price !== undefined && input.price !== null) {
     formData.append("price", input.price.toString());
   }
 
-  if (input.quantity !== undefined) {
+  if (input.quantity !== undefined && input.quantity !== null) {
     formData.append("quantity", input.quantity.toString());
   }
 
@@ -465,6 +465,69 @@ export async function updateGedFile(
     return response.data.data;
   } catch (error) {
     console.error(`Failed to update GED file with id ${gedId}:`, error);
+    throw error;
+  }
+}
+
+export async function uploadGedFiles(
+  token: string,
+  gedId: string,
+  files: {
+    file?: { uri: string | File; name: string; type: string };
+    audioFile?: { uri: string | File; name: string; type: string };
+  },
+  data?: Partial<Ged>,
+): Promise<Ged> {
+  const formData = new FormData();
+
+  // Append file (Image)
+  if (files.file) {
+    if (typeof files.file.uri === "object" && files.file.uri instanceof File) {
+      formData.append("file", files.file.uri);
+    } else {
+      formData.append("file", {
+        uri: files.file.uri,
+        name: files.file.name,
+        type: files.file.type,
+      } as any);
+    }
+  }
+
+  // Append audio file
+  if (files.audioFile) {
+    if (
+      typeof files.audioFile.uri === "object" &&
+      files.audioFile.uri instanceof File
+    ) {
+      formData.append("audiofile", files.audioFile.uri);
+    } else {
+      formData.append("audiofile", {
+        uri: files.audioFile.uri,
+        name: files.audioFile.name,
+        type: files.audioFile.type,
+      } as any);
+    }
+  }
+
+  // Append other data if provided
+  if (data) {
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, value.toString());
+      }
+    });
+  }
+
+  try {
+    const response = await api.put(`api/geds/${gedId}`, formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data.data;
+  } catch (error) {
+    console.error(`Failed to upload files to GED with id ${gedId}:`, error);
     throw error;
   }
 }
