@@ -12,21 +12,21 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import {
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
+    PanGestureHandler,
+    PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import VoiceNoteRecorder, { VoiceNoteRecorderRef } from "../VoiceNoteRecorder";
 
@@ -423,6 +423,20 @@ export default function BulkAddImageModal({
       return;
     }
 
+    // Capture voice note if recording is active
+    let currentVoiceNote = voiceNote;
+    if (voiceNoteRecorderRef.current) {
+      const uri = await voiceNoteRecorderRef.current.stopAndReturnRecording();
+      if (uri) {
+        currentVoiceNote = {
+          uri,
+          type: "audio/m4a",
+          name: `voicenote-${Date.now()}.m4a`,
+        };
+        setVoiceNote(currentVoiceNote);
+      }
+    }
+
     // Get author info
     let authorName = "Unknown User";
     if (token) {
@@ -479,7 +493,7 @@ export default function BulkAddImageModal({
             title: title || `Transfert ${i + 1}`,
             description: description,
             image: image,
-            voiceNote: voiceNote,
+            voiceNote: currentVoiceNote, // Use the captured voice note
             author: authorName,
             idauthor: user?.id,
             iddevice: deviceId,
