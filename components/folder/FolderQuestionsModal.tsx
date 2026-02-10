@@ -8,22 +8,18 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/contexts/AuthContext";
 import * as gedService from "@/services/gedService";
 import { Ged } from "@/services/gedService";
-import { Audio } from "expo-av";
-import { Image } from "expo-image";
+
 import * as ImagePicker from "expo-image-picker";
-import MapSelectionModal from "./MapSelectionModal";
+import AnswerModal from "./AnswerModal";
 
 const SUPPORTED_TYPES = [
   "long_text",
@@ -57,413 +53,78 @@ interface AnswerData {
   boolValue?: boolean;
 }
 
-// ... helper functions ...
-
-function AnswerTextInputModal({
-  visible,
-  onClose,
-  onSubmit,
-  initialValue,
-  title,
-  keyboardType = "default",
-  multiline = false,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  onSubmit: (val: string) => void;
-  initialValue: string;
-  title: string;
-  keyboardType?: "default" | "numeric" | "email-address" | "phone-pad";
-  multiline?: boolean;
-}) {
-  const [val, setVal] = useState(initialValue);
-  const insets = useSafeAreaInsets(); // Ensure correct hook usage if needed, or pass from parent
-
-  useEffect(() => {
-    if (visible) setVal(initialValue);
-  }, [visible, initialValue]);
-
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalContentWrapper}
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{title}</Text>
-            <TextInput
-              style={[
-                styles.modalInput,
-                multiline && { height: 120, textAlignVertical: "top" },
-              ]}
-              value={val}
-              onChangeText={setVal}
-              placeholder="Saisir votre réponse..."
-              multiline={multiline}
-              keyboardType={keyboardType}
-              autoFocus
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity onPress={onClose} style={styles.modalBtnCancel}>
-                <Text style={styles.modalBtnTextCancel}>Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => onSubmit(val)}
-                style={styles.modalBtnSave}
-              >
-                <Text style={styles.modalBtnTextSave}>Enregistrer</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
-  );
-}
-
 function QuestionRow({
   item,
   answer,
-  onChange,
-  onOpenTextModal,
+  onOpenAnswerModal,
 }: {
   item: Ged;
   answer?: AnswerData;
-  onChange: (data: Partial<AnswerData>) => void;
-  onOpenTextModal: (
-    item: Ged,
-    currentValue: string,
-    isMultiline: boolean,
-    keyboardType: "default" | "numeric",
-  ) => void;
+  onOpenAnswerModal: (item: Ged) => void;
 }) {
-  // Use 'answer' field if available, fallback to 'value'
-  const [localValue, setLocalValue] = useState(
-    answer?.answer || answer?.value || "",
-  );
-  const [localQuantity, setLocalQuantity] = useState(
-    answer?.quantity?.toString() || "",
-  );
-  const [localPrice, setLocalPrice] = useState(answer?.price?.toString() || "");
-
-  // ... state for complex types ...
-  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [status, setStatus] = useState<
-    "idle" | "recording" | "recorded" | "playing"
-  >("idle");
-  const [isMapVisible, setMapVisible] = useState(false);
-
-  // Sync local state if prop changes (e.g. initial load)
-  useEffect(() => {
-    const newVal = answer?.answer || answer?.value;
-    if (newVal !== undefined && newVal !== localValue) setLocalValue(newVal);
-
-    if (
-      answer?.quantity !== undefined &&
-      answer.quantity.toString() !== localQuantity
-    )
-      setLocalQuantity(answer.quantity.toString());
-    if (answer?.price !== undefined && answer.price.toString() !== localPrice)
-      setLocalPrice(answer.price.toString());
-  }, [answer]);
-
-  // ... audio cleanup ...
-  useEffect(() => {
-    return sound
-      ? () => {
-          sound.unloadAsync();
-        }
-      : undefined;
-  }, [sound]);
-
-  const handleTextChange = (text: string) => {
-    setLocalValue(text);
-    onChange({ answer: text, value: text }); // Update both for compatibility/display
-  };
-
-  const handleQuantityChange = (text: string) => {
-    setLocalQuantity(text);
-    const qty = parseFloat(text);
-    onChange({ quantity: isNaN(qty) ? undefined : qty });
-  };
-
-  const handlePriceChange = (text: string) => {
-    setLocalPrice(text);
-    const prc = parseFloat(text);
-    onChange({ price: isNaN(prc) ? undefined : prc });
-  };
-
-  const handleBooleanChange = (val: boolean) => {
-    const strVal = String(val);
-    onChange({ boolValue: val, answer: strVal, value: strVal });
-  };
-
-  // --- Photo Logic ---
-  const handleSelectImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      alert("Permission refusée");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.5,
-    });
-    if (!result.canceled) {
-      onChange({
-        image: result.assets[0],
-        answer: "Photo sélectionnée",
-        value: "Photo sélectionnée",
-      });
-    }
-  };
-
-  // --- Audio Logic ---
-  const startRecording = async () => {
-    try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
-      );
-      setRecording(recording);
-      setStatus("recording");
-    } catch (err) {
-      console.error("Failed to start recording", err);
-    }
-  };
-
-  const stopRecording = async () => {
-    if (!recording) return;
-    await recording.stopAndUnloadAsync();
-    const uri = recording.getURI();
-    setRecording(null);
-    setStatus("recorded");
-    if (uri)
-      onChange({
-        recordingUri: uri,
-        answer: "Audio enregistré",
-        value: "Audio enregistré",
-      });
-  };
-
-  const playSound = async () => {
-    if (!answer?.recordingUri) return;
-    const { sound: newSound } = await Audio.Sound.createAsync({
-      uri: answer.recordingUri,
-    });
-    setSound(newSound);
-    await newSound.playAsync();
-  };
-
-  // --- GPS Logic ---
-  const handleLocationSelect = (loc: {
-    latitude: number;
-    longitude: number;
-  }) => {
-    const val = `Lat: ${loc.latitude.toFixed(4)}, Lon: ${loc.longitude.toFixed(4)}`;
-    onChange({
-      latitude: String(loc.latitude),
-      longitude: String(loc.longitude),
-      answer: val,
-      value: val,
-    });
-    setMapVisible(false);
-  };
-
-  // ... renderAnswerInput ...
-  const renderAnswerInput = () => {
-    switch (item.type) {
-      case "boolean":
-        return (
-          <View style={{ alignItems: "flex-end" }}>
-            <Switch
-              value={answer?.boolValue || localValue === "true"}
-              onValueChange={handleBooleanChange}
-              trackColor={{ false: "#767577", true: "#f87b1b" }}
-            />
-          </View>
-        );
-      case "date":
-        return (
-          <>
-            <TouchableOpacity
-              onPress={() => setDatePickerVisibility(true)}
-              style={styles.dateButton}
-            >
-              <Text style={styles.dateText}>{localValue || "YYYY-MM-DD"}</Text>
-              <Ionicons name="calendar-outline" size={20} color="#666" />
-            </TouchableOpacity>
-            <DateTimePickerModal
-              isVisible={isDatePickerVisible}
-              mode="date"
-              onConfirm={(date) => {
-                const val = date.toISOString().split("T")[0];
-                setLocalValue(val);
-                onChange({ answer: val, value: val });
-                setDatePickerVisibility(false);
-              }}
-              onCancel={() => setDatePickerVisibility(false)}
-            />
-          </>
-        );
-      case "photo":
-        return (
-          <TouchableOpacity
-            onPress={handleSelectImage}
-            style={styles.mediaButton}
-          >
-            {answer?.image ? (
-              <Image
-                source={{ uri: answer.image.uri }}
-                style={styles.thumbnail}
-              />
-            ) : localValue && localValue.startsWith("http") ? (
-              // Existing image from server
-              <Image source={{ uri: localValue }} style={styles.thumbnail} />
-            ) : (
-              <Ionicons name="camera-outline" size={24} color="#f87b1b" />
-            )}
-          </TouchableOpacity>
-        );
-      case "voice":
-        return (
-          <View style={styles.rowCenter}>
-            {status === "recording" ? (
-              <TouchableOpacity onPress={stopRecording}>
-                <Ionicons name="stop-circle" size={28} color="#ef4444" />
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity onPress={startRecording}>
-                <Ionicons name="mic-outline" size={24} color="#f87b1b" />
-              </TouchableOpacity>
-            )}
-            {(answer?.recordingUri ||
-              (localValue && localValue.endsWith(".m4a"))) && (
-              <TouchableOpacity onPress={playSound} style={{ marginLeft: 10 }}>
-                <Ionicons
-                  name="play-circle-outline"
-                  size={24}
-                  color="#11224e"
-                />
-              </TouchableOpacity>
-            )}
-          </View>
-        );
-      case "GPS":
-        return (
-          <>
-            <TouchableOpacity
-              onPress={() => setMapVisible(true)}
-              style={styles.rowCenter}
-            >
-              <Ionicons name="location-outline" size={24} color="#f87b1b" />
-              <Text style={styles.smallText}>
-                {answer?.latitude ? "Modifier" : "Définir"}
-              </Text>
-            </TouchableOpacity>
-            <MapSelectionModal
-              visible={isMapVisible}
-              onClose={() => setMapVisible(false)}
-              onLocationSelect={handleLocationSelect}
-            />
-          </>
-        );
-      case "long_text":
-        return (
-          <TouchableOpacity
-            style={[styles.input, styles.inputTrigger]}
-            onPress={() => onOpenTextModal(item, localValue, true, "default")}
-          >
-            <Text
-              style={[
-                styles.inputTextDisplay,
-                !localValue && styles.placeholderText,
-              ]}
-              numberOfLines={2}
-            >
-              {localValue || "Saisir..."}
-            </Text>
-          </TouchableOpacity>
-        );
-      default: // text, number, taux, list
-        const isNumeric = item.type === "number" || item.type === "taux";
-        return (
-          <TouchableOpacity
-            style={[styles.input, styles.inputTrigger]}
-            onPress={() =>
-              onOpenTextModal(
-                item,
-                localValue,
-                false,
-                isNumeric ? "numeric" : "default",
-              )
-            }
-          >
-            <Text
-              style={[
-                styles.inputTextDisplay,
-                !localValue && styles.placeholderText,
-              ]}
-              numberOfLines={1}
-            >
-              {localValue || "Saisir..."}
-            </Text>
-          </TouchableOpacity>
-        );
-    }
-  };
-
-  // ... render ...
-  // Determine if we show Quantity/Price inputs
-  const showQuantity = !!item.quantity;
-  const showPrice = !!item.price;
+  const displayValue = answer?.answer || answer?.value || "";
+  const hasImage =
+    !!answer?.image ||
+    (displayValue.startsWith("http") && item.type === "photo");
+  const hasVoice =
+    !!answer?.recordingUri || displayValue.endsWith(".m4a") || !!item.urlvoice;
 
   return (
-    <View style={styles.row}>
-      {/* Title & Desc */}
+    <TouchableOpacity
+      style={styles.row}
+      onPress={() => onOpenAnswerModal(item)}
+    >
+      {/* Title */}
       <View style={styles.colTitle}>
         <View style={styles.titleRow}>
-          <TouchableOpacity
-            onPress={() => {
-              if (item.description) {
-                Alert.alert("Description", item.description);
-              }
-            }}
-            disabled={!item.description}
-            style={{ flex: 1 }}
+          <Text
+            style={[
+              styles.questionTitle,
+              item.description && { color: "#f87b1b" },
+            ]}
+            numberOfLines={2}
           >
-            <Text
-              style={[
-                styles.questionTitle,
-                item.description && { color: "#f87b1b" },
-              ]}
-            >
-              {item.title}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.helpIcon}>
-            <Ionicons name="camera-outline" size={20} color="#f87b1b" />
-          </View>
+            {item.title}
+          </Text>
+          {!!item.description && (
+            <Ionicons
+              name="information-circle-outline"
+              size={16}
+              color="#f87b1b"
+              style={{ marginLeft: 4 }}
+            />
+          )}
         </View>
       </View>
 
-      {/* Answer Input */}
-      <View style={styles.colAnswer}>{renderAnswerInput()}</View>
-    </View>
+      {/* Answer Preview */}
+      <View style={styles.colAnswer}>
+        <View style={styles.answerPreviewContainer}>
+          <Text
+            style={[
+              styles.answerTextPreview,
+              !displayValue && styles.placeholderText,
+            ]}
+            numberOfLines={1}
+          >
+            {displayValue || "Répondre..."}
+          </Text>
+          <View style={styles.iconsRow}>
+            {hasImage && (
+              <Ionicons name="image-outline" size={16} color="#f87b1b" />
+            )}
+            {hasVoice && (
+              <Ionicons name="mic-outline" size={16} color="#f87b1b" />
+            )}
+            {displayValue ? (
+              <Ionicons name="checkmark-circle" size={16} color="green" />
+            ) : (
+              <Ionicons name="chevron-forward" size={16} color="#ccc" />
+            )}
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 }
 
@@ -478,23 +139,16 @@ export default function FolderQuestionsModal({
   const [initialAnswers, setInitialAnswers] = useState<Map<string, Ged>>(
     new Map(),
   );
+  // pendingChanges basically acts as "current local state" for updated answers
   const [pendingChanges, setPendingChanges] = useState<
     Record<string, AnswerData>
   >({});
 
   // Modal State
-  const [textModalVisible, setTextModalVisible] = useState(false);
-  const [editingItem, setEditingItem] = useState<{
-    id: string;
-    title: string;
-    value: string;
-    multiline: boolean;
-    keyboardType: "default" | "numeric";
-  } | null>(null);
+  const [answerModalVisible, setAnswerModalVisible] = useState(false);
+  const [selectedQuestion, setSelectedQuestion] = useState<Ged | null>(null);
 
-  // ... state ...
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const insets = useSafeAreaInsets();
@@ -526,8 +180,6 @@ export default function FolderQuestionsModal({
         fetchedAnswers.forEach((a) => {
           if (a.idsource) {
             answersMap.set(a.idsource, a);
-            // Pre-populate pending changes
-            // Prioritize 'answer' field, fallback to 'description'/'value' for backward compatibility
             const val = a.answer || a.description || a.value || "";
             initialPending[a.idsource] = {
               answer: val,
@@ -536,7 +188,8 @@ export default function FolderQuestionsModal({
               price: a.price ?? undefined,
               latitude: a.latitude || undefined,
               longitude: a.longitude || undefined,
-              // For images/voice, we don't download blob, just keep ref in value/url
+              image: undefined, // We don't verify remote images as local assets immediately
+              recordingUri: undefined,
               boolValue: val === "true",
             };
           }
@@ -555,146 +208,116 @@ export default function FolderQuestionsModal({
     loadData();
   }, [folderId, token, visible]);
 
-  // ... handleRowChange ...
-  const handleRowChange = (questionId: string, data: Partial<AnswerData>) => {
-    setPendingChanges((prev) => ({
-      ...prev,
-      [questionId]: { ...(prev[questionId] || {}), ...data },
-    }));
+  const handleOpenAnswerModal = (question: Ged) => {
+    setSelectedQuestion(question);
+    setAnswerModalVisible(true);
   };
 
-  const handleGlobalSubmit = async () => {
-    if (!token || !user) return;
-    setIsSubmitting(true);
+  const handleAnswerSave = async (data: any) => {
+    if (!selectedQuestion || !token || !user) return;
+
+    const question = selectedQuestion;
+    const existingAnswer = initialAnswers.get(question.id);
+
+    // Base Payload
+    const basePayload: any = {
+      idsource: question.id,
+      title: `Réponse: ${question.title}`,
+      kind: "answer",
+      author: user.id,
+      type: "answer",
+      quantity: data.quantity,
+      price: data.price,
+      answer: data.answer || data.value,
+      latitude: data.latitude,
+      longitude: data.longitude,
+    };
+
     try {
-      const promises = geds.map(async (question) => {
-        const changes = pendingChanges[question.id];
-        if (!changes) return; // No changes or initial value
-
-        const existingAnswer = initialAnswers.get(question.id);
-
-        // Construct shared payload base
-        const basePayload: any = {
-          idsource: question.id,
-          title: `Réponse: ${question.title}`,
-          kind: "answer",
-          author: user.id,
-          type: "answer",
-          quantity: changes.quantity,
-          price: changes.price,
-        };
-
-        // Handle specific types data
-        if (question.type === "GPS" && changes.latitude) {
-          basePayload.latitude = changes.latitude;
-          basePayload.longitude = changes.longitude;
-          // If we have an answer text for GPS (like raw lat/lon string), save it too
-          if (changes.answer) basePayload.answer = changes.answer;
-        } else if (question.type !== "photo" && question.type !== "voice") {
-          // Use 'answer' field instead of description
-          basePayload.answer = changes.answer || changes.value;
-          // IMPORTANT: User requested to use 'answer' instead of 'description'.
-          // We can leave description null or put a summary there if needed.
-        }
-
-        if (existingAnswer) {
-          // UPDATE
-          if (question.type === "photo" && changes.image) {
-            await gedService.updateGedFile(
-              token,
-              existingAnswer.id,
-              {
-                uri: changes.image.uri,
-                type: changes.image.mimeType || "image/jpeg",
-                name: changes.image.fileName || "photo.jpg",
-              },
-              basePayload,
-            );
-          } else if (question.type === "voice" && changes.recordingUri) {
-            await gedService.updateGedFile(
-              token,
-              existingAnswer.id,
-              {
-                uri: changes.recordingUri,
-                type: "audio/m4a",
-                name: `voice-${Date.now()}.m4a`,
-              },
-              basePayload,
-            );
-          } else {
-            await gedService.updateGed(token, existingAnswer.id, basePayload);
-          }
-        } else {
-          // CREATE
-          const createPayload = { ...basePayload };
-          if (question.type === "photo" && changes.image) {
-            createPayload.file = {
-              uri: changes.image.uri,
-              type: changes.image.mimeType || "image/jpeg",
-              name: changes.image.fileName || "photo.jpg",
-            };
-          } else if (question.type === "voice" && changes.recordingUri) {
-            createPayload.file = {
-              uri: changes.recordingUri,
+      let savedGed: Ged;
+      if (existingAnswer) {
+        // UPDATE
+        if (data.image) {
+          savedGed = await gedService.updateGedFile(
+            token,
+            existingAnswer.id,
+            {
+              uri: data.image.uri,
+              type: data.image.mimeType || "image/jpeg",
+              name: data.image.fileName || "photo.jpg",
+            },
+            basePayload,
+          );
+        } else if (data.recordingUri) {
+          savedGed = await gedService.updateGedFile(
+            token,
+            existingAnswer.id,
+            {
+              uri: data.recordingUri,
               type: "audio/m4a",
               name: `voice-${Date.now()}.m4a`,
-            };
-          } else {
-            // Logic for 'answer' fallback
-            if (!createPayload.answer && !createPayload.latitude) {
-              createPayload.answer = changes.answer || changes.value || "";
-            }
-          }
-          await gedService.createGed(token, createPayload);
+            },
+            basePayload,
+          );
+        } else {
+          savedGed = await gedService.updateGed(
+            token,
+            existingAnswer.id,
+            basePayload,
+          );
         }
+      } else {
+        // CREATE
+        const createPayload = { ...basePayload };
+        if (data.image) {
+          createPayload.file = {
+            uri: data.image.uri,
+            type: data.image.mimeType || "image/jpeg",
+            name: data.image.fileName || "photo.jpg",
+          };
+        } else if (data.recordingUri) {
+          createPayload.file = {
+            uri: data.recordingUri,
+            type: "audio/m4a",
+            name: `voice-${Date.now()}.m4a`,
+          };
+        }
+        const res = await gedService.createGed(token, createPayload);
+        savedGed = res.data;
+      }
+
+      // Update local state
+      setPendingChanges((prev) => ({
+        ...prev,
+        [question.id]: {
+          ...data,
+          answer: data.answer || data.value,
+        },
+      }));
+
+      // Also update initialAnswers so next open has correct ID
+      setInitialAnswers((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(question.id, savedGed);
+        return newMap;
       });
-
-      await Promise.all(promises);
-      Alert.alert("Succès", "Réponses enregistrées");
-      onClose();
-    } catch (err) {
-      Alert.alert("Erreur", "Echec de l'enregistrement");
-      console.error(err);
-    } finally {
-      setIsSubmitting(false);
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Erreur", "Echec de l'enregistrement de la réponse");
+      throw e; // AnswerModal will catch
     }
-  };
-
-  const handleOpenTextModal = (
-    item: Ged,
-    currentValue: string,
-    isMultiline: boolean,
-    keyboardType: "default" | "numeric",
-  ) => {
-    setEditingItem({
-      id: item.id,
-      title: item.title,
-      value: currentValue,
-      multiline: isMultiline,
-      keyboardType,
-    });
-    setTextModalVisible(true);
-  };
-
-  const handleTextModalSubmit = (val: string) => {
-    if (editingItem) {
-      handleRowChange(editingItem.id, { answer: val, value: val });
-    }
-    setTextModalVisible(false);
-    setEditingItem(null);
   };
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      {editingItem && (
-        <AnswerTextInputModal
-          visible={textModalVisible}
-          onClose={() => setTextModalVisible(false)}
-          onSubmit={handleTextModalSubmit}
-          initialValue={editingItem.value}
-          title={editingItem.title}
-          multiline={editingItem.multiline}
-          keyboardType={editingItem.keyboardType}
+      {/* Answer Modal */}
+      {selectedQuestion && (
+        <AnswerModal
+          visible={answerModalVisible}
+          question={selectedQuestion}
+          initialAnswer={pendingChanges[selectedQuestion.id]}
+          onClose={() => setAnswerModalVisible(false)}
+          onSave={handleAnswerSave}
         />
       )}
       <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -729,8 +352,7 @@ export default function FolderQuestionsModal({
                   key={question.id}
                   item={question}
                   answer={pendingChanges[question.id]}
-                  onChange={(data) => handleRowChange(question.id, data)}
-                  onOpenTextModal={handleOpenTextModal}
+                  onOpenAnswerModal={handleOpenAnswerModal}
                 />
               ))}
             </ScrollView>
@@ -739,16 +361,8 @@ export default function FolderQuestionsModal({
 
         {/* Footer */}
         <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>
-          <TouchableOpacity
-            style={[styles.saveButton, isSubmitting && styles.disabledBtn]}
-            onPress={handleGlobalSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.saveBtnText}>Enregistrer tout</Text>
-            )}
+          <TouchableOpacity style={styles.saveButton} onPress={onClose}>
+            <Text style={styles.saveBtnText}>Fermer</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -791,58 +405,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  questionTitle: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#1f2937",
-    flex: 1, // Allow title to take available space
-  },
-  // questionDesc removed
-
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
   },
-  helpIcon: {
-    marginLeft: 6,
-    padding: 2,
+
+  questionTitle: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#1f2937",
+    flex: 1,
   },
 
-  input: {
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 4,
-    padding: 6,
-    fontSize: 13,
-    minHeight: 36,
-    backgroundColor: "#fff",
-  },
-  textArea: { height: 60, textAlignVertical: "top" },
-  numberInput: {
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 4,
-    padding: 4,
-    fontSize: 13,
-    textAlign: "center",
-    minHeight: 32,
-  },
-
-  mediaButton: { justifyContent: "center", alignItems: "center", padding: 4 },
-  thumbnail: { width: 40, height: 40, borderRadius: 4 },
-  rowCenter: { flexDirection: "row", alignItems: "center" },
-
-  dateButton: {
+  answerPreviewContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 4,
-    padding: 6,
     justifyContent: "space-between",
   },
-  dateText: { fontSize: 12, color: "#374151" },
-  smallText: { fontSize: 11, marginLeft: 4, color: "#4b5563" },
+  answerTextPreview: {
+    flex: 1,
+    fontSize: 14,
+    color: "#4b5563",
+    marginRight: 4,
+  },
+  placeholderText: {
+    color: "#9ca3af",
+    fontStyle: "italic",
+  },
+  iconsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
 
   footer: {
     padding: 16,
@@ -851,84 +445,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   saveButton: {
-    backgroundColor: "#f87b1b",
+    backgroundColor: "#f3f4f6",
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: "center",
   },
-  disabledBtn: { opacity: 0.7 },
-  saveBtnText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
-
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    padding: 20,
-  },
-  modalContentWrapper: {
-    justifyContent: "center",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 15,
-    color: "#11224e",
-    textAlign: "center",
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 20,
-    backgroundColor: "#f9f9f9",
-    minHeight: 50,
-  },
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  modalBtnCancel: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: "#f3f4f6",
-    marginRight: 10,
-    alignItems: "center",
-  },
-  modalBtnSave: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: "#f87b1b",
-    marginLeft: 10,
-    alignItems: "center",
-  },
-  modalBtnTextCancel: { color: "#374151", fontWeight: "600" },
-  modalBtnTextSave: { color: "#fff", fontWeight: "600" },
-
-  // Input Trigger Styles
-  inputTrigger: {
-    justifyContent: "center",
-  },
-  inputTextDisplay: {
-    color: "#1f2937",
-    fontSize: 13,
-  },
-  placeholderText: {
-    color: "#9ca3af",
-    fontStyle: "italic",
-  },
+  saveBtnText: { color: "#374151", fontWeight: "bold", fontSize: 16 },
 });
