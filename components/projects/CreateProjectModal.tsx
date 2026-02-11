@@ -1,14 +1,17 @@
 import API_CONFIG from "@/app/config/api";
 import { useAuth } from "@/contexts/AuthContext";
 import companyService from "@/services/companyService";
+import { createGed } from "@/services/gedService";
 import { createProject, getAllProjects } from "@/services/projectService";
 import { getAllProjectTypes } from "@/services/projectTypeService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -37,7 +40,7 @@ export default function CreateProjectModal({
   // const isSuperAdmin = user?.role === "Super Admin"; // No longer needed
 
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [logo, setLogo] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [dd, setDd] = useState("");
   const [df, setDf] = useState("");
   const [ownerId, setOwnerId] = useState("");
@@ -208,10 +211,9 @@ export default function CreateProjectModal({
 
     try {
       setIsSubmitting(true);
-      await createProject(token, {
+      const res = await createProject(token, {
         code: generateProjectCode(),
         title,
-        description: description || undefined,
         dd: dd || (undefined as any),
         df: df || (undefined as any),
         owner_id: ownerId || undefined,
@@ -221,8 +223,36 @@ export default function CreateProjectModal({
         technicien_id: undefined,
         projecttype_id: projectTypeId || undefined,
       });
+
+      // Upload Logo if selected
+      if (logo && res.data?.id) {
+        try {
+          await createGed(token, {
+            idsource: res.data.id,
+            kind: "chantier_logo",
+            title: "Logo du chantier",
+            file: {
+              uri: logo.uri,
+              type: logo.mimeType || "image/jpeg",
+              name: logo.fileName || "logo.jpg",
+            },
+            author: user?.id || "Unknown",
+            idauthor: user?.id,
+            answer: null, // compliant with type
+            description: "Logo du chantier",
+            mode: "upload",
+          });
+        } catch (uploadError) {
+          console.error("Logo upload failed", uploadError);
+          Alert.alert(
+            "Info",
+            "Le chantier a été créé mais le logo n'a pas pu être téléchargé.",
+          );
+        }
+      }
+
       setTitle("");
-      setDescription("");
+      setLogo(null);
       setDd("");
       setDf("");
       setOwnerId("");
@@ -330,6 +360,94 @@ export default function CreateProjectModal({
                   INFORMATIONS GÉNÉRALES
                 </Text>
 
+                {/* Logo Upload */}
+                <View style={{ alignItems: "center", marginBottom: 24 }}>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      const { status } =
+                        await ImagePicker.requestMediaLibraryPermissionsAsync();
+                      if (status !== "granted") {
+                        Alert.alert(
+                          "Permission refusée",
+                          "Nous avons besoin de votre permission pour accéder à la galerie.",
+                        );
+                        return;
+                      }
+                      const result = await ImagePicker.launchImageLibraryAsync({
+                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                        allowsEditing: true, // Allow cropping for better logos
+                        aspect: [1, 1], // Square aspect ratio for logos usually better
+                        quality: 0.8,
+                      });
+
+                      if (!result.canceled) {
+                        setLogo(result.assets[0]);
+                      }
+                    }}
+                    style={{
+                      width: 100,
+                      height: 100,
+                      borderRadius: 50,
+                      backgroundColor: "#F1F5F9",
+                      borderWidth: 1,
+                      borderColor: "#cbd5e1",
+                      borderStyle: "dashed",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {logo ? (
+                      <Image
+                        source={{ uri: logo.uri }}
+                        style={{ width: "100%", height: "100%" }}
+                      />
+                    ) : (
+                      <View style={{ alignItems: "center" }}>
+                        <Ionicons
+                          name="camera-outline"
+                          size={32}
+                          color="#94a3b8"
+                        />
+                        <Text
+                          style={{
+                            fontSize: 10,
+                            color: "#94a3b8",
+                            marginTop: 4,
+                          }}
+                        >
+                          Logo
+                        </Text>
+                      </View>
+                    )}
+                    {logo && (
+                      <View
+                        style={{
+                          position: "absolute",
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          backgroundColor: "rgba(0,0,0,0.4)",
+                          height: 24,
+                          justifyContent: "center",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Ionicons name="create" size={14} color="#FFF" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: "#64748B",
+                      marginTop: 8,
+                    }}
+                  >
+                    Ajouter un logo (optionnel)
+                  </Text>
+                </View>
+
                 <View style={[stylesFS.inputWrap, { marginBottom: 16 }]}>
                   <Ionicons name="text-outline" size={20} color="#9ca3af" />
                   <TextInput
@@ -338,35 +456,6 @@ export default function CreateProjectModal({
                     value={title}
                     onChangeText={setTitle}
                     style={stylesFS.input}
-                  />
-                </View>
-
-                <View
-                  style={[
-                    stylesFS.inputWrap,
-                    {
-                      marginBottom: 16,
-                      height: 100,
-                      alignItems: "flex-start",
-                      paddingTop: 12,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="document-text-outline"
-                    size={20}
-                    color="#9ca3af"
-                  />
-                  <TextInput
-                    placeholder="Description (optionnel)"
-                    placeholderTextColor="#9ca3af"
-                    value={description}
-                    onChangeText={setDescription}
-                    style={[
-                      stylesFS.input,
-                      { height: "100%", textAlignVertical: "top" },
-                    ]}
-                    multiline
                   />
                 </View>
 
