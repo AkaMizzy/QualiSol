@@ -17,13 +17,19 @@ type ParameterCard = {
 };
 
 const PARAMETER_CARDS: ParameterCard[] = [
-  
   {
     title: "Constats",
     description: "Visualiser tous les constats de l'entreprise",
     image: require("../../assets/icons/camera_p.png"),
     route: "/constats",
     color: "#0ea5e9",
+  },
+  {
+    title: "contrôles",
+    description: "Configurer les types de dossiers de contrôles",
+    image: require("../../assets/icons/approved.png"), // Assuming a generic folder icon or reusing existing
+    route: "action:folderTypes",
+    color: "#10b981",
   },
   {
     title: "Chantiers",
@@ -33,27 +39,13 @@ const PARAMETER_CARDS: ParameterCard[] = [
     color: "#ec4899",
   },
   {
-    title: "Organisme",
-    description: "Gérer les informations de votre organisme",
-    image: require("../../assets/icons/company.png"),
-    route: "/company",
-    color: "#3b82f6",
-  },
-  {
     title: "Utilisateurs",
     description: "Gérer les utilisateurs et leurs rôles",
     image: require("../../assets/icons/users.png"),
     route: "/users",
     color: "#8b5cf6",
   },
- 
-  {
-    title: "contrôles",
-    description: "Configurer les types de dossiers de contrôles",
-    image: require("../../assets/icons/approved.png"), // Assuming a generic folder icon or reusing existing
-    route: "action:folderTypes",
-    color: "#10b981",
-  },
+
   {
     title: "Anomalie niveau 1",
     description: "Configuration des anomalies de niveau 1",
@@ -68,7 +60,13 @@ const PARAMETER_CARDS: ParameterCard[] = [
     route: "/anomalie2",
     color: "#ef4444",
   },
-  
+  {
+    title: "Organisme",
+    description: "Gérer les informations de votre organisme",
+    image: require("../../assets/icons/company.png"),
+    route: "/company",
+    color: "#3b82f6",
+  },
 ];
 
 export default function ParametersScreen() {
@@ -165,7 +163,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    gap: 12,
+    gap: 12
   },
   card: {
     flexDirection: "row",
@@ -186,28 +184,28 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9fafb",
   },
   iconContainer: {
-    width: 56,
-    height: 56,
+    width: 44,
+    height: 45,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 16,
   },
   icon: {
-    width: 32,
-    height: 32,
+    width: 24,
+    height: 24,
   },
   cardContent: {
     flex: 1,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
     color: "#11224e",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   cardDescription: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#6b7280",
     lineHeight: 20,
   },
