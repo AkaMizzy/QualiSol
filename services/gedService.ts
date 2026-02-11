@@ -605,6 +605,15 @@ export async function getAssignedPhotoAvant(token: string): Promise<Ged[]> {
   return response.data;
 }
 
+export async function getAssignedGeds(token: string): Promise<Ged[]> {
+  const response = await api.get("/api/geds/assigned", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.data;
+}
+
 /**
  * Assign a gallery photo to a folder by updating its idsource and kind
  * @param token - Auth token

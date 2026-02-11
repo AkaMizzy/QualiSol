@@ -1,27 +1,39 @@
-import AppHeader from '@/components/AppHeader';
-import { ChildQualiPhotoView } from '@/components/reception/ChildQualiPhotoView';
-import { ICONS } from '@/constants/Icons';
-import { useAuth } from '@/contexts/AuthContext';
-import { Folder } from '@/services/folderService';
-import { Ged, getAssignedPhotoAvant } from '@/services/gedService';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import AppHeader from "@/components/AppHeader";
+import { ChildQualiPhotoView } from "@/components/reception/ChildQualiPhotoView";
+import { ICONS } from "@/constants/Icons";
+import { useAuth } from "@/contexts/AuthContext";
+import { Folder } from "@/services/folderService";
+import { Ged, getAssignedGeds } from "@/services/gedService";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 function formatDateForGrid(dateStr?: string | null): string {
-  if (!dateStr) return '';
+  if (!dateStr) return "";
   try {
-    const compliantDateStr = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
-    return new Intl.DateTimeFormat('fr-FR', {
-      month: 'short',
-      day: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    const compliantDateStr = dateStr.includes("T")
+      ? dateStr
+      : dateStr.replace(" ", "T");
+    return new Intl.DateTimeFormat("fr-FR", {
+      month: "short",
+      day: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }).format(new Date(compliantDateStr));
   } catch {
-    return '';
+    return "";
   }
 }
 
@@ -43,10 +55,21 @@ export default function DangerScreen() {
     setErrorMessage(null);
 
     try {
-      const items = await getAssignedPhotoAvant(token);
-      
+      // Use the new endpoint to get all assigned GEDs
+      const items = await getAssignedGeds(token);
+
+      // Filter for pictures/visual content only
+      const visualItems = items.filter(
+        (item) =>
+          ["qualiphoto", "photoavant", "photoapres"].includes(item.kind) ||
+          (item.url &&
+            (item.url.endsWith(".jpg") ||
+              item.url.endsWith(".jpeg") ||
+              item.url.endsWith(".png"))),
+      );
+
       // Sort by creation date, latest first
-      const sortedItems = items.sort((a, b) => {
+      const sortedItems = visualItems.sort((a, b) => {
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
         return dateB - dateA;
@@ -54,8 +77,8 @@ export default function DangerScreen() {
 
       setAssignedGeds(sortedItems);
     } catch (e) {
-      console.error('Failed to load assigned GEDs', e);
-      setErrorMessage('Échec du chargement. Tirez pour réessayer.');
+      console.error("Failed to load assigned GEDs", e);
+      setErrorMessage("Échec du chargement. Tirez pour réessayer.");
     } finally {
       setIsLoading(false);
     }
@@ -78,9 +101,11 @@ export default function DangerScreen() {
   }, [token, fetchAssignedGeds]);
 
   const handleAvantPhotoUpdate = (updatedPhoto: Ged) => {
+    // Since it's read-only, we might not strictly need this locally,
+    // but ChildQualiPhotoView might call it.
     setSelectedGed(updatedPhoto);
-    setAssignedGeds(prev => 
-      prev.map(item => item.id === updatedPhoto.id ? updatedPhoto : item)
+    setAssignedGeds((prev) =>
+      prev.map((item) => (item.id === updatedPhoto.id ? updatedPhoto : item)),
     );
   };
 
@@ -94,9 +119,11 @@ export default function DangerScreen() {
         }}
       >
         {item.url ? (
-          <Image 
-            source={{ uri: `${require('@/app/config/api').default.BASE_URL}${item.url}` }} 
-            style={styles.thumbnail} 
+          <Image
+            source={{
+              uri: `${require("@/app/config/api").default.BASE_URL}${item.url}`,
+            }}
+            style={styles.thumbnail}
           />
         ) : (
           <View style={[styles.thumbnail, styles.placeholderThumbnail]}>
@@ -109,11 +136,15 @@ export default function DangerScreen() {
           </Text>
           <View style={styles.infoRow}>
             <Ionicons name="person-outline" size={14} color="#f87b1b" />
-            <Text style={styles.infoText} numberOfLines={1}>{item.author || 'N/A'}</Text>
+            <Text style={styles.infoText} numberOfLines={1}>
+              {item.author || "N/A"}
+            </Text>
           </View>
           <View style={styles.infoRow}>
             <Ionicons name="calendar-outline" size={14} color="#f87b1b" />
-            <Text style={styles.infoText}>{formatDateForGrid(item.created_at)}</Text>
+            <Text style={styles.infoText}>
+              {formatDateForGrid(item.created_at)}
+            </Text>
           </View>
           {item.level !== undefined && item.level !== null && (
             <View style={styles.infoRow}>
@@ -137,7 +168,8 @@ export default function DangerScreen() {
           <View style={styles.headerTextContainer}>
             <Text style={styles.headerTitle}>Situations assignées</Text>
             <Text style={styles.headerSubtitle}>
-              {assignedGeds.length} situation{assignedGeds.length !== 1 ? 's' : ''} avant à traiter
+              {assignedGeds.length} situation
+              {assignedGeds.length !== 1 ? "s" : ""} à traiter
             </Text>
           </View>
         </View>
@@ -152,7 +184,7 @@ export default function DangerScreen() {
           <FlatList
             data={assignedGeds}
             keyExtractor={keyExtractor}
-            key={isTablet ? 'tablet-3' : 'phone-2'}
+            key={isTablet ? "tablet-3" : "phone-2"}
             numColumns={isTablet ? 3 : 2}
             columnWrapperStyle={styles.row}
             renderItem={renderItem}
@@ -161,15 +193,22 @@ export default function DangerScreen() {
             onRefresh={refresh}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
-                <Ionicons name="checkmark-circle-outline" size={64} color="#10b981" />
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={64}
+                  color="#10b981"
+                />
                 <Text style={styles.emptyTitle}>
-                  {errorMessage ? 'Impossible de charger' : 'Aucune situation assignée'}
+                  {errorMessage
+                    ? "Impossible de charger"
+                    : "Aucune situation assignée"}
                 </Text>
                 {errorMessage ? (
                   <Text style={styles.emptySubtitle}>{errorMessage}</Text>
                 ) : (
                   <Text style={styles.emptySubtitle}>
-                    Vous n&apos;avez aucune situation &quot;avant&quot; qui vous a été assignée pour le moment.
+                    Vous n&apos;avez aucune situation qui vous a été assignée
+                    pour le moment.
                   </Text>
                 )}
               </View>
@@ -183,8 +222,12 @@ export default function DangerScreen() {
         )}
       </View>
 
-      <Modal visible={detailVisible} animationType="slide" presentationStyle="fullScreen">
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      <Modal
+        visible={detailVisible}
+        animationType="slide"
+        presentationStyle="fullScreen"
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
           {selectedGed && (
             <ChildQualiPhotoView
               item={selectedGed}
@@ -192,7 +235,9 @@ export default function DangerScreen() {
               onClose={() => {
                 setDetailVisible(false);
                 setSelectedGed(null);
-                fetchAssignedGeds(); // Refresh list when closing detail
+                // Refresh list when closing detail to reflect any external changes?
+                // Or simply keep it as is.
+                fetchAssignedGeds();
               }}
               subtitle={`Assigné à vous • ${formatDateForGrid(selectedGed.created_at)}`}
               projectTitle=""
@@ -210,18 +255,18 @@ export default function DangerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f87b1b',
+    borderBottomColor: "#f87b1b",
   },
   headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   headerIcon: {
@@ -233,19 +278,19 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#f87b1b',
+    fontWeight: "700",
+    color: "#f87b1b",
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#6b7280',
+    color: "#6b7280",
     marginTop: 2,
   },
   content: {
     flex: 1,
   },
   row: {
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
     paddingHorizontal: 12,
   },
   listContent: {
@@ -254,51 +299,51 @@ const styles = StyleSheet.create({
   },
   emptyWrap: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 48,
     paddingHorizontal: 16,
     gap: 12,
   },
   emptyTitle: {
-    color: '#111827',
-    fontWeight: '700',
+    color: "#111827",
+    fontWeight: "700",
     fontSize: 18,
-    textAlign: 'center',
+    textAlign: "center",
   },
   emptySubtitle: {
-    color: '#6b7280',
+    color: "#6b7280",
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
     maxWidth: 300,
   },
   card: {
     flex: 1,
-    maxWidth: '49%',
+    maxWidth: "49%",
     marginHorizontal: 4,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#f87b1b',
-    shadowColor: '#000',
+    borderColor: "#f87b1b",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   pressed: {
     transform: [{ scale: 0.98 }],
-    backgroundColor: '#f9fafb',
+    backgroundColor: "#f9fafb",
   },
   thumbnail: {
-    width: '100%',
+    width: "100%",
     aspectRatio: 16 / 9,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: "#f3f4f6",
   },
   placeholderThumbnail: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   cardBody: {
     padding: 12,
@@ -306,22 +351,22 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#f87b1b',
+    fontWeight: "700",
+    color: "#f87b1b",
     marginBottom: 4,
   },
   infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
-    backgroundColor: '#f8fafc',
+    backgroundColor: "#f8fafc",
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   infoText: {
     fontSize: 11,
-    color: '#4b5563',
+    color: "#4b5563",
     flex: 1,
   },
 });
