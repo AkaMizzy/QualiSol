@@ -1,29 +1,29 @@
-import API_CONFIG from "@/app/config/api";
 import { useAuth } from "@/contexts/AuthContext";
+import folderService, { Folder } from "@/services/folderService";
 import {
-  deleteProject,
-  Project,
-  updateProject,
+    deleteProject,
+    Project,
+    updateProject,
 } from "@/services/projectService";
 import { formatDisplayDate } from "@/utils/dateFormat";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Easing,
-  LayoutAnimation,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  UIManager,
-  View,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Easing,
+    LayoutAnimation,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    UIManager,
+    View,
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -37,14 +37,6 @@ type Props = {
   onUpdated?: () => void;
 };
 
-type Company = { id: string; title?: string | null } | null;
-type Owner = {
-  id: string;
-  firstname?: string;
-  lastname?: string;
-  email?: string;
-} | null;
-
 export default function ProjectDetailModal({
   visible,
   onClose,
@@ -53,8 +45,9 @@ export default function ProjectDetailModal({
 }: Props) {
   const { token, user } = useAuth();
   const isSuperAdmin = user?.role === "Super Admin";
-  const [company, setCompany] = useState<Company>(null);
-  const [owner, setOwner] = useState<Owner>(null);
+
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [isLoadingFolders, setIsLoadingFolders] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
@@ -69,18 +62,15 @@ export default function ProjectDetailModal({
 
   // Collapsible sections state
   const [openOverview, setOpenOverview] = useState(true);
-  const [openRelations, setOpenRelations] = useState(true);
+  // Relations section removed
+  const [foldersOpen, setFoldersOpen] = useState(true);
   const [openMore, setOpenMore] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editOwner, setEditOwner] = useState<string>("");
   const [editTitle, setEditTitle] = useState<string>("");
   const [editDescription, setEditDescription] = useState<string>("");
   const [editDd, setEditDd] = useState<string>("");
   const [editDf, setEditDf] = useState<string>("");
-  const [ownerOpen, setOwnerOpen] = useState(false);
-  const [companyUsers, setCompanyUsers] = useState<
-    { id: string; firstname?: string; lastname?: string; email?: string }[]
-  >([]);
+  // ownerOpen and companyUsers removed
   const [isSaving, setIsSaving] = useState(false);
   const [isDdPickerVisible, setDdPickerVisible] = useState(false);
   const [isDfPickerVisible, setDfPickerVisible] = useState(false);
@@ -88,15 +78,15 @@ export default function ProjectDetailModal({
   // Rotate chevrons
   const rotateAnim = useRef({
     overview: new Animated.Value(1),
-    relations: new Animated.Value(1),
+    folders: new Animated.Value(1),
     more: new Animated.Value(0),
   }).current;
 
-  function toggleSection(section: "overview" | "relations" | "more") {
+  function toggleSection(section: "overview" | "folders" | "more") {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     const map = {
       overview: [openOverview, setOpenOverview],
-      relations: [openRelations, setOpenRelations],
+      folders: [foldersOpen, setFoldersOpen],
       more: [openMore, setOpenMore],
     } as const;
     const [isOpen, setIsOpen] = map[section];
@@ -109,11 +99,7 @@ export default function ProjectDetailModal({
     }).start();
   }
 
-  function Chevron({
-    section,
-  }: {
-    section: "overview" | "relations" | "more";
-  }) {
+  function Chevron({ section }: { section: "overview" | "folders" | "more" }) {
     const spin = rotateAnim[section].interpolate({
       inputRange: [0, 1],
       outputRange: ["0deg", "180deg"],
@@ -171,81 +157,26 @@ export default function ProjectDetailModal({
 
   useEffect(() => {
     let cancelled = false;
-    async function loadMeta() {
-      if (!project) {
-        setCompany(null);
-        setOwner(null);
-        setCompanyUsers([]);
+    async function loadData() {
+      if (!project || !token) {
+        setFolders([]);
         return;
       }
-      setIsLoading(true);
-      setError(null);
+
+      // Load folders
+      setIsLoadingFolders(true);
       try {
-        const tasks: Promise<void>[] = [];
-
-        // Fetch company details with authentication token
-        if (project.company_id) {
-          tasks.push(
-            (async () => {
-              try {
-                const res = await fetch(
-                  `${API_CONFIG.BASE_URL}/api/company/${project.company_id}`,
-                  {
-                    headers: token
-                      ? { Authorization: `Bearer ${token}` }
-                      : (undefined as any),
-                  },
-                );
-                const data = await res.json();
-                if (!cancelled)
-                  setCompany(
-                    res.ok ? { id: String(data.id), title: data.title } : null,
-                  );
-              } catch {
-                if (!cancelled) setCompany(null);
-              }
-            })(),
-          );
-        } else {
-          setCompany(null);
+        const allFolders = await folderService.getAllFolders(token);
+        if (!cancelled) {
+          setFolders(allFolders.filter((f) => f.project_id === project.id));
         }
-
-        // Fetch all company users in a single request
-        if (token) {
-          tasks.push(
-            (async () => {
-              try {
-                const res = await fetch(`${API_CONFIG.BASE_URL}/api/users`, {
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                  },
-                });
-                const data = await res.json();
-                if (!cancelled) {
-                  if (res.ok && Array.isArray(data)) {
-                    setCompanyUsers(data);
-                  } else {
-                    setCompanyUsers([]);
-                  }
-                }
-              } catch {
-                if (!cancelled) setCompanyUsers([]);
-              }
-            })(),
-          );
-        } else {
-          setCompanyUsers([]);
-        }
-
-        await Promise.all(tasks);
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message || "Erreur de chargement");
+      } catch (e) {
+        console.error("Failed to load folders", e);
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) setIsLoadingFolders(false);
       }
     }
-    loadMeta();
+    loadData();
     return () => {
       cancelled = true;
     };
@@ -254,7 +185,7 @@ export default function ProjectDetailModal({
   useEffect(() => {
     // initialize edit fields when opening or when project changes
     if (project) {
-      setEditOwner(project.owner_id ? String(project.owner_id) : "");
+      // Owner edit removed
       setEditTitle(project.title || "");
       setEditDescription(project.description || "");
       setEditDd(project.dd || "");
@@ -262,31 +193,7 @@ export default function ProjectDetailModal({
     }
   }, [project]);
 
-  // Derive owner from companyUsers list
-  useEffect(() => {
-    if (!project) {
-      setOwner(null);
-      return;
-    }
-
-    if (project.owner_id && companyUsers.length > 0) {
-      const ownerUser = companyUsers.find(
-        (u) => String(u.id) === String(project.owner_id),
-      );
-      setOwner(
-        ownerUser
-          ? {
-              id: String(ownerUser.id),
-              firstname: ownerUser.firstname,
-              lastname: ownerUser.lastname,
-              email: ownerUser.email,
-            }
-          : null,
-      );
-    } else {
-      setOwner(null);
-    }
-  }, [project, companyUsers]);
+  // Owner derivation removed
 
   if (!project) return null;
 
@@ -405,16 +312,10 @@ export default function ProjectDetailModal({
                       description: editDescription || undefined,
                       dd: editDd,
                       df: editDf,
-                      owner_id: editOwner || null,
+                      // owner_id not updated here as relations section is removed
                     });
                     setIsEditing(false);
                     // reflect local change quickly
-                    if (owner)
-                      setOwner(
-                        companyUsers.find(
-                          (u) => String(u.id) === String(editOwner),
-                        ) || owner,
-                      );
                     if (onUpdated) onUpdated();
                     Alert.alert("Succès", "Projet mis à jour avec succès");
                   } catch (e: any) {
@@ -436,11 +337,8 @@ export default function ProjectDetailModal({
               <Pressable
                 onPress={() => {
                   setIsEditing(false);
-                  setOwnerOpen(false);
                   if (project) {
-                    setEditOwner(
-                      project.owner_id ? String(project.owner_id) : "",
-                    );
+                    // setEditOwner removed
                     setEditTitle(project.title || "");
                     setEditDescription(project.description || "");
                     setEditDd(project.dd || "");
@@ -476,7 +374,16 @@ export default function ProjectDetailModal({
             </Pressable>
             {openOverview && (
               <View style={{ marginTop: 8, gap: 6 }}>
-                {/* Title - editable or view-only */}
+                {/* 1. Code - Read-only */}
+                <Pressable
+                  android_ripple={{ color: "#f3f4f6" }}
+                  style={styles.itemRow}
+                >
+                  <Ionicons name="barcode-outline" size={16} color="#6b7280" />
+                  <Text style={styles.meta}>Code · {project.code || "—"}</Text>
+                </Pressable>
+
+                {/* 2. Title - editable or view-only */}
                 {!isEditing ? (
                   <Pressable
                     android_ripple={{ color: "#f3f4f6" }}
@@ -511,67 +418,7 @@ export default function ProjectDetailModal({
                   </View>
                 )}
 
-                {/* Description - editable or view-only */}
-                {!isEditing ? (
-                  <Pressable
-                    android_ripple={{ color: "#f3f4f6" }}
-                    style={styles.itemRow}
-                  >
-                    <Ionicons
-                      name="document-text-outline"
-                      size={16}
-                      color="#6b7280"
-                    />
-                    <Text style={styles.meta}>
-                      Description · {project.description || "—"}
-                    </Text>
-                  </Pressable>
-                ) : (
-                  <View
-                    style={{
-                      borderWidth: 1,
-                      borderColor: "#e5e7eb",
-                      borderRadius: 12,
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      flexDirection: "row",
-                      alignItems: "flex-start",
-                      gap: 8,
-                      minHeight: 60,
-                    }}
-                  >
-                    <Ionicons
-                      name="document-text-outline"
-                      size={16}
-                      color="#6b7280"
-                      style={{ marginTop: 2 }}
-                    />
-                    <TextInput
-                      placeholder="Description (optionnel)"
-                      placeholderTextColor="#9ca3af"
-                      value={editDescription}
-                      onChangeText={setEditDescription}
-                      style={{
-                        flex: 1,
-                        color: "#111827",
-                        fontSize: 14,
-                        textAlignVertical: "top",
-                      }}
-                      multiline
-                      numberOfLines={3}
-                    />
-                  </View>
-                )}
-
-                <Pressable
-                  android_ripple={{ color: "#f3f4f6" }}
-                  style={styles.itemRow}
-                >
-                  <Ionicons name="barcode-outline" size={16} color="#6b7280" />
-                  <Text style={styles.meta}>Code · {project.code || "—"}</Text>
-                </Pressable>
-
-                {/* Period dates - editable or view-only */}
+                {/* 3. Period (Dates) - editable or view-only */}
                 {!isEditing ? (
                   <Pressable
                     android_ripple={{ color: "#f3f4f6" }}
@@ -646,54 +493,19 @@ export default function ProjectDetailModal({
                   </View>
                 )}
 
-                {/* Project type - view-only */}
-                <Pressable
-                  android_ripple={{ color: "#f3f4f6" }}
-                  style={styles.itemRow}
-                >
-                  <Ionicons name="albums-outline" size={16} color="#6b7280" />
-                  <Text style={styles.meta}>
-                    Type · {project.project_type_title || "—"}
-                  </Text>
-                </Pressable>
-              </View>
-            )}
-          </View>
-
-          {/* Relations Card (collapsible) */}
-          <View style={styles.card}>
-            <Pressable
-              onPress={() => toggleSection("relations")}
-              style={styles.cardHeader}
-              android_ripple={{ color: "#f3f4f6" }}
-            >
-              <Text style={styles.cardTitle}>Relations</Text>
-              <Chevron section="relations" />
-            </Pressable>
-            {openRelations && (
-              <View style={{ marginTop: 8, gap: 6 }}>
-                <Pressable
-                  android_ripple={{ color: "#f3f4f6" }}
-                  style={styles.itemRow}
-                >
-                  <Ionicons name="business-outline" size={16} color="#6b7280" />
-                  <Text style={styles.meta}>
-                    Société · {company?.title || "—"}
-                  </Text>
-                </Pressable>
+                {/* 4. Description - editable or view-only */}
                 {!isEditing ? (
                   <Pressable
                     android_ripple={{ color: "#f3f4f6" }}
                     style={styles.itemRow}
                   >
-                    <Ionicons name="person-outline" size={16} color="#6b7280" />
+                    <Ionicons
+                      name="document-text-outline"
+                      size={16}
+                      color="#6b7280"
+                    />
                     <Text style={styles.meta}>
-                      Propriétaire ·{" "}
-                      {owner
-                        ? `${owner.firstname || ""} ${owner.lastname || ""}`.trim() ||
-                          owner.email ||
-                          owner.id
-                        : "—"}
+                      Description · {project.description || "—"}
                     </Text>
                   </Pressable>
                 ) : (
@@ -702,97 +514,125 @@ export default function ProjectDetailModal({
                       borderWidth: 1,
                       borderColor: "#e5e7eb",
                       borderRadius: 12,
-                      overflow: "hidden",
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      flexDirection: "row",
+                      alignItems: "flex-start",
+                      gap: 8,
+                      minHeight: 60,
                     }}
                   >
-                    <TouchableOpacity
-                      onPress={() => setOwnerOpen((v) => !v)}
+                    <Ionicons
+                      name="document-text-outline"
+                      size={16}
+                      color="#6b7280"
+                      style={{ marginTop: 2 }}
+                    />
+                    <TextInput
+                      placeholder="Description (optionnel)"
+                      placeholderTextColor="#9ca3af"
+                      value={editDescription}
+                      onChangeText={setEditDescription}
                       style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        paddingHorizontal: 12,
-                        paddingVertical: 10,
+                        flex: 1,
+                        color: "#111827",
+                        fontSize: 14,
+                        textAlignVertical: "top",
                       }}
-                    >
+                      multiline
+                      numberOfLines={3}
+                    />
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* Folders List Section (New) */}
+          <View style={styles.card}>
+            <Pressable
+              onPress={() => toggleSection("folders")}
+              style={styles.cardHeader}
+              android_ripple={{ color: "#f3f4f6" }}
+            >
+              <Text style={styles.cardTitle}>Dossiers ({folders.length})</Text>
+              <Chevron section="folders" />
+            </Pressable>
+            {foldersOpen && (
+              <View style={{ marginTop: 8 }}>
+                {isLoadingFolders ? (
+                  <ActivityIndicator
+                    size="small"
+                    color="#11224e"
+                    style={{ marginVertical: 10 }}
+                  />
+                ) : folders.length === 0 ? (
+                  <View style={{ padding: 12, alignItems: "center" }}>
+                    <Text style={{ color: "#9ca3af", fontStyle: "italic" }}>
+                      Aucun dossier associé
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={{ gap: 8 }}>
+                    {folders.map((folder) => (
                       <View
+                        key={folder.id}
                         style={{
+                          backgroundColor: "#f9fafb",
+                          padding: 10,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: "#e5e7eb",
                           flexDirection: "row",
+                          justifyContent: "space-between",
                           alignItems: "center",
-                          gap: 8,
                         }}
                       >
+                        <View style={{ flex: 1, gap: 4 }}>
+                          <Text
+                            style={{
+                              fontSize: 14,
+                              fontWeight: "600",
+                              color: "#111827",
+                            }}
+                            numberOfLines={1}
+                          >
+                            {folder.title}
+                          </Text>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 12,
+                                color: "#6b7280",
+                                fontFamily:
+                                  Platform.OS === "ios"
+                                    ? "Courier"
+                                    : "monospace",
+                              }}
+                            >
+                              {folder.code}
+                            </Text>
+                            {folder.created_at ? (
+                              <Text style={{ fontSize: 12, color: "#9ca3af" }}>
+                                • {formatDisplayDate(folder.created_at)}
+                              </Text>
+                            ) : null}
+                          </View>
+                        </View>
+                        {/* Optional status or icon */}
                         <Ionicons
-                          name="person-outline"
-                          size={16}
-                          color="#6b7280"
+                          name="folder-outline"
+                          size={18}
+                          color="#9ca3af"
                         />
-                        <Text style={{ color: "#111827" }} numberOfLines={1}>
-                          {editOwner
-                            ? companyUsers.find(
-                                (u) => String(u.id) === String(editOwner),
-                              )?.firstname
-                              ? `${companyUsers.find((u) => String(u.id) === String(editOwner))?.firstname} ${companyUsers.find((u) => String(u.id) === String(editOwner))?.lastname || ""}`
-                              : editOwner
-                            : "Choisir un propriétaire"}
-                        </Text>
                       </View>
-                      <Ionicons
-                        name={ownerOpen ? "chevron-up" : "chevron-down"}
-                        size={16}
-                        color="#9ca3af"
-                      />
-                    </TouchableOpacity>
-                    {ownerOpen && (
-                      <View style={{ maxHeight: 220 }}>
-                        <ScrollView keyboardShouldPersistTaps="handled">
-                          {isLoading ? (
-                            <View style={{ padding: 12 }}>
-                              <Text style={{ color: "#6b7280" }}>
-                                Chargement...
-                              </Text>
-                            </View>
-                          ) : companyUsers.length === 0 ? (
-                            <View style={{ padding: 12 }}>
-                              <Text style={{ color: "#6b7280" }}>
-                                Aucun utilisateur
-                              </Text>
-                            </View>
-                          ) : (
-                            companyUsers.map((u) => (
-                              <TouchableOpacity
-                                key={u.id}
-                                onPress={() => {
-                                  setEditOwner(String(u.id));
-                                  setOwnerOpen(false);
-                                }}
-                                style={{
-                                  paddingHorizontal: 12,
-                                  paddingVertical: 10,
-                                  backgroundColor:
-                                    String(editOwner) === String(u.id)
-                                      ? "#f1f5f9"
-                                      : "#FFFFFF",
-                                  borderBottomWidth: 1,
-                                  borderBottomColor: "#f3f4f6",
-                                }}
-                              >
-                                <Text style={{ color: "#11224e" }}>
-                                  {u.firstname || ""} {u.lastname || ""}
-                                </Text>
-                                {u.email ? (
-                                  <Text
-                                    style={{ color: "#6b7280", fontSize: 12 }}
-                                  >
-                                    {u.email}
-                                  </Text>
-                                ) : null}
-                              </TouchableOpacity>
-                            ))
-                          )}
-                        </ScrollView>
-                      </View>
-                    )}
+                    ))}
                   </View>
                 )}
               </View>
@@ -885,7 +725,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#f3f4f6",
   },
-  cardTitle: { fontSize: 14, fontWeight: "700", color: "#11224e" },
+  cardTitle: { fontSize: 14, fontWeight: "700", color: "#f87b1b" },
   meta: { color: "#374151", marginTop: 2 },
   ctaRow: {
     flexDirection: "row",

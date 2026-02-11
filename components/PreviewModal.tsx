@@ -594,6 +594,16 @@ export default function PreviewModal({
                     </View>
                   </View>
                 )}
+
+                {/* Audio Text Placeholder */}
+                <View style={styles.metadataSection}>
+                  <Text style={styles.metadataLabel}>Audio Text</Text>
+                </View>
+
+                {/* IA Text Placeholder */}
+                <View style={styles.metadataSection}>
+                  <Text style={styles.metadataLabel}>IA Text</Text>
+                </View>
                 {/* Title Section (Moved here as requested) */}
                 {title && (
                   <View style={styles.metadataSection}>
