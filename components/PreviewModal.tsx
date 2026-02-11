@@ -204,7 +204,7 @@ export default function PreviewModal({
     return date.toLocaleDateString("fr-FR", {
       day: "2-digit",
       month: "numeric",
-      year: "numeric",
+      year: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -533,6 +533,7 @@ export default function PreviewModal({
                         size={16}
                         color="#f87b1b"
                       />
+                      <Text style={styles.metadataSmallValue}>{level}</Text>
                     </View>
                   )}
                   {mode && (
