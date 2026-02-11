@@ -468,6 +468,17 @@ export default function PreviewModal({
               </Pressable>
             )}
 
+            {onAssign && (
+              <Pressable
+                style={styles.actionButton}
+                onPress={onAssign}
+                accessibilityRole="button"
+                accessibilityLabel="Assigner"
+              >
+                <Ionicons name="person-add-outline" size={24} color="#f87b1b" />
+              </Pressable>
+            )}
+
             <Pressable
               style={styles.actionButton}
               onPress={onClose}

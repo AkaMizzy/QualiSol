@@ -8,6 +8,7 @@ export default function ConstatsScreen() {
       creationMode="capture"
       allowOffline={true}
       fetchData={getCompanyImages}
+      enableAssignment={true}
     />
   );
 }

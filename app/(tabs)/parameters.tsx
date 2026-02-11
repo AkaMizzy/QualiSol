@@ -24,7 +24,15 @@ const PARAMETER_CARDS: ParameterCard[] = [
     image: require("../../assets/icons/camera_p.png"),
     route: "/constats",
     color: "#0ea5e9",
-  },{
+  },
+  {
+    title: "Chantiers",
+    description: "Gérer les chantiers et les zones",
+    image: require("../../assets/icons/project.png"),
+    route: "/projects",
+    color: "#ec4899",
+  },
+  {
     title: "Organisme",
     description: "Gérer les informations de votre organisme",
     image: require("../../assets/icons/company.png"),
@@ -38,13 +46,7 @@ const PARAMETER_CARDS: ParameterCard[] = [
     route: "/users",
     color: "#8b5cf6",
   },
-  {
-    title: "Chantiers",
-    description: "Gérer les chantiers et les zones",
-    image: require("../../assets/icons/project.png"),
-    route: "/projects",
-    color: "#ec4899",
-  },
+ 
   {
     title: "contrôles",
     description: "Configurer les types de dossiers de contrôles",

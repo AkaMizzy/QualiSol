@@ -64,14 +64,7 @@ export default function ProjectsScreen() {
       <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
         <AppHeader user={user || undefined} />
         <View style={styles.headerContainer}>
-          <View style={styles.typesContainer}>
-            <TouchableOpacity
-              onPress={() => setProjectTypeManagerVisible(true)}
-              style={styles.secondaryButton}
-            >
-              <Text style={styles.secondaryButtonText}>Type chantier</Text>
-            </TouchableOpacity>
-          </View>
+          
           <View style={styles.pageHeader}>
             <View style={{ flex: 1 }}>
               <Text
