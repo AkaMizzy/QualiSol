@@ -166,9 +166,9 @@ export default function DangerScreen() {
         <View style={styles.headerContent}>
           <Image source={ICONS.danger} style={styles.headerIcon} />
           <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Situations assignées</Text>
+            <Text style={styles.headerTitle}>Constats assignés</Text>
             <Text style={styles.headerSubtitle}>
-              {assignedGeds.length} situation
+              {assignedGeds.length} constat
               {assignedGeds.length !== 1 ? "s" : ""} à traiter
             </Text>
           </View>

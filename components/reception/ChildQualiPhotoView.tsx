@@ -3,19 +3,19 @@ import { Audio, ResizeMode, Video } from "expo-av";
 import * as Linking from "expo-linking";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from "react-native";
 
 import API_CONFIG from "@/app/config/api";
@@ -23,11 +23,11 @@ import { ICONS } from "@/constants/Icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { Folder } from "@/services/folderService";
 import {
-  describeImage,
-  Ged,
-  getGedsBySource,
-  updateGed,
-  updateGedFile,
+    describeImage,
+    Ged,
+    getGedsBySource,
+    updateGed,
+    updateGedFile,
 } from "@/services/gedService";
 import { getAllStatuses, Status } from "@/services/statusService";
 import { isVideoFile } from "@/utils/mediaUtils";
@@ -1156,6 +1156,8 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
           chantier={projectTitle}
           companyTitle={companyTitle}
           level={previewedItem?.level}
+          audiotxt={previewedItem?.audiotxt}
+          iatxt={previewedItem?.iatxt}
         />
       )}
       <Modal visible={isAnnotatorVisible} animationType="slide">

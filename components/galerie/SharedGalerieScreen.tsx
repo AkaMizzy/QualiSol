@@ -725,6 +725,8 @@ export default function SharedGalerieScreen({
               ? companyUsers.find((u) => u.id === selectedItem.assigned)
               : undefined
           }
+          audiotxt={selectedItem.audiotxt}
+          iatxt={selectedItem.iatxt}
         />
       )}
       <UserSelectionModal

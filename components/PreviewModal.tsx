@@ -3,16 +3,16 @@ import { Audio, ResizeMode, Video } from "expo-av";
 import { Image } from "expo-image";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Linking,
-    Modal,
-    Pressable,
-    Share,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Linking,
+  Modal,
+  Pressable,
+  Share,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 interface PreviewModalProps {
@@ -42,6 +42,8 @@ interface PreviewModalProps {
   zoneTitle?: string;
   onAssign?: () => void;
   assignedTo?: string | { firstname: string; lastname: string };
+  audiotxt?: string;
+  iatxt?: string;
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
@@ -72,6 +74,8 @@ export default function PreviewModal({
   zoneTitle,
   onAssign,
   assignedTo,
+  audiotxt,
+  iatxt,
 }: PreviewModalProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -199,7 +203,7 @@ export default function PreviewModal({
     const date = new Date(dateString);
     return date.toLocaleDateString("fr-FR", {
       day: "2-digit",
-      month: "long",
+      month: "numeric",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
@@ -529,9 +533,6 @@ export default function PreviewModal({
                         size={16}
                         color="#f87b1b"
                       />
-                      <Text style={styles.metadataSmallValue}>
-                        Sévérité: {level}
-                      </Text>
                     </View>
                   )}
                   {mode && (
@@ -595,15 +596,43 @@ export default function PreviewModal({
                   </View>
                 )}
 
-                {/* Audio Text Placeholder */}
-                <View style={styles.metadataSection}>
-                  <Text style={styles.metadataLabel}>Audio Text</Text>
-                </View>
+                {/* Audio Text Display */}
+                {audiotxt && (
+                  <View style={styles.metadataSection}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                        marginBottom: 4,
+                      }}
+                    >
+                      <Ionicons name="mic-outline" size={16} color="#f87b1b" />
+                    </View>
+                    <Text style={styles.metadataValue}>{audiotxt}</Text>
+                  </View>
+                )}
 
-                {/* IA Text Placeholder */}
-                <View style={styles.metadataSection}>
-                  <Text style={styles.metadataLabel}>IA Text</Text>
-                </View>
+                {/* IA Text Display */}
+                {iatxt && (
+                  <View style={styles.metadataSection}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                        marginBottom: 4,
+                      }}
+                    >
+                      <Ionicons
+                        name="sparkles-outline"
+                        size={16}
+                        color="#f87b1b"
+                      />
+                    </View>
+                    <Text style={styles.metadataValue}>{iatxt}</Text>
+                  </View>
+                )}
                 {/* Title Section (Moved here as requested) */}
                 {title && (
                   <View style={styles.metadataSection}>
