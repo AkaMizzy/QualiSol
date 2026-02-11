@@ -12,7 +12,8 @@ import {
   Ged,
   createGed,
   deleteGed,
-  getMyGeds, // Import new service
+  getMyGeds,
+  updateGed, // Import new service
   updateGedFile,
 } from "@/services/gedService";
 import {
@@ -21,7 +22,9 @@ import {
   getOfflineRecords,
 } from "@/services/offlineStorageService";
 import { startSyncMonitoring } from "@/services/syncService";
+import { getUsers } from "@/services/userService";
 import { OfflineRecord } from "@/types/offlineTypes";
+import { CompanyUser } from "@/types/user";
 import { isVideoFile } from "@/utils/mediaUtils";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -46,6 +49,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import UserSelectionModal from "../UserSelectionModal";
 import BulkAddImageModal from "./BulkAddImageModal";
 
 const IMAGES_PER_PAGE = 2;
@@ -55,6 +59,8 @@ interface SharedGalerieScreenProps {
   customButtonIcon?: any;
   allowOffline?: boolean; // Default: false - controls offline storage/sync functionality
   useBulkModal?: boolean; // Default: false - use BulkAddImageModal instead of AddImageModal
+  fetchData?: (token: string) => Promise<Ged[]>; // Optional custom fetch function
+  enableAssignment?: boolean;
 }
 
 export default function SharedGalerieScreen({
@@ -62,6 +68,8 @@ export default function SharedGalerieScreen({
   customButtonIcon,
   allowOffline = false,
   useBulkModal = false,
+  fetchData,
+  enableAssignment = false,
 }: SharedGalerieScreenProps) {
   const { token, user } = useAuth();
   const { width } = useWindowDimensions();
@@ -83,13 +91,21 @@ export default function SharedGalerieScreen({
     null,
   );
 
+  // Assignment state
+  const [assignModalVisible, setAssignModalVisible] = useState(false);
+  const [companyUsers, setCompanyUsers] = useState<CompanyUser[]>([]);
+  const [itemToAssign, setItemToAssign] = useState<Ged | null>(null);
+
   const isTablet = width >= 768;
 
   const fetchGeds = useCallback(async () => {
     if (token) {
       try {
         setLoading(true);
-        const fetchedGeds = await getMyGeds(token); // Use getMyGeds instead of getAllGeds
+        // Use custom fetchData if provided, otherwise default to getMyGeds
+        const fetchedGeds = fetchData
+          ? await fetchData(token)
+          : await getMyGeds(token);
         setGeds(fetchedGeds);
       } catch (error) {
         console.error("Failed to fetch geds:", error);
@@ -97,7 +113,7 @@ export default function SharedGalerieScreen({
         setLoading(false);
       }
     }
-  }, [token]);
+  }, [token, fetchData]);
 
   const fetchOfflineRecords = useCallback(async () => {
     if (!allowOffline) return; // Skip if offline mode disabled
@@ -108,6 +124,17 @@ export default function SharedGalerieScreen({
       console.error("Failed to fetch offline records:", error);
     }
   }, [allowOffline]);
+
+  const fetchUsers = useCallback(async () => {
+    if (enableAssignment && token) {
+      try {
+        const users = await getUsers();
+        setCompanyUsers(users);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+      }
+    }
+  }, [enableAssignment, token]);
 
   const checkNetworkStatus = useCallback(async () => {
     if (!allowOffline) {
@@ -163,8 +190,22 @@ export default function SharedGalerieScreen({
       fetchOfflineRecords(),
       checkNetworkStatus(),
     ]);
+    if (enableAssignment) {
+      void fetchUsers();
+    }
     setRefreshing(false);
-  }, [fetchGeds, fetchOfflineRecords, checkNetworkStatus]);
+  }, [
+    fetchGeds,
+    fetchOfflineRecords,
+    checkNetworkStatus,
+    enableAssignment,
+    fetchUsers,
+  ]);
+
+  // Initial fetch for users
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleAddImage = async (
     data: {
@@ -250,6 +291,7 @@ export default function SharedGalerieScreen({
           audiotxt: data.audiotxt,
           iatxt: data.iatxt,
           mode: data.mode,
+          answer: undefined,
         });
 
         // Refresh the gallery ONLY if not skipped (e.g. for bulk uploads, only refresh on last item)
@@ -323,6 +365,37 @@ export default function SharedGalerieScreen({
 
   const handleCardPress = (item: Ged) => {
     setSelectedItem(item);
+  };
+
+  const handleOpenAssignModal = () => {
+    if (selectedItem) {
+      setItemToAssign(selectedItem);
+      setAssignModalVisible(true);
+    }
+  };
+
+  const handleAssignUser = async (user: CompanyUser) => {
+    if (!token || !itemToAssign) return;
+
+    try {
+      // Optimistic update
+      const updatedGed: Ged = { ...itemToAssign, assigned: user.id };
+      setGeds((prevGeds) =>
+        prevGeds.map((g) => (g.id === itemToAssign.id ? updatedGed : g)),
+      );
+      setSelectedItem(updatedGed); // Update preview
+
+      // API Call
+      await updateGed(token, itemToAssign.id, { assigned: user.id });
+
+      setAssignModalVisible(false);
+      setItemToAssign(null);
+      Alert.alert("Succès", `Assigné à ${user.firstname} ${user.lastname}`);
+    } catch (error) {
+      console.error("Failed to assign user:", error);
+      Alert.alert("Erreur", "Impossible d'assigner l'utilisateur.");
+      // Revert optimistic update could be done here if needed
+    }
   };
 
   const closePreview = () => {
@@ -647,8 +720,20 @@ export default function SharedGalerieScreen({
               ? `${API_CONFIG.BASE_URL}${selectedItem.urlvoice}`
               : undefined
           }
+          onAssign={enableAssignment ? handleOpenAssignModal : undefined}
+          assignedTo={
+            selectedItem.assigned
+              ? companyUsers.find((u) => u.id === selectedItem.assigned)
+              : undefined
+          }
         />
       )}
+      <UserSelectionModal
+        visible={assignModalVisible}
+        onClose={() => setAssignModalVisible(false)}
+        onSelect={handleAssignUser}
+        users={companyUsers}
+      />
       <Modal visible={isAnnotatorVisible} animationType="slide">
         {annotatorImageUri && (
           <PictureAnnotator

@@ -17,7 +17,14 @@ type ParameterCard = {
 };
 
 const PARAMETER_CARDS: ParameterCard[] = [
+  
   {
+    title: "Constats",
+    description: "Visualiser tous les constats de l'entreprise",
+    image: require("../../assets/icons/camera_p.png"),
+    route: "/constats",
+    color: "#0ea5e9",
+  },{
     title: "Organisme",
     description: "Gérer les informations de votre organisme",
     image: require("../../assets/icons/company.png"),
@@ -59,6 +66,7 @@ const PARAMETER_CARDS: ParameterCard[] = [
     route: "/anomalie2",
     color: "#ef4444",
   },
+  
 ];
 
 export default function ParametersScreen() {

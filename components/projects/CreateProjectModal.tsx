@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import companyService from "@/services/companyService";
 import { createGed } from "@/services/gedService";
 import { createProject, getAllProjects } from "@/services/projectService";
-import { getAllProjectTypes } from "@/services/projectTypeService";
+
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -44,18 +44,14 @@ export default function CreateProjectModal({
   const [dd, setDd] = useState("");
   const [df, setDf] = useState("");
   const [ownerId, setOwnerId] = useState("");
-  const [projectTypeId, setProjectTypeId] = useState("");
-  const [projectTypes, setProjectTypes] = useState<
-    { id: string; title: string }[]
-  >([]);
-  const [projectTypeOpen, setProjectTypeOpen] = useState(false);
+
   const [companyUsers, setCompanyUsers] = useState<
     { id: string; firstname?: string; lastname?: string; email?: string }[]
   >([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
   const [ownerOpen, setOwnerOpen] = useState(false);
-  const [loadingTypes, setLoadingTypes] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDdPickerVisible, setDdPickerVisible] = useState(false);
@@ -170,24 +166,6 @@ export default function CreateProjectModal({
     loadUsers();
   }, [visible, token]);
 
-  useEffect(() => {
-    async function loadProjectTypes() {
-      if (!token) return;
-      setLoadingTypes(true);
-      try {
-        const data = await getAllProjectTypes(token);
-        setProjectTypes(
-          data.map((t: any) => ({ id: String(t.id), title: t.title })),
-        );
-      } catch {
-        setProjectTypes([]);
-      } finally {
-        setLoadingTypes(false);
-      }
-    }
-    if (visible && token) loadProjectTypes();
-  }, [visible, token]);
-
   function generateProjectCode() {
     const ts = Date.now().toString(36).toUpperCase();
     return `PRJ-${ts}`;
@@ -221,7 +199,6 @@ export default function CreateProjectModal({
         control_id: undefined,
         // @ts-ignore - Fields removed from UI but might be required by type
         technicien_id: undefined,
-        projecttype_id: projectTypeId || undefined,
       });
 
       // Upload Logo if selected
@@ -256,7 +233,7 @@ export default function CreateProjectModal({
       setDd("");
       setDf("");
       setOwnerId("");
-      setProjectTypeId("");
+
       setError(null);
       if (onCreated) await onCreated();
       onClose();
@@ -457,107 +434,6 @@ export default function CreateProjectModal({
                     onChangeText={setTitle}
                     style={stylesFS.input}
                   />
-                </View>
-
-                {/* Project Type */}
-                <View style={{ marginBottom: 24 }}>
-                  <Text style={stylesFS.label}>Type de chantier</Text>
-                  <TouchableOpacity
-                    style={[
-                      stylesFS.inputWrap,
-                      { justifyContent: "space-between" },
-                    ]}
-                    onPress={() => setProjectTypeOpen((v) => !v)}
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 10,
-                        flex: 1,
-                      }}
-                    >
-                      <Ionicons
-                        name="albums-outline"
-                        size={20}
-                        color="#9ca3af"
-                      />
-                      <Text
-                        style={[
-                          stylesFS.input,
-                          { color: projectTypeId ? "#111827" : "#9ca3af" },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {projectTypeId
-                          ? projectTypes.find(
-                              (pt) => String(pt.id) === String(projectTypeId),
-                            )?.title || projectTypeId
-                          : "Sélectionner un type"}
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name={projectTypeOpen ? "chevron-up" : "chevron-down"}
-                      size={20}
-                      color="#9ca3af"
-                    />
-                  </TouchableOpacity>
-
-                  {projectTypeOpen && (
-                    <View style={stylesFS.dropdownList}>
-                      <ScrollView
-                        nestedScrollEnabled
-                        keyboardShouldPersistTaps="handled"
-                        style={{ maxHeight: 200 }}
-                      >
-                        {loadingTypes ? (
-                          <View style={{ padding: 12 }}>
-                            <Text style={stylesFS.placeholderText}>
-                              Chargement...
-                            </Text>
-                          </View>
-                        ) : projectTypes.length === 0 ? (
-                          <View style={{ padding: 12 }}>
-                            <Text style={stylesFS.placeholderText}>
-                              Aucun type disponible
-                            </Text>
-                          </View>
-                        ) : (
-                          projectTypes.map((pt) => (
-                            <TouchableOpacity
-                              key={pt.id}
-                              onPress={() => {
-                                setProjectTypeId(String(pt.id));
-                                setProjectTypeOpen(false);
-                              }}
-                              style={[
-                                stylesFS.dropdownItem,
-                                String(projectTypeId) === String(pt.id) &&
-                                  stylesFS.dropdownItemSelected,
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  stylesFS.dropdownItemText,
-                                  String(projectTypeId) === String(pt.id) &&
-                                    stylesFS.dropdownItemTextSelected,
-                                ]}
-                              >
-                                {pt.title}
-                              </Text>
-                              {String(projectTypeId) === String(pt.id) && (
-                                <Ionicons
-                                  name="checkmark"
-                                  size={16}
-                                  color="#f87b1b"
-                                />
-                              )}
-                            </TouchableOpacity>
-                          ))
-                        )}
-                      </ScrollView>
-                    </View>
-                  )}
                 </View>
 
                 <Text style={stylesFS.sectionTitle}>PÉRIODE</Text>

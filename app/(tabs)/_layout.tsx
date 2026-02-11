@@ -24,6 +24,8 @@ export default function TabLayout() {
       <Tabs.Screen name="danger" />
       <Tabs.Screen name="galerie" />
       <Tabs.Screen name="constat" />
+      <Tabs.Screen name="constats" />
+
       <Tabs.Screen name="transfert" />
       <Tabs.Screen name="profile" />
       <Tabs.Screen name="projects" />

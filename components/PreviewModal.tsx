@@ -3,16 +3,16 @@ import { Audio, ResizeMode, Video } from "expo-av";
 import { Image } from "expo-image";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Linking,
-  Modal,
-  Pressable,
-  Share,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Linking,
+    Modal,
+    Pressable,
+    Share,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 
 interface PreviewModalProps {
@@ -40,6 +40,8 @@ interface PreviewModalProps {
   level?: number;
   mode?: "upload" | "capture";
   zoneTitle?: string;
+  onAssign?: () => void;
+  assignedTo?: string | { firstname: string; lastname: string };
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
@@ -68,6 +70,8 @@ export default function PreviewModal({
   level,
   mode,
   zoneTitle,
+  onAssign,
+  assignedTo,
 }: PreviewModalProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -583,6 +587,28 @@ export default function PreviewModal({
                 {title && (
                   <View style={styles.metadataSection}>
                     <Text style={styles.metadataValue}>{title}</Text>
+                  </View>
+                )}
+
+                {/* Assigned User Display */}
+                {assignedTo && (
+                  <View style={styles.metadataSection}>
+                    <Text style={styles.metadataLabel}>Assigné à</Text>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      <Ionicons
+                        name="person-circle-outline"
+                        size={20}
+                        color="#f87b1b"
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text style={styles.metadataValue}>
+                        {typeof assignedTo === "string"
+                          ? assignedTo
+                          : `${assignedTo.firstname} ${assignedTo.lastname}`}
+                      </Text>
+                    </View>
                   </View>
                 )}
 
