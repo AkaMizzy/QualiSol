@@ -390,7 +390,6 @@ export default function SharedGalerieScreen({
 
       setAssignModalVisible(false);
       setItemToAssign(null);
-      Alert.alert("Succès", `Assigné à ${user.firstname} ${user.lastname}`);
     } catch (error) {
       console.error("Failed to assign user:", error);
       Alert.alert("Erreur", "Impossible d'assigner l'utilisateur.");
