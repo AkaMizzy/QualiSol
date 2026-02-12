@@ -12,6 +12,8 @@ interface AppHeaderProps {
   onNotificationPress?: () => void;
   onProfilePress?: () => void;
   onNavigate?: () => void;
+  onLogoPress?: () => void;
+  rightComponent?: React.ReactNode;
   user?: {
     firstname?: string;
     lastname?: string;
@@ -27,6 +29,8 @@ export default function AppHeader({
   onNotificationPress,
   onProfilePress,
   onNavigate,
+  onLogoPress,
+  rightComponent,
   user,
 }: AppHeaderProps) {
   const router = useRouter();
@@ -116,9 +120,15 @@ export default function AppHeader({
       <View style={styles.headerRow}>
         <TouchableOpacity
           style={styles.headerLeft}
-          onPress={() => handleNavigate("/(tabs)")}
+          onPress={() => {
+            if (onLogoPress) {
+              onLogoPress();
+            } else {
+              handleNavigate("/(tabs)");
+            }
+          }}
           accessibilityRole="button"
-          accessibilityLabel="Navigate to home"
+          accessibilityLabel={onLogoPress ? "Action" : "Navigate to home"}
         >
           <Image
             source={
@@ -149,32 +159,38 @@ export default function AppHeader({
 
         {/* Right side - Action Icons */}
         <View style={styles.headerRight}>
-          {showProfile && (
-            <TouchableOpacity
-              accessibilityRole="button"
-              style={styles.iconButton}
-              onPress={handleProfilePress}
-            >
-              {user?.photo && !imageError ? (
-                <Image
-                  source={{ uri: `${API_CONFIG.BASE_URL}${user.photo}` }}
-                  style={styles.avatar}
-                  onError={() => {
-                    console.log(
-                      "Failed to load avatar image:",
-                      `${API_CONFIG.BASE_URL}${user.photo}`,
-                    );
-                    setImageError(true);
-                  }}
-                />
-              ) : (
-                <Ionicons
-                  name="person-circle-outline"
-                  size={28}
-                  color="#FF6B35"
-                />
+          {rightComponent ? (
+            rightComponent
+          ) : (
+            <>
+              {showProfile && (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  style={styles.iconButton}
+                  onPress={handleProfilePress}
+                >
+                  {user?.photo && !imageError ? (
+                    <Image
+                      source={{ uri: `${API_CONFIG.BASE_URL}${user.photo}` }}
+                      style={styles.avatar}
+                      onError={() => {
+                        console.log(
+                          "Failed to load avatar image:",
+                          `${API_CONFIG.BASE_URL}${user.photo}`,
+                        );
+                        setImageError(true);
+                      }}
+                    />
+                  ) : (
+                    <Ionicons
+                      name="person-circle-outline"
+                      size={28}
+                      color="#FF6B35"
+                    />
+                  )}
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
+            </>
           )}
         </View>
       </View>
@@ -189,6 +205,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 2,
     borderBottomColor: "#f87b1b",
+    zIndex: 10,
   },
   headerRow: {
     flexDirection: "row",
@@ -207,7 +224,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerRight: {
-    width: 50,
+    minWidth: 50,
     flexDirection: "row",
     justifyContent: "flex-end",
     alignItems: "center",

@@ -22,6 +22,7 @@ export interface Company {
   nbfolders?: number;
   nbzones?: number;
   nbchanitiers?: number;
+  nbimages?: number;
   sizeimages?: number;
   nbimagetake?: number;
   status?: string;
@@ -30,4 +31,3 @@ export interface Company {
   prompt4?: string | null;
   prompt5?: string | null;
 }
-

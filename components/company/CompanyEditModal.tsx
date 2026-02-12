@@ -1,5 +1,5 @@
+import { useAuth } from "@/contexts/AuthContext";
 import companyService from "@/services/companyService";
-import Ionicons from "@expo/vector-icons/build/Ionicons";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
 import {
@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Company } from "../../types/company";
+import AppHeader from "../AppHeader";
 
 interface CompanyEditModalProps {
   visible: boolean;
@@ -58,12 +59,26 @@ const InputField = ({
   </View>
 );
 
+const StatItem = ({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) => (
+  <View style={styles.statItem}>
+    <Text style={styles.statLabel}>{label}</Text>
+    <Text style={styles.statValue}>{value}</Text>
+  </View>
+);
+
 export default function CompanyEditModal({
   visible,
   onClose,
   company,
   onUpdated,
 }: CompanyEditModalProps) {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [logoUri, setLogoUri] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -193,7 +208,7 @@ export default function CompanyEditModal({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
       <SafeAreaView style={styles.safeArea}>
@@ -202,26 +217,27 @@ export default function CompanyEditModal({
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color="#6b7280" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Modifier l&apos;organisme</Text>
-            <TouchableOpacity
-              onPress={handleSave}
-              style={[
-                styles.saveButton,
-                isLoading && styles.saveButtonDisabled,
-              ]}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color="#f87b1b" />
-              ) : (
-                <Text style={styles.saveButtonText}>Enregistrer</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          <AppHeader
+            user={user || undefined}
+            onLogoPress={onClose}
+            showProfile={false}
+            rightComponent={
+              <TouchableOpacity
+                onPress={handleSave}
+                style={[
+                  styles.saveButton,
+                  isLoading && styles.saveButtonDisabled,
+                ]}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#f87b1b" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Enregistrer</Text>
+                )}
+              </TouchableOpacity>
+            }
+          />
 
           <ScrollView
             style={styles.content}
@@ -237,7 +253,6 @@ export default function CompanyEditModal({
                 keyboardType="email-address"
                 required
               />
-
               <InputField
                 label="Téléphone"
                 value={formData.phone}
@@ -258,7 +273,6 @@ export default function CompanyEditModal({
                 onChangeText={(text) => handleInputChange("city", text)}
                 placeholder="Paris"
               />
-
             </View>
 
             {/* Prompts Section */}
@@ -300,6 +314,33 @@ export default function CompanyEditModal({
                 multiline
               />
             </View>
+
+            {/* Statistics Section */}
+            <View style={[styles.section, { borderBottomWidth: 0 }]}>
+              <Text style={styles.sectionTitle}>Statistiques</Text>
+              <View style={styles.statsGrid}>
+                <StatItem label="Utilisateurs" value={company?.nbusers || 0} />
+                <StatItem
+                  label="Chantiers"
+                  value={company?.nbchanitiers || 0}
+                />
+                <StatItem label="Zones" value={company?.nbzones || 0} />
+                <StatItem label="Dossiers" value={company?.nbfolders || 0} />
+                <StatItem label="Images" value={company?.nbimages || 0} />
+                <StatItem
+                  label="Taille Images"
+                  value={
+                    company?.sizeimages
+                      ? `${(company.sizeimages / (1024 * 1024)).toFixed(2)} MB`
+                      : "0 MB"
+                  }
+                />
+                <StatItem
+                  label="Images Prises"
+                  value={company?.nbimagetake || 0}
+                />
+              </View>
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -315,26 +356,6 @@ const styles = {
   container: {
     flex: 1,
     backgroundColor: "white",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-    backgroundColor: "white",
-  },
-  closeButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#11224e",
-    flex: 1,
-    textAlign: "center",
   },
   saveButton: {
     backgroundColor: "#f87b1b",
@@ -377,7 +398,7 @@ const styles = {
   inputLabel: {
     fontSize: 16,
     fontWeight: "500",
-    color: "#374151",
+    color: "#f87b1b",
     marginBottom: 8,
   },
   required: {
@@ -385,7 +406,7 @@ const styles = {
   },
   input: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: "#f87b1b",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 16,
@@ -427,5 +448,28 @@ const styles = {
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#e5e7eb",
+  },
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  statItem: {
+    width: "48%",
+    backgroundColor: "#f9fafb",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  statLabel: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#11224e",
   },
 } as const;
