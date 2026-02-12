@@ -131,12 +131,9 @@ export default function AppHeader({
           accessibilityLabel={onLogoPress ? "Action" : "Navigate to home"}
         >
           <Image
-            source={
-              companyLogo && !logoError ? { uri: companyLogo } : ICONS.newIcon
-            }
+            source={ICONS.newIcon}
             style={styles.logo}
             resizeMode="contain"
-            onError={() => setLogoError(true)}
           />
         </TouchableOpacity>
 
@@ -169,7 +166,14 @@ export default function AppHeader({
                   style={styles.iconButton}
                   onPress={handleProfilePress}
                 >
-                  {user?.photo && !imageError ? (
+                  {companyLogo && !logoError ? (
+                    <Image
+                      source={{ uri: companyLogo }}
+                      style={styles.avatar} // Keeping avatar style for consistent sizing
+                      resizeMode="contain" // Ensure logo fits well
+                      onError={() => setLogoError(true)}
+                    />
+                  ) : user?.photo && !imageError ? (
                     <Image
                       source={{ uri: `${API_CONFIG.BASE_URL}${user.photo}` }}
                       style={styles.avatar}

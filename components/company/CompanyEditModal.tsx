@@ -471,13 +471,12 @@ const styles = {
     justifyContent: "space-between",
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#f87b1b",
   },
   statValue: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     color: "#11224e",
-    marginLeft: 4,
   },
 } as const;

@@ -38,14 +38,7 @@ const PARAMETER_CARDS: ParameterCard[] = [
     route: "/projects",
     color: "#ec4899",
   },
-  {
-    title: "Utilisateurs",
-    description: "Gérer les utilisateurs et leurs rôles",
-    image: require("../../assets/icons/users.png"),
-    route: "/users",
-    color: "#8b5cf6",
-  },
-
+  
   {
     title: "Anomalie niveau 1",
     description: "Configuration des anomalies de niveau 1",
@@ -59,6 +52,13 @@ const PARAMETER_CARDS: ParameterCard[] = [
     image: require("../../assets/icons/anomalie.png"),
     route: "/anomalie2",
     color: "#ef4444",
+  },
+  {
+    title: "Utilisateurs",
+    description: "Gérer les utilisateurs et leurs rôles",
+    image: require("../../assets/icons/users.png"),
+    route: "/users",
+    color: "#8b5cf6",
   },
   {
     title: "Organisme",
