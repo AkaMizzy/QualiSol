@@ -16,6 +16,7 @@ import {
   Animated,
   Easing,
   LayoutAnimation,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -29,7 +30,6 @@ import {
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
-import ReportsModal from "../reports/ReportsModal";
 import FolderContextModal from "./FolderContextModal";
 
 type Props = {
@@ -54,7 +54,6 @@ export default function ProjectDetailModal({
   const [isLoadingFolders, setIsLoadingFolders] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
 
   // Enable smooth layout animations on Android
@@ -193,6 +192,16 @@ export default function ProjectDetailModal({
     );
   };
 
+  const handleOpenReport = (url: string | null | undefined) => {
+    if (url) {
+      Linking.openURL(url).catch((err) =>
+        Alert.alert("Erreur", "Impossible d'ouvrir le lien"),
+      );
+    } else {
+      Alert.alert("Info", "Aucun document disponible.");
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
     async function loadData() {
@@ -244,7 +253,7 @@ export default function ProjectDetailModal({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
       <SafeAreaView style={styles.container}>
@@ -298,20 +307,6 @@ export default function ProjectDetailModal({
               >
                 <Ionicons name="trash-outline" size={16} color="#f87b1b" />
                 <Text style={styles.ctaText}>Supprimer</Text>
-              </Pressable>
-            ) : null}
-            {!isEditing ? (
-              <Pressable
-                onPress={() => setIsReportsModalOpen(true)}
-                android_ripple={{ color: "#fde7d4" }}
-                style={styles.ctaButton}
-              >
-                <Ionicons
-                  name="document-text-outline"
-                  size={16}
-                  color="#f87b1b"
-                />
-                <Text style={styles.ctaText}>Rapports PDF</Text>
               </Pressable>
             ) : null}
 
@@ -400,6 +395,48 @@ export default function ProjectDetailModal({
               </Pressable>
             ) : null}
           </View>
+
+          {/* PDF Buttons Row */}
+          {!isEditing ? (
+            <View style={styles.pdfRow}>
+              <Pressable
+                onPress={() => handleOpenReport(project.urlreport1)}
+                android_ripple={{ color: "#fde7d4" }}
+                style={styles.ctaButton}
+              >
+                <Ionicons
+                  name="document-text-outline"
+                  size={16}
+                  color="#f87b1b"
+                />
+                <Text style={styles.ctaText}>PDF 1</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => handleOpenReport(project.urlreport2)}
+                android_ripple={{ color: "#fde7d4" }}
+                style={styles.ctaButton}
+              >
+                <Ionicons
+                  name="document-text-outline"
+                  size={16}
+                  color="#f87b1b"
+                />
+                <Text style={styles.ctaText}>PDF 2</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => handleOpenReport(project.urlreport3)}
+                android_ripple={{ color: "#fde7d4" }}
+                style={styles.ctaButton}
+              >
+                <Ionicons
+                  name="document-text-outline"
+                  size={16}
+                  color="#f87b1b"
+                />
+                <Text style={styles.ctaText}>PDF 3</Text>
+              </Pressable>
+            </View>
+          ) : null}
 
           {/* Overview Card (collapsible) */}
           <View style={styles.card}>
@@ -721,12 +758,6 @@ export default function ProjectDetailModal({
           </View>
         </ScrollView>
 
-        {/* Reports Modal */}
-        <ReportsModal
-          visible={isReportsModalOpen}
-          onClose={() => setIsReportsModalOpen(false)}
-        />
-
         <FolderContextModal
           visible={!!selectedFolder}
           folder={selectedFolder}
@@ -820,6 +851,12 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 8,
     paddingTop: 8,
+  },
+  pdfRow: {
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 8,
+    marginTop: 12,
   },
   ctaButton: {
     flexDirection: "row",

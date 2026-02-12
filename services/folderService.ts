@@ -37,6 +37,9 @@ export interface Folder {
   company_id: string;
   created_at: string;
   updated_at: string;
+  urlreport1?: string;
+  urlreport2?: string;
+  urlreport3?: string;
 }
 
 export interface Project {

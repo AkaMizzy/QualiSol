@@ -12,6 +12,7 @@ import {
     ActivityIndicator,
     Alert,
     FlatList,
+    Linking,
     Modal,
     Platform,
     StyleSheet,
@@ -94,6 +95,16 @@ export default function FolderContextModal({
       );
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  const handleOpenReport = (url: string | null | undefined) => {
+    if (url) {
+      Linking.openURL(url).catch((err) =>
+        Alert.alert("Erreur", "Impossible d'ouvrir le lien"),
+      );
+    } else {
+      Alert.alert("Info", "Aucun document disponible.");
     }
   };
 
@@ -186,6 +197,31 @@ export default function FolderContextModal({
             })()}
           </View>
           <View style={styles.placeholder} />
+        </View>
+
+        {/* PDF Buttons Row */}
+        <View style={styles.pdfRow}>
+          <TouchableOpacity
+            onPress={() => handleOpenReport(currentFolder?.urlreport1)}
+            style={styles.ctaButton}
+          >
+            <Ionicons name="document-text-outline" size={16} color="#f87b1b" />
+            <Text style={styles.ctaText}>PDF 1</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleOpenReport(currentFolder?.urlreport2)}
+            style={styles.ctaButton}
+          >
+            <Ionicons name="document-text-outline" size={16} color="#f87b1b" />
+            <Text style={styles.ctaText}>PDF 2</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleOpenReport(currentFolder?.urlreport3)}
+            style={styles.ctaButton}
+          >
+            <Ionicons name="document-text-outline" size={16} color="#f87b1b" />
+            <Text style={styles.ctaText}>PDF 3</Text>
+          </TouchableOpacity>
         </View>
 
         {isLoading ? (
@@ -313,4 +349,25 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     marginTop: 2,
   },
+  pdfRow: {
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    backgroundColor: "#FFFFFF",
+  },
+  ctaButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 9999,
+  },
+  ctaText: { color: "#f87b1b", fontWeight: "600", fontSize: 12 },
 });

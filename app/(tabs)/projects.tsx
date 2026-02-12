@@ -4,17 +4,19 @@ import ProjectDetailModal from "@/components/projects/ProjectDetailModal";
 import ProjectTypeManagerModal from "@/components/projects/ProjectTypeManagerModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAllProjects, Project } from "@/services/projectService";
+import { getUsers } from "@/services/userService";
+import { CompanyUser } from "@/types/user";
 import { formatDisplayDate } from "@/utils/dateFormat";
 import Ionicons from "@expo/vector-icons/build/Ionicons";
 import { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -22,6 +24,7 @@ export default function ProjectsScreen() {
   const { token, user } = useAuth();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [users, setUsers] = useState<CompanyUser[]>([]);
   const { width } = useWindowDimensions();
   const [createVisible, setCreateVisible] = useState<boolean>(false);
   const [detailVisible, setDetailVisible] = useState<boolean>(false);
@@ -53,6 +56,12 @@ export default function ProjectsScreen() {
     refreshProjects();
   }, [token, refreshProjects]);
 
+  useEffect(() => {
+    if (token) {
+      getUsers().then(setUsers).catch(console.error);
+    }
+  }, [token]);
+
   const columnCount = width >= 900 ? 3 : 2;
   const horizontalPadding = 16;
   const gap = 12;
@@ -64,7 +73,6 @@ export default function ProjectsScreen() {
       <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
         <AppHeader user={user || undefined} />
         <View style={styles.headerContainer}>
-          
           <View style={styles.pageHeader}>
             <View style={{ flex: 1 }}>
               <Text
@@ -140,13 +148,6 @@ export default function ProjectsScreen() {
                       </Text>
                     </View>
                     <View style={{ marginTop: 6 }}>
-                      {item.company_title ? (
-                        <Text style={styles.cardMeta}>
-                          Société · {item.company_title}
-                        </Text>
-                      ) : (
-                        <Text style={styles.cardMeta}>Société · —</Text>
-                      )}
                       <Text style={styles.cardSub}>
                         Du {formatDisplayDate(item.dd)} au{" "}
                         {formatDisplayDate(item.df)}
@@ -156,6 +157,17 @@ export default function ProjectsScreen() {
                           Type · {item.project_type_title}
                         </Text>
                       ) : null}
+                      {(() => {
+                        const owner = users.find((u) => u.id === item.owner_id);
+                        if (owner) {
+                          return (
+                            <Text style={styles.cardMeta}>
+                              Resp: {owner.firstname} {owner.lastname}
+                            </Text>
+                          );
+                        }
+                        return null;
+                      })()}
                     </View>
                   </TouchableOpacity>
                 );
@@ -248,7 +260,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#f87b1b",
     borderRadius: 10,
     padding: 12,
     backgroundColor: "white",
@@ -256,7 +268,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#11224e",
+    color: "#f87b1b",
   },
   cardSub: {
     marginTop: 4,

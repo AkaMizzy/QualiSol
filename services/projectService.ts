@@ -13,6 +13,9 @@ export type Project = {
   control_id: string | null;
   technicien_id: string | null;
   projecttype_id: string | null;
+  urlreport1: string | null;
+  urlreport2: string | null;
+  urlreport3: string | null;
   project_type_title?: string | null; // This might need to be fetched separately
   company_title?: string | null; // Company name for display
   createdAt: string;
@@ -29,6 +32,9 @@ type CreateProjectInput = {
   control_id: string;
   technicien_id: string;
   projecttype_id?: string;
+  urlreport1?: string;
+  urlreport2?: string;
+  urlreport3?: string;
 };
 
 type UpdateProjectInput = Partial<{
@@ -41,6 +47,9 @@ type UpdateProjectInput = Partial<{
   control_id: string | null;
   technicien_id: string | null;
   projecttype_id: string | null;
+  urlreport1: string | null;
+  urlreport2: string | null;
+  urlreport3: string | null;
 }>;
 
 export async function getAllProjects(token: string): Promise<Project[]> {
