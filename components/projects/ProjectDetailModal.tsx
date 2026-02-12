@@ -1,33 +1,36 @@
 import { useAuth } from "@/contexts/AuthContext";
 import folderService, { Folder } from "@/services/folderService";
 import {
-    deleteProject,
-    Project,
-    updateProject,
+  deleteProject,
+  Project,
+  updateProject,
 } from "@/services/projectService";
+import { getUsers } from "@/services/userService";
+import { CompanyUser } from "@/types/user";
 import { formatDisplayDate } from "@/utils/dateFormat";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Easing,
-    LayoutAnimation,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    UIManager,
-    View,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Easing,
+  LayoutAnimation,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  UIManager,
+  View,
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ReportsModal from "../reports/ReportsModal";
+import FolderContextModal from "./FolderContextModal";
 
 type Props = {
   visible: boolean;
@@ -47,10 +50,12 @@ export default function ProjectDetailModal({
   const isSuperAdmin = user?.role === "Super Admin";
 
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [usersList, setUsersList] = useState<CompanyUser[]>([]);
   const [isLoadingFolders, setIsLoadingFolders] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
 
   // Enable smooth layout animations on Android
   if (
@@ -155,6 +160,39 @@ export default function ProjectDetailModal({
     );
   };
 
+  const handleDeleteFolder = (folderId: string, folderTitle: string) => {
+    if (!token) return;
+
+    Alert.alert(
+      "Supprimer le dossier",
+      `Êtes-vous sûr de vouloir supprimer le dossier "${folderTitle}" ?\n\nCette action est irréversible.`,
+      [
+        {
+          text: "Annuler",
+          style: "cancel",
+        },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await folderService.deleteFolder(folderId, token);
+              // Remove locally
+              setFolders((prev) => prev.filter((f) => f.id !== folderId));
+              Alert.alert("Succès", "Dossier supprimé avec succès");
+            } catch (e: any) {
+              console.error("Failed to delete folder", e);
+              Alert.alert(
+                "Erreur",
+                e?.message || "Échec de la suppression du dossier",
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
   useEffect(() => {
     let cancelled = false;
     async function loadData() {
@@ -166,12 +204,17 @@ export default function ProjectDetailModal({
       // Load folders
       setIsLoadingFolders(true);
       try {
-        const allFolders = await folderService.getAllFolders(token);
+        const [allFolders, allUsers] = await Promise.all([
+          folderService.getAllFolders(token),
+          getUsers(),
+        ]);
+
         if (!cancelled) {
           setFolders(allFolders.filter((f) => f.project_id === project.id));
+          setUsersList(allUsers);
         }
       } catch (e) {
-        console.error("Failed to load folders", e);
+        console.error("Failed to load data", e);
       } finally {
         if (!cancelled) setIsLoadingFolders(false);
       }
@@ -575,8 +618,10 @@ export default function ProjectDetailModal({
                 ) : (
                   <View style={{ gap: 8 }}>
                     {folders.map((folder) => (
-                      <View
+                      <TouchableOpacity
                         key={folder.id}
+                        onPress={() => setSelectedFolder(folder)}
+                        activeOpacity={0.7}
                         style={{
                           backgroundColor: "#f9fafb",
                           padding: 10,
@@ -610,13 +655,22 @@ export default function ProjectDetailModal({
                               style={{
                                 fontSize: 12,
                                 color: "#6b7280",
-                                fontFamily:
-                                  Platform.OS === "ios"
-                                    ? "Courier"
-                                    : "monospace",
+                                fontFamily: "System",
+                                fontWeight: "500",
+                                // fontFamily:
+                                //   Platform.OS === "ios"
+                                //     ? "Courier"
+                                //     : "monospace",
                               }}
                             >
-                              {folder.code}
+                              {(() => {
+                                const owner = usersList.find(
+                                  (u) => u.id === folder.owner_id,
+                                );
+                                return owner
+                                  ? `${owner.firstname} ${owner.lastname}`
+                                  : "Non assigné";
+                              })()}
                             </Text>
                             {folder.created_at ? (
                               <Text style={{ fontSize: 12, color: "#9ca3af" }}>
@@ -626,12 +680,39 @@ export default function ProjectDetailModal({
                           </View>
                         </View>
                         {/* Optional status or icon */}
-                        <Ionicons
-                          name="folder-outline"
-                          size={18}
-                          color="#9ca3af"
-                        />
-                      </View>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 12,
+                          }}
+                        >
+                          {/* Folder Icon - purely visual now, or keep as part of row */}
+                          {/* Delete Button */}
+                          <TouchableOpacity
+                            onPress={() =>
+                              handleDeleteFolder(folder.id, folder.title)
+                            }
+                            style={{
+                              padding: 6,
+                              // backgroundColor: "#fee2e2",
+                              // borderRadius: 8,
+                            }}
+                          >
+                            <Ionicons
+                              name="trash-outline"
+                              size={18}
+                              color="#ef4444"
+                            />
+                          </TouchableOpacity>
+
+                          <Ionicons
+                            name="chevron-forward"
+                            size={18}
+                            color="#9ca3af"
+                          />
+                        </View>
+                      </TouchableOpacity>
                     ))}
                   </View>
                 )}
@@ -644,6 +725,13 @@ export default function ProjectDetailModal({
         <ReportsModal
           visible={isReportsModalOpen}
           onClose={() => setIsReportsModalOpen(false)}
+        />
+
+        <FolderContextModal
+          visible={!!selectedFolder}
+          folder={selectedFolder}
+          onClose={() => setSelectedFolder(null)}
+          token={token || null}
         />
 
         {/* Date Pickers */}
