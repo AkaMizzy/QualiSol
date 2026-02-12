@@ -10,6 +10,7 @@ import { getUsers } from "@/services/userService";
 import { CompanyUser } from "@/types/user";
 import { formatDisplayDate } from "@/utils/dateFormat";
 import { Ionicons } from "@expo/vector-icons";
+import * as ExpoLocation from "expo-location";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -246,7 +247,68 @@ export default function ProjectDetailModal({
     }
   }, [project]);
 
-  // Owner derivation removed
+  const handleCaptureLocation = async () => {
+    if (!project || !token) return;
+
+    Alert.alert(
+      "Capturer la position GPS",
+      "Voulez-vous capturer votre position GPS actuelle?",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Capturer",
+          onPress: async () => {
+            try {
+              // Request permissions
+              const { status } =
+                await ExpoLocation.requestForegroundPermissionsAsync();
+              if (status !== "granted") {
+                Alert.alert(
+                  "Permission refusée",
+                  "L'accès à la localisation est nécessaire pour capturer la position GPS.",
+                );
+                return;
+              }
+
+              // Get current location with high accuracy
+              const location = await ExpoLocation.getCurrentPositionAsync({
+                accuracy: ExpoLocation.Accuracy.High,
+              });
+
+              const { latitude, longitude, altitude, accuracy } =
+                location.coords;
+
+              // Update project with captured coordinates
+              setIsSaving(true);
+              const updated = await updateProject(token, project.id, {
+                latitude: latitude.toString(),
+                longitude: longitude.toString(),
+                altitude: altitude?.toString() || null,
+                accuracy: accuracy?.toString() || null,
+                altitudeAccuracy: null, // Not provided by expo-location
+              });
+
+              // Update local state
+              if (onUpdated) await onUpdated();
+              setIsSaving(false);
+
+              Alert.alert(
+                "Succès",
+                `Position GPS capturée:\nLatitude: ${latitude.toFixed(6)}\nLongitude: ${longitude.toFixed(6)}`,
+              );
+            } catch (error) {
+              setIsSaving(false);
+              console.error("Error capturing location:", error);
+              Alert.alert(
+                "Erreur",
+                "Impossible de capturer la position GPS. Assurez-vous que les services de localisation sont activés.",
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
 
   if (!project) return null;
 
@@ -306,6 +368,39 @@ export default function ProjectDetailModal({
               >
                 <Ionicons name="trash-outline" size={16} color="#f87b1b" />
                 <Text style={styles.ctaText}>Supprimer</Text>
+              </Pressable>
+            ) : null}
+
+            {/* GPS Location Icon - shows in edit mode */}
+            {isEditing ? (
+              <Pressable
+                onPress={handleCaptureLocation}
+                disabled={isSaving}
+                android_ripple={{ color: "#fde7d4" }}
+                style={styles.ctaButton}
+              >
+                <Ionicons
+                  name="location-outline"
+                  size={16}
+                  color={
+                    !project.latitude || !project.longitude
+                      ? "#ef4444"
+                      : "#10b981"
+                  }
+                />
+                <Text
+                  style={[
+                    styles.ctaText,
+                    {
+                      color:
+                        !project.latitude || !project.longitude
+                          ? "#ef4444"
+                          : "#10b981",
+                    },
+                  ]}
+                >
+                  GPS
+                </Text>
               </Pressable>
             ) : null}
 
@@ -444,7 +539,6 @@ export default function ProjectDetailModal({
               style={styles.cardHeader}
               android_ripple={{ color: "#f3f4f6" }}
             >
-
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
               >
@@ -453,7 +547,6 @@ export default function ProjectDetailModal({
             </Pressable>
             {openOverview && (
               <View style={{ marginTop: 8, gap: 6 }}>
-                
                 {/* 2. Title - editable or view-only */}
                 {!isEditing ? (
                   <Pressable
@@ -488,10 +581,6 @@ export default function ProjectDetailModal({
                     />
                   </View>
                 )}
-
-                
-
-               
               </View>
             )}
           </View>

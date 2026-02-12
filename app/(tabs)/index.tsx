@@ -326,7 +326,7 @@ export default function DashboardScreen() {
         } catch (error) {
           console.error("Failed to fetch company info:", error);
         }
-      } catch {
+      } catch (error: any) {
         // keep UI functional without stats
         setStats({
           pending: 0,
@@ -338,6 +338,15 @@ export default function DashboardScreen() {
         setTodayActivities([]);
         setOverdueActivities([]);
         setUpcomingActivities([]);
+
+        // Show error to user if it's a timeout or server error
+        if (error?.code === "ECONNABORTED" || error?.response?.status === 504) {
+          console.error("Failed to load data:", error);
+          Alert.alert(
+            "Erreur de chargement",
+            "Le serveur met trop de temps à répondre. Veuillez réessayer.",
+          );
+        }
       }
     })();
   }, [token]);

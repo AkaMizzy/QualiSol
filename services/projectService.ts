@@ -16,6 +16,11 @@ export type Project = {
   urlreport1: string | null;
   urlreport2: string | null;
   urlreport3: string | null;
+  latitude?: string | null;
+  longitude?: string | null;
+  altitude?: string | null;
+  accuracy?: string | null;
+  altitudeAccuracy?: string | null;
   project_type_title?: string | null; // This might need to be fetched separately
   company_title?: string | null; // Company name for display
   createdAt: string;
@@ -50,6 +55,11 @@ type UpdateProjectInput = Partial<{
   urlreport1: string | null;
   urlreport2: string | null;
   urlreport3: string | null;
+  latitude: string | null;
+  longitude: string | null;
+  altitude: string | null;
+  accuracy: string | null;
+  altitudeAccuracy: string | null;
 }>;
 
 export async function getAllProjects(token: string): Promise<Project[]> {
