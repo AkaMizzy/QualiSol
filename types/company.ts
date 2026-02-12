@@ -14,7 +14,7 @@ export interface Company {
   phone?: string | null;
   address?: string | null;
   city?: string | null;
-  pays?: string | null;
+  country?: string | null;
   ice_number?: string | null;
   logo?: string;
   nb_users?: number;

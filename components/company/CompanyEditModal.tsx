@@ -67,7 +67,7 @@ const StatItem = ({
   value: string | number;
 }) => (
   <View style={styles.statItem}>
-    <Text style={styles.statLabel}>{label}</Text>
+    <Text style={styles.statLabel}>{label} :</Text>
     <Text style={styles.statValue}>{value}</Text>
   </View>
 );
@@ -88,7 +88,7 @@ export default function CompanyEditModal({
     phone: "",
     address: "",
     city: "",
-    pays: "",
+    country: "",
     ice_number: "",
     prompt1: "",
     prompt3: "",
@@ -105,7 +105,7 @@ export default function CompanyEditModal({
         phone: company.phone || "",
         address: company.address || "",
         city: company.city || "",
-        pays: company.pays || "",
+        country: company.country || "",
         ice_number: company.ice_number || "",
         prompt1:
           company.prompt1 ||
@@ -178,7 +178,7 @@ export default function CompanyEditModal({
         phone: formData.phone.trim() || null,
         address: formData.address.trim() || null,
         city: formData.city.trim() || null,
-        pays: formData.pays.trim() || null,
+        country: formData.country.trim() || null,
         ice_number: formData.ice_number.trim() || null,
         prompt1: formData.prompt1.trim() || null,
         prompt3: formData.prompt3.trim() || null,
@@ -268,6 +268,12 @@ export default function CompanyEditModal({
               />
 
               <InputField
+                label="country"
+                value={formData.country}
+                onChangeText={(text) => handleInputChange("country", text)}
+                placeholder="Maroc"
+              />
+              <InputField
                 label="Ville"
                 value={formData.city}
                 onChangeText={(text) => handleInputChange("city", text)}
@@ -324,7 +330,6 @@ export default function CompanyEditModal({
                   label="Chantiers"
                   value={company?.nbchanitiers || 0}
                 />
-                <StatItem label="Zones" value={company?.nbzones || 0} />
                 <StatItem label="Dossiers" value={company?.nbfolders || 0} />
                 <StatItem label="Images" value={company?.nbimages || 0} />
                 <StatItem
@@ -383,7 +388,7 @@ const styles = {
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#11224e",
+    color: "#f87b1b",
     marginBottom: 20,
   },
   promptDescription: {
@@ -415,7 +420,7 @@ const styles = {
     backgroundColor: "white",
   },
   multilineInput: {
-    height: 120,
+    height: 150,
     textAlignVertical: "top",
   },
   logoContainer: {
@@ -460,16 +465,19 @@ const styles = {
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#f87b1b",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   statLabel: {
     fontSize: 12,
-    color: "#6b7280",
-    marginBottom: 4,
+    color: "#f87b1b",
   },
   statValue: {
     fontSize: 16,
     fontWeight: "600",
     color: "#11224e",
+    marginLeft: 4,
   },
 } as const;

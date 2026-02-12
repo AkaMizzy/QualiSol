@@ -163,19 +163,14 @@ export default function CompanyScreen() {
 
           {/* Company Information */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Informations générales</Text>
             <View style={styles.infoContainer}>
               <InfoRow icon="mail-outline" label="Email" value={company.email || '-'} />
               <InfoRow icon="call-outline" label="Téléphone" value={company.phone || '-'} />
               <InfoRow icon="business-outline" label="Adresse" value={company.address || '-'} />
               <InfoRow icon="map-outline" label="Ville" value={company.city || '-'} />
-              <InfoRow icon="flag-outline" label="Pays" value={company.pays || '-'} />
-              <InfoRow icon="barcode-outline" label="Numéro ICE" value={company.ice_number || '-'} />
+              <InfoRow icon="flag-outline" label="Pays" value={company.country || '-'} />
             </View>
           </View>
-
-          {/* Sector Information */}
-    
 
           {/* Actions */}
           <View style={styles.actionsContainer}>
