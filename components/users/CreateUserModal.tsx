@@ -1,17 +1,18 @@
+import AppHeader from "@/components/AppHeader";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
@@ -291,20 +292,28 @@ export default function CreateUserModal({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={handleClose}
     >
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={handleClose} disabled={loading}>
-              <View style={styles.closeButton}>
-                <Ionicons name="close" size={24} color="#1f2937" />
-              </View>
-            </TouchableOpacity>
+          <AppHeader
+            user={user || undefined}
+            showNotifications={false}
+            showProfile={true}
+            onLogoPress={handleClose}
+            rightComponent={
+              <TouchableOpacity
+                onPress={handleClose}
+                disabled={loading}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            }
+          />
+          <View style={styles.headerTitleRow}>
             <Text style={styles.headerTitle}>Nouvel Utilisateur</Text>
-            <View style={{ width: 40 }} />
           </View>
 
           <KeyboardAvoidingView
@@ -681,25 +690,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f9fafb", // Light gray background for the modal
   },
-  header: {
-    flexDirection: "row",
+  headerTitleRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#fff",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
+    borderBottomColor: "#e5e7eb",
   },
   closeButton: {
     padding: 8,
-    borderRadius: 8,
-    backgroundColor: "#f3f4f6",
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#111827",
+    color: "#11224e",
+    textAlign: "center",
   },
   content: {
     flex: 1,

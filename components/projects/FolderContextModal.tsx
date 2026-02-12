@@ -1,7 +1,9 @@
 import API_CONFIG from "@/app/config/api";
+import AppHeader from "@/components/AppHeader";
 import GalerieCard from "@/components/galerie/GalerieCard";
 import PreviewModal from "@/components/PreviewModal";
 import UserSelectionModal from "@/components/UserSelectionModal";
+import { useAuth } from "@/contexts/AuthContext";
 import folderService, { Folder } from "@/services/folderService";
 import { Ged, getGedsBySource } from "@/services/gedService";
 import { getUsers } from "@/services/userService";
@@ -9,16 +11,16 @@ import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Linking,
-    Modal,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Linking,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -45,6 +47,7 @@ export default function FolderContextModal({
   const [users, setUsers] = useState<CompanyUser[]>([]);
   const [isUserModalVisible, setIsUserModalVisible] = useState(false);
   const [currentFolder, setCurrentFolder] = useState<Folder | null>(folder);
+  const { user } = useAuth();
 
   useEffect(() => {
     setCurrentFolder(folder);
@@ -151,52 +154,52 @@ export default function FolderContextModal({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color="#6b7280" />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+        <AppHeader
+          user={user || undefined}
+          showNotifications={false}
+          showProfile={true}
+          onLogoPress={onClose}
+          rightComponent={
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={24} color="#6b7280" />
+            </TouchableOpacity>
+          }
+        />
+
+        <View style={styles.headerTitleRow}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {currentFolder?.title || "Dossier"}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setIsUserModalVisible(true)}
+              style={{ padding: 4 }}
             >
-              <Text style={styles.headerTitle} numberOfLines={1}>
-                {currentFolder?.title || "Dossier"}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setIsUserModalVisible(true)}
-                style={{ padding: 4 }}
-              >
-                <Ionicons
-                  name="person-circle-outline"
-                  size={20}
-                  color="#f87b1b"
-                />
-              </TouchableOpacity>
-            </View>
-            {currentFolder?.code && (
-              <Text style={styles.headerSubtitle}>{currentFolder.code}</Text>
-            )}
-            {/* Display current owner name if available in users list? 
-                 We might not have owner populated in folder object directly depending on API.
-                 But we can try to find it in users list for display if needed. 
-             */}
-            {(() => {
-              const owner = users.find((u) => u.id === currentFolder?.owner_id);
-              if (owner) {
-                return (
-                  <Text style={styles.ownerText}>
-                    Resp: {owner.firstname} {owner.lastname}
-                  </Text>
-                );
-              }
-              return null;
-            })()}
+              <Ionicons
+                name="person-circle-outline"
+                size={20}
+                color="#f87b1b"
+              />
+            </TouchableOpacity>
           </View>
-          <View style={styles.placeholder} />
+          {currentFolder?.code && (
+            <Text style={styles.headerSubtitle}>{currentFolder.code}</Text>
+          )}
+          {(() => {
+            const owner = users.find((u) => u.id === currentFolder?.owner_id);
+            if (owner) {
+              return (
+                <Text style={styles.ownerText}>
+                  Resp: {owner.firstname} {owner.lastname}
+                </Text>
+              );
+            }
+            return null;
+          })()}
         </View>
 
         {/* PDF Buttons Row */}
@@ -289,12 +292,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  headerTitleRow: {
     paddingHorizontal: 16,
     paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
@@ -302,23 +304,18 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 8,
   },
-  headerCenter: {
-    alignItems: "center",
-    flex: 1,
-  },
   headerTitle: {
     fontSize: 18,
     fontWeight: "600",
     color: "#11224e",
+    textAlign: "center",
   },
   headerSubtitle: {
     fontSize: 12,
     color: "#6b7280",
     marginTop: 2,
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
-  },
-  placeholder: {
-    width: 40,
+    textAlign: "center",
   },
   loadingContainer: {
     flex: 1,
@@ -357,6 +354,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
     backgroundColor: "#FFFFFF",
+    justifyContent: "center",
   },
   ctaButton: {
     flexDirection: "row",

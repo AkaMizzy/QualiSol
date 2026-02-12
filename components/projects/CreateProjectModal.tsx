@@ -1,4 +1,5 @@
 import API_CONFIG from "@/app/config/api";
+import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import companyService from "@/services/companyService";
 import { createGed } from "@/services/gedService";
@@ -9,18 +10,18 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -270,7 +271,7 @@ export default function CreateProjectModal({
       <Modal
         visible={visible}
         animationType="slide"
-        presentationStyle="pageSheet"
+        presentationStyle="fullScreen"
         onRequestClose={onClose}
       >
         <KeyboardAvoidingView
@@ -278,15 +279,22 @@ export default function CreateProjectModal({
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           <SafeAreaView style={stylesFS.container}>
-            {/* Header */}
-            <View style={stylesFS.header}>
-              <TouchableOpacity onPress={onClose} style={stylesFS.closeButton}>
-                <Ionicons name="close" size={24} color="#6b7280" />
-              </TouchableOpacity>
-              <View style={stylesFS.headerCenter}>
-                <Text style={stylesFS.headerTitle}>Créer un chantier</Text>
-              </View>
-              <View style={stylesFS.placeholder} />
+            <AppHeader
+              user={user || undefined}
+              showNotifications={false}
+              showProfile={true}
+              onLogoPress={onClose}
+              rightComponent={
+                <TouchableOpacity
+                  onPress={onClose}
+                  style={stylesFS.closeButton}
+                >
+                  <Ionicons name="close" size={24} color="#6b7280" />
+                </TouchableOpacity>
+              }
+            />
+            <View style={stylesFS.headerTitleRow}>
+              <Text style={stylesFS.headerTitle}>Créer un chantier</Text>
             </View>
 
             {/* Error Banner */}
@@ -659,24 +667,22 @@ export default function CreateProjectModal({
 
 const stylesFS = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
-  header: {
-    flexDirection: "row",
+  headerTitleRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    justifyContent: "center",
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-  closeButton: {
-    padding: 8,
-    backgroundColor: "#F1F5F9",
-    borderRadius: 8,
+  closeButton: { padding: 8 },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0F172A",
+    textAlign: "center",
   },
-  headerCenter: { alignItems: "center", flex: 1 },
-  headerTitle: { fontSize: 18, fontWeight: "700", color: "#0F172A" },
-  placeholder: { width: 44 },
 
   alertBanner: {
     flexDirection: "row",

@@ -1,3 +1,4 @@
+import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import folderService, { Folder } from "@/services/folderService";
 import {
@@ -257,19 +258,17 @@ export default function ProjectDetailModal({
       onRequestClose={onClose}
     >
       <SafeAreaView style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color="#6b7280" />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle} numberOfLines={1}>
-              {project.title}
-            </Text>
-          </View>
-          <View style={styles.placeholder} />
-        </View>
-
+        <AppHeader
+          user={user || undefined}
+          showNotifications={false}
+          showProfile={true}
+          onLogoPress={onClose} // Use logo to close or navigate back
+          rightComponent={
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={24} color="#6b7280" />
+            </TouchableOpacity>
+          }
+        />
         {/* Loading/Error */}
         {isLoading ? (
           <View style={{ padding: 16, alignItems: "center" }}>
@@ -445,7 +444,7 @@ export default function ProjectDetailModal({
               style={styles.cardHeader}
               android_ripple={{ color: "#f3f4f6" }}
             >
-              <Text style={styles.cardTitle}>Aperçu</Text>
+
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
               >
@@ -454,15 +453,7 @@ export default function ProjectDetailModal({
             </Pressable>
             {openOverview && (
               <View style={{ marginTop: 8, gap: 6 }}>
-                {/* 1. Code - Read-only */}
-                <Pressable
-                  android_ripple={{ color: "#f3f4f6" }}
-                  style={styles.itemRow}
-                >
-                  <Ionicons name="barcode-outline" size={16} color="#6b7280" />
-                  <Text style={styles.meta}>Code · {project.code || "—"}</Text>
-                </Pressable>
-
+                
                 {/* 2. Title - editable or view-only */}
                 {!isEditing ? (
                   <Pressable
@@ -498,132 +489,9 @@ export default function ProjectDetailModal({
                   </View>
                 )}
 
-                {/* 3. Period (Dates) - editable or view-only */}
-                {!isEditing ? (
-                  <Pressable
-                    android_ripple={{ color: "#f3f4f6" }}
-                    style={styles.itemRow}
-                  >
-                    <Ionicons
-                      name="calendar-outline"
-                      size={16}
-                      color="#6b7280"
-                    />
-                    <Text style={styles.meta}>
-                      Période · {formatDisplayDate(project.dd)} →{" "}
-                      {formatDisplayDate(project.df)}
-                    </Text>
-                  </Pressable>
-                ) : (
-                  <View style={{ gap: 8 }}>
-                    <TouchableOpacity
-                      onPress={() => setDdPickerVisible(true)}
-                      style={{
-                        borderWidth: 1,
-                        borderColor: "#e5e7eb",
-                        borderRadius: 12,
-                        paddingHorizontal: 12,
-                        paddingVertical: 10,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 8,
-                      }}
-                    >
-                      <Ionicons
-                        name="calendar-outline"
-                        size={16}
-                        color="#6b7280"
-                      />
-                      <Text
-                        style={{
-                          color: editDd ? "#111827" : "#9ca3af",
-                          fontSize: 14,
-                        }}
-                      >
-                        {editDd || "Date de début (YYYY-MM-DD)"}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setDfPickerVisible(true)}
-                      style={{
-                        borderWidth: 1,
-                        borderColor: "#e5e7eb",
-                        borderRadius: 12,
-                        paddingHorizontal: 12,
-                        paddingVertical: 10,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 8,
-                      }}
-                    >
-                      <Ionicons
-                        name="calendar-outline"
-                        size={16}
-                        color="#6b7280"
-                      />
-                      <Text
-                        style={{
-                          color: editDf ? "#111827" : "#9ca3af",
-                          fontSize: 14,
-                        }}
-                      >
-                        {editDf || "Date de fin (YYYY-MM-DD)"}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
+                
 
-                {/* 4. Description - editable or view-only */}
-                {!isEditing ? (
-                  <Pressable
-                    android_ripple={{ color: "#f3f4f6" }}
-                    style={styles.itemRow}
-                  >
-                    <Ionicons
-                      name="document-text-outline"
-                      size={16}
-                      color="#6b7280"
-                    />
-                    <Text style={styles.meta}>
-                      Description · {project.description || "—"}
-                    </Text>
-                  </Pressable>
-                ) : (
-                  <View
-                    style={{
-                      borderWidth: 1,
-                      borderColor: "#e5e7eb",
-                      borderRadius: 12,
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      flexDirection: "row",
-                      alignItems: "flex-start",
-                      gap: 8,
-                      minHeight: 60,
-                    }}
-                  >
-                    <Ionicons
-                      name="document-text-outline"
-                      size={16}
-                      color="#6b7280"
-                      style={{ marginTop: 2 }}
-                    />
-                    <TextInput
-                      placeholder="Description (optionnel)"
-                      placeholderTextColor="#9ca3af"
-                      value={editDescription}
-                      onChangeText={setEditDescription}
-                      style={{
-                        flex: 1,
-                        color: "#111827",
-                        fontSize: 14,
-                        textAlignVertical: "top",
-                      }}
-                      multiline
-                      numberOfLines={3}
-                    />
-                  </View>
-                )}
+               
               </View>
             )}
           </View>
@@ -801,20 +669,21 @@ export default function ProjectDetailModal({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
+
+  headerTitleRow: {
+    paddingHorizontal: 8,
     paddingVertical: 12,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    alignItems: "center",
+    justifyContent: "center",
   },
   closeButton: { padding: 8 },
-  headerCenter: { alignItems: "center", flex: 1 },
-  headerTitle: { fontSize: 18, fontWeight: "600", color: "#11224e" },
-  placeholder: { width: 40 },
+  headerTitle: { fontSize: 22, fontWeight: "700", color: "#11224e" },
+  headerSubtitle: {
+    fontSize: 14,
+    color: "#6b7280",
+    marginTop: 4,
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+  },
   alertBanner: {
     flexDirection: "row",
     alignItems: "center",

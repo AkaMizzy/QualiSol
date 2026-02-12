@@ -1,3 +1,4 @@
+import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   bulkImportQuestionTypes,
@@ -227,7 +228,7 @@ export default function QuestionTypeManagerModal({
   onClose,
   folderType,
 }: Props) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [questionTypes, setQuestionTypes] = useState<QuestionType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditing, setIsEditing] = useState<QuestionType | null>(null);
@@ -429,13 +430,21 @@ export default function QuestionTypeManagerModal({
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <SafeAreaView style={styles.container}>
-          <View style={styles.header}>
+          <AppHeader
+            user={user || undefined}
+            showNotifications={false}
+            showProfile={true}
+            onLogoPress={onClose}
+            rightComponent={
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            }
+          />
+          <View style={styles.headerTitleRow}>
             <Text style={styles.headerTitle}>
               Gérer les Questions pour {folderType.title}
             </Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color="#6b7280" />
-            </TouchableOpacity>
           </View>
           <ScrollView
             style={styles.contentContainer}
@@ -527,17 +536,22 @@ export default function QuestionTypeManagerModal({
 }
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  headerTitleRow: {
     paddingHorizontal: 16,
     paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
-    backgroundColor: "white",
   },
-  headerTitle: { fontSize: 18, fontWeight: "600", color: "#11224e" },
+  closeButton: { padding: 8 },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#11224e",
+    textAlign: "center",
+  },
   contentContainer: {
     flex: 1,
     paddingHorizontal: 16,
