@@ -9,15 +9,15 @@ import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -242,12 +242,16 @@ export default function QualiPhotoGalleryScreen() {
               </View>
             )}
             <View style={styles.infoRow}>
-              <Image
-                source={ICONS.chantierPng}
-                style={{ width: 14, height: 14 }}
-              />
+              <Ionicons name="person-outline" size={14} color="#f87b1b" />
               <Text style={styles.infoText} numberOfLines={1}>
-                {projectTitle || "N/A"}
+                {(() => {
+                  const owner = users.find(
+                    (u) => String(u.id) === String(item.owner_id),
+                  );
+                  return owner
+                    ? `${owner.firstname} ${owner.lastname}`
+                    : "Propriétaire inconnu";
+                })()}
               </Text>
             </View>
             <View style={styles.infoRow}>

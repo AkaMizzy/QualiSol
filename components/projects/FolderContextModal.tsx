@@ -1,6 +1,5 @@
 import API_CONFIG from "@/app/config/api";
 import AppHeader from "@/components/AppHeader";
-import GalerieCard from "@/components/galerie/GalerieCard";
 import PreviewModal from "@/components/PreviewModal";
 import UserSelectionModal from "@/components/UserSelectionModal";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,11 +8,13 @@ import { deleteGed, Ged, getGedsBySource } from "@/services/gedService";
 import { getUsers } from "@/services/userService";
 import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
+import { ResizeMode, Video } from "expo-av";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
     FlatList,
+    Image,
     Linking,
     Modal,
     Platform,
@@ -160,21 +161,110 @@ export default function FolderContextModal({
     }
   };
 
-  const renderItem = ({ item }: { item: Ged }) => (
-    <View style={styles.gridItem}>
-      <GalerieCard
-        item={item}
-        onPress={() => setSelectedGed(item)}
-        // Additional props can be passed if needed
-        isOffline={false} // Assuming online for now as this is a context modal
-        hasVoiceNote={!!item.urlvoice}
-        isVideo={
-          item.url?.toLowerCase().endsWith(".mp4") ||
-          item.url?.toLowerCase().endsWith(".mov")
-        }
-      />
-    </View>
-  );
+  const renderItem = ({ item }: { item: Ged }) => {
+    const isVideo =
+      item.url?.toLowerCase().endsWith(".mp4") ||
+      item.url?.toLowerCase().endsWith(".mov");
+
+    const formattedTime = item.created_at
+      ? new Date(item.created_at).toLocaleTimeString("fr-FR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "";
+
+    return (
+      <View style={styles.gridItem}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => setSelectedGed(item)}
+        >
+          <View style={styles.imageContainer}>
+            {isVideo ? (
+              <Video
+                source={{ uri: `${API_CONFIG.BASE_URL}${item.url}` }}
+                style={styles.image}
+                resizeMode={ResizeMode.COVER}
+                shouldPlay={false}
+                isMuted={true}
+              />
+            ) : (
+              <Image
+                source={{ uri: `${API_CONFIG.BASE_URL}${item.url}` }}
+                style={styles.image}
+              />
+            )}
+
+            {isVideo && (
+              <View style={styles.playIconOverlay}>
+                <Ionicons
+                  name="play-circle"
+                  size={40}
+                  color="rgba(255, 255, 255, 0.9)"
+                />
+              </View>
+            )}
+
+            {/* Top Right Badges Container */}
+            <View style={styles.topRightContainer}>
+              {/* Mode Indicator */}
+              {item.mode && (
+                <View
+                  style={[styles.badge, { backgroundColor: "rgba(0,0,0,0.5)" }]}
+                >
+                  <Ionicons
+                    name={item.mode === "capture" ? "camera" : "cloud-upload"}
+                    size={16}
+                    color="#f87b1b"
+                  />
+                </View>
+              )}
+            </View>
+
+            {/* GPS Status Indicator */}
+            {(() => {
+              const lat = item.latitude;
+              const long = item.longitude;
+              const accuracy = item.accuracy ? parseFloat(item.accuracy) : null;
+
+              let iconColor = "#FF3B30"; // Default Red (No GPS)
+
+              if (lat && long) {
+                if (accuracy === null || isNaN(accuracy)) {
+                  iconColor = "#007AFF"; // Blue (Position exists, unknown accuracy)
+                } else if (accuracy <= 20) {
+                  iconColor = "#34C759"; // Green (Good accuracy <= 20m)
+                } else {
+                  iconColor = "#FF9500"; // Orange (Poor accuracy > 20m)
+                }
+              }
+
+              return (
+                <View
+                  style={[
+                    styles.gpsStatusBadge,
+                    { backgroundColor: "rgba(0,0,0,0.5)" },
+                  ]}
+                >
+                  <Ionicons name="location-sharp" size={16} color={iconColor} />
+                </View>
+              );
+            })()}
+
+            <View style={styles.overlay}>
+              <Text style={styles.overlayTextLeft} numberOfLines={1}>
+                {item.author || "Sans auteur"}
+              </Text>
+              <Text style={styles.overlayTextCenter} numberOfLines={1}>
+                {item.chantier || currentFolder?.title || ""}
+              </Text>
+              <Text style={styles.overlayTextRight}>{formattedTime}</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <Modal
@@ -399,4 +489,89 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
   },
   ctaText: { color: "#f87b1b", fontWeight: "600", fontSize: 12 },
+
+  card: {
+    flex: 1,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#f3f4f6",
+  },
+  imageContainer: {
+    width: "100%",
+    height: "100%",
+    position: "relative",
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#e5e7eb",
+  },
+  playIconOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1,
+  },
+  overlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  overlayTextLeft: {
+    color: "#f87b1b",
+    fontSize: 10,
+    fontWeight: "500",
+    textAlign: "left",
+    flex: 1,
+    marginRight: 4,
+  },
+  overlayTextCenter: {
+    color: "#f87b1b",
+    fontSize: 10,
+    textAlign: "center",
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  overlayTextRight: {
+    color: "#f87b1b",
+    fontSize: 10,
+    fontWeight: "bold",
+    textAlign: "right",
+    minWidth: 35,
+  },
+  topRightContainer: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    flexDirection: "row",
+    gap: 4,
+    zIndex: 10,
+  },
+  badge: {
+    borderRadius: 12,
+    padding: 4,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  gpsStatusBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    borderRadius: 12,
+    padding: 4,
+    zIndex: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });

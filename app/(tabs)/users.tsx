@@ -221,41 +221,49 @@ export default function UsersScreen() {
                 </Text>
               </View>
             )}
-            {/* Internal/External indicator */}
+            {/* Internal/External indicator & Company */}
             <View
-              style={[
-                styles.badge,
-                {
-                  backgroundColor: interneStyle.bg,
-                  borderColor: interneStyle.border,
-                  marginTop: 4,
-                  flexDirection: "row",
-                  gap: 4,
-                },
-              ]}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 4,
+              }}
             >
-              <Ionicons
-                name={interneStyle.icon}
-                size={10}
-                color={interneStyle.color}
-              />
-              <Text style={[styles.badgeText, { color: interneStyle.color }]}>
-                {interneStyle.label}
-              </Text>
-            </View>
-            {/* Show represented company for external users */}
-            {item.interne === 0 && item.represent && (
-              <Text
-                style={{
-                  fontSize: 10,
-                  color: "#f87b1b",
-                  marginTop: 4,
-                  textAlign: "right" as const,
-                }}
+              <View
+                style={[
+                  styles.badge,
+                  {
+                    backgroundColor: interneStyle.bg,
+                    borderColor: interneStyle.border,
+                    flexDirection: "row",
+                    gap: 4,
+                  },
+                ]}
               >
-                {item.represent}
-              </Text>
-            )}
+                <Ionicons
+                  name={interneStyle.icon}
+                  size={10}
+                  color={interneStyle.color}
+                />
+                <Text style={[styles.badgeText, { color: interneStyle.color }]}>
+                  {interneStyle.label}
+                </Text>
+              </View>
+
+              {/* Show represented company for external users */}
+              {item.interne === 0 && item.represent && (
+                <Text
+                  style={{
+                    fontSize: 11,
+                    color: "#f87b1b",
+                    fontWeight: "500",
+                  }}
+                >
+                  {item.represent}
+                </Text>
+              )}
+            </View>
           </View>
         </View>
       </TouchableOpacity>

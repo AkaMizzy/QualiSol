@@ -255,11 +255,6 @@ export default function ProjectDetailModal({
               if (response.data && onUpdated) {
                 onUpdated();
               }
-
-              Alert.alert(
-                "Succès",
-                "Position GPS capturée et enregistrée avec succès.",
-              );
             } catch (error: any) {
               console.error("Location capture error:", error);
               Alert.alert(
@@ -519,15 +514,17 @@ export default function ProjectDetailModal({
                   android_ripple={{ color: "#f3f4f6" }}
                   style={styles.itemRow}
                 >
-
                   <Text style={styles.meta}>
                     Titre : {project.title || "—"}
                   </Text>
                 </Pressable>
               ) : (
-                <>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+                >
                   <View
                     style={{
+                      flex: 1,
                       borderWidth: 1,
                       borderColor: "#e5e7eb",
                       borderRadius: 12,
@@ -547,24 +544,24 @@ export default function ProjectDetailModal({
                       style={{ flex: 1, color: "#111827", fontSize: 14 }}
                     />
                   </View>
-                  {/* GPS Icon - Separate */}
+
+                  {/* Compact GPS Button */}
                   <TouchableOpacity
                     onPress={handleCaptureLocation}
                     disabled={isCapturingLocation}
                     style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                      paddingHorizontal: 12,
-                      paddingVertical: 10,
-                      borderWidth: 1,
-                      borderColor: "#e5e7eb",
+                      width: 44,
+                      height: 44,
                       borderRadius: 12,
                       backgroundColor: "#f9fafb",
+                      borderWidth: 1,
+                      borderColor: "#e5e7eb",
+                      justifyContent: "center",
+                      alignItems: "center",
                     }}
                   >
                     {isCapturingLocation ? (
-                      <ActivityIndicator size="small" color="#6b7280" />
+                      <ActivityIndicator size="small" color="#f87b1b" />
                     ) : (
                       <Ionicons
                         name="location"
@@ -576,19 +573,8 @@ export default function ProjectDetailModal({
                         }
                       />
                     )}
-                    <Text
-                      style={{
-                        fontSize: 13,
-                        color: "#6b7280",
-                        fontWeight: "500",
-                      }}
-                    >
-                      {!project.latitude || !project.longitude
-                        ? "Capturer la position GPS"
-                        : "Position GPS capturée"}
-                    </Text>
                   </TouchableOpacity>
-                </>
+                </View>
               )}
             </View>
           </View>
