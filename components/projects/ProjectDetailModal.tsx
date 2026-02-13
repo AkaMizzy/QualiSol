@@ -512,13 +512,6 @@ export default function ProjectDetailModal({
 
           {/* Overview Card (always visible) */}
           <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-              >
-                <Text style={styles.cardTitle}>Aperçu</Text>
-              </View>
-            </View>
             <View style={{ marginTop: 8, gap: 6 }}>
               {/* 2. Title - editable or view-only */}
               {!isEditing ? (
@@ -526,9 +519,9 @@ export default function ProjectDetailModal({
                   android_ripple={{ color: "#f3f4f6" }}
                   style={styles.itemRow}
                 >
-                  <Ionicons name="text-outline" size={16} color="#6b7280" />
+
                   <Text style={styles.meta}>
-                    Titre · {project.title || "—"}
+                    Titre : {project.title || "—"}
                   </Text>
                 </Pressable>
               ) : (

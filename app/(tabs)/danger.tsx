@@ -1,23 +1,24 @@
 import AppHeader from "@/components/AppHeader";
-import { ChildQualiPhotoView } from "@/components/reception/ChildQualiPhotoView";
-import { ICONS } from "@/constants/Icons";
+import { AssignedGedView } from "@/components/danger/AssignedGedView";
+import GalerieCard from "@/components/galerie/GalerieCard";
+import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { Folder } from "@/services/folderService";
 import { Ged, getAssignedGeds } from "@/services/gedService";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
   Modal,
-  Pressable,
+  RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
-  useWindowDimensions,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+const ITEMS_PER_PAGE = 2;
 
 function formatDateForGrid(dateStr?: string | null): string {
   if (!dateStr) return "";
@@ -39,14 +40,13 @@ function formatDateForGrid(dateStr?: string | null): string {
 
 export default function DangerScreen() {
   const { user, token } = useAuth();
-  const { width } = useWindowDimensions();
-  const isTablet = width >= 768;
   const [assignedGeds, setAssignedGeds] = useState<Ged[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedGed, setSelectedGed] = useState<Ged | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
 
   const fetchAssignedGeds = useCallback(async () => {
     if (!token) return;
@@ -101,126 +101,141 @@ export default function DangerScreen() {
   }, [token, fetchAssignedGeds]);
 
   const handleAvantPhotoUpdate = (updatedPhoto: Ged) => {
-    // Since it's read-only, we might not strictly need this locally,
-    // but ChildQualiPhotoView might call it.
     setSelectedGed(updatedPhoto);
     setAssignedGeds((prev) =>
       prev.map((item) => (item.id === updatedPhoto.id ? updatedPhoto : item)),
     );
   };
 
-  const renderItem = useCallback(({ item }: { item: Ged }) => {
-    return (
-      <Pressable
-        style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-        onPress={() => {
-          setSelectedGed(item);
-          setDetailVisible(true);
-        }}
-      >
-        {item.url ? (
-          <Image
-            source={{
-              uri: `${require("@/app/config/api").default.BASE_URL}${item.url}`,
-            }}
-            style={styles.thumbnail}
-          />
-        ) : (
-          <View style={[styles.thumbnail, styles.placeholderThumbnail]}>
-            <Ionicons name="image-outline" size={40} color="#9ca3af" />
-          </View>
-        )}
-        <View style={styles.cardBody}>
-          <Text style={styles.cardTitle} numberOfLines={2}>
-            {item.title}
-          </Text>
-          <View style={styles.infoRow}>
-            <Ionicons name="person-outline" size={14} color="#f87b1b" />
-            <Text style={styles.infoText} numberOfLines={1}>
-              {item.author || "N/A"}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="calendar-outline" size={14} color="#f87b1b" />
-            <Text style={styles.infoText}>
-              {formatDateForGrid(item.created_at)}
-            </Text>
-          </View>
-          {item.level !== undefined && item.level !== null && (
-            <View style={styles.infoRow}>
-              <Ionicons name="warning-outline" size={14} color="#f87b1b" />
-              <Text style={styles.infoText}>Niveau: {item.level}/10</Text>
-            </View>
-          )}
-        </View>
-      </Pressable>
-    );
-  }, []);
+  // Pagination logic
+  const totalPages = Math.ceil(assignedGeds.length / ITEMS_PER_PAGE);
 
-  const keyExtractor = useCallback((item: Ged) => item.id, []);
+  const paginatedData = useMemo(() => {
+    const pages = [];
+    for (let i = 0; i < assignedGeds.length; i += ITEMS_PER_PAGE) {
+      pages.push(assignedGeds.slice(i, i + ITEMS_PER_PAGE));
+    }
+    return pages;
+  }, [assignedGeds]);
+
+  const currentPageImages = useMemo(() => {
+    return paginatedData[currentPage] || [];
+  }, [paginatedData, currentPage]);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader user={user || undefined} />
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Image source={ICONS.danger} style={styles.headerIcon} />
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Constats assignés</Text>
-            <Text style={styles.headerSubtitle}>
-              {assignedGeds.length} constat
-              {assignedGeds.length !== 1 ? "s" : ""} à traiter
-            </Text>
+
+      {isLoading && !isRefreshing ? (
+        <View style={styles.skeletonContainer}>
+          {[...Array(2)].map((_, index) => (
+            <View key={index} style={styles.skeletonCard} />
+          ))}
+        </View>
+      ) : (
+        <View style={{ flex: 1 }}>
+          <ScrollView
+            style={styles.galleryContainer}
+            refreshControl={
+              <RefreshControl refreshing={isRefreshing} onRefresh={refresh} />
+            }
+          >
+            <View style={styles.contentContainer}>
+              {currentPageImages.length === 0 ? (
+                <View style={styles.emptyWrap}>
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={64}
+                    color="#10b981"
+                  />
+                  <Text style={styles.emptyTitle}>
+                    {errorMessage
+                      ? "Impossible de charger"
+                      : "Aucune situation assignée"}
+                  </Text>
+                  {errorMessage ? (
+                    <Text style={styles.emptySubtitle}>{errorMessage}</Text>
+                  ) : (
+                    <Text style={styles.emptySubtitle}>
+                      Vous n&apos;avez aucune situation qui vous a été assignée
+                      pour le moment.
+                    </Text>
+                  )}
+                </View>
+              ) : (
+                currentPageImages.map((item: Ged) => (
+                  <View key={item.id} style={styles.imageContainer}>
+                    <GalerieCard
+                      item={item}
+                      onPress={() => {
+                        setSelectedGed(item);
+                        setDetailVisible(true);
+                      }}
+                      hasVoiceNote={!!item.urlvoice}
+                    />
+                  </View>
+                ))
+              )}
+            </View>
+
+            <View style={{ height: 150 }} />
+          </ScrollView>
+
+          <View style={styles.bottomBar}>
+            <View style={styles.navigationControls}>
+              <TouchableOpacity
+                style={[
+                  styles.navButton,
+                  currentPage === 0 && styles.navButtonHidden,
+                ]}
+                onPress={handlePrevPage}
+                disabled={currentPage === 0}
+              >
+                <Ionicons
+                  name="chevron-back"
+                  size={28}
+                  color={COLORS.primary}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.navButton,
+                  currentPage >= totalPages - 1 && styles.navButtonHidden,
+                ]}
+                onPress={handleNextPage}
+                disabled={currentPage >= totalPages - 1}
+              >
+                <Ionicons
+                  name="chevron-forward"
+                  size={28}
+                  color={COLORS.primary}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {totalPages > 1 && (
+              <View style={styles.pageInfoContainer}>
+                <Text style={styles.pageText}>
+                  Page {currentPage + 1} / {totalPages}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
-      </View>
-
-      <View style={styles.content}>
-        {isLoading && assignedGeds.length === 0 ? (
-          <View style={styles.emptyWrap}>
-            <ActivityIndicator color="#11224e" size="large" />
-          </View>
-        ) : (
-          <FlatList
-            data={assignedGeds}
-            keyExtractor={keyExtractor}
-            key={isTablet ? "tablet-3" : "phone-2"}
-            numColumns={isTablet ? 3 : 2}
-            columnWrapperStyle={styles.row}
-            renderItem={renderItem}
-            contentContainerStyle={styles.listContent}
-            refreshing={isRefreshing}
-            onRefresh={refresh}
-            ListEmptyComponent={
-              <View style={styles.emptyWrap}>
-                <Ionicons
-                  name="checkmark-circle-outline"
-                  size={64}
-                  color="#10b981"
-                />
-                <Text style={styles.emptyTitle}>
-                  {errorMessage
-                    ? "Impossible de charger"
-                    : "Aucune situation assignée"}
-                </Text>
-                {errorMessage ? (
-                  <Text style={styles.emptySubtitle}>{errorMessage}</Text>
-                ) : (
-                  <Text style={styles.emptySubtitle}>
-                    Vous n&apos;avez aucune situation qui vous a été assignée
-                    pour le moment.
-                  </Text>
-                )}
-              </View>
-            }
-            ListFooterComponent={
-              <>
-                <View style={{ height: 50 }} />
-              </>
-            }
-          />
-        )}
-      </View>
+      )}
 
       <Modal
         visible={detailVisible}
@@ -229,14 +244,12 @@ export default function DangerScreen() {
       >
         <SafeAreaView style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
           {selectedGed && (
-            <ChildQualiPhotoView
+            <AssignedGedView
               item={selectedGed}
               parentFolder={{} as Folder}
               onClose={() => {
                 setDetailVisible(false);
                 setSelectedGed(null);
-                // Refresh list when closing detail to reflect any external changes?
-                // Or simply keep it as is.
                 fetchAssignedGeds();
               }}
               subtitle={`Assigné à vous • ${formatDateForGrid(selectedGed.created_at)}`}
@@ -255,47 +268,18 @@ export default function DangerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.lightWhite,
   },
-  header: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f87b1b",
-  },
-  headerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  headerIcon: {
-    width: 48,
-    height: 48,
-  },
-  headerTextContainer: {
+  galleryContainer: {
     flex: 1,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#f87b1b",
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: "#6b7280",
-    marginTop: 2,
-  },
-  content: {
+  contentContainer: {
     flex: 1,
+    paddingHorizontal: SIZES.medium,
+    paddingTop: SIZES.medium,
   },
-  row: {
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-  },
-  listContent: {
-    paddingVertical: 12,
-    gap: 12,
+  imageContainer: {
+    marginBottom: SIZES.medium,
   },
   emptyWrap: {
     flex: 1,
@@ -317,56 +301,70 @@ const styles = StyleSheet.create({
     textAlign: "center",
     maxWidth: 300,
   },
-  card: {
-    flex: 1,
-    maxWidth: "49%",
-    marginHorizontal: 4,
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#f87b1b",
+  bottomBar: {
+    backgroundColor: COLORS.white,
+    paddingTop: SIZES.medium,
+    paddingBottom: SIZES.large,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.lightWhite,
+    elevation: 10,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-    overflow: "hidden",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  pressed: {
-    transform: [{ scale: 0.98 }],
-    backgroundColor: "#f9fafb",
-  },
-  thumbnail: {
-    width: "100%",
-    aspectRatio: 16 / 9,
-    backgroundColor: "#f3f4f6",
-  },
-  placeholderThumbnail: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cardBody: {
-    padding: 12,
-    gap: 6,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#f87b1b",
-    marginBottom: 4,
-  },
-  infoRow: {
+  navigationControls: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#f8fafc",
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    justifyContent: "space-between",
+    paddingHorizontal: SIZES.large,
+    marginBottom: SIZES.small,
   },
-  infoText: {
-    fontSize: 11,
-    color: "#4b5563",
+  navButton: {
+    padding: SIZES.small,
+    borderRadius: 50,
+    backgroundColor: COLORS.lightWhite,
+  },
+  navButtonHidden: {
+    opacity: 0,
+  },
+  centerAddButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: -20,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    borderWidth: 4,
+    borderColor: COLORS.white,
+  },
+  centerAddButtonIcon: {
+    width: 32,
+    height: 32,
+  },
+  pageInfoContainer: {
+    alignItems: "center",
+  },
+  pageText: {
+    fontFamily: FONT.medium,
+    fontSize: SIZES.small,
+    color: COLORS.gray,
+  },
+  skeletonContainer: {
     flex: 1,
+    paddingHorizontal: SIZES.medium,
+    marginTop: SIZES.medium,
+  },
+  skeletonCard: {
+    height: 200,
+    backgroundColor: "#E0E0E0",
+    borderRadius: SIZES.medium,
+    marginBottom: SIZES.medium,
   },
 });

@@ -535,18 +535,19 @@ export async function uploadGedFiles(
 export async function getGedsBySource(
   token: string,
   idsource: string | string[],
-  kind: string,
+  kind?: string,
   sortOrder: "asc" | "desc" = "desc",
 ): Promise<Ged[]> {
   const source = Array.isArray(idsource) ? idsource.join(",") : idsource;
-  const response = await api.get(
-    `/api/geds/filter?idsource=${source}&kind=${kind}&sort=${sortOrder}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+  let url = `/api/geds/filter?idsource=${source}&sort=${sortOrder}`;
+  if (kind) {
+    url += `&kind=${kind}`;
+  }
+  const response = await api.get(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
     },
-  );
+  });
   return response.data;
 }
 
