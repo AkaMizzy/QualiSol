@@ -32,7 +32,7 @@ import {
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
-import CreateQualiPhotoModal from "../reception/CreateQualiPhotoModal";
+import CreateFolderModal from "../folders/CreateFolderModal";
 import FolderContextModal from "./FolderContextModal";
 
 type Props = {
@@ -764,7 +764,7 @@ export default function ProjectDetailModal({
           token={token || null}
         />
 
-        <CreateQualiPhotoModal
+        <CreateFolderModal
           visible={isCreateFolderModalVisible}
           onClose={() => setIsCreateFolderModalVisible(false)}
           onSuccess={async () => {
@@ -784,8 +784,7 @@ export default function ProjectDetailModal({
             }
             setIsCreateFolderModalVisible(false);
           }}
-          projectId={project?.id}
-          assignedOwnerId={user?.id}
+          projectId={project?.id || ""}
         />
 
         {/* Date Pickers */}

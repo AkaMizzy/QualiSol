@@ -3,23 +3,24 @@ import { ICONS } from "@/constants/Icons";
 import { useAuth } from "@/contexts/AuthContext";
 import companyService from "@/services/companyService";
 import folderService, {
-  CreateFolderPayload,
-  Folder,
+    CreateFolderPayload,
+    Folder,
 } from "@/services/folderService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -27,55 +28,53 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   onSuccess?: (created: Folder) => void;
-  projectId?: string;
-  zoneId?: string;
-  assignedOwnerId?: string;
+  projectId: string;
 };
 
-export default function CreateQualiPhotoModal({
+export default function CreateFolderModal({
   visible,
   onClose,
   onSuccess,
   projectId,
-  zoneId,
-  assignedOwnerId,
 }: Props) {
   const { token, user } = useAuth();
-  const isAdmin = user?.role === "Admin";
-  const isController =
-    user?.role === "Controller" || user?.role === "Contrôleur";
+
+  // Form fields
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
+  const [ownerId, setOwnerId] = useState("");
+
+  // UI state
+  const [showOwnerPicker, setShowOwnerPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Users data
   const [companyUsers, setCompanyUsers] = useState<
     { id: string; firstname?: string; lastname?: string; email?: string }[]
   >([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [ownerId, setOwnerId] = useState("");
 
+  // Folder limits
   const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
   const [currentFoldersCount, setCurrentFoldersCount] = useState(0);
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [loadingLimits, setLoadingLimits] = useState(true);
 
-  const adminUser = useMemo(
+  // Get selected user details
+  const selectedUser = useMemo(
     () => companyUsers.find((u) => u.id === ownerId),
     [companyUsers, ownerId],
   );
 
+  // Pre-select current user on mount
   useEffect(() => {
-    if (visible) {
-      // Use assigned owner if provided, otherwise default to current user
-      if (assignedOwnerId) {
-        setOwnerId(assignedOwnerId);
-      } else if (user?.id) {
-        setOwnerId(user.id);
-      }
+    if (visible && user?.id) {
+      setOwnerId(user.id);
     }
-  }, [visible, user, assignedOwnerId]);
+  }, [visible, user]);
 
+  // Load folder limits
   useEffect(() => {
     const fetchLimitInfo = async () => {
       try {
@@ -104,13 +103,14 @@ export default function CreateQualiPhotoModal({
     }
   }, [visible, token]);
 
+  // Load company users
   useEffect(() => {
     async function loadUsers() {
-      if (!visible) return;
-      if (!token) {
+      if (!visible || !token) {
         setCompanyUsers([]);
         return;
       }
+
       setLoadingUsers(true);
       try {
         const baseUrl = API_CONFIG.BASE_URL?.replace(/\/$/, "") || "";
@@ -122,32 +122,48 @@ export default function CreateQualiPhotoModal({
             Authorization: `Bearer ${token}`,
           },
         });
+
         if (!res.ok) {
           setCompanyUsers([]);
           return;
         }
+
         const data = await res.json();
-        if (Array.isArray(data)) setCompanyUsers(data);
-        else setCompanyUsers([]);
-      } catch {
+        if (Array.isArray(data)) {
+          setCompanyUsers(data);
+        } else {
+          setCompanyUsers([]);
+        }
+      } catch (err) {
+        console.error("Failed to load users:", err);
         setCompanyUsers([]);
       } finally {
         setLoadingUsers(false);
       }
     }
+
     loadUsers();
   }, [visible, token]);
 
+  // Check if form is valid
   const isDisabled = useMemo(
-    () => !title || !token || submitting || isLimitReached,
-    [title, token, submitting, isLimitReached],
+    () => !title || !ownerId || !token || submitting || isLimitReached,
+    [title, ownerId, token, submitting, isLimitReached],
   );
 
   const handleSubmit = async () => {
     if (!token) return;
+
     setError(null);
+
+    // Validation
     if (!title || title.trim().length === 0) {
       setError("Veuillez saisir un titre.");
+      return;
+    }
+
+    if (!ownerId) {
+      setError("Veuillez sélectionner un propriétaire.");
       return;
     }
 
@@ -158,22 +174,19 @@ export default function CreateQualiPhotoModal({
       return;
     }
 
-    const roles = [ownerId].filter(Boolean);
-    const uniqueRoles = new Set(roles);
-
     setSubmitting(true);
     try {
       const payload: CreateFolderPayload = {
         code: `F-${Date.now().toString(36).toUpperCase()}`,
         title,
         description,
-        owner_id: ownerId || undefined,
-        // Removed control_id and technicien_id as requested
+        owner_id: ownerId,
         control_id: undefined,
         technicien_id: undefined,
         project_id: projectId,
-        zone_id: zoneId,
+        zone_id: undefined,
       };
+
       const created = await folderService.createFolder(payload, token);
       onSuccess && onSuccess(created);
       handleClose();
@@ -198,7 +211,8 @@ export default function CreateQualiPhotoModal({
   const handleClose = () => {
     setTitle("");
     setDescription("");
-    // Do not reset ownerId here to keep it stable if needed, or reset to defaults in useEffect
+    setOwnerId(user?.id || "");
+    setShowOwnerPicker(false);
     setError(null);
     onClose();
   };
@@ -266,6 +280,7 @@ export default function CreateQualiPhotoModal({
             showsVerticalScrollIndicator={false}
           >
             <View style={{ paddingTop: 16 }}>
+              {/* Title Input */}
               <View style={[styles.inputWrap, { marginBottom: 16 }]}>
                 <Ionicons name="text-outline" size={16} color="#f87b1b" />
                 <TextInput
@@ -277,17 +292,18 @@ export default function CreateQualiPhotoModal({
                 />
               </View>
 
+              {/* Owner Selection */}
               <View style={{ gap: 8, marginTop: 12 }}>
                 <Text style={{ fontSize: 12, color: "#6b7280", marginLeft: 2 }}>
-                  Propriétaire
+                  Propriétaire <Text style={{ color: "#ef4444" }}>*</Text>
                 </Text>
                 <TouchableOpacity
                   style={[
                     styles.inputWrap,
                     { justifyContent: "space-between" },
-                    styles.disabledInput,
                   ]}
-                  disabled
+                  onPress={() => setShowOwnerPicker(!showOwnerPicker)}
+                  disabled={loadingUsers}
                 >
                   <View
                     style={{
@@ -309,25 +325,95 @@ export default function CreateQualiPhotoModal({
                       ]}
                       numberOfLines={1}
                     >
-                      {adminUser
-                        ? `${adminUser.firstname || ""} ${adminUser.lastname || ""}`.trim() ||
-                          adminUser.email
+                      {selectedUser
+                        ? `${selectedUser.firstname || ""} ${selectedUser.lastname || ""}`.trim() ||
+                          selectedUser.email
                         : loadingUsers
                           ? "Chargement..."
-                          : assignedOwnerId
-                            ? "Utilisateur sélectionné"
-                            : user?.email || "Admin non défini"}
+                          : "Sélectionner un propriétaire"}
                     </Text>
                   </View>
                   <Ionicons
-                    name="lock-closed-outline"
+                    name={showOwnerPicker ? "chevron-up" : "chevron-down"}
                     size={16}
-                    color="#9ca3af"
+                    color="#f87b1b"
                   />
                 </TouchableOpacity>
+
+                {/* Owner Dropdown */}
+                {showOwnerPicker && (
+                  <View
+                    style={{
+                      backgroundColor: "#fff",
+                      borderWidth: 1,
+                      borderColor: "#e5e7eb",
+                      borderRadius: 8,
+                      maxHeight: 200,
+                    }}
+                  >
+                    <ScrollView
+                      nestedScrollEnabled
+                      showsVerticalScrollIndicator={true}
+                    >
+                      {companyUsers.length === 0 && !loadingUsers ? (
+                        <View style={{ padding: 16, alignItems: "center" }}>
+                          <Text style={{ color: "#9ca3af", fontSize: 13 }}>
+                            Aucun utilisateur disponible
+                          </Text>
+                        </View>
+                      ) : (
+                        companyUsers.map((user) => (
+                          <TouchableOpacity
+                            key={user.id}
+                            onPress={() => {
+                              setOwnerId(user.id);
+                              setShowOwnerPicker(false);
+                            }}
+                            style={{
+                              padding: 12,
+                              borderBottomWidth: 1,
+                              borderBottomColor: "#f3f4f6",
+                              backgroundColor:
+                                user.id === ownerId ? "#fef3f2" : "transparent",
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 14,
+                                color: "#111827",
+                                fontWeight: user.id === ownerId ? "600" : "400",
+                              }}
+                            >
+                              {`${user.firstname || ""} ${user.lastname || ""}`.trim() ||
+                                user.email}
+                            </Text>
+                            {user.email &&
+                              (user.firstname || user.lastname) && (
+                                <Text
+                                  style={{
+                                    fontSize: 12,
+                                    color: "#6b7280",
+                                    marginTop: 2,
+                                  }}
+                                >
+                                  {user.email}
+                                </Text>
+                              )}
+                          </TouchableOpacity>
+                        ))
+                      )}
+                    </ScrollView>
+                  </View>
+                )}
               </View>
 
-              <View style={[styles.inputWrap, { alignItems: "flex-start" }]}>
+              {/* Description Input */}
+              <View
+                style={[
+                  styles.inputWrap,
+                  { alignItems: "flex-start", marginTop: 16 },
+                ]}
+              >
                 <Ionicons
                   name="chatbubble-ellipses-outline"
                   size={16}
@@ -335,11 +421,11 @@ export default function CreateQualiPhotoModal({
                   style={{ marginTop: 4 }}
                 />
                 <TextInput
-                  placeholder="Introduction"
+                  placeholder="Description (optionnel)"
                   placeholderTextColor="#9ca3af"
                   value={description}
                   onChangeText={setDescription}
-                  style={[styles.input, { height: 250 }]}
+                  style={[styles.input, { height: 120 }]}
                   multiline
                   numberOfLines={4}
                   textAlignVertical="top"
@@ -359,7 +445,7 @@ export default function CreateQualiPhotoModal({
             >
               {submitting ? (
                 <>
-                  <Ionicons name="hourglass" size={20} color="#FFFFFF" />
+                  <ActivityIndicator size="small" color="#FFFFFF" />
                   <Text style={styles.submitButtonText}>Enregistrement...</Text>
                 </>
               ) : (
@@ -423,10 +509,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-  },
-  disabledInput: {
-    backgroundColor: "#f3f4f6",
-    borderColor: "#d1d5db",
   },
   input: { flex: 1, color: "#111827" },
   footer: {
