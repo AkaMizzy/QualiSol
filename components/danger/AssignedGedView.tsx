@@ -902,19 +902,15 @@ export const AssignedGedView: React.FC<AssignedGedViewProps> = ({
 
                   {/* Use a consistent overlay for metadata */}
                   <View style={styles.thumbnailOverlay}>
-                    <View style={styles.overlayTopRow}>
-                      <Text style={styles.overlayTitle} numberOfLines={1}>
-                        {item.title || "Sans titre"}
-                      </Text>
-                      <Text style={styles.overlayTime}>
-                        {formatTime(item.created_at)}
-                      </Text>
-                    </View>
-                    {item.chantier || projectTitle ? (
-                      <Text style={styles.overlaySubtitle} numberOfLines={1}>
-                        {item.chantier || projectTitle}
-                      </Text>
-                    ) : null}
+                    <Text style={styles.overlayTextLeft} numberOfLines={1}>
+                      {item.author || "Sans auteur"}
+                    </Text>
+                    <Text style={styles.overlayTextCenter} numberOfLines={1}>
+                      {item.chantier || projectTitle || ""}
+                    </Text>
+                    <Text style={styles.overlayTextRight}>
+                      {formatTime(item.created_at)}
+                    </Text>
                   </View>
                 </TouchableOpacity>
               ) : null}
@@ -1031,19 +1027,15 @@ export const AssignedGedView: React.FC<AssignedGedViewProps> = ({
                     })()}
 
                     <View style={styles.thumbnailOverlay}>
-                      <View style={styles.overlayTopRow}>
-                        <Text style={styles.overlayTitle} numberOfLines={1}>
-                          {photo.title || "Sans titre"}
-                        </Text>
-                        <Text style={styles.overlayTime}>
-                          {formatTime(photo.created_at)}
-                        </Text>
-                      </View>
-                      {photo.chantier || projectTitle ? (
-                        <Text style={styles.overlaySubtitle} numberOfLines={1}>
-                          {photo.chantier || projectTitle}
-                        </Text>
-                      ) : null}
+                      <Text style={styles.overlayTextLeft} numberOfLines={1}>
+                        {photo.author || "Sans auteur"}
+                      </Text>
+                      <Text style={styles.overlayTextCenter} numberOfLines={1}>
+                        {photo.chantier || projectTitle || ""}
+                      </Text>
+                      <Text style={styles.overlayTextRight}>
+                        {formatTime(photo.created_at)}
+                      </Text>
                     </View>
                   </TouchableOpacity>
                 ))
@@ -1379,28 +1371,30 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.6)",
     paddingHorizontal: 8,
     paddingVertical: 6,
-  },
-  overlayTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 2,
   },
-  overlayTitle: {
+  overlayTextLeft: {
     color: "#f87b1b",
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "bold",
+    textAlign: "left",
     flex: 1,
-    marginRight: 8,
+    marginRight: 4,
   },
-  overlayTime: {
-    color: "#ffffff",
+  overlayTextCenter: {
+    color: "#f87b1b",
     fontSize: 11,
-    fontWeight: "500",
+    textAlign: "center",
+    flex: 1,
+    marginRight: 4,
   },
-  overlaySubtitle: {
-    color: "#e5e7eb",
+  overlayTextRight: {
+    color: "#f87b1b",
     fontSize: 11,
+    fontWeight: "bold",
+    textAlign: "right",
   },
   comparisonContainer: {
     marginTop: 12,
