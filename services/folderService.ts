@@ -33,6 +33,7 @@ export interface Folder {
   control_id?: string;
   technicien_id?: string;
   foldertype?: string;
+  foldertype_id?: string;
   status_id: string;
   company_id: string;
   created_at: string;
@@ -66,6 +67,7 @@ export type CreateFolderPayload = Pick<
   | "control_id"
   | "technicien_id"
   | "foldertype"
+  | "foldertype_id"
 >;
 
 export type UpdateFolderPayload = Partial<Folder>;

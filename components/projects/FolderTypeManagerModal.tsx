@@ -7,14 +7,8 @@ import {
   deleteFolderType,
   FolderType,
   getAllFolderTypes,
-  updateFolderType,
 } from "@/services/folderTypeService";
-import {
-  createGed,
-  getAllGeds,
-  getGedsBySource,
-  updateGedFile,
-} from "@/services/gedService";
+import { createGed, getAllGeds, getGedsBySource } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -38,6 +32,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import QuestionTypeManagerModal from "./QuestionTypeManagerModal";
+import UpdateFolderTypeModal from "./UpdateFolderTypeModal";
 
 type FormComponentProps = {
   isEditing: boolean;
@@ -132,7 +127,6 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
   const { token, user } = useAuth();
   const [folderTypes, setFolderTypes] = useState<FolderType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isEditing, setIsEditing] = useState<FolderType | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -140,6 +134,13 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
   const [selectedFolderType, setSelectedFolderType] =
     useState<FolderType | null>(null);
   const [isQuestionModalVisible, setIsQuestionModalVisible] = useState(false);
+
+  // Update Modal State
+  const [isUpdateModalVisible, setIsUpdateModalVisible] = useState(false);
+  const [folderTypeToEdit, setFolderTypeToEdit] = useState<FolderType | null>(
+    null,
+  );
+
   const [image, setImage] = useState<ImagePickerAsset | null>(null);
 
   // Limit tracking state
@@ -223,15 +224,12 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
   };
 
   const handleBeginEdit = (type: FolderType) => {
-    setIsEditing(type);
+    setFolderTypeToEdit(type);
+    setIsUpdateModalVisible(true);
     setIsAdding(false);
-    setTitle(type.title);
-    setDescription(type.description || "");
-    setImage(null);
   };
 
   const handleBeginAdd = () => {
-    setIsEditing(null);
     setIsAdding(true);
     setTitle("");
     setDescription("");
@@ -239,7 +237,6 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
   };
 
   const handleCancel = () => {
-    setIsEditing(null);
     setIsAdding(false);
     setTitle("");
     setDescription("");
@@ -265,27 +262,11 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
 
     setIsSubmitting(true);
     try {
-      let savedType: FolderType;
-      if (isEditing) {
-        const updatedType = await updateFolderType(
-          isEditing.id,
-          { title, description: description || undefined },
-          token,
-        );
-        setFolderTypes((prev) =>
-          prev.map((t) =>
-            t.id === updatedType.id ? { ...t, ...updatedType } : t,
-          ),
-        );
-        savedType = { ...isEditing, ...updatedType };
-      } else {
-        const newType = await createFolderType(
-          { title, description: description || undefined },
-          token,
-        );
-        setFolderTypes((prev) => [newType, ...prev]);
-        savedType = newType;
-      }
+      const newType = await createFolderType(
+        { title, description: description || undefined },
+        token,
+      );
+      setFolderTypes((prev) => [newType, ...prev]);
 
       if (image && image.uri) {
         const file = {
@@ -294,59 +275,41 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
           type: image.type === "image" ? "image/jpeg" : "video/mp4",
         };
 
-        if (isEditing && isEditing.imageGedId) {
-          const updatedGed = await updateGedFile(
-            token,
-            isEditing.imageGedId,
-            file,
-          );
-          setFolderTypes((prev) =>
-            prev.map((t) =>
-              t.id === savedType.id
-                ? {
-                    ...t,
-                    imageUrl: `${API_CONFIG.BASE_URL}${updatedGed.url}`,
-                    imageGedId: updatedGed.id,
-                  }
-                : t,
-            ),
-          );
-        } else {
-          const gedData = await createGed(token, {
-            idsource: savedType.id,
-            title: `Icon for ${savedType.title}`,
-            kind: "folder_type_icon",
-            author: user.id,
-            file,
-            answer: undefined,
-          });
-          setFolderTypes((prev) =>
-            prev.map((t) =>
-              t.id === savedType.id
-                ? {
-                    ...t,
-                    imageUrl: `${API_CONFIG.BASE_URL}${gedData.data.url}`,
-                    imageGedId: gedData.data.id,
-                  }
-                : t,
-            ),
-          );
-        }
+        const gedData = await createGed(token, {
+          idsource: newType.id,
+          title: `Icon for ${newType.title}`,
+          kind: "folder_type_icon",
+          author: user.id,
+          file,
+          answer: undefined,
+        });
+
+        setFolderTypes((prev) =>
+          prev.map((t) =>
+            t.id === newType.id
+              ? {
+                  ...t,
+                  imageUrl: `${API_CONFIG.BASE_URL}${gedData.data.url}`,
+                  imageGedId: gedData.data.id,
+                }
+              : t,
+          ),
+        );
       }
 
       handleCancel();
     } catch (error) {
-      console.error(
-        `Failed to ${isEditing ? "update" : "create"} folder type:`,
-        error,
-      );
-      Alert.alert(
-        "Erreur",
-        `Échec de ${isEditing ? "la mise à jour" : "la création"} du type de dossier.`,
-      );
+      console.error("Failed to create folder type:", error);
+      Alert.alert("Erreur", "Échec de la création du type de dossier.");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleUpdateSuccess = (updatedType: FolderType) => {
+    setFolderTypes((prev) =>
+      prev.map((t) => (t.id === updatedType.id ? updatedType : t)),
+    );
   };
 
   const handleDelete = async (id: string) => {
@@ -445,9 +408,9 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
           </View>
 
           <View style={styles.contentContainer}>
-            {isAdding || isEditing ? (
+            {isAdding ? (
               <FormComponent
-                isEditing={!!isEditing}
+                isEditing={false}
                 isSubmitting={isSubmitting}
                 title={title}
                 description={description}
@@ -456,7 +419,7 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
                 onSubmit={handleSubmit}
                 onCancel={handleCancel}
                 onPickImage={handlePickImage}
-                imageUri={image?.uri || isEditing?.imageUrl}
+                imageUri={image?.uri}
               />
             ) : (
               <TouchableOpacity
@@ -470,7 +433,7 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
               </TouchableOpacity>
             )}
 
-            {isLoading && !isAdding && !isEditing ? (
+            {isLoading && !isAdding ? (
               <ActivityIndicator
                 style={{ marginTop: 20 }}
                 color="#11224e"
@@ -483,7 +446,7 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
                 renderItem={renderItem}
                 contentContainerStyle={{
                   paddingBottom: 20,
-                  paddingTop: isAdding || isEditing ? 0 : 16,
+                  paddingTop: isAdding ? 0 : 16,
                 }}
                 ListEmptyComponent={
                   !isLoading ? (
@@ -503,6 +466,15 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
           visible={isQuestionModalVisible}
           onClose={() => setIsQuestionModalVisible(false)}
           folderType={selectedFolderType}
+        />
+      )}
+
+      {folderTypeToEdit && (
+        <UpdateFolderTypeModal
+          visible={isUpdateModalVisible}
+          onClose={() => setIsUpdateModalVisible(false)}
+          folderType={folderTypeToEdit}
+          onSuccess={handleUpdateSuccess}
         />
       )}
     </Modal>
