@@ -10,7 +10,7 @@ import { getUsers } from "@/services/userService";
 import { CompanyUser } from "@/types/user";
 import { formatDisplayDate } from "@/utils/dateFormat";
 import { Ionicons } from "@expo/vector-icons";
-import * as ExpoLocation from "expo-location";
+import * as Location from "expo-location";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -32,6 +32,7 @@ import {
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
+import CreateQualiPhotoModal from "../reception/CreateQualiPhotoModal";
 import FolderContextModal from "./FolderContextModal";
 
 type Props = {
@@ -57,6 +58,8 @@ export default function ProjectDetailModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
+  const [isCreateFolderModalVisible, setIsCreateFolderModalVisible] =
+    useState(false);
 
   // Enable smooth layout animations on Android
   if (
@@ -80,6 +83,7 @@ export default function ProjectDetailModal({
   const [isSaving, setIsSaving] = useState(false);
   const [isDdPickerVisible, setDdPickerVisible] = useState(false);
   const [isDfPickerVisible, setDfPickerVisible] = useState(false);
+  const [isCapturingLocation, setIsCapturingLocation] = useState(false);
 
   // Rotate chevrons
   const rotateAnim = useRef({
@@ -204,6 +208,74 @@ export default function ProjectDetailModal({
     }
   };
 
+  const handleCaptureLocation = async () => {
+    if (!project || !token) return;
+
+    Alert.alert(
+      "Capturer la position",
+      "Voulez-vous capturer votre position GPS actuelle?",
+      [
+        {
+          text: "Annuler",
+          style: "cancel",
+        },
+        {
+          text: "Capturer",
+          onPress: async () => {
+            try {
+              setIsCapturingLocation(true);
+
+              // Request permission
+              const { status } =
+                await Location.requestForegroundPermissionsAsync();
+              if (status !== "granted") {
+                Alert.alert(
+                  "Permission refusée",
+                  "La permission de localisation est nécessaire pour capturer votre position.",
+                );
+                return;
+              }
+
+              // Get current position
+              const location = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.High,
+              });
+
+              // Update project with location data
+              const response = await updateProject(token, project.id, {
+                latitude: location.coords.latitude.toString(),
+                longitude: location.coords.longitude.toString(),
+                altitude: location.coords.altitude?.toString() || null,
+                accuracy: location.coords.accuracy?.toString() || null,
+                altitudeAccuracy:
+                  location.coords.altitudeAccuracy?.toString() || null,
+              });
+
+              // Update local state
+              if (response.data && onUpdated) {
+                onUpdated();
+              }
+
+              Alert.alert(
+                "Succès",
+                "Position GPS capturée et enregistrée avec succès.",
+              );
+            } catch (error: any) {
+              console.error("Location capture error:", error);
+              Alert.alert(
+                "Erreur",
+                error?.message ||
+                  "Impossible de capturer la position GPS. Vérifiez que votre GPS est activé.",
+              );
+            } finally {
+              setIsCapturingLocation(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   useEffect(() => {
     let cancelled = false;
     async function loadData() {
@@ -247,68 +319,7 @@ export default function ProjectDetailModal({
     }
   }, [project]);
 
-  const handleCaptureLocation = async () => {
-    if (!project || !token) return;
-
-    Alert.alert(
-      "Capturer la position GPS",
-      "Voulez-vous capturer votre position GPS actuelle?",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Capturer",
-          onPress: async () => {
-            try {
-              // Request permissions
-              const { status } =
-                await ExpoLocation.requestForegroundPermissionsAsync();
-              if (status !== "granted") {
-                Alert.alert(
-                  "Permission refusée",
-                  "L'accès à la localisation est nécessaire pour capturer la position GPS.",
-                );
-                return;
-              }
-
-              // Get current location with high accuracy
-              const location = await ExpoLocation.getCurrentPositionAsync({
-                accuracy: ExpoLocation.Accuracy.High,
-              });
-
-              const { latitude, longitude, altitude, accuracy } =
-                location.coords;
-
-              // Update project with captured coordinates
-              setIsSaving(true);
-              const updated = await updateProject(token, project.id, {
-                latitude: latitude.toString(),
-                longitude: longitude.toString(),
-                altitude: altitude?.toString() || null,
-                accuracy: accuracy?.toString() || null,
-                altitudeAccuracy: null, // Not provided by expo-location
-              });
-
-              // Update local state
-              if (onUpdated) await onUpdated();
-              setIsSaving(false);
-
-              Alert.alert(
-                "Succès",
-                `Position GPS capturée:\nLatitude: ${latitude.toFixed(6)}\nLongitude: ${longitude.toFixed(6)}`,
-              );
-            } catch (error) {
-              setIsSaving(false);
-              console.error("Error capturing location:", error);
-              Alert.alert(
-                "Erreur",
-                "Impossible de capturer la position GPS. Assurez-vous que les services de localisation sont activés.",
-              );
-            }
-          },
-        },
-      ],
-    );
-  };
+  // Owner derivation removed
 
   if (!project) return null;
 
@@ -368,39 +379,6 @@ export default function ProjectDetailModal({
               >
                 <Ionicons name="trash-outline" size={16} color="#f87b1b" />
                 <Text style={styles.ctaText}>Supprimer</Text>
-              </Pressable>
-            ) : null}
-
-            {/* GPS Location Icon - shows in edit mode */}
-            {isEditing ? (
-              <Pressable
-                onPress={handleCaptureLocation}
-                disabled={isSaving}
-                android_ripple={{ color: "#fde7d4" }}
-                style={styles.ctaButton}
-              >
-                <Ionicons
-                  name="location-outline"
-                  size={16}
-                  color={
-                    !project.latitude || !project.longitude
-                      ? "#ef4444"
-                      : "#10b981"
-                  }
-                />
-                <Text
-                  style={[
-                    styles.ctaText,
-                    {
-                      color:
-                        !project.latitude || !project.longitude
-                          ? "#ef4444"
-                          : "#10b981",
-                    },
-                  ]}
-                >
-                  GPS
-                </Text>
               </Pressable>
             ) : null}
 
@@ -532,33 +510,29 @@ export default function ProjectDetailModal({
             </View>
           ) : null}
 
-          {/* Overview Card (collapsible) */}
+          {/* Overview Card (always visible) */}
           <View style={styles.card}>
-            <Pressable
-              onPress={() => toggleSection("overview")}
-              style={styles.cardHeader}
-              android_ripple={{ color: "#f3f4f6" }}
-            >
+            <View style={styles.cardHeader}>
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
               >
-                <Chevron section="overview" />
+                <Text style={styles.cardTitle}>Aperçu</Text>
               </View>
-            </Pressable>
-            {openOverview && (
-              <View style={{ marginTop: 8, gap: 6 }}>
-                {/* 2. Title - editable or view-only */}
-                {!isEditing ? (
-                  <Pressable
-                    android_ripple={{ color: "#f3f4f6" }}
-                    style={styles.itemRow}
-                  >
-                    <Ionicons name="text-outline" size={16} color="#6b7280" />
-                    <Text style={styles.meta}>
-                      Titre · {project.title || "—"}
-                    </Text>
-                  </Pressable>
-                ) : (
+            </View>
+            <View style={{ marginTop: 8, gap: 6 }}>
+              {/* 2. Title - editable or view-only */}
+              {!isEditing ? (
+                <Pressable
+                  android_ripple={{ color: "#f3f4f6" }}
+                  style={styles.itemRow}
+                >
+                  <Ionicons name="text-outline" size={16} color="#6b7280" />
+                  <Text style={styles.meta}>
+                    Titre · {project.title || "—"}
+                  </Text>
+                </Pressable>
+              ) : (
+                <>
                   <View
                     style={{
                       borderWidth: 1,
@@ -580,9 +554,50 @@ export default function ProjectDetailModal({
                       style={{ flex: 1, color: "#111827", fontSize: 14 }}
                     />
                   </View>
-                )}
-              </View>
-            )}
+                  {/* GPS Icon - Separate */}
+                  <TouchableOpacity
+                    onPress={handleCaptureLocation}
+                    disabled={isCapturingLocation}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      borderWidth: 1,
+                      borderColor: "#e5e7eb",
+                      borderRadius: 12,
+                      backgroundColor: "#f9fafb",
+                    }}
+                  >
+                    {isCapturingLocation ? (
+                      <ActivityIndicator size="small" color="#6b7280" />
+                    ) : (
+                      <Ionicons
+                        name="location"
+                        size={20}
+                        color={
+                          !project.latitude || !project.longitude
+                            ? "#ef4444"
+                            : "#22c55e"
+                        }
+                      />
+                    )}
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        color: "#6b7280",
+                        fontWeight: "500",
+                      }}
+                    >
+                      {!project.latitude || !project.longitude
+                        ? "Capturer la position GPS"
+                        : "Position GPS capturée"}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
           </View>
 
           {/* Folders List Section (New) */}
@@ -592,7 +607,34 @@ export default function ProjectDetailModal({
               style={styles.cardHeader}
               android_ripple={{ color: "#f3f4f6" }}
             >
-              <Text style={styles.cardTitle}>Dossiers ({folders.length})</Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                  flex: 1,
+                }}
+              >
+                <Text style={styles.cardTitle}>
+                  Dossiers ({folders.length})
+                </Text>
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation(); // Prevent toggle
+                    setIsCreateFolderModalVisible(true);
+                  }}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 14,
+                    backgroundColor: "#f87b1b",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <Ionicons name="add" size={18} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
               <Chevron section="folders" />
             </Pressable>
             {foldersOpen && (
@@ -720,6 +762,30 @@ export default function ProjectDetailModal({
           folder={selectedFolder}
           onClose={() => setSelectedFolder(null)}
           token={token || null}
+        />
+
+        <CreateQualiPhotoModal
+          visible={isCreateFolderModalVisible}
+          onClose={() => setIsCreateFolderModalVisible(false)}
+          onSuccess={async () => {
+            // Refresh folder list
+            if (project && token) {
+              setIsLoadingFolders(true);
+              try {
+                const allFolders = await folderService.getAllFolders(token);
+                setFolders(
+                  allFolders.filter((f) => f.project_id === project.id),
+                );
+              } catch (e) {
+                console.error("Failed to reload folders", e);
+              } finally {
+                setIsLoadingFolders(false);
+              }
+            }
+            setIsCreateFolderModalVisible(false);
+          }}
+          projectId={project?.id}
+          assignedOwnerId={user?.id}
         />
 
         {/* Date Pickers */}

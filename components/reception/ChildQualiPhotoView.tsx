@@ -33,6 +33,7 @@ import { getAllStatuses, Status } from "@/services/statusService";
 import { isVideoFile } from "@/utils/mediaUtils";
 
 import CustomAlert from "../CustomAlert";
+import CreateLinkedGedModal from "../danger/CreateLinkedGedModal";
 import PictureAnnotator from "../PictureAnnotator";
 import PreviewModal from "../PreviewModal";
 import CreateComplementaireQualiPhotoModal from "./CreateComplementaireQualiPhotoModal";
@@ -127,6 +128,9 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     null,
   );
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // Linked GED creation modal state
+  const [isLinkedGedModalVisible, setIsLinkedGedModalVisible] = useState(false);
 
   useEffect(() => {
     async function fetchStatuses() {
@@ -268,8 +272,18 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
   };
 
   const handleAfterPhotoSuccess = (createdGed: Ged) => {
-    setAfterPhotos((prev) => [...prev, createdGed]);
-    setCreateAfterModalVisible(false);
+    setAfterPhotos([createdGed]);
+  };
+
+  const handleOpenLinkedGedModal = () => {
+    setIsLinkedGedModalVisible(true);
+  };
+
+  const handleLinkedGedSuccess = (newGed: Ged) => {
+    console.log("Linked GED created successfully:", newGed.id);
+    // Optionally refresh or show confirmation
+    // For now, just close the modal
+    setIsLinkedGedModalVisible(false);
   };
 
   const getSeverityEmoji = (level: number) => {
@@ -1077,6 +1091,17 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
           )}
 
           <TouchableOpacity
+            style={styles.linkedGedButton}
+            onPress={handleOpenLinkedGedModal}
+            accessibilityLabel="Créer un enregistrement lié"
+          >
+            <Ionicons name="add-circle-outline" size={20} color="#f87b1b" />
+            <Text style={styles.linkedGedButtonText}>
+              Créer un enregistrement lié
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[
               styles.validateButton,
               isValidated
@@ -1176,6 +1201,12 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
         title={alertInfo.title}
         message={alertInfo.message}
         onClose={() => setAlertInfo((prev) => ({ ...prev, visible: false }))}
+      />
+      <CreateLinkedGedModal
+        visible={isLinkedGedModalVisible}
+        onClose={() => setIsLinkedGedModalVisible(false)}
+        sourceGedId={item.id}
+        onSuccess={handleLinkedGedSuccess}
       />
     </>
   );
@@ -1511,6 +1542,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
   topRightContainer: {
     position: "absolute",
@@ -1536,5 +1568,28 @@ const styles = StyleSheet.create({
     zIndex: 10,
     justifyContent: "center",
     alignItems: "center",
+  },
+  linkedGedButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#f87b1b",
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  linkedGedButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#f87b1b",
   },
 });

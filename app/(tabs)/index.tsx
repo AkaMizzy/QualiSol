@@ -7,16 +7,16 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    Alert,
-    FlatList,
-    LayoutAnimation,
-    Linking,
-    Pressable,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    View,
-    useWindowDimensions,
+  Alert,
+  FlatList,
+  LayoutAnimation,
+  Linking,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../components/AppHeader";
@@ -326,7 +326,7 @@ export default function DashboardScreen() {
         } catch (error) {
           console.error("Failed to fetch company info:", error);
         }
-      } catch (error: any) {
+      } catch {
         // keep UI functional without stats
         setStats({
           pending: 0,
@@ -338,15 +338,6 @@ export default function DashboardScreen() {
         setTodayActivities([]);
         setOverdueActivities([]);
         setUpcomingActivities([]);
-
-        // Show error to user if it's a timeout or server error
-        if (error?.code === "ECONNABORTED" || error?.response?.status === 504) {
-          console.error("Failed to load data:", error);
-          Alert.alert(
-            "Erreur de chargement",
-            "Le serveur met trop de temps à répondre. Veuillez réessayer.",
-          );
-        }
       }
     })();
   }, [token]);

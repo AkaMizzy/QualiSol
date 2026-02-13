@@ -263,7 +263,6 @@ export default function FolderContextModal({
             description={selectedGed.description}
             author={selectedGed.author}
             createdAt={selectedGed.created_at}
-            // Add other props as needed matching PreviewModal signature
             latitude={selectedGed.latitude}
             longitude={selectedGed.longitude}
             voiceNoteUrl={
@@ -273,6 +272,11 @@ export default function FolderContextModal({
             }
             audiotxt={selectedGed.audiotxt}
             iatxt={selectedGed.iatxt}
+            type={selectedGed.type}
+            categorie={selectedGed.categorie}
+            chantier={selectedGed.chantier}
+            level={selectedGed.level}
+            mode={selectedGed.mode}
           />
         )}
 
