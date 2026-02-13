@@ -19,6 +19,7 @@ import {
 } from "react-native";
 
 import API_CONFIG from "@/app/config/api";
+import AppHeader from "@/components/AppHeader";
 import { ICONS } from "@/constants/Icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { Folder } from "@/services/folderService";
@@ -62,6 +63,7 @@ export const AssignedGedView: React.FC<AssignedGedViewProps> = ({
   readOnly = false,
 }) => {
   const { token } = useAuth();
+  const { user } = useAuth();
   const { width } = useWindowDimensions();
 
   // Helper to format date consistent with GalerieCard/DangerScreen
@@ -755,8 +757,8 @@ export const AssignedGedView: React.FC<AssignedGedViewProps> = ({
     (currentStatus?.status === "Active" && associatedGeds.length > 0);
   const canValidate = associatedGeds.length > 0;
 
-  const header = (
-    <View style={styles.header}>
+  const subHeader = (
+    <View style={styles.subHeader}>
       <View style={styles.headerLeftActions}>
         <Pressable
           accessibilityRole="button"
@@ -774,19 +776,18 @@ export const AssignedGedView: React.FC<AssignedGedViewProps> = ({
           <Ionicons name="share-social-outline" size={24} color="#f87b1b" />
         </TouchableOpacity>
       </View>
-      <View style={styles.headerTitles}>
-        <Text style={styles.title}>{item.title}</Text>
-        <Text numberOfLines={1} style={styles.subtitle}>
-          {subtitle}
-        </Text>
-      </View>
+      <View style={styles.headerTitles} />
       <View style={styles.headerActionsContainer}>
         <TouchableOpacity
-          style={styles.headerAction}
+          style={[
+            styles.headerAction,
+            associatedGeds.length > 0 && styles.disabledHeaderAction,
+          ]}
           onPress={handleOpenLinkedGedModal}
+          disabled={associatedGeds.length > 0}
           accessibilityLabel="Créer un enregistrement lié"
         >
-          <Ionicons name="add-circle-outline" size={24} color="#f87b1b" />
+          <Image source={ICONS.cameraPng} style={styles.headerActionIcon} />
         </TouchableOpacity>
         {!readOnly && (
           <TouchableOpacity
@@ -808,7 +809,8 @@ export const AssignedGedView: React.FC<AssignedGedViewProps> = ({
 
   return (
     <>
-      {header}
+      <AppHeader user={user || undefined} />
+      {subHeader}
       <ScrollView bounces>
         <View style={styles.content}>
           <View style={isTablet ? styles.avantApresContainer : undefined}>
@@ -1254,28 +1256,25 @@ export const AssignedGedView: React.FC<AssignedGedViewProps> = ({
 };
 
 const styles = StyleSheet.create({
-  header: {
+  subHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#FFFFFF",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
+    paddingVertical: 8,
+    backgroundColor: "#F9FAFB",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
   },
   closeBtn: {
-    width: 40,
-    height: 40,
-    backgroundColor: "#F2F2F7",
+    width: 36,
+    height: 36,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#f87b1b",
+    borderColor: "#E5E7EB",
   },
   headerTitles: {
     flex: 1,
@@ -1369,30 +1368,30 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: "rgba(0,0,0,0.6)",
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   overlayTextLeft: {
     color: "#f87b1b",
-    fontSize: 11,
-    fontWeight: "bold",
+    fontSize: 13,
+    fontWeight: "500",
     textAlign: "left",
     flex: 1,
     marginRight: 4,
   },
   overlayTextCenter: {
     color: "#f87b1b",
-    fontSize: 11,
-    textAlign: "center",
+    fontSize: 13,
+    textAlign: "left",
     flex: 1,
-    marginRight: 4,
+    marginHorizontal: 8,
   },
   overlayTextRight: {
     color: "#f87b1b",
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "bold",
     textAlign: "right",
   },

@@ -3,19 +3,19 @@ import { Audio, ResizeMode, Video } from "expo-av";
 import * as Linking from "expo-linking";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    Share,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
 
 import API_CONFIG from "@/app/config/api";
@@ -23,17 +23,16 @@ import { ICONS } from "@/constants/Icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { Folder } from "@/services/folderService";
 import {
-    describeImage,
-    Ged,
-    getGedsBySource,
-    updateGed,
-    updateGedFile,
+  describeImage,
+  Ged,
+  getGedsBySource,
+  updateGed,
+  updateGedFile,
 } from "@/services/gedService";
 import { getAllStatuses, Status } from "@/services/statusService";
 import { isVideoFile } from "@/utils/mediaUtils";
 
 import CustomAlert from "../CustomAlert";
-import CreateLinkedGedModal from "../danger/CreateLinkedGedModal";
 import PictureAnnotator from "../PictureAnnotator";
 import PreviewModal from "../PreviewModal";
 import CreateComplementaireQualiPhotoModal from "./CreateComplementaireQualiPhotoModal";
@@ -128,9 +127,6 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     null,
   );
   const [isPlaying, setIsPlaying] = useState(false);
-
-  // Linked GED creation modal state
-  const [isLinkedGedModalVisible, setIsLinkedGedModalVisible] = useState(false);
 
   useEffect(() => {
     async function fetchStatuses() {
@@ -273,17 +269,6 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
 
   const handleAfterPhotoSuccess = (createdGed: Ged) => {
     setAfterPhotos([createdGed]);
-  };
-
-  const handleOpenLinkedGedModal = () => {
-    setIsLinkedGedModalVisible(true);
-  };
-
-  const handleLinkedGedSuccess = (newGed: Ged) => {
-    console.log("Linked GED created successfully:", newGed.id);
-    // Optionally refresh or show confirmation
-    // For now, just close the modal
-    setIsLinkedGedModalVisible(false);
   };
 
   const getSeverityEmoji = (level: number) => {
@@ -1091,17 +1076,6 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
           )}
 
           <TouchableOpacity
-            style={styles.linkedGedButton}
-            onPress={handleOpenLinkedGedModal}
-            accessibilityLabel="Créer un enregistrement lié"
-          >
-            <Ionicons name="add-circle-outline" size={20} color="#f87b1b" />
-            <Text style={styles.linkedGedButtonText}>
-              Créer un enregistrement lié
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
             style={[
               styles.validateButton,
               isValidated
@@ -1201,12 +1175,6 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
         title={alertInfo.title}
         message={alertInfo.message}
         onClose={() => setAlertInfo((prev) => ({ ...prev, visible: false }))}
-      />
-      <CreateLinkedGedModal
-        visible={isLinkedGedModalVisible}
-        onClose={() => setIsLinkedGedModalVisible(false)}
-        sourceGedId={item.id}
-        onSuccess={handleLinkedGedSuccess}
       />
     </>
   );
