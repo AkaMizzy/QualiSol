@@ -5,22 +5,22 @@ import PreviewModal from "@/components/PreviewModal";
 import UserSelectionModal from "@/components/UserSelectionModal";
 import { useAuth } from "@/contexts/AuthContext";
 import folderService, { Folder } from "@/services/folderService";
-import { Ged, getGedsBySource } from "@/services/gedService";
+import { deleteGed, Ged, getGedsBySource } from "@/services/gedService";
 import { getUsers } from "@/services/userService";
 import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Linking,
-  Modal,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Linking,
+    Modal,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -109,6 +109,32 @@ export default function FolderContextModal({
     } else {
       Alert.alert("Info", "Aucun document disponible.");
     }
+  };
+
+  const handleDeleteGed = async () => {
+    if (!selectedGed || !token) return;
+
+    Alert.alert(
+      "Supprimer",
+      "Êtes-vous sûr de vouloir supprimer cet élément ?",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteGed(token, selectedGed.id);
+              setGeds((prev) => prev.filter((g) => g.id !== selectedGed.id));
+              setSelectedGed(null);
+            } catch (error) {
+              console.error("Failed to delete GED", error);
+              Alert.alert("Erreur", "Impossible de supprimer l'élément");
+            }
+          },
+        },
+      ],
+    );
   };
 
   useEffect(() => {
@@ -277,6 +303,7 @@ export default function FolderContextModal({
             chantier={selectedGed.chantier}
             level={selectedGed.level}
             mode={selectedGed.mode}
+            onDelete={handleDeleteGed}
           />
         )}
 
