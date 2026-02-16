@@ -7,16 +7,16 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    Alert,
-    FlatList,
-    LayoutAnimation,
-    Linking,
-    Pressable,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    View,
-    useWindowDimensions,
+  Alert,
+  FlatList,
+  LayoutAnimation,
+  Linking,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../components/AppHeader";
@@ -117,7 +117,6 @@ export default function DashboardScreen() {
     "overdue",
   );
   const [companyTitle, setCompanyTitle] = useState<string>("");
-  const [powredBy, setPowredBy] = useState<string | null>(null);
 
   // Dynamic folder types
   const [folderTypes, setFolderTypes] = useState<FolderType[]>([]);
@@ -321,9 +320,8 @@ export default function DashboardScreen() {
         // Fetch company info
         try {
           const companyData = await companyService.getCompany();
-          if (companyData) {
-            if (companyData.title) setCompanyTitle(companyData.title);
-            if (companyData.powredby) setPowredBy(companyData.powredby);
+          if (companyData && companyData.title) {
+            setCompanyTitle(companyData.title);
           }
         } catch (error) {
           console.error("Failed to fetch company info:", error);
@@ -759,11 +757,6 @@ export default function DashboardScreen() {
               ]}
             >
               {companyTitle}
-            </Text>
-          ) : null}
-          {powredBy ? (
-            <Text style={[styles.footerText, { marginBottom: 2 }]}>
-              Powered by {powredBy}
             </Text>
           ) : null}
           <Text style={styles.footerText}>

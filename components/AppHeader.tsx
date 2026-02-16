@@ -17,6 +17,7 @@ interface AppHeaderProps {
   user?: {
     firstname?: string;
     lastname?: string;
+    identifier?: string;
     photo?: string | null;
     role?: string;
     role_id?: string;
@@ -38,6 +39,7 @@ export default function AppHeader({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [companyTitle, setCompanyTitle] = useState<string | null>(null);
+  const [powredBy, setPowredBy] = useState<string | null>(null);
   const [logoError, setLogoError] = useState(false);
 
   // Fetch company logo on mount
@@ -48,6 +50,7 @@ export default function AppHeader({
         if (company) {
           if (company.logo) setCompanyLogo(company.logo);
           if (company.title) setCompanyTitle(company.title);
+          if (company.powredby) setPowredBy(company.powredby);
         }
       } catch (error) {
         console.error("Error fetching company logo:", error);
@@ -144,12 +147,10 @@ export default function AppHeader({
               {companyTitle}
             </Text>
           )}
-          {user && (
-            <View style={styles.userInfo}>
-              <Text style={[styles.userNameText, { color: usernameColor }]}>
-                {user.firstname} {user.lastname}
-              </Text>
-            </View>
+          {powredBy && (
+            <Text style={styles.poweredByText} numberOfLines={1}>
+              {powredBy}
+            </Text>
           )}
           <Text style={styles.dateTime}>{formatDateTime(currentDate)}</Text>
         </View>
@@ -163,7 +164,7 @@ export default function AppHeader({
               {showProfile && (
                 <TouchableOpacity
                   accessibilityRole="button"
-                  style={styles.iconButton}
+                  style={styles.profileButtonContainer}
                   onPress={handleProfilePress}
                 >
                   {companyLogo && !logoError ? (
@@ -191,6 +192,16 @@ export default function AppHeader({
                       size={28}
                       color="#FF6B35"
                     />
+                  )}
+                  {user?.identifier && (
+                    <Text
+                      style={[
+                        styles.userIdentifierText,
+                        { color: usernameColor },
+                      ]}
+                    >
+                      {user.identifier}
+                    </Text>
                   )}
                 </TouchableOpacity>
               )}
@@ -234,6 +245,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
+  profileButtonContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 50,
+  },
+  userIdentifierText: {
+    fontSize: 10,
+    fontWeight: "600",
+    marginTop: 2,
+    textAlign: "center",
+  },
   userInfo: {
     flexDirection: "row",
     alignItems: "center",
@@ -248,6 +270,13 @@ const styles = StyleSheet.create({
   companyName: {
     fontSize: 14,
     fontWeight: "700",
+    color: "#FF6B35",
+    textAlign: "center",
+    marginBottom: 0,
+  },
+  poweredByText: {
+    fontSize: 12,
+    fontWeight: "500",
     color: "#11224e",
     textAlign: "center",
     marginBottom: 2,
@@ -255,7 +284,7 @@ const styles = StyleSheet.create({
   dateTime: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#11224e",
+    color: "#FF6B35",
     textAlign: "center",
   },
   logo: {
