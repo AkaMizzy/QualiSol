@@ -30,4 +30,5 @@ export interface Company {
   prompt3?: string | null;
   prompt4?: string | null;
   prompt5?: string | null;
+  powredby?: string | null;
 }
