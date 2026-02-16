@@ -13,7 +13,7 @@ import {
   createGed,
   deleteGed,
   getMyGeds,
-  updateGed, // Import new service
+  updateGed,
   updateGedFile,
 } from "@/services/gedService";
 import {
