@@ -593,7 +593,23 @@ export default function SharedGalerieScreen({
                     <View key={item.id} style={styles.imageContainer}>
                       <GalerieCard
                         item={{ ...item, author: displayAuthor }}
-                        onPress={() => handleCardPress(item)}
+                        onPress={() => {
+                          handleCardPress(item);
+                          // Increment view count
+                          if (token && item.id) {
+                            import("@/services/gedService").then(
+                              ({ incrementGedView }) => {
+                                incrementGedView(
+                                  token,
+                                  item.id,
+                                  item.view || 0,
+                                ).catch((err) =>
+                                  console.error("View inc failed", err),
+                                );
+                              },
+                            );
+                          }
+                        }}
                         hasVoiceNote={!!item.urlvoice}
                         isOffline={item.isOffline}
                         localImagePath={item.localImagePath}

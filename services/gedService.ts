@@ -59,8 +59,9 @@ export interface Ged {
   accuracy: string | null;
   altitudeAccuracy: string | null;
   url: string | null;
-  urlvoice: string | null; // NEW - voice note URL
+  urlvoice: string | null; // NEW
   size: number | null;
+  vue?: number;
   status_id: string;
   company_id: string;
   type?: string;
@@ -810,4 +811,12 @@ export async function downloadImagesZip(
     console.error("Failed to download ZIP:", error);
     throw error;
   }
+}
+export async function incrementGedView(
+  token: string,
+  id: string,
+  currentView: number,
+): Promise<void> {
+  const newView = (currentView || 0) + 1;
+  await api.put(`/api/geds/${id}`, { view: newView });
 }
