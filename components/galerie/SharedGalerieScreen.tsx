@@ -675,7 +675,7 @@ export default function SharedGalerieScreen({
           }
           modalTitle={
             creationMode === "capture"
-              ? "Ajouter un constat"
+              ? "Constat"
               : "Ajouter une image"
           }
           buttonText={

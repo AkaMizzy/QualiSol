@@ -12,21 +12,21 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import {
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
+    PanGestureHandler,
+    PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import VoiceNoteRecorder, { VoiceNoteRecorderRef } from "../VoiceNoteRecorder";
 
@@ -944,7 +944,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   modalContent: {
-    maxHeight: "90%",
+    height: "90%",
     backgroundColor: COLORS.white,
     borderTopLeftRadius: SIZES.xLarge,
     borderTopRightRadius: SIZES.xLarge,
@@ -1125,7 +1125,7 @@ const styles = StyleSheet.create({
   },
   imagePickerPlaceholder: {
     width: "100%",
-    height: 200,
+    height: 280,
     backgroundColor: COLORS.lightWhite,
     borderRadius: SIZES.medium,
     borderWidth: 2,
@@ -1165,7 +1165,7 @@ const styles = StyleSheet.create({
   },
   imagePreview: {
     width: "100%",
-    height: 200,
+    height: 280,
     borderRadius: SIZES.medium,
     backgroundColor: COLORS.lightWhite,
   },
