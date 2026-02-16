@@ -126,7 +126,7 @@ export default function SharedGalerieScreen({
   }, [allowOffline]);
 
   const fetchUsers = useCallback(async () => {
-    if (enableAssignment && token) {
+    if (token) {
       try {
         const users = await getUsers();
         setCompanyUsers(users);
@@ -134,7 +134,7 @@ export default function SharedGalerieScreen({
         console.error("Failed to fetch users:", error);
       }
     }
-  }, [enableAssignment, token]);
+  }, [token]);
 
   const checkNetworkStatus = useCallback(async () => {
     if (!allowOffline) {
@@ -581,19 +581,28 @@ export default function SharedGalerieScreen({
                   </Text>
                 </View>
               ) : (
-                currentPageImages.map((item: any) => (
-                  <View key={item.id} style={styles.imageContainer}>
-                    <GalerieCard
-                      item={item}
-                      onPress={() => handleCardPress(item)}
-                      hasVoiceNote={!!item.urlvoice}
-                      isOffline={item.isOffline}
-                      localImagePath={item.localImagePath}
-                      syncStatus={item.syncStatus}
-                      isVideo={isVideoFile(item.url)}
-                    />
-                  </View>
-                ))
+                currentPageImages.map((item: any) => {
+                  const authorUser = companyUsers.find(
+                    (u) => u.id === item.idauthor,
+                  );
+                  const displayAuthor = authorUser
+                    ? authorUser.identifier
+                    : item.author;
+
+                  return (
+                    <View key={item.id} style={styles.imageContainer}>
+                      <GalerieCard
+                        item={{ ...item, author: displayAuthor }}
+                        onPress={() => handleCardPress(item)}
+                        hasVoiceNote={!!item.urlvoice}
+                        isOffline={item.isOffline}
+                        localImagePath={item.localImagePath}
+                        syncStatus={item.syncStatus}
+                        isVideo={isVideoFile(item.url)}
+                      />
+                    </View>
+                  );
+                })
               )}
             </View>
 
@@ -674,9 +683,7 @@ export default function SharedGalerieScreen({
               : "Prendre une photo ou vidéo"
           }
           modalTitle={
-            creationMode === "capture"
-              ? "Constat"
-              : "Ajouter une image"
+            creationMode === "capture" ? "Constat" : "Ajouter une image"
           }
           buttonText={
             creationMode === "capture"

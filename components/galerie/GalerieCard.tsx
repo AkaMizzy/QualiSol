@@ -5,12 +5,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { ResizeMode, Video } from "expo-av";
 import React from "react";
 import {
-  ActivityIndicator,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Animated,
+    Easing,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 interface GalerieCardProps {
@@ -37,6 +39,35 @@ export default function GalerieCard({
     hour: "2-digit",
     minute: "2-digit",
   });
+
+  // Animation for AI Analysis
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    if (item.iaanalyse === 1) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.2,
+            duration: 1000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      pulse.start();
+
+      return () => pulse.stop();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [item.iaanalyse, pulseAnim]);
 
   // Use local image path for offline records, otherwise use backend URL
   const imageSource =
@@ -71,6 +102,30 @@ export default function GalerieCard({
         )}
 
         {/* Top Right Badges Container */}
+        <View style={styles.topRightContainer}>
+          {/* AI Analysis & Powered By Overlay (Top Center) removed from here and placed absolutely */}
+        </View>
+
+        {/* AI Analysis & Powered By Overlay (Top Center) */}
+        {(item.iaanalyse !== undefined || item.powredby) && (
+          <View style={styles.aiOverlayContainer}>
+            <View style={styles.aiBadge}>
+              <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+                <Ionicons
+                  name="sparkles"
+                  size={14}
+                  color={item.iaanalyse === 1 ? "#FFD700" : COLORS.gray} // Gold for active, Gray for inactive
+                />
+              </Animated.View>
+              {item.powredby && (
+                <Text style={styles.poweredByText}>
+                  {item.powredby}
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
+
         <View style={styles.topRightContainer}>
           {/* Mode Indicator */}
           {item.mode && (
@@ -248,5 +303,29 @@ const styles = StyleSheet.create({
     zIndex: 10,
     justifyContent: "center",
     alignItems: "center",
+  },
+  aiOverlayContainer: {
+    position: "absolute",
+    top: 8,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    zIndex: 10,
+  },
+  aiBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f87b1b",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 6,
+  },
+  poweredByText: {
+    fontFamily: FONT.regular,
+    fontSize: 10,
+    color: COLORS.white,
+    opacity: 0.9,
   },
 });

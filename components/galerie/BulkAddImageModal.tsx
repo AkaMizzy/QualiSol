@@ -12,21 +12,21 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    PanGestureHandler,
-    PanGestureHandlerGestureEvent,
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import VoiceNoteRecorder, { VoiceNoteRecorderRef } from "../VoiceNoteRecorder";
 
@@ -449,12 +449,12 @@ export default function BulkAddImageModal({
           }
           const decodedString = atob(base64);
           const decodedPayload = JSON.parse(decodedString);
-          if (decodedPayload.username) {
+          if (decodedPayload.identifier) {
+            authorName = decodedPayload.identifier;
+          } else if (decodedPayload.username) {
             authorName = decodedPayload.username;
           } else if (decodedPayload.email) {
             authorName = decodedPayload.email;
-          } else if (decodedPayload.identifier) {
-            authorName = decodedPayload.identifier;
           }
         }
       } catch (err) {
@@ -463,14 +463,18 @@ export default function BulkAddImageModal({
     }
 
     if (authorName === "Unknown User" && user) {
-      const name = [user.firstname, user.lastname]
-        .filter(Boolean)
-        .join(" ")
-        .trim();
-      if (name) {
-        authorName = name;
-      } else if (user.email) {
-        authorName = user.email;
+      if (user.identifier) {
+        authorName = user.identifier;
+      } else {
+        const name = [user.firstname, user.lastname]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+        if (name) {
+          authorName = name;
+        } else if (user.email) {
+          authorName = user.email;
+        }
       }
     }
 

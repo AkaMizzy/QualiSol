@@ -67,6 +67,8 @@ export interface Ged {
   categorie?: string;
   assigned?: string;
   audiotxt?: string;
+  iaanalyse?: number; // 0 or 1
+  powredby?: string;
   iatxt?: string;
   quantity?: number;
   price?: number;
