@@ -615,7 +615,7 @@ export default function SharedGalerieScreen({
                         localImagePath={item.localImagePath}
                         syncStatus={item.syncStatus}
                         isVideo={isVideoFile(item.url)}
-                        height={350}
+                        height={250}
                       />
                     </View>
                   );
@@ -750,7 +750,6 @@ export default function SharedGalerieScreen({
               : undefined
           }
           audiotxt={selectedItem.audiotxt}
-          iatxt={selectedItem.iatxt}
         />
       )}
       <UserSelectionModal
