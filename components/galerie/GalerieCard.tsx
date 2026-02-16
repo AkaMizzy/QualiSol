@@ -5,14 +5,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { ResizeMode, Video } from "expo-av";
 import React from "react";
 import {
-    ActivityIndicator,
-    Animated,
-    Easing,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Animated,
+  Easing,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface GalerieCardProps {
@@ -23,6 +23,7 @@ interface GalerieCardProps {
   localImagePath?: string;
   syncStatus?: "pending" | "syncing" | "failed";
   isVideo?: boolean;
+  height?: number;
 }
 
 export default function GalerieCard({
@@ -31,8 +32,10 @@ export default function GalerieCard({
   hasVoiceNote,
   isOffline,
   localImagePath,
+
   syncStatus,
   isVideo,
+  height = 240, // Default height
 }: GalerieCardProps) {
   const GofG = API_CONFIG.BASE_URL;
   const formattedTime = new Date(item.created_at).toLocaleTimeString("fr-FR", {
@@ -87,7 +90,7 @@ export default function GalerieCard({
             isMuted={true}
           />
         ) : (
-          <Image source={imageSource} style={styles.image} />
+          <Image source={imageSource} style={[styles.image, { height }]} />
         )}
 
         {/* Play icon overlay for videos */}
@@ -118,9 +121,7 @@ export default function GalerieCard({
                 />
               </Animated.View>
               {item.powredby && (
-                <Text style={styles.poweredByText}>
-                  {item.powredby}
-                </Text>
+                <Text style={styles.poweredByText}>{item.powredby}</Text>
               )}
             </View>
           </View>

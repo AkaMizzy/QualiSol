@@ -615,6 +615,7 @@ export default function SharedGalerieScreen({
                         localImagePath={item.localImagePath}
                         syncStatus={item.syncStatus}
                         isVideo={isVideoFile(item.url)}
+                        height={350}
                       />
                     </View>
                   );

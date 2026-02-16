@@ -12,6 +12,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
@@ -126,6 +127,7 @@ export default function BulkAddImageModal({
   );
 
   const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const prevVisibleRef = useRef(visible);
 
@@ -381,7 +383,9 @@ export default function BulkAddImageModal({
     setVoiceNote(null);
     setIsExpanded(false);
     setCurrentImageIndex(0);
+    setCurrentImageIndex(0);
     voiceNoteRecorderRef.current?.forceStopAndCleanup();
+    setIsSubmitting(false);
   };
 
   const handlePrevImage = () => {
@@ -480,6 +484,7 @@ export default function BulkAddImageModal({
 
     // Start upload
     setIsUploading(true);
+    setIsSubmitting(true);
 
     let succeeded = 0;
     let failed = 0;
@@ -524,6 +529,7 @@ export default function BulkAddImageModal({
     }
 
     setIsUploading(false);
+    setIsSubmitting(false);
 
     // Navigation logic after bulk upload
     if (shouldClose) {
@@ -547,7 +553,11 @@ export default function BulkAddImageModal({
         style={styles.keyboardAvoidingView}
       >
         <View style={styles.modalContainer}>
-          <TouchableOpacity style={styles.modalBackdrop} onPress={onClose} />
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            onPress={() => !isSubmitting && onClose()}
+            disabled={isSubmitting}
+          />
           <View style={styles.modalContent}>
             <ScrollView
               showsVerticalScrollIndicator={false}
@@ -556,7 +566,11 @@ export default function BulkAddImageModal({
               contentContainerStyle={styles.scrollViewContent}
             >
               <View style={styles.headerContainer}>
-                <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => !isSubmitting && onClose()}
+                  disabled={isSubmitting}
+                >
                   <Ionicons name="close" size={32} color={COLORS.primary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{modalTitle}</Text>
@@ -646,7 +660,8 @@ export default function BulkAddImageModal({
                 ) : (
                   <TouchableOpacity
                     style={styles.imagePickerPlaceholder}
-                    onPress={handlePickImages}
+                    onPress={() => !isSubmitting && handlePickImages()}
+                    disabled={isSubmitting}
                   >
                     <Ionicons
                       name="images-outline"
@@ -671,8 +686,13 @@ export default function BulkAddImageModal({
               {/* Primary Action Buttons */}
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
-                  style={[styles.button, styles.cancelButton]}
+                  style={[
+                    styles.button,
+                    styles.cancelButton,
+                    isSubmitting && { opacity: 0.7 },
+                  ]}
                   onPress={() => handleBulkUpload(true)}
+                  disabled={isSubmitting}
                 >
                   <Text style={[styles.buttonText, styles.cancelButtonText]}>
                     Terminer
@@ -685,6 +705,7 @@ export default function BulkAddImageModal({
                     styles.addButton,
                     (isStorageQuotaReached ||
                       isUploading ||
+                      isSubmitting ||
                       selectedImages.length === 0) &&
                       styles.addButtonDisabled,
                   ]}
@@ -692,6 +713,7 @@ export default function BulkAddImageModal({
                   disabled={
                     isStorageQuotaReached ||
                     isUploading ||
+                    isSubmitting ||
                     selectedImages.length === 0
                   }
                 >
@@ -928,6 +950,18 @@ export default function BulkAddImageModal({
                 </View>
               )}
             </ScrollView>
+
+            {/* Loading Overlay */}
+            {isSubmitting && (
+              <View style={styles.submitLoadingOverlay}>
+                <View style={styles.submitLoadingContainer}>
+                  <ActivityIndicator size="large" color={COLORS.primary} />
+                  <Text style={styles.submitLoadingText}>
+                    Traitement en cours...
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -948,11 +982,33 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   modalContent: {
+    width: "100%",
     height: "90%",
     backgroundColor: COLORS.white,
-    borderTopLeftRadius: SIZES.xLarge,
-    borderTopRightRadius: SIZES.xLarge,
+    borderTopLeftRadius: SIZES.large,
+    borderTopRightRadius: SIZES.large,
     padding: SIZES.large,
+    overflow: "hidden",
+  },
+  submitLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255,255,255,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  submitLoadingContainer: {
+    backgroundColor: "rgba(0,0,0,0.8)",
+    padding: 20,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  submitLoadingText: {
+    color: "#fff",
+    marginTop: 10,
+    fontSize: 16,
+    fontWeight: "bold",
   },
   scrollViewContent: {
     paddingBottom: Platform.OS === "android" ? 80 : 40,

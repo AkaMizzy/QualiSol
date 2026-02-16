@@ -16,6 +16,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Keyboard,
@@ -142,6 +143,7 @@ export default function AddImageModal({
   const [annotatorBaseUri, setAnnotatorBaseUri] = useState<string | null>(null);
 
   const [captureModalVisible, setCaptureModalVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Ref for voice note recorder cleanup
   const voiceNoteRecorderRef = useRef<VoiceNoteRecorderRef>(null);
@@ -398,6 +400,7 @@ export default function AddImageModal({
       setIsGeneratingDescription(false);
       setLevel(5);
       setSelectedType(null);
+      setIsSubmitting(false);
     }
   }, [visible, showImagePickerOptions, openCameraOnShow, allowedMode]);
 
@@ -549,7 +552,9 @@ export default function AddImageModal({
     setSelectedCategorie(null);
     setAnnotatorVisible(false);
     setAnnotatorBaseUri(null);
+    setAnnotatorBaseUri(null);
     setMode("upload");
+    setIsSubmitting(false);
   };
 
   const handleAdd = async (shouldClose: boolean) => {
@@ -580,6 +585,9 @@ export default function AddImageModal({
       );
       return;
     }
+
+    // Set loading state
+    setIsSubmitting(true);
 
     let authorName = "Unknown User";
 
@@ -631,30 +639,35 @@ export default function AddImageModal({
     };
 
     // Submit the data
-    getDeviceId().then((deviceId) => {
-      onAdd(
-        {
-          title,
-          description,
-          image,
-          voiceNote: currentVoiceNote, // Use the locally resolved voice note
-          author: authorName,
-          idauthor: user?.id,
-          iddevice: deviceId,
-          latitude,
-          longitude,
-          altitude,
-          accuracy,
-          altitudeAccuracy,
-          level,
-          type: selectedType,
-          categorie: selectedCategorie,
-          iatxt: iaText,
-          mode: mode,
-        },
-        shouldClose,
-        false, // skipRefresh = false (always refresh for single add)
-      );
+    getDeviceId().then(async (deviceId) => {
+      try {
+        await onAdd(
+          {
+            title,
+            description,
+            image,
+            voiceNote: currentVoiceNote, // Use the locally resolved voice note
+            author: authorName,
+            idauthor: user?.id,
+            iddevice: deviceId,
+            latitude,
+            longitude,
+            altitude,
+            accuracy,
+            altitudeAccuracy,
+            level,
+            type: selectedType,
+            categorie: selectedCategorie,
+            iatxt: iaText,
+            mode: mode,
+          },
+          shouldClose,
+          false, // skipRefresh = false (always refresh for single add)
+        );
+      } catch (error) {
+        console.error("Submission failed", error);
+        setIsSubmitting(false);
+      }
     });
 
     if (shouldClose) {
@@ -665,7 +678,7 @@ export default function AddImageModal({
     } else {
       // Flow 2: Submit & Continue
       // Reset the form immediately for the next entry
-      resetForm();
+      await resetForm();
       // Show picker options again (or open camera if preferred) to keep the flow going
       showImagePickerOptions();
     }
@@ -709,9 +722,11 @@ export default function AddImageModal({
           <TouchableOpacity
             style={styles.modalBackdrop}
             onPress={async () => {
+              if (isSubmitting) return;
               await voiceNoteRecorderRef.current?.forceStopAndCleanup();
               onClose();
             }}
+            disabled={isSubmitting}
           />
           <View style={styles.modalContent}>
             <ScrollView
@@ -832,39 +847,6 @@ export default function AddImageModal({
                   </View>
                 )}
               </View>
-
-              {/* Annotated Image Preview */}
-              {annotatedImage && image?.type !== "video" && (
-                <View style={styles.annotatedImageContainer}>
-                  <View style={styles.annotatedImageHeader}>
-                    <Ionicons
-                      name="analytics-outline"
-                      size={20}
-                      color="#ef4444"
-                    />
-                    <Text style={styles.annotatedImageTitle}>
-                      Analyse IA - Anomalies Détectées
-                    </Text>
-                  </View>
-                  <View style={styles.annotatedImageWrapper}>
-                    <TouchableOpacity
-                      onPress={() => setFullScreenImageVisible(true)}
-                      activeOpacity={0.9}
-                      style={{ width: "100%", height: "100%" }}
-                    >
-                      <Image
-                        source={{ uri: annotatedImage }}
-                        style={styles.annotatedImagePreview}
-                        resizeMode="contain"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={styles.annotatedImageNote}>
-                    Appuyez l'image pour l'agrandir 🔍
-                  </Text>
-                </View>
-              )}
-
               {/* COMPACT SECTION - Always Visible */}
               <View style={styles.compactSection}>
                 <VoiceNoteRecorder
@@ -1121,6 +1103,16 @@ export default function AddImageModal({
                 </View>
               )}
             </ScrollView>
+
+            {/* Loading Overlay */}
+            {isSubmitting && (
+              <View style={styles.loadingOverlay}>
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={COLORS.primary} />
+                  <Text style={styles.loadingText}>Traitement en cours...</Text>
+                </View>
+              </View>
+            )}
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -1260,6 +1252,27 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: SIZES.xLarge,
     borderTopRightRadius: SIZES.xLarge,
     padding: SIZES.large,
+    overflow: "hidden",
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255,255,255,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  loadingContainer: {
+    backgroundColor: "rgba(0,0,0,0.8)",
+    padding: 20,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    color: "#fff",
+    marginTop: 10,
+    fontSize: 16,
+    fontWeight: "bold",
   },
   scrollViewContent: {
     paddingBottom: Platform.OS === "android" ? 80 : 40,

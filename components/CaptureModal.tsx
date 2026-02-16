@@ -1,23 +1,24 @@
 import { COLORS } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import Slider from "@react-native-community/slider";
 import {
-    CameraType,
-    CameraView,
-    FlashMode,
-    useCameraPermissions,
-    useMicrophonePermissions,
+  CameraType,
+  CameraView,
+  FlashMode,
+  useCameraPermissions,
+  useMicrophonePermissions,
 } from "expo-camera";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    Alert,
-    Modal,
-    Platform,
-    SafeAreaView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  Platform,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface CaptureModalProps {
@@ -43,6 +44,7 @@ export default function CaptureModal({
   const [flash, setFlash] = useState<FlashMode>("off");
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [zoom, setZoom] = useState(0);
   const cameraRef = useRef<CameraView>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -182,6 +184,7 @@ export default function CaptureModal({
           facing={facing}
           mode={mode}
           flash={flash}
+          zoom={zoom}
           ref={cameraRef}
           animateShutter={false} // We handle our own animation/feedback
         >
@@ -218,8 +221,24 @@ export default function CaptureModal({
 
             <View style={styles.spacer} />
 
-            {/* Bottom Controls */}
             <View style={styles.bottomControls}>
+              {/* Zoom Slider */}
+              <View style={styles.zoomContainer}>
+                <Ionicons name="remove" size={20} color="white" />
+                <Slider
+                  style={{ flex: 1, marginHorizontal: 10 }}
+                  minimumValue={0}
+                  maximumValue={1}
+                  step={0.01}
+                  value={zoom}
+                  onValueChange={setZoom}
+                  minimumTrackTintColor="#FFFFFF"
+                  maximumTrackTintColor="rgba(255,255,255,0.3)"
+                  thumbTintColor="#FFFFFF"
+                />
+                <Ionicons name="add" size={20} color="white" />
+              </View>
+
               {/* Mode Switcher */}
               {!isRecording && (
                 <View style={styles.modeSwitcher}>
@@ -330,6 +349,13 @@ const styles = StyleSheet.create({
   bottomControls: {
     paddingBottom: 40,
     backgroundColor: "rgba(0,0,0,0.3)", // Slight tint for readability
+  },
+  zoomContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 40,
+    marginBottom: 20,
+    paddingTop: 10,
   },
   modeSwitcher: {
     flexDirection: "row",
