@@ -2,19 +2,11 @@ import API_CONFIG from "@/app/config/api";
 import { useAuth } from "@/contexts/AuthContext";
 import folderService, {
   CreateFolderPayload,
+  Folder,
   Project,
 } from "@/services/folderService";
 import { FolderType, updateFolderType } from "@/services/folderTypeService";
-import {
-  createGed,
-  Ged,
-  getGedsBySource,
-  updateGedFile,
-} from "@/services/gedService";
-import {
-  getQuestionTypesByFolder,
-  QuestionType,
-} from "@/services/questionTypeService";
+import { createGed, updateGedFile } from "@/services/gedService";
 import { getUsers } from "@/services/userService";
 import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
@@ -37,6 +29,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../AppHeader";
+import FolderAnswersSummaryModal from "./FolderAnswersSummaryModal";
 
 type Props = {
   visible: boolean;
@@ -67,16 +60,18 @@ export default function UpdateFolderTypeModal({
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
 
-  // User Answers View State
-  const [questionTypes, setQuestionTypes] = useState<QuestionType[]>([]);
-  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
-  const [userAnswers, setUserAnswers] = useState<Ged[]>([]);
-  const [loadingAnswers, setLoadingAnswers] = useState(false);
+  // Folder Answers View State
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string>("");
+  const [showFolderPicker, setShowFolderPicker] = useState(false);
+  const [showAnswersModal, setShowAnswersModal] = useState(false);
+  const [loadingFolders, setLoadingFolders] = useState(false);
 
   useEffect(() => {
     if (visible && token) {
       loadUsers();
       loadProjects();
+      loadFolders();
     }
   }, [visible, token]);
 
@@ -110,6 +105,31 @@ export default function UpdateFolderTypeModal({
     }
   };
 
+  const loadFolders = async () => {
+    if (!token || !folderType || !user) return;
+    setLoadingFolders(true);
+    try {
+      const foldersData = await folderService.getAllFolders(
+        token,
+        folderType.id,
+      );
+      if (Array.isArray(foldersData)) {
+        // Filter by company_id
+        const companyFolders = foldersData.filter(
+          (f) =>
+            f.company_id === user.company_id &&
+            (f.foldertype_id === folderType.id ||
+              f.foldertype === folderType.id),
+        );
+        setFolders(companyFolders);
+      }
+    } catch (error) {
+      console.error("Failed to load folders:", error);
+    } finally {
+      setLoadingFolders(false);
+    }
+  };
+
   const getSelectedUserName = () => {
     if (!selectedUserId) return "Sélectionner un propriétaire";
     const user = users.find((u) => u.id === selectedUserId);
@@ -127,60 +147,18 @@ export default function UpdateFolderTypeModal({
     return project?.title || "Chantier inconnu";
   };
 
+  const getSelectedFolderTitle = () => {
+    if (!selectedFolderId) return "Sélectionner un dossier";
+    const folder = folders.find((f) => f.id === selectedFolderId);
+    return folder?.code || folder?.title || "Dossier inconnu";
+  };
+
   useEffect(() => {
     if (folderType) {
       setTitle(folderType.title);
       setImage(null); // Reset new image selection, show existing URL
-      loadFolderQuestions();
     }
   }, [folderType, visible]);
-
-  const loadFolderQuestions = async () => {
-    if (!folderType || !token) return;
-    try {
-      const qTypes = await getQuestionTypesByFolder(folderType.id, token);
-      setQuestionTypes(qTypes);
-    } catch (error) {
-      console.error("Failed to load question types:", error);
-    }
-  };
-
-  const handleUserSelect = async (userId: string) => {
-    if (expandedUserId === userId) {
-      setExpandedUserId(null);
-      setUserAnswers([]);
-      return;
-    }
-
-    if (!token) return;
-
-    setExpandedUserId(userId);
-    setLoadingAnswers(true);
-    setUserAnswers([]);
-
-    try {
-      const questionIds = questionTypes.map((q) => q.id);
-      if (questionIds.length === 0) {
-        setLoadingAnswers(false);
-        return;
-      }
-
-      // Fetch answers where idsource is in questionIds
-      // We need to filter by author client-side if the API doesn't support multiple filters perfectly combined,
-      // but let's assume valid response and filter.
-      // However, typical getGedsBySource takes idsource.
-      const answers = await getGedsBySource(token, questionIds, "answer");
-
-      // Filter for this user
-      const userSpecificAnswers = answers.filter((a) => a.author === userId);
-      setUserAnswers(userSpecificAnswers);
-    } catch (error) {
-      console.error("Failed to load user answers:", error);
-      Alert.alert("Erreur", "Impossible de charger les réponses.");
-    } finally {
-      setLoadingAnswers(false);
-    }
-  };
 
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -319,6 +297,13 @@ export default function UpdateFolderTypeModal({
       presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
+      <FolderAnswersSummaryModal
+        visible={showAnswersModal}
+        onClose={() => setShowAnswersModal(false)}
+        folderId={selectedFolderId}
+        folderTitle={getSelectedFolderTitle()}
+        users={users}
+      />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1, backgroundColor: "#f8fafc" }}
@@ -335,10 +320,6 @@ export default function UpdateFolderTypeModal({
               </TouchableOpacity>
             }
           />
-          <View style={[styles.header, { justifyContent: "center" }]}>
-            <Text style={styles.headerTitle}>Modifier le type</Text>
-          </View>
-
           <ScrollView
             style={{ flex: 1 }}
             contentContainerStyle={styles.content}
@@ -545,7 +526,7 @@ export default function UpdateFolderTypeModal({
               </TouchableOpacity>
             </View>
 
-            {/* User Answers Overview Section */}
+            {/* User Answers Overview Section - REPLACED BY FOLDER SELECTOR */}
             <View style={styles.answersSection}>
               <View style={styles.sectionHeader}>
                 <Ionicons
@@ -553,160 +534,89 @@ export default function UpdateFolderTypeModal({
                   size={20}
                   color="#f87b1b"
                 />
-                <Text style={styles.sectionTitle}>
-                  Suivi des réponses utilisateurs
-                </Text>
+                <Text style={styles.sectionTitle}>Suivi des Dossiers</Text>
               </View>
 
-              {/* User List - Horizontal Scroll */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.usersListContainer}
+              <View
+                style={[
+                  styles.userPickerContainer,
+                  { zIndex: showFolderPicker ? 3000 : 5 },
+                ]}
               >
-                {users.map((u) => {
-                  const isSelected = expandedUserId === u.id;
-                  const name =
-                    `${u.firstname || ""} ${u.lastname || ""}`.trim() ||
-                    u.email ||
-                    "?";
-                  const initials =
-                    name === "?"
-                      ? "?"
-                      : `${u.firstname?.[0] || ""}${u.lastname?.[0] || ""}`.toUpperCase();
+                <Text style={styles.label}>Sélectionner un dossier</Text>
+                <TouchableOpacity
+                  style={styles.pickerButton}
+                  onPress={() => setShowFolderPicker(!showFolderPicker)}
+                  disabled={loadingFolders}
+                >
+                  <Text
+                    style={[
+                      styles.pickerButtonText,
+                      !selectedFolderId && { color: "#9ca3af" },
+                    ]}
+                  >
+                    {loadingFolders
+                      ? "Chargement..."
+                      : getSelectedFolderTitle()}
+                  </Text>
+                  <Ionicons
+                    name={showFolderPicker ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color="#6b7280"
+                  />
+                </TouchableOpacity>
 
-                  return (
-                    <TouchableOpacity
-                      key={u.id}
-                      style={[
-                        styles.userAvatarItem,
-                        isSelected && styles.userAvatarItemSelected,
-                      ]}
-                      onPress={() => handleUserSelect(u.id)}
-                    >
-                      <View
-                        style={[
-                          styles.avatarCircle,
-                          isSelected && styles.avatarCircleSelected,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.avatarInitials,
-                            isSelected && styles.avatarInitialsSelected,
-                          ]}
-                        >
-                          {initials}
+                {showFolderPicker && (
+                  <View style={styles.dropdown}>
+                    <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
+                      {folders.length === 0 ? (
+                        <Text style={styles.dropdownItemText}>
+                          Aucun dossier trouvé.
                         </Text>
-                      </View>
-                      <Text
-                        style={[
-                          styles.userAvatarName,
-                          isSelected && styles.userAvatarNameSelected,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-
-              {/* Answers Panel */}
-              {expandedUserId && (
-                <View style={styles.answersPanel}>
-                  {loadingAnswers ? (
-                    <ActivityIndicator size="small" color="#f87b1b" />
-                  ) : userAnswers.length === 0 ? (
-                    <Text style={styles.emptyAnswersText}>
-                      Aucune réponse trouvée pour cet utilisateur.
-                    </Text>
-                  ) : (
-                    <View>
-                      <View style={styles.answersTableHeader}>
-                        <Text style={[styles.answersth, { flex: 2 }]}>
-                          Question
-                        </Text>
-                        <Text style={[styles.answersth, { width: 60 }]}>
-                          Qté/Prix
-                        </Text>
-                        <Text style={[styles.answersth, { width: 50 }]}>
-                          Média
-                        </Text>
-                        <Text style={[styles.answersth, { width: 70 }]}>
-                          Date
-                        </Text>
-                      </View>
-                      {userAnswers.map((answer) => {
-                        const question = questionTypes.find(
-                          (q) => q.id === answer.idsource,
-                        );
-                        const hasPhoto = !!answer.url;
-                        const hasVoice = !!answer.urlvoice;
-
-                        return (
-                          <View key={answer.id} style={styles.answerRow}>
-                            <Text
-                              style={[styles.answerCell, { flex: 2 }]}
-                              numberOfLines={2}
-                            >
-                              {question?.title || "Question inconnue"}
-                            </Text>
-                            <View style={{ width: 60 }}>
-                              {answer.quantity !== undefined &&
-                                answer.quantity !== null && (
-                                  <Text style={styles.answerDetailText}>
-                                    x{answer.quantity}
-                                  </Text>
-                                )}
-                              {answer.price !== undefined &&
-                                answer.price !== null && (
-                                  <Text style={styles.answerDetailText}>
-                                    {answer.price}€
-                                  </Text>
-                                )}
-                            </View>
-                            <View
-                              style={{
-                                width: 50,
-                                flexDirection: "row",
-                                gap: 4,
-                              }}
-                            >
-                              {hasPhoto && (
-                                <Ionicons
-                                  name="image"
-                                  size={14}
-                                  color="#6b7280"
-                                />
-                              )}
-                              {hasVoice && (
-                                <Ionicons
-                                  name="mic"
-                                  size={14}
-                                  color="#6b7280"
-                                />
-                              )}
-                            </View>
+                      ) : (
+                        folders.map((f) => (
+                          <TouchableOpacity
+                            key={f.id}
+                            style={[
+                              styles.dropdownItem,
+                              selectedFolderId === f.id &&
+                                styles.dropdownItemSelected,
+                            ]}
+                            onPress={() => {
+                              setSelectedFolderId(f.id);
+                              setShowFolderPicker(false);
+                            }}
+                          >
                             <Text
                               style={[
-                                styles.answerCell,
-                                { width: 70, fontSize: 10 },
+                                styles.dropdownItemText,
+                                selectedFolderId === f.id &&
+                                  styles.dropdownItemTextSelected,
                               ]}
                             >
-                              {new Date(answer.created_at).toLocaleDateString(
-                                "fr-FR",
-                                { day: "2-digit", month: "2-digit" },
-                              )}
+                              {f.code} - {f.title}
                             </Text>
-                          </View>
-                        );
-                      })}
-                    </View>
-                  )}
-                </View>
-              )}
+                          </TouchableOpacity>
+                        ))
+                      )}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.createFolderButton,
+                  !selectedFolderId && styles.createFolderButtonDisabled,
+                ]}
+                onPress={() => setShowAnswersModal(true)}
+                disabled={!selectedFolderId}
+              >
+                <Ionicons name="eye-outline" size={20} color="#f87b1b" />
+                <Text style={styles.createFolderButtonText}>
+                  Voir les réponses
+                </Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
 

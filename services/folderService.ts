@@ -86,9 +86,16 @@ async function getAllFolders(
   token: string,
   folderTypeId?: string,
 ): Promise<Folder[]> {
-  const url = folderTypeId
-    ? `api/folders?foldertype=${folderTypeId}`
-    : "api/folders";
+  let url = "api/folders";
+  if (folderTypeId) {
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        folderTypeId,
+      );
+    url = isUuid
+      ? `api/folders?foldertype_id=${folderTypeId}`
+      : `api/folders?foldertype=${folderTypeId}`;
+  }
   const response = await api.get(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
