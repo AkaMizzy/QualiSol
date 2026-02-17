@@ -1,6 +1,9 @@
 import API_CONFIG from "@/app/config/api";
 import { useAuth } from "@/contexts/AuthContext";
-import folderService, { CreateFolderPayload } from "@/services/folderService";
+import folderService, {
+  CreateFolderPayload,
+  Project,
+} from "@/services/folderService";
 import { FolderType, updateFolderType } from "@/services/folderTypeService";
 import {
   createGed,
@@ -58,8 +61,12 @@ export default function UpdateFolderTypeModal({
   const [users, setUsers] = useState<CompanyUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [showUserPicker, setShowUserPicker] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [showProjectPicker, setShowProjectPicker] = useState(false);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(false);
 
   // User Answers View State
   const [questionTypes, setQuestionTypes] = useState<QuestionType[]>([]);
@@ -70,8 +77,24 @@ export default function UpdateFolderTypeModal({
   useEffect(() => {
     if (visible && token) {
       loadUsers();
+      loadProjects();
     }
   }, [visible, token]);
+
+  const loadProjects = async () => {
+    if (!token) return;
+    setLoadingProjects(true);
+    try {
+      const projectsData = await folderService.getAllProjects(token);
+      if (Array.isArray(projectsData)) {
+        setProjects(projectsData);
+      }
+    } catch (error) {
+      console.error("Failed to load projects:", error);
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
 
   const loadUsers = async () => {
     if (!token) return;
@@ -97,6 +120,12 @@ export default function UpdateFolderTypeModal({
       user.email ||
       "Utilisateur sans nom"
     );
+  };
+
+  const getSelectedProjectTitle = () => {
+    if (!selectedProjectId) return "Sélectionner un chantier";
+    const project = projects.find((p) => p.id === selectedProjectId);
+    return project?.title || "Chantier inconnu";
   };
 
   useEffect(() => {
@@ -247,6 +276,10 @@ export default function UpdateFolderTypeModal({
       Alert.alert("Erreur", "Veuillez sélectionner un propriétaire.");
       return;
     }
+    if (!selectedProjectId) {
+      Alert.alert("Erreur", "Veuillez sélectionner un chantier.");
+      return;
+    }
     if (!folderType || !token) return;
 
     setIsCreatingFolder(true);
@@ -257,7 +290,7 @@ export default function UpdateFolderTypeModal({
         description: folderType.description || undefined,
         owner_id: selectedUserId,
         foldertype_id: folderType.id,
-        project_id: undefined,
+        project_id: selectedProjectId,
         zone_id: undefined,
         control_id: undefined,
         technicien_id: undefined,
@@ -266,7 +299,9 @@ export default function UpdateFolderTypeModal({
       await folderService.createFolder(payload, token);
       Alert.alert("Succès", "Dossier créé avec succès !");
       // Optional: Close modal or reset selection
+      // Optional: Close modal or reset selection
       setSelectedUserId("");
+      setSelectedProjectId("");
       onClose();
     } catch (error) {
       console.error("Failed to create folder from type:", error);
@@ -414,14 +449,75 @@ export default function UpdateFolderTypeModal({
                   )}
                 </View>
 
+                {/* Project Picker */}
+                <View style={styles.userPickerContainer}>
+                  <Text style={styles.label}>Chantier</Text>
+                  <TouchableOpacity
+                    style={styles.pickerButton}
+                    onPress={() => setShowProjectPicker(!showProjectPicker)}
+                  >
+                    <Text
+                      style={[
+                        styles.pickerButtonText,
+                        !selectedProjectId && { color: "#9ca3af" },
+                      ]}
+                    >
+                      {getSelectedProjectTitle()}
+                    </Text>
+                    <Ionicons
+                      name={showProjectPicker ? "chevron-up" : "chevron-down"}
+                      size={20}
+                      color="#6b7280"
+                    />
+                  </TouchableOpacity>
+
+                  {showProjectPicker && (
+                    <View style={styles.dropdown}>
+                      <ScrollView
+                        nestedScrollEnabled
+                        style={{ maxHeight: 200 }}
+                      >
+                        {projects.map((p) => (
+                          <TouchableOpacity
+                            key={p.id}
+                            style={[
+                              styles.dropdownItem,
+                              selectedProjectId === p.id &&
+                                styles.dropdownItemSelected,
+                            ]}
+                            onPress={() => {
+                              setSelectedProjectId(p.id);
+                              setShowProjectPicker(false);
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.dropdownItemText,
+                                selectedProjectId === p.id &&
+                                  styles.dropdownItemTextSelected,
+                              ]}
+                            >
+                              {p.title}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+
                 <TouchableOpacity
                   style={[
                     styles.createFolderButton,
-                    (!selectedUserId || isCreatingFolder) &&
+                    (!selectedUserId ||
+                      !selectedProjectId ||
+                      isCreatingFolder) &&
                       styles.createFolderButtonDisabled,
                   ]}
                   onPress={handleCreateFolder}
-                  disabled={!selectedUserId || isCreatingFolder}
+                  disabled={
+                    !selectedUserId || !selectedProjectId || isCreatingFolder
+                  }
                 >
                   {isCreatingFolder ? (
                     <ActivityIndicator size="small" color="#f87b1b" />
