@@ -2,7 +2,16 @@ import API_CONFIG from "@/app/config/api";
 import { useAuth } from "@/contexts/AuthContext";
 import folderService, { CreateFolderPayload } from "@/services/folderService";
 import { FolderType, updateFolderType } from "@/services/folderTypeService";
-import { createGed, updateGedFile } from "@/services/gedService";
+import {
+  createGed,
+  Ged,
+  getGedsBySource,
+  updateGedFile,
+} from "@/services/gedService";
+import {
+  getQuestionTypesByFolder,
+  QuestionType,
+} from "@/services/questionTypeService";
 import { getUsers } from "@/services/userService";
 import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
@@ -52,6 +61,12 @@ export default function UpdateFolderTypeModal({
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
+  // User Answers View State
+  const [questionTypes, setQuestionTypes] = useState<QuestionType[]>([]);
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [userAnswers, setUserAnswers] = useState<Ged[]>([]);
+  const [loadingAnswers, setLoadingAnswers] = useState(false);
+
   useEffect(() => {
     if (visible && token) {
       loadUsers();
@@ -88,8 +103,56 @@ export default function UpdateFolderTypeModal({
     if (folderType) {
       setTitle(folderType.title);
       setImage(null); // Reset new image selection, show existing URL
+      loadFolderQuestions();
     }
   }, [folderType, visible]);
+
+  const loadFolderQuestions = async () => {
+    if (!folderType || !token) return;
+    try {
+      const qTypes = await getQuestionTypesByFolder(folderType.id, token);
+      setQuestionTypes(qTypes);
+    } catch (error) {
+      console.error("Failed to load question types:", error);
+    }
+  };
+
+  const handleUserSelect = async (userId: string) => {
+    if (expandedUserId === userId) {
+      setExpandedUserId(null);
+      setUserAnswers([]);
+      return;
+    }
+
+    if (!token) return;
+
+    setExpandedUserId(userId);
+    setLoadingAnswers(true);
+    setUserAnswers([]);
+
+    try {
+      const questionIds = questionTypes.map((q) => q.id);
+      if (questionIds.length === 0) {
+        setLoadingAnswers(false);
+        return;
+      }
+
+      // Fetch answers where idsource is in questionIds
+      // We need to filter by author client-side if the API doesn't support multiple filters perfectly combined,
+      // but let's assume valid response and filter.
+      // However, typical getGedsBySource takes idsource.
+      const answers = await getGedsBySource(token, questionIds, "answer");
+
+      // Filter for this user
+      const userSpecificAnswers = answers.filter((a) => a.author === userId);
+      setUserAnswers(userSpecificAnswers);
+    } catch (error) {
+      console.error("Failed to load user answers:", error);
+      Alert.alert("Erreur", "Impossible de charger les réponses.");
+    } finally {
+      setLoadingAnswers(false);
+    }
+  };
 
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -235,7 +298,10 @@ export default function UpdateFolderTypeModal({
               </TouchableOpacity>
             </View>
 
-            <View style={styles.content}>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={styles.content}
+            >
               {/* Image Picker */}
               <View style={styles.imageContainer}>
                 <TouchableOpacity
@@ -373,7 +439,171 @@ export default function UpdateFolderTypeModal({
                   )}
                 </TouchableOpacity>
               </View>
-            </View>
+
+              {/* User Answers Overview Section */}
+              <View style={styles.answersSection}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons
+                    name="stats-chart-outline"
+                    size={20}
+                    color="#f87b1b"
+                  />
+                  <Text style={styles.sectionTitle}>
+                    Suivi des réponses utilisateurs
+                  </Text>
+                </View>
+
+                {/* User List - Horizontal Scroll */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.usersListContainer}
+                >
+                  {users.map((u) => {
+                    const isSelected = expandedUserId === u.id;
+                    const name =
+                      `${u.firstname || ""} ${u.lastname || ""}`.trim() ||
+                      u.email ||
+                      "?";
+                    const initials =
+                      name === "?"
+                        ? "?"
+                        : `${u.firstname?.[0] || ""}${u.lastname?.[0] || ""}`.toUpperCase();
+
+                    return (
+                      <TouchableOpacity
+                        key={u.id}
+                        style={[
+                          styles.userAvatarItem,
+                          isSelected && styles.userAvatarItemSelected,
+                        ]}
+                        onPress={() => handleUserSelect(u.id)}
+                      >
+                        <View
+                          style={[
+                            styles.avatarCircle,
+                            isSelected && styles.avatarCircleSelected,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.avatarInitials,
+                              isSelected && styles.avatarInitialsSelected,
+                            ]}
+                          >
+                            {initials}
+                          </Text>
+                        </View>
+                        <Text
+                          style={[
+                            styles.userAvatarName,
+                            isSelected && styles.userAvatarNameSelected,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+
+                {/* Answers Panel */}
+                {expandedUserId && (
+                  <View style={styles.answersPanel}>
+                    {loadingAnswers ? (
+                      <ActivityIndicator size="small" color="#f87b1b" />
+                    ) : userAnswers.length === 0 ? (
+                      <Text style={styles.emptyAnswersText}>
+                        Aucune réponse trouvée pour cet utilisateur.
+                      </Text>
+                    ) : (
+                      <View>
+                        <View style={styles.answersTableHeader}>
+                          <Text style={[styles.answersth, { flex: 2 }]}>
+                            Question
+                          </Text>
+                          <Text style={[styles.answersth, { width: 60 }]}>
+                            Qté/Prix
+                          </Text>
+                          <Text style={[styles.answersth, { width: 50 }]}>
+                            Média
+                          </Text>
+                          <Text style={[styles.answersth, { width: 70 }]}>
+                            Date
+                          </Text>
+                        </View>
+                        {userAnswers.map((answer) => {
+                          const question = questionTypes.find(
+                            (q) => q.id === answer.idsource,
+                          );
+                          const hasPhoto = !!answer.url;
+                          const hasVoice = !!answer.urlvoice;
+
+                          return (
+                            <View key={answer.id} style={styles.answerRow}>
+                              <Text
+                                style={[styles.answerCell, { flex: 2 }]}
+                                numberOfLines={2}
+                              >
+                                {question?.title || "Question inconnue"}
+                              </Text>
+                              <View style={{ width: 60 }}>
+                                {answer.quantity !== undefined &&
+                                  answer.quantity !== null && (
+                                    <Text style={styles.answerDetailText}>
+                                      x{answer.quantity}
+                                    </Text>
+                                  )}
+                                {answer.price !== undefined &&
+                                  answer.price !== null && (
+                                    <Text style={styles.answerDetailText}>
+                                      {answer.price}€
+                                    </Text>
+                                  )}
+                              </View>
+                              <View
+                                style={{
+                                  width: 50,
+                                  flexDirection: "row",
+                                  gap: 4,
+                                }}
+                              >
+                                {hasPhoto && (
+                                  <Ionicons
+                                    name="image"
+                                    size={14}
+                                    color="#6b7280"
+                                  />
+                                )}
+                                {hasVoice && (
+                                  <Ionicons
+                                    name="mic"
+                                    size={14}
+                                    color="#6b7280"
+                                  />
+                                )}
+                              </View>
+                              <Text
+                                style={[
+                                  styles.answerCell,
+                                  { width: 70, fontSize: 10 },
+                                ]}
+                              >
+                                {new Date(answer.created_at).toLocaleDateString(
+                                  "fr-FR",
+                                  { day: "2-digit", month: "2-digit" },
+                                )}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            </ScrollView>
 
             <View style={styles.footer}>
               <TouchableOpacity
@@ -425,7 +655,6 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   content: {
-    flex: 1,
     padding: 24,
   },
   imageContainer: {
@@ -618,5 +847,96 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#f87b1b",
+  },
+  // User Answers Section Styles
+  answersSection: {
+    marginTop: 24,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+  },
+  usersListContainer: {
+    paddingVertical: 12,
+    gap: 12,
+  },
+  userAvatarItem: {
+    alignItems: "center",
+    width: 60,
+  },
+  userAvatarItemSelected: {
+    opacity: 1,
+  },
+  avatarCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#f3f4f6",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  avatarCircleSelected: {
+    backgroundColor: "#fff7ed",
+    borderColor: "#f87b1b",
+  },
+  avatarInitials: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#6b7280",
+  },
+  avatarInitialsSelected: {
+    color: "#f87b1b",
+  },
+  userAvatarName: {
+    fontSize: 10,
+    color: "#6b7280",
+    textAlign: "center",
+  },
+  userAvatarNameSelected: {
+    color: "#f87b1b",
+    fontWeight: "600",
+  },
+  answersPanel: {
+    marginTop: 16,
+    backgroundColor: "#f9fafb",
+    borderRadius: 12,
+    padding: 12,
+    minHeight: 100,
+  },
+  emptyAnswersText: {
+    fontSize: 14,
+    color: "#9ca3af",
+    textAlign: "center",
+    marginTop: 20,
+    fontStyle: "italic",
+  },
+  answersTableHeader: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    paddingBottom: 8,
+    marginBottom: 8,
+  },
+  answersth: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6b7280",
+  },
+  answerRow: {
+    flexDirection: "row",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6",
+    alignItems: "center",
+  },
+  answerCell: {
+    fontSize: 12,
+    color: "#374151",
+  },
+  answerDetailText: {
+    fontSize: 10,
+    color: "#6b7280",
   },
 });

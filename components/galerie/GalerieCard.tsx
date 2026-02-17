@@ -5,14 +5,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { ResizeMode, Video } from "expo-av";
 import React from "react";
 import {
-  ActivityIndicator,
-  Animated,
-  Easing,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Animated,
+    Easing,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 interface GalerieCardProps {
@@ -47,7 +47,7 @@ export default function GalerieCard({
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
 
   React.useEffect(() => {
-    if (item.iaanalyse === 1) {
+    if (item.iaanalyse === 1 || item.iaanalyse === 0) {
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -117,7 +117,13 @@ export default function GalerieCard({
                 <Ionicons
                   name="sparkles"
                   size={14}
-                  color={item.iaanalyse === 1 ? "#FFD700" : COLORS.gray} // Gold for active, Gray for inactive
+                  color={
+                    item.iaanalyse === 1
+                      ? "#34C759" // Green
+                      : item.iaanalyse === 0
+                        ? "#FFD700" // Gold
+                        : COLORS.gray
+                  }
                 />
               </Animated.View>
               {item.powredby && (

@@ -818,5 +818,5 @@ export async function incrementGedView(
   currentView: number,
 ): Promise<void> {
   const newView = (currentView || 0) + 1;
-  await api.put(`/api/geds/${id}`, { view: newView });
+  await api.put(`/api/geds/${id}`, { vue: newView });
 }

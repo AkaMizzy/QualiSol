@@ -9,17 +9,17 @@ import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { getConnectivity } from "@/services/connectivity";
 import {
-  Ged,
-  createGed,
-  deleteGed,
-  getMyGeds,
-  updateGed,
-  updateGedFile,
+    Ged,
+    createGed,
+    deleteGed,
+    getMyGeds,
+    updateGed,
+    updateGedFile,
 } from "@/services/gedService";
 import {
-  createOfflineRecord,
-  deleteOfflineRecord,
-  getOfflineRecords,
+    createOfflineRecord,
+    deleteOfflineRecord,
+    getOfflineRecords,
 } from "@/services/offlineStorageService";
 import { startSyncMonitoring } from "@/services/syncService";
 import { getUsers } from "@/services/userService";
@@ -31,22 +31,22 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
 import {
-  Alert,
-  Modal,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
+    Alert,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import UserSelectionModal from "../UserSelectionModal";
@@ -602,7 +602,7 @@ export default function SharedGalerieScreen({
                                 incrementGedView(
                                   token,
                                   item.id,
-                                  item.view || 0,
+                                  item.vue || 0,
                                 ).catch((err) =>
                                   console.error("View inc failed", err),
                                 );
