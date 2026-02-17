@@ -43,6 +43,8 @@ interface PreviewModalProps {
   onAssign?: () => void;
   assignedTo?: string | { firstname: string; lastname: string };
   audiotxt?: string;
+  gedVisible?: number;
+  wait?: number;
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
@@ -74,6 +76,8 @@ export default function PreviewModal({
   onAssign,
   assignedTo,
   audiotxt,
+  gedVisible: isVisibleProp = 1, // Default to visible (1)
+  wait = 0, // Default wait time 0
 }: PreviewModalProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -82,6 +86,25 @@ export default function PreviewModal({
   const [isLoading, setIsLoading] = useState(false);
   const [showMetadata, setShowMetadata] = useState(mediaType === "image");
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(wait);
+
+  useEffect(() => {
+    if (visible && isVisibleProp === 0 && wait > 0) {
+      setTimeLeft(wait);
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            onClose();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [visible, isVisibleProp, wait, onClose]);
 
   useEffect(() => {
     return sound
@@ -481,14 +504,31 @@ export default function PreviewModal({
               </Pressable>
             )}
 
-            <Pressable
-              style={styles.actionButton}
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel="Close preview"
-            >
-              <Ionicons name="close" size={28} color="#f87b1b" />
-            </Pressable>
+            {/* Only show close button if visible is 1 (default) */}
+            {(isVisibleProp === 1 || isVisibleProp === undefined) && (
+              <Pressable
+                style={styles.actionButton}
+                onPress={onClose}
+                accessibilityRole="button"
+                accessibilityLabel="Close preview"
+              >
+                <Ionicons name="close" size={28} color="#f87b1b" />
+              </Pressable>
+            )}
+
+            {/* Show timer if auto-closing */}
+            {isVisibleProp === 0 && (
+              <View
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: "rgba(255, 68, 68, 0.8)" },
+                ]}
+              >
+                <Text style={{ color: "white", fontWeight: "bold" }}>
+                  {timeLeft}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 

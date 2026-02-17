@@ -2,6 +2,8 @@ import API_CONFIG from "@/app/config/api";
 import api from "./api";
 
 export type CreateGedInput = {
+  visible?: number;
+  wait?: number;
   answer: any;
   idsource: string;
   title: string;
@@ -76,6 +78,8 @@ export interface Ged {
   mode?: "upload" | "capture";
   created_at: string;
   value?: string;
+  visible?: number;
+  wait?: number;
 }
 
 export async function createGed(
@@ -164,6 +168,14 @@ export async function createGed(
 
   if (input.quantity !== undefined && input.quantity !== null) {
     formData.append("quantity", input.quantity.toString());
+  }
+
+  if (input.visible !== undefined && input.visible !== null) {
+    formData.append("visible", input.visible.toString());
+  }
+
+  if (input.wait !== undefined && input.wait !== null) {
+    formData.append("wait", input.wait.toString());
   }
 
   if (input.mode) {

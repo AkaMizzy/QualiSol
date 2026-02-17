@@ -594,8 +594,22 @@ export default function SharedGalerieScreen({
                       <GalerieCard
                         item={{ ...item, author: displayAuthor }}
                         onPress={() => {
-                          handleCardPress(item);
-                          // Increment view count
+                          // Optimistically update local state
+                          setGeds((prevGeds) =>
+                            prevGeds.map((g) =>
+                              g.id === item.id
+                                ? { ...g, vue: (g.vue || 0) + 1 }
+                                : g,
+                            ),
+                          );
+
+                          // Use the updated value for the preview
+                          handleCardPress({
+                            ...item,
+                            vue: (item.vue || 0) + 1,
+                          });
+
+                          // Increment view count on backend
                           if (token && item.id) {
                             import("@/services/gedService").then(
                               ({ incrementGedView }) => {
@@ -750,6 +764,8 @@ export default function SharedGalerieScreen({
               : undefined
           }
           audiotxt={selectedItem.audiotxt}
+          gedVisible={selectedItem.visible}
+          wait={selectedItem.wait}
         />
       )}
       <UserSelectionModal
