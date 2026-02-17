@@ -525,7 +525,7 @@ export default function PreviewModal({
                 ]}
               >
                 <Text style={{ color: "white", fontWeight: "bold" }}>
-                  {timeLeft}
+                  {timeLeft}s
                 </Text>
               </View>
             )}
