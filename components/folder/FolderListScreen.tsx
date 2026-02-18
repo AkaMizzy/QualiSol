@@ -14,7 +14,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -118,7 +118,7 @@ export default function FolderListScreen({
   }, [folders, selectedProject, archivedStatusId]);
 
   const fetchFolders = useCallback(async () => {
-    if (!token) {
+    if (!token || !user) {
       setIsLoading(false);
       return;
     }
@@ -128,7 +128,16 @@ export default function FolderListScreen({
         token,
         folderTypeTitle,
       );
-      const sortedFolders = fetchedFolders.sort((a, b) => {
+
+      // Filter folders for standard users - access control
+      let availableFolders = fetchedFolders;
+      if (!["Super Admin", "Admin"].includes(user.role)) {
+        availableFolders = fetchedFolders.filter(
+          (f) => String(f.owner_id) === String(user.id),
+        );
+      }
+
+      const sortedFolders = availableFolders.sort((a, b) => {
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
         return dateB - dateA;
