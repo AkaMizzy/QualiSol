@@ -64,6 +64,7 @@ export default function UpdateFolderTypeModal({
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
+  const [newFolderTitle, setNewFolderTitle] = useState("");
 
   // Folder Answers View State
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -275,7 +276,7 @@ export default function UpdateFolderTypeModal({
     try {
       const payload: CreateFolderPayload = {
         code: `F-${Date.now().toString(36).toUpperCase()}`,
-        title: folderType.title,
+        title: newFolderTitle.trim() || folderType.title,
         description: folderType.description || undefined,
         owner_id: selectedUserId,
         foldertype_id: folderType.id,
@@ -440,6 +441,20 @@ export default function UpdateFolderTypeModal({
                     <Ionicons name="add" size={24} color="#f87b1b" />
                   )}
                 </TouchableOpacity>
+              </View>
+
+              {/* New Folder Title Input */}
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Titre du dossier (optionnel)</Text>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    value={newFolderTitle}
+                    onChangeText={setNewFolderTitle}
+                    placeholder={`Par défaut: ${folderType.title}`}
+                    style={styles.input}
+                    placeholderTextColor="#9ca3af"
+                  />
+                </View>
               </View>
 
               <View
@@ -608,7 +623,13 @@ export default function UpdateFolderTypeModal({
             onClose={() => setShowFolderSelectionModal(false)}
             folders={folders}
             users={users}
-            onSelect={(id) => setSelectedFolderId(id)}
+            onSelect={(id) => {
+              setSelectedFolderId(id);
+              // Open the answers modal automatically after a short delay to allow the selection modal to close
+              setTimeout(() => {
+                setShowAnswersModal(true);
+              }, 400);
+            }}
             selectedFolderId={selectedFolderId}
           />
 
@@ -653,7 +674,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#f3f4f6",
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "700",
     color: "#111827",
   },
@@ -665,7 +686,7 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 16,
   },
   imageWrapper: {
     position: "relative",
@@ -676,15 +697,15 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   circleImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     backgroundColor: "#f3f4f6",
   },
   placeholderCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     backgroundColor: "#fff7ed",
     alignItems: "center",
     justifyContent: "center",
@@ -722,7 +743,7 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#f87b1b",
     borderRadius: 10,
     backgroundColor: "#f9fafb",
     paddingHorizontal: 12,
@@ -741,8 +762,8 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -752,7 +773,7 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: "#4b5563",
     fontWeight: "600",
-    fontSize: 16,
+    fontSize: 15,
   },
   submitButton: {
     backgroundColor: "#f87b1b",
@@ -760,28 +781,27 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: "white",
     fontWeight: "600",
-    fontSize: 16,
+    fontSize: 15,
   },
   startSection: {
-    marginTop: 16,
-    marginBottom: 24,
+    marginTop: 12,
+    marginBottom: 16,
   },
   headerRightActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
   headerIconButton: {
     padding: 8,
-    borderRadius: 20,
+    borderRadius: 18,
     backgroundColor: "#f3f4f6",
   },
   // New Styles for Create Folder Section
   createFolderSection: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
+    marginTop: 12,
+    paddingTop: 12,
+    // borderTopWidth removed as requested
   },
   sectionHeaderRow: {
     flexDirection: "row",
@@ -800,9 +820,9 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
   iconActionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: "#fff7ed",
     alignItems: "center",
     justifyContent: "center",
@@ -816,20 +836,19 @@ const styles = StyleSheet.create({
   },
   userPickerContainer: {
     marginBottom: 12,
-    zIndex: 10, // Ensure dropdown floats above other elements
+    zIndex: 10,
   },
   pickerButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#f87b1b",
     borderRadius: 10,
     backgroundColor: "#f9fafb",
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-
   pickerButtonText: {
     fontSize: 14,
     color: "#111827",
@@ -871,10 +890,8 @@ const styles = StyleSheet.create({
 
   // User Answers Section Styles
   answersSection: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
+    marginTop: 12,
+    paddingTop: 12,
   },
   usersListContainer: {
     paddingVertical: 12,
