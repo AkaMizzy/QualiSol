@@ -353,9 +353,6 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
       />
       <View style={styles.itemTextContainer}>
         <Text style={styles.itemTitle}>{item.title}</Text>
-        {item.description ? (
-          <Text style={styles.itemDescription}>{item.description}</Text>
-        ) : null}
       </View>
       <View style={styles.itemActions}>
         <TouchableOpacity
@@ -404,11 +401,22 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
             }
           />
           <View style={styles.headerTitleRow}>
-            <Text style={styles.headerTitle}>Gérer les types de dossier</Text>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+            >
+              <Text style={styles.headerTitle}>
+                Gérer les types de contrôle
+              </Text>
+              {!isAdding && (
+                <TouchableOpacity onPress={handleBeginAdd}>
+                  <Ionicons name="add-circle" size={30} color="#f87b1b" />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           <View style={styles.contentContainer}>
-            {isAdding ? (
+            {isAdding && (
               <FormComponent
                 isEditing={false}
                 isSubmitting={isSubmitting}
@@ -421,16 +429,6 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
                 onPickImage={handlePickImage}
                 imageUri={image?.uri}
               />
-            ) : (
-              <TouchableOpacity
-                onPress={handleBeginAdd}
-                style={styles.addButton}
-              >
-                <Ionicons name="add" size={22} color="#f87b1b" />
-                <Text style={styles.addButtonText}>
-                  Ajouter un type de dossier
-                </Text>
-              </TouchableOpacity>
             )}
 
             {isLoading && !isAdding ? (
