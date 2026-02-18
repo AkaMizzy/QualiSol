@@ -490,7 +490,8 @@ export default function PreviewModal({
                   )}
 
                   {(mediaType === "image" || mediaType === "video") &&
-                    onAnnotate && (
+                    onAnnotate &&
+                    !isActionRestricted && (
                       <Pressable
                         style={styles.actionButton}
                         onPress={onAnnotate}
