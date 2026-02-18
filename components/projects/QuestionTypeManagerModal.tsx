@@ -101,25 +101,6 @@ const FormComponent = ({
         />
       </View>
 
-      <View
-        style={[
-          styles.inputContainer,
-          { height: 100, alignItems: "flex-start", paddingTop: 15 },
-        ]}
-      >
-        <Ionicons name="document-text-outline" size={20} color="#f87b1b" />
-        <TextInput
-          placeholder="Description (optionnel)"
-          placeholderTextColor="#f87b1b"
-          value={description}
-          onChangeText={onDescriptionChange}
-          style={[styles.input, { height: "100%" }]}
-          multiline
-          returnKeyType="done"
-          blurOnSubmit={true}
-        />
-      </View>
-
       <TouchableOpacity
         style={styles.inputContainer}
         onPress={() => setPickerVisible(true)}
@@ -156,6 +137,25 @@ const FormComponent = ({
           ios_backgroundColor="#3e3e3e"
           value={price}
           onValueChange={onPriceChange}
+        />
+      </View>
+
+      <View
+        style={[
+          styles.inputContainer,
+          { height: 100, alignItems: "flex-start", paddingTop: 15 },
+        ]}
+      >
+        <Ionicons name="document-text-outline" size={20} color="#f87b1b" />
+        <TextInput
+          placeholder="Description (optionnel)"
+          placeholderTextColor="#f87b1b"
+          value={description}
+          onChangeText={onDescriptionChange}
+          style={[styles.input, { height: "100%" }]}
+          multiline
+          returnKeyType="done"
+          blurOnSubmit={true}
         />
       </View>
 
@@ -235,7 +235,7 @@ export default function QuestionTypeManagerModal({
   const [isAdding, setIsAdding] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<QuestionType["type"] | null>(null);
+  const [type, setType] = useState<QuestionType["type"] | null>("boolean");
   const [quantity, setQuantity] = useState(false);
   const [price, setPrice] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -275,7 +275,7 @@ export default function QuestionTypeManagerModal({
     setIsAdding(true);
     setTitle("");
     setDescription("");
-    setType(null);
+    setType("boolean");
     setQuantity(false);
     setPrice(false);
   };
@@ -285,7 +285,7 @@ export default function QuestionTypeManagerModal({
     setIsAdding(false);
     setTitle("");
     setDescription("");
-    setType(null);
+    setType("boolean");
     setQuantity(false);
     setPrice(false);
   };
