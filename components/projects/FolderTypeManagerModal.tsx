@@ -359,19 +359,7 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
           onPress={() => handleBeginEdit(item)}
           style={styles.iconButton}
         >
-          <Ionicons name="pencil" size={20} color="#11224e" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => handleDelete(item.id)}
-          style={styles.iconButton}
-        >
-          <Ionicons name="trash" size={20} color="#ef4444" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => handleOpenQuestionManager(item)}
-          style={styles.iconButton}
-        >
-          <Ionicons name="ellipsis-vertical" size={20} color="#6b7280" />
+          <Ionicons name="pencil" size={20} color="#f87b1b" />
         </TouchableOpacity>
       </View>
     </View>
@@ -473,6 +461,14 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
           onClose={() => setIsUpdateModalVisible(false)}
           folderType={folderTypeToEdit}
           onSuccess={handleUpdateSuccess}
+          onDelete={() => handleDelete(folderTypeToEdit.id)}
+          onManageQuestions={() => {
+            setIsUpdateModalVisible(false);
+            // Small timeout to allow modal to close smoothly before opening the next one
+            setTimeout(() => {
+              handleOpenQuestionManager(folderTypeToEdit);
+            }, 300);
+          }}
         />
       )}
     </Modal>

@@ -30,12 +30,15 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../AppHeader";
 import FolderAnswersSummaryModal from "./FolderAnswersSummaryModal";
+import FolderSelectionModal from "./FolderSelectionModal";
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   folderType: FolderType | null;
   onSuccess: (updatedType: FolderType) => void;
+  onManageQuestions: () => void;
+  onDelete: () => void;
 };
 
 export default function UpdateFolderTypeModal({
@@ -43,6 +46,8 @@ export default function UpdateFolderTypeModal({
   onClose,
   folderType,
   onSuccess,
+  onManageQuestions,
+  onDelete,
 }: Props) {
   const { token, user } = useAuth();
   const [title, setTitle] = useState("");
@@ -63,7 +68,8 @@ export default function UpdateFolderTypeModal({
   // Folder Answers View State
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string>("");
-  const [showFolderPicker, setShowFolderPicker] = useState(false);
+  const [showFolderSelectionModal, setShowFolderSelectionModal] =
+    useState(false);
   const [showAnswersModal, setShowAnswersModal] = useState(false);
   const [loadingFolders, setLoadingFolders] = useState(false);
 
@@ -150,7 +156,14 @@ export default function UpdateFolderTypeModal({
   const getSelectedFolderTitle = () => {
     if (!selectedFolderId) return "Sélectionner un dossier";
     const folder = folders.find((f) => f.id === selectedFolderId);
-    return folder?.code || folder?.title || "Dossier inconnu";
+    if (!folder) return "Dossier inconnu";
+
+    const owner = users.find((u) => u.id === folder.owner_id);
+    const ownerName = owner
+      ? `${owner.firstname || ""} ${owner.lastname || ""}`.trim() || owner.email
+      : "Propriétaire inconnu";
+
+    return `${folder.title} - ${ownerName}`;
   };
 
   useEffect(() => {
@@ -315,9 +328,39 @@ export default function UpdateFolderTypeModal({
             showProfile={true}
             onLogoPress={onClose}
             rightComponent={
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color="#6b7280" />
-              </TouchableOpacity>
+              <View style={styles.headerRightActions}>
+                <TouchableOpacity
+                  onPress={onManageQuestions}
+                  style={styles.headerIconButton}
+                >
+                  <Ionicons name="list" size={22} color="#11224e" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    Alert.alert(
+                      "Supprimer",
+                      "Êtes-vous sûr de vouloir supprimer ce type de dossier ?",
+                      [
+                        { text: "Annuler", style: "cancel" },
+                        {
+                          text: "Supprimer",
+                          style: "destructive",
+                          onPress: () => {
+                            onDelete();
+                            onClose();
+                          },
+                        },
+                      ],
+                    );
+                  }}
+                  style={[styles.headerIconButton, { marginRight: 8 }]}
+                >
+                  <Ionicons name="trash-outline" size={22} color="#ef4444" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                  <Ionicons name="close" size={24} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
             }
           />
           <ScrollView
@@ -369,15 +412,34 @@ export default function UpdateFolderTypeModal({
 
             {/* Create Folder Section */}
             <View style={styles.createFolderSection}>
-              <View style={styles.sectionHeader}>
-                <Ionicons
-                  name="folder-open-outline"
-                  size={20}
-                  color="#f87b1b"
-                />
-                <Text style={styles.sectionTitle}>
-                  Créer un dossier à partir de ce type
-                </Text>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons
+                    name="folder-open-outline"
+                    size={20}
+                    color="#f87b1b"
+                  />
+                  <Text style={styles.sectionTitle}>Créer un dossier</Text>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.iconActionButton,
+                    (!selectedUserId ||
+                      !selectedProjectId ||
+                      isCreatingFolder) &&
+                      styles.iconActionButtonDisabled,
+                  ]}
+                  onPress={handleCreateFolder}
+                  disabled={
+                    !selectedUserId || !selectedProjectId || isCreatingFolder
+                  }
+                >
+                  {isCreatingFolder ? (
+                    <ActivityIndicator size="small" color="#f87b1b" />
+                  ) : (
+                    <Ionicons name="add" size={24} color="#f87b1b" />
+                  )}
+                </TouchableOpacity>
               </View>
 
               <View
@@ -497,128 +559,58 @@ export default function UpdateFolderTypeModal({
                   </View>
                 )}
               </View>
-
-              <TouchableOpacity
-                style={[
-                  styles.createFolderButton,
-                  (!selectedUserId || !selectedProjectId || isCreatingFolder) &&
-                    styles.createFolderButtonDisabled,
-                ]}
-                onPress={handleCreateFolder}
-                disabled={
-                  !selectedUserId || !selectedProjectId || isCreatingFolder
-                }
-              >
-                {isCreatingFolder ? (
-                  <ActivityIndicator size="small" color="#f87b1b" />
-                ) : (
-                  <>
-                    <Ionicons
-                      name="add-circle-outline"
-                      size={20}
-                      color="#f87b1b"
-                    />
-                    <Text style={styles.createFolderButtonText}>
-                      Créer le dossier
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
             </View>
 
-            {/* User Answers Overview Section - REPLACED BY FOLDER SELECTOR */}
+            {/* User Answers Overview Section */}
             <View style={styles.answersSection}>
-              <View style={styles.sectionHeader}>
-                <Ionicons
-                  name="stats-chart-outline"
-                  size={20}
-                  color="#f87b1b"
-                />
-                <Text style={styles.sectionTitle}>Suivi des Dossiers</Text>
-              </View>
-
-              <View
-                style={[
-                  styles.userPickerContainer,
-                  { zIndex: showFolderPicker ? 3000 : 5 },
-                ]}
-              >
-                <Text style={styles.label}>Sélectionner un dossier</Text>
-                <TouchableOpacity
-                  style={styles.pickerButton}
-                  onPress={() => setShowFolderPicker(!showFolderPicker)}
-                  disabled={loadingFolders}
-                >
-                  <Text
-                    style={[
-                      styles.pickerButtonText,
-                      !selectedFolderId && { color: "#9ca3af" },
-                    ]}
-                  >
-                    {loadingFolders
-                      ? "Chargement..."
-                      : getSelectedFolderTitle()}
-                  </Text>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionHeader}>
                   <Ionicons
-                    name={showFolderPicker ? "chevron-up" : "chevron-down"}
+                    name="stats-chart-outline"
                     size={20}
-                    color="#6b7280"
+                    color="#f87b1b"
                   />
+                  <Text style={styles.sectionTitle}>Suivi des Dossiers</Text>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.iconActionButton,
+                    !selectedFolderId && styles.iconActionButtonDisabled,
+                  ]}
+                  onPress={() => setShowAnswersModal(true)}
+                  disabled={!selectedFolderId}
+                >
+                  <Ionicons name="eye-outline" size={22} color="#f87b1b" />
                 </TouchableOpacity>
-
-                {showFolderPicker && (
-                  <View style={styles.dropdown}>
-                    <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
-                      {folders.length === 0 ? (
-                        <Text style={styles.dropdownItemText}>
-                          Aucun dossier trouvé.
-                        </Text>
-                      ) : (
-                        folders.map((f) => (
-                          <TouchableOpacity
-                            key={f.id}
-                            style={[
-                              styles.dropdownItem,
-                              selectedFolderId === f.id &&
-                                styles.dropdownItemSelected,
-                            ]}
-                            onPress={() => {
-                              setSelectedFolderId(f.id);
-                              setShowFolderPicker(false);
-                            }}
-                          >
-                            <Text
-                              style={[
-                                styles.dropdownItemText,
-                                selectedFolderId === f.id &&
-                                  styles.dropdownItemTextSelected,
-                              ]}
-                            >
-                              {f.code} - {f.title}
-                            </Text>
-                          </TouchableOpacity>
-                        ))
-                      )}
-                    </ScrollView>
-                  </View>
-                )}
               </View>
 
               <TouchableOpacity
-                style={[
-                  styles.createFolderButton,
-                  !selectedFolderId && styles.createFolderButtonDisabled,
-                ]}
-                onPress={() => setShowAnswersModal(true)}
-                disabled={!selectedFolderId}
+                style={styles.pickerButton}
+                onPress={() => setShowFolderSelectionModal(true)}
+                disabled={loadingFolders}
               >
-                <Ionicons name="eye-outline" size={20} color="#f87b1b" />
-                <Text style={styles.createFolderButtonText}>
-                  Voir les réponses
+                <Text
+                  style={[
+                    styles.pickerButtonText,
+                    !selectedFolderId && { color: "#9ca3af" },
+                  ]}
+                >
+                  {loadingFolders ? "Chargement..." : getSelectedFolderTitle()}
                 </Text>
+                <Ionicons name="chevron-forward" size={20} color="#6b7280" />
               </TouchableOpacity>
             </View>
           </ScrollView>
+
+          {/* Folder Selection Modal */}
+          <FolderSelectionModal
+            visible={showFolderSelectionModal}
+            onClose={() => setShowFolderSelectionModal(false)}
+            folders={folders}
+            users={users}
+            onSelect={(id) => setSelectedFolderId(id)}
+            selectedFolderId={selectedFolderId}
+          />
 
           <View style={styles.footer}>
             <TouchableOpacity
@@ -669,11 +661,11 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   content: {
-    padding: 24,
+    padding: 16,
   },
   imageContainer: {
     alignItems: "center",
-    marginBottom: 32,
+    marginBottom: 20,
   },
   imageWrapper: {
     position: "relative",
@@ -684,15 +676,15 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   circleImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: "#f3f4f6",
   },
   placeholderCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: "#fff7ed",
     alignItems: "center",
     justifyContent: "center",
@@ -705,43 +697,43 @@ const styles = StyleSheet.create({
     bottom: 0,
     right: 0,
     backgroundColor: "#f87b1b",
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
     borderColor: "white",
   },
   imageLabel: {
-    marginTop: 12,
-    fontSize: 14,
+    marginTop: 8,
+    fontSize: 12,
     color: "#6b7280",
     fontWeight: "500",
   },
   formGroup: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: "#374151",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   inputWrapper: {
     borderWidth: 1,
     borderColor: "#e5e7eb",
-    borderRadius: 12,
+    borderRadius: 10,
     backgroundColor: "#f9fafb",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   input: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#111827",
   },
   footer: {
-    padding: 24,
+    padding: 16,
     borderTopWidth: 1,
     borderTopColor: "#f3f4f6",
     flexDirection: "row",
@@ -770,26 +762,60 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 16,
   },
+  startSection: {
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  headerRightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  headerIconButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: "#f3f4f6",
+  },
   // New Styles for Create Folder Section
   createFolderSection: {
-    marginTop: 24,
-    paddingTop: 24,
+    marginTop: 16,
+    paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: "#e5e7eb",
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
   },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
     color: "#111827",
   },
+  iconActionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#fff7ed",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#fdba74",
+  },
+  iconActionButtonDisabled: {
+    backgroundColor: "#f3f4f6",
+    borderColor: "#e5e7eb",
+    opacity: 0.5,
+  },
   userPickerContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
     zIndex: 10, // Ensure dropdown floats above other elements
   },
   pickerButton: {
@@ -798,11 +824,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderWidth: 1,
     borderColor: "#e5e7eb",
-    borderRadius: 12,
+    borderRadius: 10,
     backgroundColor: "#f9fafb",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
+
   pickerButtonText: {
     fontSize: 14,
     color: "#111827",
@@ -841,31 +868,11 @@ const styles = StyleSheet.create({
     color: "#f87b1b",
     fontWeight: "600",
   },
-  createFolderButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#f87b1b",
-    borderRadius: 12,
-    paddingVertical: 12,
-    borderStyle: "dashed",
-  },
-  createFolderButtonDisabled: {
-    borderColor: "#e5e7eb",
-    backgroundColor: "#f9fafb",
-  },
-  createFolderButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#f87b1b",
-  },
+
   // User Answers Section Styles
   answersSection: {
-    marginTop: 24,
-    paddingTop: 24,
+    marginTop: 16,
+    paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: "#e5e7eb",
   },
