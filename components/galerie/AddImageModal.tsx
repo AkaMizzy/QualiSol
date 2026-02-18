@@ -1,5 +1,5 @@
 import VoiceNoteRecorder, {
-  VoiceNoteRecorderRef,
+    VoiceNoteRecorderRef,
 } from "@/components/VoiceNoteRecorder";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,24 +16,24 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import {
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
+    PanGestureHandler,
+    PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
@@ -1109,7 +1109,9 @@ export default function AddImageModal({
               <View style={styles.loadingOverlay}>
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color={COLORS.primary} />
-                  <Text style={styles.loadingText}>Traitement en cours...</Text>
+                  <Text style={styles.loadingText}>
+                    Enregistrement en cours...
+                  </Text>
                 </View>
               </View>
             )}
@@ -1262,15 +1264,23 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   loadingContainer: {
-    backgroundColor: "rgba(0,0,0,0.8)",
-    padding: 20,
+    backgroundColor: COLORS.white,
+    padding: 30,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
   },
   loadingText: {
-    color: "#fff",
-    marginTop: 10,
+    color: COLORS.secondary,
+    marginTop: 15,
     fontSize: 16,
     fontWeight: "bold",
   },

@@ -45,6 +45,7 @@ interface PreviewModalProps {
   audiotxt?: string;
   gedVisible?: number;
   wait?: number;
+  ianalyse?: number;
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
@@ -78,6 +79,7 @@ export default function PreviewModal({
   audiotxt,
   gedVisible: isVisibleProp = 1, // Default to visible (1)
   wait = 0, // Default wait time 0
+  ianalyse,
 }: PreviewModalProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -460,38 +462,66 @@ export default function PreviewModal({
                 )}
               </Pressable>
             )}
-            {mediaType === "image" && onEdit && (
-              <Pressable
-                style={styles.actionButton}
-                onPress={onEdit}
-                accessibilityRole="button"
-                accessibilityLabel="Edit photo"
-              >
-                <Ionicons name="create-outline" size={24} color="#FFFFFF" />
-              </Pressable>
-            )}
 
-            {(mediaType === "image" || mediaType === "video") && onAnnotate && (
-              <Pressable
-                style={styles.actionButton}
-                onPress={onAnnotate}
-                accessibilityRole="button"
-                accessibilityLabel="Annoter"
-              >
-                <Ionicons name="brush-outline" size={24} color="#f87b1b" />
-              </Pressable>
-            )}
+            {/* Conditional rendering for Edit and Delete buttons */}
+            {(() => {
+              // Check if action should be restricted
+              // Restricted if:
+              // 1. Timer is active (visible=0 and timeLeft > 0)
+              // 2. ianalyse is 0
+              const isTimerActive = isVisibleProp === 0 && timeLeft > 0;
+              const isActionRestricted = isTimerActive || ianalyse === 0;
 
-            {onDelete && (
-              <Pressable
-                style={styles.actionButton}
-                onPress={onDelete}
-                accessibilityRole="button"
-                accessibilityLabel="Delete"
-              >
-                <Ionicons name="trash-outline" size={24} color="#FF3B30" />
-              </Pressable>
-            )}
+              return (
+                <>
+                  {mediaType === "image" && onEdit && !isActionRestricted && (
+                    <Pressable
+                      style={styles.actionButton}
+                      onPress={onEdit}
+                      accessibilityRole="button"
+                      accessibilityLabel="Edit photo"
+                    >
+                      <Ionicons
+                        name="create-outline"
+                        size={24}
+                        color="#FFFFFF"
+                      />
+                    </Pressable>
+                  )}
+
+                  {(mediaType === "image" || mediaType === "video") &&
+                    onAnnotate && (
+                      <Pressable
+                        style={styles.actionButton}
+                        onPress={onAnnotate}
+                        accessibilityRole="button"
+                        accessibilityLabel="Annoter"
+                      >
+                        <Ionicons
+                          name="brush-outline"
+                          size={24}
+                          color="#f87b1b"
+                        />
+                      </Pressable>
+                    )}
+
+                  {onDelete && !isActionRestricted && (
+                    <Pressable
+                      style={styles.actionButton}
+                      onPress={onDelete}
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete"
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={24}
+                        color="#FF3B30"
+                      />
+                    </Pressable>
+                  )}
+                </>
+              );
+            })()}
 
             {onAssign && (
               <Pressable

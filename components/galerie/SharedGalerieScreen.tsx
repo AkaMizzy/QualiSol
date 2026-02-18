@@ -766,6 +766,7 @@ export default function SharedGalerieScreen({
           audiotxt={selectedItem.audiotxt}
           gedVisible={selectedItem.visible}
           wait={selectedItem.wait}
+          ianalyse={selectedItem.iaanalyse}
         />
       )}
       <UserSelectionModal
