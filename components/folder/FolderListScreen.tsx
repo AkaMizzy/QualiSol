@@ -1,10 +1,9 @@
 import AppHeader from "@/components/AppHeader";
-import CreateFolderModal from "@/components/folder/CreateFolderModal";
 import FolderQuestionsModal from "@/components/folder/FolderQuestionsModal";
 import { ICONS } from "@/constants/Icons";
 import { useAuth } from "@/contexts/AuthContext";
 import folderService, { Folder, Project } from "@/services/folderService";
-import { getUsers } from "@/services/userService";
+import { getArchivedStatusId } from "@/services/statusService";
 import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -13,11 +12,9 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -98,6 +95,7 @@ export default function FolderListScreen({
   const [selectedUser, setSelectedUser] = useState<string | undefined>(
     undefined,
   );
+  const [archivedStatusId, setArchivedStatusId] = useState<string | null>(null);
 
   const [projectOpen, setProjectOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -107,11 +105,17 @@ export default function FolderListScreen({
 
   const filteredFolders = React.useMemo(() => {
     return folders.filter((folder) => {
+      // 1. Filter by Project
       const projectMatch =
         !selectedProject || folder.project_id === selectedProject;
-      return projectMatch;
+
+      // 2. Filter out Archived
+      const isArchived =
+        archivedStatusId && folder.status_id === archivedStatusId;
+
+      return projectMatch && !isArchived;
     });
-  }, [folders, selectedProject]);
+  }, [folders, selectedProject, archivedStatusId]);
 
   const fetchFolders = useCallback(async () => {
     if (!token) {
@@ -143,38 +147,11 @@ export default function FolderListScreen({
     fetchFolders();
   }, [fetchFolders]);
 
-  // Load projects on mount
+  // Load archived status ID
   useEffect(() => {
-    async function fetchProjects() {
-      if (!token) return;
-      setLoadingProjects(true);
-      try {
-        const fetchedProjects = await folderService.getAllProjects(token);
-        setProjects(fetchedProjects);
-      } catch (error) {
-        console.error("Failed to load projects", error);
-      } finally {
-        setLoadingProjects(false);
-      }
+    if (token) {
+      getArchivedStatusId(token).then(setArchivedStatusId);
     }
-    fetchProjects();
-  }, [token]);
-
-  // Load users on mount
-  useEffect(() => {
-    async function fetchUsers() {
-      if (!token) return;
-      setLoadingUsers(true);
-      try {
-        const fetchedUsers = await getUsers();
-        setUsers(fetchedUsers);
-      } catch (error) {
-        console.error("Failed to load users", error);
-      } finally {
-        setLoadingUsers(false);
-      }
-    }
-    fetchUsers();
   }, [token]);
 
   if (isLoading) {
@@ -199,17 +176,6 @@ export default function FolderListScreen({
   };
 
   const renderEmptyList = () => {
-    if (selectedProject) {
-      return (
-        <View style={styles.emptyWrap}>
-          <Text style={styles.emptyTitle}>Aucun dossier trouvé</Text>
-          <Text style={styles.emptySubtitle}>
-            Aucun dossier ne correspond aux filtres sélectionnés.
-          </Text>
-        </View>
-      );
-    }
-
     return (
       <View style={styles.emptyWrap}>
         <Text style={styles.emptyTitle}>Aucun dossier pour le moment</Text>
@@ -220,191 +186,24 @@ export default function FolderListScreen({
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader user={user || undefined} />
-      <View style={styles.filterContainer}>
-        <View style={styles.dropdownsContainer}>
-          {/* Project dropdown */}
-          <View style={styles.dropdownWrap}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Projet"
-              onPress={() => {
-                setProjectOpen((v) => !v);
-                setUserDropdownOpen(false);
-              }}
-              style={styles.selectBtn}
-            >
-              <Text
-                style={[
-                  styles.selectText,
-                  !selectedProject && styles.selectPlaceholder,
-                ]}
-                numberOfLines={1}
-              >
-                {selectedProject
-                  ? projects.find((p) => p.id === selectedProject)?.title ||
-                    "Chantier"
-                  : "Chantier"}
-              </Text>
-              <Ionicons
-                name={projectOpen ? "chevron-up" : "chevron-down"}
-                size={16}
-                color="#f87b1b"
+      <View style={styles.listContainer}>
+        <FlatList
+          data={filteredFolders}
+          renderItem={({ item }) => {
+            return (
+              <FolderCard
+                item={item}
+                onPress={() => handleOpenQuestionsModal(item.id)}
               />
-            </Pressable>
-            {projectOpen && (
-              <View style={styles.selectMenu}>
-                <ScrollView>
-                  <Pressable
-                    style={styles.selectItem}
-                    onPress={() => {
-                      setSelectedProject(undefined);
-                      setProjectOpen(false);
-                    }}
-                  >
-                    <Text style={styles.selectItemText}>
-                      Tous les chantiers
-                    </Text>
-                  </Pressable>
-                  {loadingProjects ? (
-                    <View style={styles.selectItem}>
-                      <ActivityIndicator />
-                    </View>
-                  ) : (
-                    projects.map((p) => (
-                      <Pressable
-                        key={p.id}
-                        style={styles.selectItem}
-                        onPress={() => {
-                          setSelectedProject(p.id);
-                          setProjectOpen(false);
-                        }}
-                      >
-                        <Text numberOfLines={1} style={styles.selectItemText}>
-                          {p.title}
-                        </Text>
-                      </Pressable>
-                    ))
-                  )}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-
-          {/* User dropdown */}
-          <View style={[styles.dropdownWrap]}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Utilisateur"
-              onPress={() => {
-                setUserDropdownOpen((v) => !v);
-                setProjectOpen(false);
-              }}
-              style={styles.selectBtn}
-            >
-              <Text
-                style={[
-                  styles.selectText,
-                  !selectedUser && styles.selectPlaceholder,
-                ]}
-                numberOfLines={1}
-              >
-                {selectedUser
-                  ? users.find((u) => u.id === selectedUser)
-                    ? `${users.find((u) => u.id === selectedUser)?.firstname} ${users.find((u) => u.id === selectedUser)?.lastname}`
-                    : "Utilisateur"
-                  : "Utilisateur"}
-              </Text>
-              <Ionicons
-                name={userDropdownOpen ? "chevron-up" : "chevron-down"}
-                size={16}
-                color="#f87b1b"
-              />
-            </Pressable>
-            {userDropdownOpen && (
-              <View style={styles.selectMenu}>
-                <ScrollView>
-                  <Pressable
-                    style={styles.selectItem}
-                    onPress={() => {
-                      setSelectedUser(undefined);
-                      setUserDropdownOpen(false);
-                    }}
-                  >
-                    <Text style={styles.selectItemText}>
-                      Tous les utilisateurs
-                    </Text>
-                  </Pressable>
-                  {loadingUsers ? (
-                    <View style={styles.selectItem}>
-                      <ActivityIndicator />
-                    </View>
-                  ) : (
-                    users.map((u) => (
-                      <Pressable
-                        key={u.id}
-                        style={styles.selectItem}
-                        onPress={() => {
-                          setSelectedUser(u.id);
-                          setUserDropdownOpen(false);
-                        }}
-                      >
-                        <Text numberOfLines={1} style={styles.selectItemText}>
-                          {u.firstname} {u.lastname}
-                        </Text>
-                      </Pressable>
-                    ))
-                  )}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-        </View>
-        <TouchableOpacity
-          style={[
-            styles.addButton,
-            !selectedProject && styles.addButtonDisabled,
-          ]}
-          onPress={() => setIsModalVisible(true)}
-          disabled={!selectedProject}
-        >
-          {folderTypeIcon ? (
-            <Image source={folderTypeIcon} style={{ width: 28, height: 28 }} />
-          ) : (
-            <Ionicons name="add-circle" size={28} color="#f87b1b" />
-          )}
-        </TouchableOpacity>
+            );
+          }}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={renderEmptyList}
+        />
       </View>
-      <FlatList
-        data={filteredFolders}
-        renderItem={({ item }) => {
-          const projectTitle = projects.find(
-            (p) => p.id === item.project_id,
-          )?.title;
-          return (
-            <FolderCard
-              item={item}
-              projectTitle={projectTitle}
-              onPress={() => handleOpenQuestionsModal(item.id)}
-            />
-          );
-        }}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={renderEmptyList}
-      />
-      <CreateFolderModal
-        visible={isModalVisible}
-        onClose={() => setIsModalVisible(false)}
-        onSuccess={() => {
-          fetchFolders();
-          setIsModalVisible(false);
-        }}
-        projectId={selectedProject}
-        assignedOwnerId={selectedUser}
-        folderTypeTitle={folderTypeTitle}
-      />
       <FolderQuestionsModal
         visible={isQuestionsModalVisible}
         onClose={() => setIsQuestionsModalVisible(false)}
@@ -420,11 +219,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
-  addButton: {
-    padding: 8,
-  },
-  addButtonDisabled: {
-    opacity: 0.5,
+  listContainer: {
+    flex: 1,
+    paddingTop: 16,
   },
   filterContainer: {
     flexDirection: "row",
