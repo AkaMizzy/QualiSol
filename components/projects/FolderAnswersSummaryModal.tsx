@@ -1,19 +1,26 @@
 import API_CONFIG from "@/app/config/api";
 import { useAuth } from "@/contexts/AuthContext";
+import folderService from "@/services/folderService";
 import { Ged, getGedsBySource } from "@/services/gedService";
+import {
+  getArchivedStatusId,
+  getPendingStatusId,
+} from "@/services/statusService";
 import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 type Props = {
@@ -39,17 +46,42 @@ export default function FolderAnswersSummaryModal({
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<QuestionWithAnswers[]>([]);
+  const [statusId, setStatusId] = useState<string | null>(null);
+  const [archivedStatusId, setArchivedStatusId] = useState<string | null>(null);
+  const [pendingStatusId, setPendingStatusId] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   useEffect(() => {
     if (visible && folderId && token) {
       loadData();
+      loadStatuses();
     }
   }, [visible, folderId, token]);
+
+  const loadStatuses = async () => {
+    if (!token) return;
+    try {
+      const [archivedId, pendingId] = await Promise.all([
+        getArchivedStatusId(token),
+        getPendingStatusId(token),
+      ]);
+      setArchivedStatusId(archivedId);
+      setPendingStatusId(pendingId);
+    } catch (error) {
+      console.error("Failed to load statuses:", error);
+    }
+  };
 
   const loadData = async () => {
     if (!token || !folderId) return;
     setLoading(true);
     try {
+      // 0. Fetch Folder Details to get current status
+      const folder = await folderService.getFolderById(folderId, token);
+      if (folder) {
+        setStatusId(folder.status_id);
+      }
+
       // 1. Fetch Questions
       const questions = await getGedsBySource(token, folderId, "question");
 
@@ -100,6 +132,31 @@ export default function FolderAnswersSummaryModal({
     return answer.answer || answer.description || answer.value || "";
   };
 
+  const handleToggleStatus = async (value: boolean) => {
+    if (!folderId || !token || !archivedStatusId || !pendingStatusId) return;
+
+    const newStatusId = value ? archivedStatusId : pendingStatusId;
+    setUpdatingStatus(true);
+    try {
+      await folderService.updateFolder(
+        folderId,
+        { status_id: newStatusId },
+        token,
+      );
+      setStatusId(newStatusId);
+    } catch (error) {
+      console.error("Failed to update status:", error);
+      Alert.alert(
+        "Erreur",
+        "Impossible de mettre à jour le statut du dossier.",
+      );
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const isArchived = statusId === archivedStatusId;
+
   return (
     <Modal
       visible={visible}
@@ -109,7 +166,28 @@ export default function FolderAnswersSummaryModal({
     >
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Réponses: {folderTitle}</Text>
+          <Text style={styles.headerTitle}>{folderTitle}</Text>
+
+          {archivedStatusId && pendingStatusId && (
+            <View style={styles.statusToggle}>
+              <Text
+                style={[
+                  styles.statusLabel,
+                  isArchived && styles.activeStatusLabel,
+                ]}
+              >
+                {isArchived ? "validé" : "En cours"}
+              </Text>
+              <Switch
+                value={isArchived}
+                onValueChange={handleToggleStatus}
+                trackColor={{ false: "#767577", true: "#f87b1b" }}
+                thumbColor={isArchived ? "white" : "#f4f3f4"}
+                disabled={updatingStatus || isArchived}
+              />
+            </View>
+          )}
+
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Ionicons name="close" size={24} color="#6b7280" />
           </TouchableOpacity>
@@ -245,6 +323,21 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 4,
+  },
+  statusToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginRight: 12,
+  },
+  statusLabel: {
+    fontSize: 12,
+    color: "#6b7280",
+    fontWeight: "500",
+  },
+  activeStatusLabel: {
+    color: "#f87b1b",
+    fontWeight: "700",
   },
   center: {
     flex: 1,

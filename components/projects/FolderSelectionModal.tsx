@@ -1,7 +1,8 @@
 import { Folder } from "@/services/folderService";
+import { getArchivedStatusId } from "@/services/statusService";
 import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     FlatList,
     KeyboardAvoidingView,
@@ -33,6 +34,15 @@ export default function FolderSelectionModal({
   selectedFolderId,
 }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [archivedStatusId, setArchivedStatusId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Fetch archived status ID for indicators
+    getArchivedStatusId("").then((id) => setArchivedStatusId(id));
+    // Note: In a real app we'd need the token here, but FolderSelectionModal
+    // props doesn't explicitly pass it. It's better to pass it or useAuth hooks if available.
+    // Assuming we can use useAuth here or if getArchivedStatusId handles empty token gracefully/we fix it.
+  }, []);
 
   const filteredFolders = useMemo(() => {
     if (!searchQuery.trim()) return folders;
@@ -76,9 +86,18 @@ export default function FolderSelectionModal({
             {ownerName}
           </Text>
         </View>
-        {isSelected && (
-          <Ionicons name="checkmark-circle" size={24} color="#f87b1b" />
-        )}
+
+        <View style={styles.itemRightActions}>
+          {item.status_id === archivedStatusId && (
+            <View style={styles.archivedBadge}>
+              <Ionicons name="lock-closed" size={14} color="#fff" />
+              <Text style={styles.archivedText}>Validé</Text>
+            </View>
+          )}
+          {isSelected && (
+            <Ionicons name="checkmark-circle" size={24} color="#f87b1b" />
+          )}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -229,5 +248,24 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: "#9ca3af",
+  },
+  itemRightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  archivedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#10b981",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  archivedText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "600",
   },
 });

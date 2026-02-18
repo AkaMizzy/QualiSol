@@ -32,7 +32,7 @@ export async function createFolderType(
 
 export async function updateFolderType(
   id: string,
-  data: { title?: string; description?: string; status_id?: string },
+  data: { title?: string; description?: string },
   token: string,
 ): Promise<FolderType> {
   const response = await api.put(`/api/foldertypes/${id}`, data, {

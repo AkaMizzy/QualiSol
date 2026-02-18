@@ -45,4 +45,17 @@ export const getPendingStatusId = async (
     console.error("Failed to get Pending status:", error);
     throw error;
   }
+}
+// Get the ID of the Archived status
+export const getArchivedStatusId = async (
+  token: string,
+): Promise<string | null> => {
+  try {
+    const statuses = await getAllStatuses(token);
+    const archivedStatus = statuses.find((s) => s.status === "Archived");
+    return archivedStatus?.id || null;
+  } catch (error) {
+    console.error("Failed to get Archived status:", error);
+    throw error;
+  }
 };

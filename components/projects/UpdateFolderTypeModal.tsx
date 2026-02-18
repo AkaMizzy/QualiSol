@@ -261,49 +261,6 @@ export default function UpdateFolderTypeModal({
     }
   };
 
-  const handleValidate = async () => {
-    if (!folderType || !token) return;
-
-    Alert.alert(
-      "Valider le type",
-      "Voulez-vous vraiment archiver ce type de dossier ?",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Valider",
-          onPress: async () => {
-            // 1. Optimistic update or waiting? Let's just update.
-            try {
-              // 2. Call updateFolderType with JSON object and token
-              const updated = await updateFolderType(
-                folderType.id,
-                {
-                  status_id: "ac6d5a56-b725-11f0-9ae2-0cc47aa8a1a0",
-                  title: title, // maintain title just in case
-                  description: folderType.description || undefined,
-                },
-                token,
-              );
-
-              Alert.alert(
-                "Succès",
-                "Le type de dossier a été validé (archivé).",
-              );
-              onSuccess(updated);
-              onClose();
-            } catch (error) {
-              console.error("Error validating folder type:", error);
-              Alert.alert(
-                "Erreur",
-                "Impossible de valider le type de dossier.",
-              );
-            }
-          },
-        },
-      ],
-    );
-  };
-
   const handleCreateFolder = async () => {
     if (!selectedUserId) {
       Alert.alert("Erreur", "Veuillez sélectionner un propriétaire.");
