@@ -46,6 +46,7 @@ interface PreviewModalProps {
   gedVisible?: number;
   wait?: number;
   ianalyse?: number;
+  onTimerFinished?: () => void;
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
@@ -80,6 +81,7 @@ export default function PreviewModal({
   gedVisible: isVisibleProp = 1, // Default to visible (1)
   wait = 0, // Default wait time 0
   ianalyse,
+  onTimerFinished,
 }: PreviewModalProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -97,7 +99,10 @@ export default function PreviewModal({
         setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
-            onClose();
+            // Instead of closing, trigger refresh/finish callback
+            if (onTimerFinished) {
+              onTimerFinished();
+            }
             return 0;
           }
           return prev - 1;
@@ -106,7 +111,7 @@ export default function PreviewModal({
 
       return () => clearInterval(timer);
     }
-  }, [visible, isVisibleProp, wait, onClose]);
+  }, [visible, isVisibleProp, wait, onClose, onTimerFinished]);
 
   useEffect(() => {
     return sound
@@ -535,8 +540,10 @@ export default function PreviewModal({
               </Pressable>
             )}
 
-            {/* Only show close button if visible is 1 (default) */}
-            {(isVisibleProp === 1 || isVisibleProp === undefined) && (
+            {/* Only show close button if visible is 1 (default) OR if visible is 0 but timer finished */}
+            {(isVisibleProp === 1 ||
+              isVisibleProp === undefined ||
+              timeLeft <= 0) && (
               <Pressable
                 style={styles.actionButton}
                 onPress={onClose}
@@ -547,8 +554,7 @@ export default function PreviewModal({
               </Pressable>
             )}
 
-            {/* Show timer if auto-closing */}
-            {isVisibleProp === 0 && (
+            {isVisibleProp === 0 && timeLeft > 0 && (
               <View
                 style={[
                   styles.actionButton,

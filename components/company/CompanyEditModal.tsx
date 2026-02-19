@@ -1,4 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
+import companySectorService, {
+  CompanySector,
+} from "@/services/companySectorService";
 import companyService from "@/services/companyService";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
@@ -94,7 +97,31 @@ export default function CompanyEditModal({
     prompt3: "",
     prompt4: "",
     prompt5: "",
+    idsector1: "",
+    idsector2: "",
+    idsector3: "",
+    idsector4: "",
+    idsector5: "",
   });
+
+  const [sectors, setSectors] = useState<CompanySector[]>([]);
+  const [sectorsLoading, setSectorsLoading] = useState(false);
+
+  useEffect(() => {
+    fetchSectors();
+  }, []);
+
+  const fetchSectors = async () => {
+    try {
+      setSectorsLoading(true);
+      const data = await companySectorService.getAllSectors();
+      setSectors(data);
+    } catch (error) {
+      console.error("Failed to fetch sectors", error);
+    } finally {
+      setSectorsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (company) {
@@ -113,6 +140,11 @@ export default function CompanyEditModal({
         prompt3: company.prompt3 || "",
         prompt4: company.prompt4 || "",
         prompt5: company.prompt5 || "",
+        idsector1: company.idsector1 || "",
+        idsector2: company.idsector2 || "",
+        idsector3: company.idsector3 || "",
+        idsector4: company.idsector4 || "",
+        idsector5: company.idsector5 || "",
       });
     }
   }, [company]);
@@ -184,6 +216,11 @@ export default function CompanyEditModal({
         prompt3: formData.prompt3.trim() || null,
         prompt4: formData.prompt4.trim() || null,
         prompt5: formData.prompt5.trim() || null,
+        idsector1: formData.idsector1 || null,
+        idsector2: formData.idsector2 || null,
+        idsector3: formData.idsector3 || null,
+        idsector4: formData.idsector4 || null,
+        idsector5: formData.idsector5 || null,
       };
 
       const updatedCompany = await companyService.updateCompany(
@@ -279,6 +316,60 @@ export default function CompanyEditModal({
                 onChangeText={(text) => handleInputChange("city", text)}
                 placeholder="Paris"
               />
+            </View>
+
+            {/* Sectors Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Secteurs d&apos;activité</Text>
+              <Text style={styles.promptDescription}>
+                Sélectionnez jusqu&apos;à 5 secteurs d&apos;activité pour votre
+                entreprise.
+              </Text>
+
+              {[1, 2, 3, 4, 5].map((num) => {
+                const key = `idsector${num}` as keyof typeof formData;
+                const value = formData[key];
+
+                return (
+                  <View key={key} style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Secteur {num}</Text>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => {
+                        Alert.alert(
+                          `Sélectionner Secteur ${num}`,
+                          "Choisissez un secteur",
+                          [
+                            {
+                              text: "Aucun",
+                              style: "destructive",
+                              onPress: () => handleInputChange(key, ""),
+                            },
+                            ...sectors.map((s) => ({
+                              text: s.sector,
+                              onPress: () =>
+                                handleInputChange(key, s.id.toString()),
+                            })),
+                            { text: "Annuler", style: "cancel" },
+                          ],
+                        );
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.pickerText,
+                          !value && styles.placeholderText,
+                        ]}
+                      >
+                        {value
+                          ? sectors.find((s) => s.id.toString() === value)
+                              ?.sector || "Secteur introuvable"
+                          : "Sélectionner un secteur"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
             </View>
 
             {/* Prompts Section */}
@@ -478,5 +569,20 @@ const styles = {
     fontSize: 15,
     fontWeight: "600",
     color: "#11224e",
+  },
+  pickerButton: {
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 16,
+    backgroundColor: "white",
+  },
+  pickerText: {
+    fontSize: 16,
+    color: "#11224e",
+  },
+  placeholderText: {
+    color: "#9ca3af",
   },
 } as const;

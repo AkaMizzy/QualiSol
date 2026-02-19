@@ -17,6 +17,11 @@ export interface Company {
   country?: string | null;
   ice_number?: string | null;
   logo?: string;
+  idsector1?: string | null;
+  idsector2?: string | null;
+  idsector3?: string | null;
+  idsector4?: string | null;
+  idsector5?: string | null;
   nb_users?: number;
   nbusers?: number;
   nbfolders?: number;

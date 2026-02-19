@@ -437,6 +437,35 @@ export default function SharedGalerieScreen({
     }
   };
 
+  const handleTimerFinished = async () => {
+    if (!selectedItem || !token) return;
+
+    try {
+      // Re-fetch the specific GED to get the latest data
+      // Dynamically import getGedById to avoid circular dependency issues if any,
+      // though typically static import is fine. Using static import pattern here for consistency if needed,
+      // but `import` was already at top. Let's assume `getGedById` is imported or add it.
+      // Checking imports... `getGedById` is NOT in the imports list at line 11.
+      // I need to update imports first or use dynamic import.
+      // Let's use dynamic import to be safe and clean.
+      const { getGedById } = await import("@/services/gedService");
+      const updatedGed = await getGedById(token, selectedItem.id);
+
+      if (updatedGed) {
+        // Update selected item to refresh the modal content
+        setSelectedItem(updatedGed);
+
+        // Update the list as well
+        setGeds((prevGeds) =>
+          prevGeds.map((g) => (g.id === updatedGed.id ? updatedGed : g)),
+        );
+      }
+    } catch (error) {
+      console.error("Failed to refresh GED after timer:", error);
+      // Optional: don't show alert, just fail silently or retry?
+    }
+  };
+
   // Merge online GEDs and offline records
   const allImages = useMemo(() => {
     const onlineImages = geds
@@ -768,6 +797,7 @@ export default function SharedGalerieScreen({
           gedVisible={selectedItem.visible}
           wait={selectedItem.wait}
           ianalyse={selectedItem.iaanalyse}
+          onTimerFinished={handleTimerFinished}
         />
       )}
       <UserSelectionModal
