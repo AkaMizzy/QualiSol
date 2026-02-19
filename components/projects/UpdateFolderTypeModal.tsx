@@ -31,6 +31,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../AppHeader";
 import FolderAnswersSummaryModal from "./FolderAnswersSummaryModal";
 import FolderSelectionModal from "./FolderSelectionModal";
+import ProjectSelectionModal from "./ProjectSelectionModal";
+import UserSelectionModal from "./UserSelectionModal";
 
 type Props = {
   visible: boolean;
@@ -57,10 +59,10 @@ export default function UpdateFolderTypeModal({
   // Folder Creation State
   const [users, setUsers] = useState<CompanyUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
-  const [showUserPicker, setShowUserPicker] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
-  const [showProjectPicker, setShowProjectPicker] = useState(false);
+  const [showProjectModal, setShowProjectModal] = useState(false);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
@@ -369,45 +371,45 @@ export default function UpdateFolderTypeModal({
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Image Picker */}
-            <View style={styles.imageContainer}>
+            {/* Header Section: Image + Title Side-by-Side */}
+            <View style={styles.headerRowContainer}>
+              {/* Image Picker */}
               <TouchableOpacity
                 onPress={handlePickImage}
-                style={styles.imageWrapper}
+                style={styles.compactImageWrapper}
               >
                 {image ? (
                   <Image
                     source={{ uri: image.uri }}
-                    style={styles.circleImage}
+                    style={styles.compactCircleImage}
                   />
                 ) : folderType.imageUrl ? (
                   <Image
                     source={{ uri: folderType.imageUrl }}
-                    style={styles.circleImage}
+                    style={styles.compactCircleImage}
                   />
                 ) : (
-                  <View style={styles.placeholderCircle}>
-                    <Ionicons name="camera" size={32} color="#f87b1b" />
+                  <View style={styles.compactPlaceholderCircle}>
+                    <Ionicons name="camera" size={24} color="#f87b1b" />
                   </View>
                 )}
-                <View style={styles.editIconBadge}>
-                  <Ionicons name="pencil" size={14} color="white" />
+                <View style={styles.compactEditIconBadge}>
+                  <Ionicons name="pencil" size={10} color="white" />
                 </View>
               </TouchableOpacity>
-              <Text style={styles.imageLabel}>Modifier l'icône</Text>
-            </View>
 
-            {/* Title Input */}
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Titre</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  value={title}
-                  onChangeText={setTitle}
-                  placeholder="Nom du type de dossier"
-                  style={styles.input}
-                  placeholderTextColor="#9ca3af"
-                />
+              {/* Title Input */}
+              <View style={styles.compactTitleContainer}>
+                <Text style={styles.label}>Titre</Text>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    value={title}
+                    onChangeText={setTitle}
+                    placeholder="Nom du type de dossier"
+                    style={styles.input}
+                    placeholderTextColor="#9ca3af"
+                  />
+                </View>
               </View>
             </View>
 
@@ -498,16 +500,12 @@ export default function UpdateFolderTypeModal({
                 </View>
               </View>
 
-              <View
-                style={[
-                  styles.userPickerContainer,
-                  { zIndex: showUserPicker ? 3000 : 20 },
-                ]}
-              >
+              {/* User Picker */}
+              <View style={[styles.userPickerContainer, { zIndex: 20 }]}>
                 <Text style={styles.label}>Propriétaire</Text>
                 <TouchableOpacity
                   style={styles.pickerButton}
-                  onPress={() => setShowUserPicker(!showUserPicker)}
+                  onPress={() => setShowUserModal(true)}
                 >
                   <Text
                     style={[
@@ -517,57 +515,16 @@ export default function UpdateFolderTypeModal({
                   >
                     {getSelectedUserName()}
                   </Text>
-                  <Ionicons
-                    name={showUserPicker ? "chevron-up" : "chevron-down"}
-                    size={20}
-                    color="#6b7280"
-                  />
+                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
                 </TouchableOpacity>
-
-                {showUserPicker && (
-                  <View style={styles.dropdown}>
-                    <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
-                      {users.map((u) => (
-                        <TouchableOpacity
-                          key={u.id}
-                          style={[
-                            styles.dropdownItem,
-                            selectedUserId === u.id &&
-                              styles.dropdownItemSelected,
-                          ]}
-                          onPress={() => {
-                            setSelectedUserId(u.id);
-                            setShowUserPicker(false);
-                          }}
-                        >
-                          <Text
-                            style={[
-                              styles.dropdownItemText,
-                              selectedUserId === u.id &&
-                                styles.dropdownItemTextSelected,
-                            ]}
-                          >
-                            {`${u.firstname || ""} ${u.lastname || ""}`.trim() ||
-                              u.email}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
               </View>
 
               {/* Project Picker */}
-              <View
-                style={[
-                  styles.userPickerContainer,
-                  { zIndex: showProjectPicker ? 3000 : 10 },
-                ]}
-              >
+              <View style={[styles.userPickerContainer, { zIndex: 10 }]}>
                 <Text style={styles.label}>Chantier</Text>
                 <TouchableOpacity
                   style={styles.pickerButton}
-                  onPress={() => setShowProjectPicker(!showProjectPicker)}
+                  onPress={() => setShowProjectModal(true)}
                 >
                   <Text
                     style={[
@@ -577,43 +534,8 @@ export default function UpdateFolderTypeModal({
                   >
                     {getSelectedProjectTitle()}
                   </Text>
-                  <Ionicons
-                    name={showProjectPicker ? "chevron-up" : "chevron-down"}
-                    size={20}
-                    color="#6b7280"
-                  />
+                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
                 </TouchableOpacity>
-
-                {showProjectPicker && (
-                  <View style={styles.dropdown}>
-                    <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
-                      {projects.map((p) => (
-                        <TouchableOpacity
-                          key={p.id}
-                          style={[
-                            styles.dropdownItem,
-                            selectedProjectId === p.id &&
-                              styles.dropdownItemSelected,
-                          ]}
-                          onPress={() => {
-                            setSelectedProjectId(p.id);
-                            setShowProjectPicker(false);
-                          }}
-                        >
-                          <Text
-                            style={[
-                              styles.dropdownItemText,
-                              selectedProjectId === p.id &&
-                                styles.dropdownItemTextSelected,
-                            ]}
-                          >
-                            {p.title}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
               </View>
 
               {/* New Create Folder Button */}
@@ -678,6 +600,22 @@ export default function UpdateFolderTypeModal({
               }, 400);
             }}
             selectedFolderId={selectedFolderId}
+          />
+
+          <UserSelectionModal
+            visible={showUserModal}
+            onClose={() => setShowUserModal(false)}
+            users={users}
+            onSelect={setSelectedUserId}
+            selectedUserId={selectedUserId}
+          />
+
+          <ProjectSelectionModal
+            visible={showProjectModal}
+            onClose={() => setShowProjectModal(false)}
+            projects={projects}
+            onSelect={setSelectedProjectId}
+            selectedProjectId={selectedProjectId}
           />
 
           <View style={styles.footer}>
@@ -844,7 +782,54 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: "#f3f4f6",
   },
-  // New Styles for Create Folder Section
+  // Compact Header Styles
+  headerRowContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    gap: 16,
+  },
+  compactImageWrapper: {
+    position: "relative",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  compactCircleImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#f3f4f6",
+  },
+  compactPlaceholderCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#fff7ed",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fdba74",
+    borderStyle: "dashed",
+  },
+  compactEditIconBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    backgroundColor: "#f87b1b",
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "white",
+  },
+  compactTitleContainer: {
+    flex: 1,
+  },
   createFolderSection: {
     marginTop: 12,
     paddingTop: 12,
