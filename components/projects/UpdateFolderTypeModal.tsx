@@ -411,7 +411,67 @@ export default function UpdateFolderTypeModal({
               </View>
             </View>
 
-            {/* Create Folder Section */}
+            {/* User Answers Overview Section - Moved to Top */}
+            <View style={styles.answersSection}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons
+                    name="stats-chart-outline"
+                    size={20}
+                    color="#f87b1b"
+                  />
+                  <Text style={styles.sectionTitle}>Suivi des Dossiers</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.pickerButton}
+                onPress={() => setShowFolderSelectionModal(true)}
+                disabled={loadingFolders}
+              >
+                <Text
+                  style={[
+                    styles.pickerButtonText,
+                    !selectedFolderId && { color: "#9ca3af" },
+                  ]}
+                >
+                  {loadingFolders ? "Chargement..." : getSelectedFolderTitle()}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+              </TouchableOpacity>
+
+              {/* New View Answers Button */}
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  {
+                    backgroundColor: "#f87b1b",
+                    marginTop: 12,
+                    flexDirection: "row",
+                    gap: 8,
+                  },
+                  !selectedFolderId && { backgroundColor: "#f3f4f6" },
+                ]}
+                onPress={() => setShowAnswersModal(true)}
+                disabled={!selectedFolderId}
+              >
+                <Ionicons
+                  name="eye-outline"
+                  size={20}
+                  color={selectedFolderId ? "white" : "#9ca3af"}
+                />
+                <Text
+                  style={[
+                    styles.submitButtonText,
+                    !selectedFolderId && { color: "#4b5563" },
+                  ]}
+                >
+                  Voir le suivi
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Create Folder Section - Moved to Bottom */}
             <View style={styles.createFolderSection}>
               <View style={styles.sectionHeaderRow}>
                 <View style={styles.sectionHeader}>
@@ -420,27 +480,8 @@ export default function UpdateFolderTypeModal({
                     size={20}
                     color="#f87b1b"
                   />
-                  <Text style={styles.sectionTitle}>Créer un dossier</Text>
+                  <Text style={styles.sectionTitle}>Créer un contrôle</Text>
                 </View>
-                <TouchableOpacity
-                  style={[
-                    styles.iconActionButton,
-                    (!selectedUserId ||
-                      !selectedProjectId ||
-                      isCreatingFolder) &&
-                      styles.iconActionButtonDisabled,
-                  ]}
-                  onPress={handleCreateFolder}
-                  disabled={
-                    !selectedUserId || !selectedProjectId || isCreatingFolder
-                  }
-                >
-                  {isCreatingFolder ? (
-                    <ActivityIndicator size="small" color="#f87b1b" />
-                  ) : (
-                    <Ionicons name="add" size={24} color="#f87b1b" />
-                  )}
-                </TouchableOpacity>
               </View>
 
               {/* New Folder Title Input */}
@@ -574,45 +615,51 @@ export default function UpdateFolderTypeModal({
                   </View>
                 )}
               </View>
-            </View>
 
-            {/* User Answers Overview Section */}
-            <View style={styles.answersSection}>
-              <View style={styles.sectionHeaderRow}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons
-                    name="stats-chart-outline"
-                    size={20}
-                    color="#f87b1b"
-                  />
-                  <Text style={styles.sectionTitle}>Suivi des Dossiers</Text>
-                </View>
-                <TouchableOpacity
-                  style={[
-                    styles.iconActionButton,
-                    !selectedFolderId && styles.iconActionButtonDisabled,
-                  ]}
-                  onPress={() => setShowAnswersModal(true)}
-                  disabled={!selectedFolderId}
-                >
-                  <Ionicons name="eye-outline" size={22} color="#f87b1b" />
-                </TouchableOpacity>
-              </View>
-
+              {/* New Create Folder Button */}
               <TouchableOpacity
-                style={styles.pickerButton}
-                onPress={() => setShowFolderSelectionModal(true)}
-                disabled={loadingFolders}
+                style={[
+                  styles.button,
+                  {
+                    backgroundColor: "#f87b1b",
+                    marginTop: 12,
+                    flexDirection: "row",
+                    gap: 8,
+                  },
+                  (!selectedUserId ||
+                    !selectedProjectId ||
+                    isCreatingFolder) && { backgroundColor: "#f3f4f6" },
+                ]}
+                onPress={handleCreateFolder}
+                disabled={
+                  !selectedUserId || !selectedProjectId || isCreatingFolder
+                }
               >
-                <Text
-                  style={[
-                    styles.pickerButtonText,
-                    !selectedFolderId && { color: "#9ca3af" },
-                  ]}
-                >
-                  {loadingFolders ? "Chargement..." : getSelectedFolderTitle()}
-                </Text>
-                <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+                {isCreatingFolder ? (
+                  <ActivityIndicator size="small" color="#f87b1b" />
+                ) : (
+                  <>
+                    <Ionicons
+                      name="add"
+                      size={24}
+                      color={
+                        !selectedUserId || !selectedProjectId
+                          ? "#9ca3af"
+                          : "white"
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.submitButtonText,
+                        (!selectedUserId || !selectedProjectId) && {
+                          color: "#4b5563",
+                        },
+                      ]}
+                    >
+                      Créer le dossier
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </ScrollView>

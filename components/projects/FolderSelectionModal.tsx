@@ -1,3 +1,4 @@
+import { useAuth } from "@/contexts/AuthContext";
 import { Folder } from "@/services/folderService";
 import { getArchivedStatusId } from "@/services/statusService";
 import { CompanyUser } from "@/types/user";
@@ -33,16 +34,15 @@ export default function FolderSelectionModal({
   users,
   selectedFolderId,
 }: Props) {
+  const { token } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [archivedStatusId, setArchivedStatusId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch archived status ID for indicators
-    getArchivedStatusId("").then((id) => setArchivedStatusId(id));
-    // Note: In a real app we'd need the token here, but FolderSelectionModal
-    // props doesn't explicitly pass it. It's better to pass it or useAuth hooks if available.
-    // Assuming we can use useAuth here or if getArchivedStatusId handles empty token gracefully/we fix it.
-  }, []);
+    if (token) {
+      getArchivedStatusId(token).then((id) => setArchivedStatusId(id));
+    }
+  }, [token]);
 
   const filteredFolders = useMemo(() => {
     if (!searchQuery.trim()) return folders;

@@ -3,16 +3,16 @@ import { Audio, ResizeMode, Video } from "expo-av";
 import { Image } from "expo-image";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Linking,
-    Modal,
-    Pressable,
-    Share,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Linking,
+  Modal,
+  Pressable,
+  Share,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 interface PreviewModalProps {
@@ -46,7 +46,7 @@ interface PreviewModalProps {
   gedVisible?: number;
   wait?: number;
   ianalyse?: number;
-  onTimerFinished?: () => void;
+  onTimerEnd?: () => void;
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
@@ -81,7 +81,7 @@ export default function PreviewModal({
   gedVisible: isVisibleProp = 1, // Default to visible (1)
   wait = 0, // Default wait time 0
   ianalyse,
-  onTimerFinished,
+  onTimerEnd,
 }: PreviewModalProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -92,17 +92,18 @@ export default function PreviewModal({
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [timeLeft, setTimeLeft] = useState(wait);
 
+  const [forceShowClose, setForceShowClose] = useState(false);
+
   useEffect(() => {
     if (visible && isVisibleProp === 0 && wait > 0) {
       setTimeLeft(wait);
+      setForceShowClose(false); // Reset on open
       const timer = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
-            // Instead of closing, trigger refresh/finish callback
-            if (onTimerFinished) {
-              onTimerFinished();
-            }
+            setForceShowClose(true); // Show close button
+            if (onTimerEnd) onTimerEnd(); // Trigger refresh callback
             return 0;
           }
           return prev - 1;
@@ -110,8 +111,10 @@ export default function PreviewModal({
       }, 1000);
 
       return () => clearInterval(timer);
+    } else {
+      setForceShowClose(false);
     }
-  }, [visible, isVisibleProp, wait, onClose, onTimerFinished]);
+  }, [visible, isVisibleProp, wait, onTimerEnd]);
 
   useEffect(() => {
     return sound
@@ -540,10 +543,10 @@ export default function PreviewModal({
               </Pressable>
             )}
 
-            {/* Only show close button if visible is 1 (default) OR if visible is 0 but timer finished */}
+            {/* Only show close button if visible is 1 (default) OR forced (timer ended) */}
             {(isVisibleProp === 1 ||
               isVisibleProp === undefined ||
-              timeLeft <= 0) && (
+              forceShowClose) && (
               <Pressable
                 style={styles.actionButton}
                 onPress={onClose}
@@ -554,7 +557,8 @@ export default function PreviewModal({
               </Pressable>
             )}
 
-            {isVisibleProp === 0 && timeLeft > 0 && (
+            {/* Show timer if auto-closing */}
+            {isVisibleProp === 0 && (
               <View
                 style={[
                   styles.actionButton,

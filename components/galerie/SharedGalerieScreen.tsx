@@ -98,22 +98,29 @@ export default function SharedGalerieScreen({
 
   const isTablet = width >= 768;
 
-  const fetchGeds = useCallback(async () => {
-    if (token) {
-      try {
-        setLoading(true);
-        // Use custom fetchData if provided, otherwise default to getMyGeds
-        const fetchedGeds = fetchData
-          ? await fetchData(token)
-          : await getMyGeds(token);
-        setGeds(fetchedGeds);
-      } catch (error) {
-        console.error("Failed to fetch geds:", error);
-      } finally {
-        setLoading(false);
+  const fetchGeds = useCallback(
+    async (isBackground: boolean = false) => {
+      if (token) {
+        try {
+          if (!isBackground) setLoading(true);
+          // Use custom fetchData if provided, otherwise default to getMyGeds
+          const fetchedGeds = fetchData
+            ? await fetchData(token)
+            : await getMyGeds(token);
+          setGeds(fetchedGeds);
+
+          return fetchedGeds;
+        } catch (error) {
+          console.error("Failed to fetch geds:", error);
+          return [];
+        } finally {
+          if (!isBackground) setLoading(false);
+        }
       }
-    }
-  }, [token, fetchData]);
+      return [];
+    },
+    [token, fetchData],
+  );
 
   const fetchOfflineRecords = useCallback(async () => {
     if (!allowOffline) return; // Skip if offline mode disabled
@@ -437,32 +444,19 @@ export default function SharedGalerieScreen({
     }
   };
 
-  const handleTimerFinished = async () => {
-    if (!selectedItem || !token) return;
+  const handlePreviewTimerEnd = async () => {
+    // Refresh data in background
+    const latestGeds = await fetchGeds(true);
 
-    try {
-      // Re-fetch the specific GED to get the latest data
-      // Dynamically import getGedById to avoid circular dependency issues if any,
-      // though typically static import is fine. Using static import pattern here for consistency if needed,
-      // but `import` was already at top. Let's assume `getGedById` is imported or add it.
-      // Checking imports... `getGedById` is NOT in the imports list at line 11.
-      // I need to update imports first or use dynamic import.
-      // Let's use dynamic import to be safe and clean.
-      const { getGedById } = await import("@/services/gedService");
-      const updatedGed = await getGedById(token, selectedItem.id);
-
-      if (updatedGed) {
-        // Update selected item to refresh the modal content
-        setSelectedItem(updatedGed);
-
-        // Update the list as well
-        setGeds((prevGeds) =>
-          prevGeds.map((g) => (g.id === updatedGed.id ? updatedGed : g)),
-        );
+    // If we have a selected item, update it with latest data to refresh the view
+    if (selectedItem && latestGeds.length > 0) {
+      const updatedItem = latestGeds.find((g) => g.id === selectedItem.id);
+      if (updatedItem) {
+        // Preserve any local augmentation if needed, but for now just update with fresh data
+        // We need to re-apply any transformations done in render if any,
+        // or just ensure updatedItem matches the structure.
+        setSelectedItem(updatedItem);
       }
-    } catch (error) {
-      console.error("Failed to refresh GED after timer:", error);
-      // Optional: don't show alert, just fail silently or retry?
     }
   };
 
@@ -797,7 +791,7 @@ export default function SharedGalerieScreen({
           gedVisible={selectedItem.visible}
           wait={selectedItem.wait}
           ianalyse={selectedItem.iaanalyse}
-          onTimerFinished={handleTimerFinished}
+          onTimerEnd={handlePreviewTimerEnd}
         />
       )}
       <UserSelectionModal
