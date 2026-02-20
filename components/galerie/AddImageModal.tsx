@@ -1,5 +1,5 @@
 import VoiceNoteRecorder, {
-    VoiceNoteRecorderRef,
+  VoiceNoteRecorderRef,
 } from "@/components/VoiceNoteRecorder";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,24 +16,24 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import {
-    PanGestureHandler,
-    PanGestureHandlerGestureEvent,
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
@@ -125,6 +125,13 @@ export default function AddImageModal({
   const [storageQuotaGB, setStorageQuotaGB] = useState(0);
   const [isStorageQuotaReached, setIsStorageQuotaReached] = useState(false);
   const [loadingLimits, setLoadingLimits] = useState(true);
+
+  // Session-based picture count limit (resets when modal closes or batch is submitted)
+  // Counts images added via "Ajouter nouveau" within the current capture session.
+  const PICTURE_LIMIT = 100;
+  const [sessionImageCount, setSessionImageCount] = useState(0);
+  const isSessionLimitReached = sessionImageCount >= PICTURE_LIMIT;
+
   const [networkStatus, setNetworkStatus] = useState<"online" | "offline">(
     "online",
   );
@@ -401,6 +408,7 @@ export default function AddImageModal({
       setLevel(5);
       setSelectedType(null);
       setIsSubmitting(false);
+      setSessionImageCount(0); // Reset session counter when modal closes
     }
   }, [visible, showImagePickerOptions, openCameraOnShow, allowedMode]);
 
@@ -555,6 +563,8 @@ export default function AddImageModal({
     setAnnotatorBaseUri(null);
     setMode("upload");
     setIsSubmitting(false);
+    // Note: sessionImageCount is NOT reset here — it persists across "Ajouter nouveau" cycles
+    // within the same session. It only resets when the modal closes.
   };
 
   const handleAdd = async (shouldClose: boolean) => {
@@ -582,6 +592,16 @@ export default function AddImageModal({
       Alert.alert(
         "Quota de stockage dépassé",
         `Vous avez atteint votre quota de stockage de ${storageQuotaGB.toFixed(2)}GB. Utilisation actuelle: ${currentStorageGB.toFixed(2)}GB. Veuillez mettre à niveau votre plan.`,
+      );
+      return;
+    }
+
+    // Session limit only blocks the "Ajouter nouveau" path (shouldClose=false).
+    // The user can always press "Terminer" to submit the last captured image.
+    if (!shouldClose && isSessionLimitReached) {
+      Alert.alert(
+        "Limite de session atteinte",
+        `Vous avez atteint la limite de ${PICTURE_LIMIT} photos pour cette session. Appuyez sur « Terminer » pour sauvegarder ce lot.`,
       );
       return;
     }
@@ -671,15 +691,11 @@ export default function AddImageModal({
     });
 
     if (shouldClose) {
-      // Flow 1: Submit & Exit
-      // The parent component (SharedGalerieScreen) handles closing via the `shouldClose` prop passed to `onAdd`
-      // But we can also force close here if we want to be sure, though `onAdd` usually handles it.
-      // We'll rely on `onAdd` to respect `shouldClose`.
+      // Flow 1: Submit & Exit — session ends, counter resets when modal closes
     } else {
-      // Flow 2: Submit & Continue
-      // Reset the form immediately for the next entry
+      // Flow 2: Submit & Continue — increment session counter, then reset form for next image
+      setSessionImageCount((prev) => prev + 1);
       await resetForm();
-      // Show picker options again (or open camera if preferred) to keep the flow going
       showImagePickerOptions();
     }
   };
@@ -868,10 +884,11 @@ export default function AddImageModal({
                     style={[
                       styles.button,
                       styles.addButton,
-                      isStorageQuotaReached && styles.addButtonDisabled,
+                      (isStorageQuotaReached || isSessionLimitReached) &&
+                        styles.addButtonDisabled,
                     ]}
                     onPress={() => handleAdd(false)}
-                    disabled={isStorageQuotaReached}
+                    disabled={isStorageQuotaReached || isSessionLimitReached}
                   >
                     <Text style={styles.buttonText}>{buttonText}</Text>
                   </TouchableOpacity>
@@ -1092,10 +1109,11 @@ export default function AddImageModal({
                       style={[
                         styles.button,
                         styles.addButton,
-                        isStorageQuotaReached && styles.addButtonDisabled,
+                        (isStorageQuotaReached || isSessionLimitReached) &&
+                          styles.addButtonDisabled,
                       ]}
                       onPress={() => handleAdd(false)}
-                      disabled={isStorageQuotaReached}
+                      disabled={isStorageQuotaReached || isSessionLimitReached}
                     >
                       <Text style={styles.buttonText}>{buttonText}</Text>
                     </TouchableOpacity>

@@ -10,7 +10,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getConnectivity } from "@/services/connectivity";
 import {
   Ged,
-  createGed,
   deleteGed,
   getMyGeds,
   updateGed,
@@ -21,7 +20,7 @@ import {
   deleteOfflineRecord,
   getOfflineRecords,
 } from "@/services/offlineStorageService";
-import { startSyncMonitoring } from "@/services/syncService";
+import { startSyncMonitoring, triggerManualSync } from "@/services/syncService";
 import { getUsers } from "@/services/userService";
 import { OfflineRecord } from "@/types/offlineTypes";
 import { CompanyUser } from "@/types/user";
@@ -255,15 +254,18 @@ export default function SharedGalerieScreen({
       return;
     }
 
-    try {
-      if (isOnline) {
-        // ONLINE: Upload directly to backend
+    // If offline mode is disabled and we are online, we still use direct upload
+    // (non-offline screens keep their real-time behaviour)
+    if (!allowOffline && isOnline) {
+      // Import createGed lazily to avoid top-level import for offline-first screens
+      const { createGed } = await import("@/services/gedService");
+      try {
         const idsource = "00000000-0000-0000-0000-000000000000";
         const { uri } = data.image;
         const fileName = uri.split("/").pop() || `qualiphoto_${Date.now()}.jpg`;
         const fileType = fileName.split(".").pop() || "jpeg";
 
-        const createdGedResponse = await createGed(token, {
+        await createGed(token, {
           idsource,
           title: data.title,
           description: data.description,
@@ -281,14 +283,14 @@ export default function SharedGalerieScreen({
           type: data.type || undefined,
           categorie: data.categorie || undefined,
           file: {
-            uri: uri,
+            uri,
             type:
               data.image.type === "video"
                 ? `video/${fileType}`
                 : `image/${fileType}`,
             name: fileName,
           },
-          audioFile: data.voiceNote // NEW - pass audio directly
+          audioFile: data.voiceNote
             ? {
                 uri: data.voiceNote.uri,
                 type: data.voiceNote.type,
@@ -301,72 +303,87 @@ export default function SharedGalerieScreen({
           answer: undefined,
         });
 
-        // Refresh the gallery ONLY if not skipped (e.g. for bulk uploads, only refresh on last item)
         if (!skipRefresh) {
           setCurrentPage(0);
           scrollViewRef.current?.scrollTo({ y: 0, animated: true });
           await fetchGeds();
         }
-      } else if (allowOffline) {
-        // OFFLINE: Save to SQLite (only if allowed)
-        await createOfflineRecord({
-          idsource: "00000000-0000-0000-0000-000000 000000",
-          title: data.title,
-          description: data.description,
-          kind: "qualiphoto",
-          author: data.author,
-          idauthor: data.idauthor,
-          iddevice: data.iddevice,
-          chantier: data.chantier,
-          audiotxt: data.audiotxt,
-          iatxt: data.iatxt,
-          mode: data.mode,
-          latitude: data.latitude?.toString(),
-          longitude: data.longitude?.toString(),
-          altitude: data.altitude?.toString(),
-          accuracy: data.accuracy?.toString(),
-          altitudeAccuracy: data.altitudeAccuracy?.toString(),
-          level: data.level,
-          type: data.type || undefined,
-          categorie: data.categorie || undefined,
-          imageUri: data.image.uri,
-          voiceNoteUri: data.voiceNote?.uri,
-        });
-
-        // Refresh offline records
-        if (!skipRefresh) {
-          setCurrentPage(0);
-          scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-          await fetchOfflineRecords();
+        if (shouldClose) setModalVisible(false);
+      } catch (error: any) {
+        console.error("[Galerie] Online upload failed:", error);
+        const errorMsg = error?.message || "Erreur inconnue";
+        if (
+          error?.message?.includes("limit") ||
+          error?.message?.includes("Image limit")
+        ) {
+          Alert.alert(
+            "Limite atteinte",
+            error?.message || "Vous avez atteint votre limite d'images.",
+          );
+        } else {
+          Alert.alert("Upload Failed", `Please try again. Error: ${errorMsg}`);
         }
+      }
+      return;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // OFFLINE-FIRST PATH (allowOffline = true)
+    // Both online and offline devices save locally first, then sync in background.
+    // This eliminates data loss / inconsistency under slow or unstable connections.
+    // ─────────────────────────────────────────────────────────────────────────
+    try {
+      await createOfflineRecord({
+        idsource: "00000000-0000-0000-0000-000000000000",
+        title: data.title,
+        description: data.description,
+        kind: "qualiphoto",
+        author: data.author,
+        idauthor: data.idauthor,
+        iddevice: data.iddevice,
+        chantier: data.chantier,
+        audiotxt: data.audiotxt,
+        iatxt: data.iatxt,
+        mode: data.mode,
+        latitude: data.latitude?.toString(),
+        longitude: data.longitude?.toString(),
+        altitude: data.altitude?.toString(),
+        accuracy: data.accuracy?.toString(),
+        altitudeAccuracy: data.altitudeAccuracy?.toString(),
+        level: data.level,
+        type: data.type || undefined,
+        categorie: data.categorie || undefined,
+        imageUri: data.image.uri,
+        voiceNoteUri: data.voiceNote?.uri,
+      });
+
+      // If online, trigger an immediate background sync (non-blocking)
+      if (isOnline) {
+        void triggerManualSync(token).catch((e) =>
+          console.warn("[Galerie] Background sync failed:", e),
+        );
+      }
+
+      if (!skipRefresh) {
+        setCurrentPage(0);
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        // Show offline records immediately, geds will refresh once sync completes
+        await fetchOfflineRecords();
       }
 
       if (shouldClose) {
         setModalVisible(false);
       }
     } catch (error: any) {
-      console.error("[Galerie] Failed to save/upload files:", error);
+      console.error("[Galerie] Failed to save locally:", error);
       console.error("[Galerie] Error stack:", error.stack);
       console.error("[Galerie] Error message:", error.message);
 
-      // Handle 403 error specifically for limit reached
-      if (
-        error?.message?.includes("limit") ||
-        error?.message?.includes("Image limit")
-      ) {
-        Alert.alert(
-          "Limite atteinte",
-          error?.message || "Vous avez atteint votre limite d'images.",
-        );
-      } else {
-        const errorMsg = error?.message || "Erreur inconnue";
-        Alert.alert(
-          isOnline ? "Upload Failed" : "Erreur hors ligne",
-          isOnline
-            ? `Please try again. Error: ${errorMsg}`
-            : `Impossible de sauvegarder localement. Erreur: ${errorMsg}`,
-        );
-      }
+      const errorMsg = error?.message || "Erreur inconnue";
+      Alert.alert(
+        "Erreur de sauvegarde",
+        `Impossible de sauvegarder localement. Erreur: ${errorMsg}`,
+      );
     }
   };
 
