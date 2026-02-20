@@ -79,13 +79,13 @@ export async function syncPendingRecords(token: string): Promise<SyncResult> {
           // Include audio file in same request if present
           audioFile: record.local_voice_note_path
             ? {
-                uri: record.local_voice_note_path,
-                type: "audio/m4a",
-                name:
-                  record.local_voice_note_path.split("/").pop() ||
-                  `voice_${Date.now()}.m4a`,
-              }
+              uri: record.local_voice_note_path,
+              type: "audio/m4a",
+              name: record.local_voice_note_path.split("/").pop() ||
+                `voice_${Date.now()}.m4a`,
+            }
             : undefined,
+          answer: undefined
         });
 
         // Mark as completed and delete local record
