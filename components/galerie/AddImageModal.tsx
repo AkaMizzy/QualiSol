@@ -1055,13 +1055,17 @@ export default function AddImageModal({
 
                   {/* Title Field - FOURTH */}
                   <View style={[styles.form, { marginTop: 15 }]}>
-                    <Text style={styles.label}>Titre (optionnel)</Text>
+                    <View style={styles.labelRow}>
+                      <Text style={styles.label}>Titre (optionnel)</Text>
+                      <Text style={styles.charCounter}>{title.length}/50</Text>
+                    </View>
                     <TextInput
                       style={styles.input}
                       placeholder="ex: 'Photo d'inspection du site'"
                       placeholderTextColor={COLORS.gray}
                       value={title}
                       onChangeText={setTitle}
+                      maxLength={50}
                     />
                   </View>
 
@@ -1178,7 +1182,13 @@ export default function AddImageModal({
                     value={tempFieldValue}
                     onChangeText={setTempFieldValue}
                     multiline
+                    maxLength={editingField === "description" ? 500 : undefined}
                   />
+                  {editingField === "description" && (
+                    <Text style={styles.charCounterPopup}>
+                      {tempFieldValue.length}/500
+                    </Text>
+                  )}
                 </View>
               </TouchableWithoutFeedback>
             </ScrollView>
@@ -1889,5 +1899,23 @@ const styles = StyleSheet.create({
   fullScreenImage: {
     width: "100%",
     height: "100%",
+  },
+  labelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  charCounter: {
+    fontSize: 12,
+    color: COLORS.gray,
+    fontFamily: FONT.regular,
+  },
+  charCounterPopup: {
+    fontSize: 12,
+    color: COLORS.gray,
+    fontFamily: FONT.regular,
+    textAlign: "right",
+    marginTop: 4,
   },
 });

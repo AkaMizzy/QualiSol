@@ -37,6 +37,7 @@ import React, {
   useState,
 } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Modal,
   RefreshControl,
@@ -83,6 +84,7 @@ export default function SharedGalerieScreen({
   const [modalVisible, setModalVisible] = useState(false);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const [selectedItem, setSelectedItem] = useState<Ged | null>(null);
   const [isAnnotatorVisible, setIsAnnotatorVisible] = useState(false);
@@ -357,11 +359,18 @@ export default function SharedGalerieScreen({
         voiceNoteUri: data.voiceNote?.uri,
       });
 
-      // If online, trigger an immediate background sync (non-blocking)
+      // If online, trigger an immediate background sync and show progress banner
       if (isOnline) {
-        void triggerManualSync(token).catch((e) =>
-          console.warn("[Galerie] Background sync failed:", e),
-        );
+        setIsSyncing(true);
+        triggerManualSync(token)
+          .catch((e) => console.warn("[Galerie] Background sync failed:", e))
+          .finally(async () => {
+            setIsSyncing(false);
+            // Refresh gallery once sync finishes so newly uploaded items appear
+            try {
+              await fetchGeds();
+            } catch (_) {}
+          });
       }
 
       if (!skipRefresh) {
@@ -596,6 +605,27 @@ export default function SharedGalerieScreen({
             />
             <Text style={styles.networkText}>Hors ligne</Text>
           </View>
+        </View>
+      )}
+
+      {/* Sync progress banner */}
+      {isSyncing && (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: "#1e40af",
+            paddingHorizontal: SIZES.medium,
+            paddingVertical: 8,
+            gap: 8,
+          }}
+        >
+          <ActivityIndicator size="small" color="#fff" />
+          <Text
+            style={{ color: "#fff", fontSize: 13, fontFamily: FONT.medium }}
+          >
+            Synchronisation en cours…
+          </Text>
         </View>
       )}
 
