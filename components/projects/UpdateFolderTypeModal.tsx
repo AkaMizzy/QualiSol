@@ -331,39 +331,9 @@ export default function UpdateFolderTypeModal({
             showProfile={true}
             onLogoPress={onClose}
             rightComponent={
-              <View style={styles.headerRightActions}>
-                <TouchableOpacity
-                  onPress={onManageQuestions}
-                  style={styles.headerIconButton}
-                >
-                  <Ionicons name="list" size={22} color="#11224e" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    Alert.alert(
-                      "Supprimer",
-                      "Êtes-vous sûr de vouloir supprimer ce type de dossier ?",
-                      [
-                        { text: "Annuler", style: "cancel" },
-                        {
-                          text: "Supprimer",
-                          style: "destructive",
-                          onPress: () => {
-                            onDelete();
-                            onClose();
-                          },
-                        },
-                      ],
-                    );
-                  }}
-                  style={[styles.headerIconButton, { marginRight: 8 }]}
-                >
-                  <Ionicons name="trash-outline" size={22} color="#ef4444" />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <Ionicons name="close" size={24} color="#6b7280" />
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
             }
           />
           <ScrollView
@@ -413,8 +383,57 @@ export default function UpdateFolderTypeModal({
               </View>
             </View>
 
+            {/* Quick Actions Row */}
+            <View style={styles.quickActionsContainer}>
+              <TouchableOpacity
+                onPress={onManageQuestions}
+                style={[
+                  styles.quickActionButton,
+                  { flex: 1, borderColor: "#11224e" },
+                ]}
+              >
+                <Ionicons name="list" size={20} color="#11224e" />
+                <Text
+                  style={{ color: "#11224e", fontWeight: "600", marginLeft: 8 }}
+                >
+                  Questions
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert(
+                    "Supprimer",
+                    "Êtes-vous sûr de vouloir supprimer ce type de dossier ?",
+                    [
+                      { text: "Annuler", style: "cancel" },
+                      {
+                        text: "Supprimer",
+                        style: "destructive",
+                        onPress: () => {
+                          onDelete();
+                          onClose();
+                        },
+                      },
+                    ],
+                  );
+                }}
+                style={[
+                  styles.quickActionButton,
+                  { flex: 1, borderColor: "#ef4444" },
+                ]}
+              >
+                <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                <Text
+                  style={{ color: "#ef4444", fontWeight: "600", marginLeft: 8 }}
+                >
+                  Supprimer
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             {/* User Answers Overview Section - Moved to Top */}
-            <View style={styles.answersSection}>
+            <View >
               <View style={styles.sectionHeaderRow}>
                 <View style={styles.sectionHeader}>
                   <Ionicons
@@ -816,12 +835,12 @@ const styles = StyleSheet.create({
   },
   compactEditIconBadge: {
     position: "absolute",
-    bottom: -2,
-    right: -2,
+    bottom: -4,
+    right: -4,
     backgroundColor: "#f87b1b",
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
@@ -830,6 +849,22 @@ const styles = StyleSheet.create({
   compactTitleContainer: {
     flex: 1,
   },
+  quickActionsContainer: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 20,
+  },
+  quickActionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderRadius: 10,
+    backgroundColor: "#fff",
+  },
+  
   createFolderSection: {
     marginTop: 12,
     paddingTop: 12,
@@ -920,11 +955,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // User Answers Section Styles
-  answersSection: {
-    marginTop: 12,
-    paddingTop: 12,
-  },
   usersListContainer: {
     paddingVertical: 12,
     gap: 12,
