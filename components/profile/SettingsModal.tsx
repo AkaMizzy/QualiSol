@@ -1,15 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { User } from "../../contexts/AuthContext";
 
@@ -17,7 +17,10 @@ interface SettingsModalProps {
   visible: boolean;
   onClose: () => void;
   user: User | null;
-  onUpdate: (data: { timebetween?: number }) => Promise<boolean>;
+  onUpdate: (data: {
+    timebetween?: number;
+    limitpage?: number;
+  }) => Promise<boolean>;
 }
 
 export default function SettingsModal({
@@ -36,22 +39,34 @@ export default function SettingsModal({
       setTimebetweenStr(
         user.timebetween !== undefined ? user.timebetween.toString() : "5",
       );
+      setLimitpageStr(
+        user.limitpage !== undefined ? user.limitpage.toString() : "2",
+      );
       setError(null);
     }
   }, [visible, user]);
 
   const handleSubmit = async () => {
     const timeNum = parseInt(timebetweenStr, 10);
+    const limitNum = parseInt(limitpageStr, 10);
 
     if (isNaN(timeNum) || timeNum < 0) {
       setError("Le délai auto-capture doit être un nombre positif ou nul.");
       return;
     }
 
+    if (isNaN(limitNum) || limitNum < 1) {
+      setError("La limite de page doit être un nombre positif supérieur à 0.");
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     try {
-      const success = await onUpdate({ timebetween: timeNum });
+      const success = await onUpdate({
+        timebetween: timeNum,
+        limitpage: limitNum,
+      });
       if (success) {
         onClose();
       } else {
@@ -99,14 +114,13 @@ export default function SettingsModal({
             />
 
             <Text style={[styles.label, { marginTop: 16 }]}>
-              Limite de page (Bientôt disponible)
+              Images par page
             </Text>
             <TextInput
-              style={[styles.input, styles.inputDisabled]}
+              style={styles.input}
               value={limitpageStr}
-              editable={false}
               onChangeText={setLimitpageStr}
-              placeholder="ex: 10"
+              placeholder="ex: 2"
               keyboardType="number-pad"
             />
 

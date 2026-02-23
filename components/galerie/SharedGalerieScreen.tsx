@@ -9,16 +9,16 @@ import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { getConnectivity } from "@/services/connectivity";
 import {
-    Ged,
-    deleteGed,
-    getMyGeds,
-    updateGed,
-    updateGedFile,
+  Ged,
+  deleteGed,
+  getMyGeds,
+  updateGed,
+  updateGedFile,
 } from "@/services/gedService";
 import {
-    createOfflineRecord,
-    deleteOfflineRecord,
-    getOfflineRecords,
+  createOfflineRecord,
+  deleteOfflineRecord,
+  getOfflineRecords,
 } from "@/services/offlineStorageService";
 import { startSyncMonitoring, triggerManualSync } from "@/services/syncService";
 import { getUsers } from "@/services/userService";
@@ -30,29 +30,27 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import UserSelectionModal from "../UserSelectionModal";
 import BulkAddImageModal from "./BulkAddImageModal";
-
-const IMAGES_PER_PAGE = 2;
 
 interface SharedGalerieScreenProps {
   creationMode: "upload" | "capture";
@@ -74,6 +72,7 @@ export default function SharedGalerieScreen({
   openModalOnFocus = false,
 }: SharedGalerieScreenProps) {
   const { token, user } = useAuth();
+  const IMAGES_PER_PAGE = user?.limitpage || 2;
   const { width } = useWindowDimensions();
   const scrollViewRef = useRef<ScrollView>(null);
   const [geds, setGeds] = useState<Ged[]>([]);

@@ -14,6 +14,7 @@ export interface CompanyUser {
   interne?: number; // 0 = external, 1 = internal
   represent?: string; // Company represented (for external users)
   timebetween?: number;
+  limitpage?: number;
   // Optional relations that might be included
   role?: { id: string; role: string }; // Field is 'role' not 'name'
   status?: { id: string; status: string }; // Field is 'status' not 'name'
@@ -40,6 +41,7 @@ export interface CreateUserData {
   interne?: number; // 0 = external, 1 = internal
   represent?: string; // Company represented (for external users)
   timebetween?: number;
+  limitpage?: number;
 }
 
 export interface CreateUserResponse {
@@ -62,4 +64,5 @@ export interface UpdateUserData {
   interne?: number; // 0 = external, 1 = internal
   represent?: string; // Company represented (for external users)
   timebetween?: number;
+  limitpage?: number;
 }
