@@ -330,11 +330,6 @@ export default function UpdateFolderTypeModal({
             showNotifications={false}
             showProfile={true}
             onLogoPress={onClose}
-            rightComponent={
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color="#6b7280" />
-              </TouchableOpacity>
-            }
           />
           <ScrollView
             style={{ flex: 1 }}
@@ -433,7 +428,7 @@ export default function UpdateFolderTypeModal({
             </View>
 
             {/* User Answers Overview Section - Moved to Top */}
-            <View >
+            <View>
               <View style={styles.sectionHeaderRow}>
                 <View style={styles.sectionHeader}>
                   <Ionicons
@@ -864,7 +859,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "#fff",
   },
-  
+
   createFolderSection: {
     marginTop: 12,
     paddingTop: 12,
