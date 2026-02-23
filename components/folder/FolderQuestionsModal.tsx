@@ -12,12 +12,16 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import { useAuth } from "@/contexts/AuthContext";
 import * as gedService from "@/services/gedService";
 import { Ged } from "@/services/gedService";
 
+import AppHeader from "@/components/AppHeader";
 import * as ImagePicker from "expo-image-picker";
 import AnswerModal from "./AnswerModal";
 
@@ -330,14 +334,16 @@ export default function FolderQuestionsModal({
           onSave={handleAnswerSave}
         />
       )}
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeAreaView style={styles.container}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose}>
-            <Ionicons name="close" size={28} color="#11224e" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Questions</Text>
-          <View style={{ width: 28 }} />
+        <AppHeader
+          user={user || undefined}
+          showNotifications={false}
+          showProfile={true}
+          onLogoPress={onClose}
+        />
+        <View style={styles.headerTitleRow}>
+          <Text style={styles.headerTitleCentered}>Questions</Text>
         </View>
 
         <View style={styles.tableHeader}>
@@ -375,7 +381,7 @@ export default function FolderQuestionsModal({
             <Text style={styles.saveBtnText}>Fermer</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -391,6 +397,21 @@ const styles = StyleSheet.create({
     borderColor: "#eee",
   },
   headerTitle: { fontSize: 18, fontWeight: "bold", color: "#11224e" },
+  headerTitleRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+  },
+  headerTitleCentered: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#11224e",
+    textAlign: "center",
+  },
 
   tableHeader: {
     flexDirection: "row",
