@@ -746,7 +746,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "#f9fafb",
     paddingHorizontal: 12,
-    paddingVertical: 10,
+
   },
   input: {
     fontSize: 14,
