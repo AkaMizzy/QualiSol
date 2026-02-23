@@ -21,13 +21,13 @@ import {
   Modal,
   Platform,
   SafeAreaView,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  TouchableWithoutFeedback,
+  View
 } from "react-native";
 import DraggableFlatList, {
   RenderItemParams,
@@ -35,6 +35,7 @@ import DraggableFlatList, {
 } from "react-native-draggable-flatlist";
 // Removed react-native-safe-area-context import as we use native SafeAreaView// Form Component
 type FormComponentProps = {
+  visible: boolean;
   isEditing: boolean;
   isSubmitting: boolean;
   title: string;
@@ -52,6 +53,7 @@ type FormComponentProps = {
 };
 
 const FormComponent = ({
+  visible,
   isEditing,
   isSubmitting,
   title,
@@ -88,137 +90,163 @@ const FormComponent = ({
     : "Type de question...";
 
   return (
-    <View style={styles.formContainer}>
-      <Text style={styles.formTitle}>
-        {isEditing ? "Modifier la question" : "Nouvelle question"}
-      </Text>
-
-      <View style={styles.inputContainer}>
-        <Ionicons name="text-outline" size={20} color="#f87b1b" />
-        <TextInput
-          placeholder="Titre de la question"
-          placeholderTextColor="#f87b1b"
-          value={title}
-          onChangeText={onTitleChange}
-          style={styles.input}
-          returnKeyType="done"
-          onSubmitEditing={Keyboard.dismiss}
-        />
-      </View>
-
-      <TouchableOpacity
-        style={styles.inputContainer}
-        onPress={() => setPickerVisible(true)}
-      >
-        <Ionicons name="options-outline" size={20} color="#f87b1b" />
-        <Text style={[styles.input, !type && { color: "#f87b1b" }]}>
-          {selectedLabel}
-        </Text>
-        <Ionicons name="chevron-down-outline" size={20} color="#f87b1b" />
-      </TouchableOpacity>
-
-      <View style={styles.switchRow}>
-        <View style={styles.switchTextContainer}>
-          <Ionicons name="server-outline" size={20} color="#f87b1b" />
-          <Text style={styles.switchLabel}>Activer la quantité</Text>
-        </View>
-        <Switch
-          trackColor={{ false: "#767577", true: "#f87b1b" }}
-          thumbColor={quantity ? "#ffffff" : "#f4f3f4"}
-          ios_backgroundColor="#3e3e3e"
-          value={quantity}
-          onValueChange={onQuantityChange}
-        />
-      </View>
-
-      <View style={styles.switchRow}>
-        <View style={styles.switchTextContainer}>
-          <Ionicons name="cash-outline" size={20} color="#f87b1b" />
-          <Text style={styles.switchLabel}>Activer le prix</Text>
-        </View>
-        <Switch
-          trackColor={{ false: "#767577", true: "#f87b1b" }}
-          thumbColor={price ? "#ffffff" : "#f4f3f4"}
-          ios_backgroundColor="#3e3e3e"
-          value={price}
-          onValueChange={onPriceChange}
-        />
-      </View>
-
-      <View
-        style={[
-          styles.inputContainer,
-          { height: 100, alignItems: "flex-start", paddingTop: 15 },
-        ]}
-      >
-        <Ionicons name="document-text-outline" size={20} color="#f87b1b" />
-        <TextInput
-          placeholder="Description (optionnel)"
-          placeholderTextColor="#f87b1b"
-          value={description}
-          onChangeText={onDescriptionChange}
-          style={[styles.input, { height: "100%" }]}
-          multiline
-          returnKeyType="done"
-          blurOnSubmit={true}
-        />
-      </View>
-
-      <View style={styles.formActions}>
-        <TouchableOpacity
-          onPress={onCancel}
-          style={[styles.button, styles.cancelButton]}
-        >
-          <Text style={[styles.buttonText, styles.cancelButtonText]}>
-            Annuler
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={onSubmit}
-          style={[styles.button, styles.submitButton]}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.buttonText}>
-              {isEditing ? "Enregistrer" : "Créer"}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
+    <>
       <Modal
+        visible={visible}
         transparent
-        visible={isPickerVisible}
         animationType="fade"
-        onRequestClose={() => setPickerVisible(false)}
+        onRequestClose={onCancel}
       >
-        <TouchableOpacity
-          style={styles.pickerModalOverlay}
-          activeOpacity={1}
-          onPressOut={() => setPickerVisible(false)}
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <View style={styles.pickerModalContainer}>
-            <FlatList
-              data={typeOptions}
-              keyExtractor={(item) => item.value}
-              renderItem={({ item }) => (
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.formContainer}>
+              <Text style={styles.formTitle}>
+                {isEditing ? "Modifier la question" : "Nouvelle question"}
+              </Text>
+
+              <View style={styles.inputContainer}>
+                <Ionicons name="text-outline" size={20} color="#f87b1b" />
+                <TextInput
+                  placeholder="la question"
+                  placeholderTextColor="#f87b1b"
+                  value={title}
+                  onChangeText={onTitleChange}
+                  style={styles.input}
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={styles.inputContainer}
+                onPress={() => setPickerVisible(true)}
+              >
+                <Ionicons name="options-outline" size={20} color="#f87b1b" />
+                <Text style={[styles.input, !type && { color: "#f87b1b" }]}>
+                  {selectedLabel}
+                </Text>
+                <Ionicons
+                  name="chevron-down-outline"
+                  size={20}
+                  color="#f87b1b"
+                />
+              </TouchableOpacity>
+
+              <View style={styles.switchRow}>
+                <View style={styles.switchTextContainer}>
+                  <Ionicons name="server-outline" size={20} color="#f87b1b" />
+                  <Text style={styles.switchLabel}>Activer la quantité</Text>
+                </View>
+                <Switch
+                  trackColor={{ false: "#767577", true: "#f87b1b" }}
+                  thumbColor={quantity ? "#ffffff" : "#f4f3f4"}
+                  ios_backgroundColor="#3e3e3e"
+                  value={quantity}
+                  onValueChange={onQuantityChange}
+                />
+              </View>
+
+              <View style={styles.switchRow}>
+                <View style={styles.switchTextContainer}>
+                  <Ionicons name="cash-outline" size={20} color="#f87b1b" />
+                  <Text style={styles.switchLabel}>Activer le prix</Text>
+                </View>
+                <Switch
+                  trackColor={{ false: "#767577", true: "#f87b1b" }}
+                  thumbColor={price ? "#ffffff" : "#f4f3f4"}
+                  ios_backgroundColor="#3e3e3e"
+                  value={price}
+                  onValueChange={onPriceChange}
+                />
+              </View>
+
+              <View
+                style={[
+                  styles.inputContainer,
+                  { height: 100, alignItems: "flex-start", paddingTop: 15 },
+                ]}
+              >
+                <Ionicons
+                  name="document-text-outline"
+                  size={20}
+                  color="#f87b1b"
+                />
+                <TextInput
+                  placeholder="Description (optionnel)"
+                  placeholderTextColor="#f87b1b"
+                  value={description}
+                  onChangeText={onDescriptionChange}
+                  style={[styles.input, { height: "100%" }]}
+                  multiline
+                  returnKeyType="done"
+                  blurOnSubmit={true}
+                />
+              </View>
+
+              <View style={styles.formActions}>
                 <TouchableOpacity
-                  style={styles.pickerItem}
-                  onPress={() => {
-                    onTypeChange(item.value as QuestionType["type"]);
-                    setPickerVisible(false);
-                  }}
+                  onPress={onCancel}
+                  style={[styles.button, styles.cancelButton]}
                 >
-                  <Text style={styles.pickerItemText}>{item.label}</Text>
+                  <Text style={[styles.buttonText, styles.cancelButtonText]}>
+                    Annuler
+                  </Text>
                 </TouchableOpacity>
-              )}
-            />
-          </View>
-        </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={onSubmit}
+                  style={[styles.button, styles.submitButton]}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.buttonText}>
+                      {isEditing ? "Enregistrer" : "Créer"}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
-    </View>
+
+      {visible && isPickerVisible && (
+        <Modal
+          transparent
+          visible={isPickerVisible}
+          animationType="fade"
+          onRequestClose={() => setPickerVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.pickerModalOverlay}
+            activeOpacity={1}
+            onPressOut={() => setPickerVisible(false)}
+          >
+            <View style={styles.pickerModalContainer}>
+              <FlatList
+                data={typeOptions}
+                keyExtractor={(item) => item.value}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.pickerItem}
+                    onPress={() => {
+                      onTypeChange(item.value as QuestionType["type"]);
+                      setPickerVisible(false);
+                    }}
+                  >
+                    <Text style={styles.pickerItemText}>{item.label}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
+    </>
   );
 };
 
@@ -513,64 +541,58 @@ export default function QuestionTypeManagerModal({
               Gérer les Questions pour {folderType.title}
             </Text>
           </View>
-          <ScrollView
-            style={styles.contentContainer}
-            contentContainerStyle={{ paddingBottom: 20 }}
-          >
-            {isAdding ? (
-              <FormComponent
-                isEditing={!!isEditing}
-                isSubmitting={isSubmitting}
-                title={title}
-                description={description}
-                type={type}
-                quantity={quantity}
-                price={price}
-                onTitleChange={setTitle}
-                onDescriptionChange={setDescription}
-                onTypeChange={setType}
-                onQuantityChange={setQuantity}
-                onPriceChange={setPrice}
-                onSubmit={handleSubmit}
-                onCancel={handleCancel}
-              />
-            ) : (
-              <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
-                <TouchableOpacity
-                  onPress={handleBeginAdd}
-                  style={[styles.addButton, { flex: 1, marginTop: 0 }]}
-                >
-                  <Ionicons name="add" size={22} color="#f87b1b" />
-                  <Text style={styles.addButtonText}>Ajouter</Text>
-                </TouchableOpacity>
+          <View style={styles.contentContainer}>
+            <FormComponent
+              visible={isAdding}
+              isEditing={!!isEditing}
+              isSubmitting={isSubmitting}
+              title={title}
+              description={description}
+              type={type}
+              quantity={quantity}
+              price={price}
+              onTitleChange={setTitle}
+              onDescriptionChange={setDescription}
+              onTypeChange={setType}
+              onQuantityChange={setQuantity}
+              onPriceChange={setPrice}
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+            />
 
-                <TouchableOpacity
-                  onPress={handleImport}
-                  style={[
-                    styles.addButton,
-                    { flex: 1, marginTop: 0, borderColor: "#11224e" },
-                  ]}
-                  disabled={isImporting}
-                >
-                  {isImporting ? (
-                    <ActivityIndicator size="small" color="#11224e" />
-                  ) : (
-                    <>
-                      <Ionicons
-                        name="cloud-upload-outline"
-                        size={22}
-                        color="#11224e"
-                      />
-                      <Text
-                        style={[styles.addButtonText, { color: "#11224e" }]}
-                      >
-                        Importer Excel
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
+              <TouchableOpacity
+                onPress={handleBeginAdd}
+                style={[styles.addButton, { flex: 1, marginTop: 0 }]}
+              >
+                <Ionicons name="add" size={22} color="#f87b1b" />
+                <Text style={styles.addButtonText}>Ajouter</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleImport}
+                style={[
+                  styles.addButton,
+                  { flex: 1, marginTop: 0, borderColor: "#11224e" },
+                ]}
+                disabled={isImporting}
+              >
+                {isImporting ? (
+                  <ActivityIndicator size="small" color="#11224e" />
+                ) : (
+                  <>
+                    <Ionicons
+                      name="cloud-upload-outline"
+                      size={22}
+                      color="#11224e"
+                    />
+                    <Text style={[styles.addButtonText, { color: "#11224e" }]}>
+                      Importer Excel
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
 
             {isLoading && !isAdding ? (
               <ActivityIndicator
@@ -612,7 +634,7 @@ export default function QuestionTypeManagerModal({
                 />
               </View>
             )}
-          </ScrollView>
+          </View>
         </SafeAreaView>
       </KeyboardAvoidingView>
     </Modal>
@@ -639,6 +661,12 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     paddingHorizontal: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    padding: 16,
   },
   addButton: {
     flexDirection: "row",
