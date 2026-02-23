@@ -43,18 +43,8 @@ const SYSTEM_GRID_ITEMS: {
     type: "system",
   },
   {
-    title: "Galerie",
-    image: require("../../assets/icons/gallery.png"),
-    type: "system",
-  },
-  {
     title: "transfert",
     image: require("../../assets/icons/transfer.png"),
-    type: "system",
-  },
-  {
-    title: "Suivi",
-    image: require("../../assets/icons/folder.png"),
     type: "system",
   },
   {
@@ -63,8 +53,8 @@ const SYSTEM_GRID_ITEMS: {
     type: "system",
   },
   {
-    title: "Calendrier",
-    image: require("../../assets/icons/calendar.png"),
+    title: "Suivi",
+    image: require("../../assets/icons/folder.png"),
     type: "system",
   },
 ];
@@ -439,8 +429,6 @@ export default function DashboardScreen() {
         } else if (item.title === "Calendrier") {
           LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
           setIsCalendarVisible((prevState) => !prevState);
-        } else if (item.title === "Galerie") {
-          router.push("/galerie");
         } else if (item.title === "Constat") {
           router.push("/constat");
         } else if (item.title === "transfert") {
@@ -541,6 +529,23 @@ export default function DashboardScreen() {
                 !isCalendarVisible && styles.sectionNoCalendar,
               ]}
             >
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Activités Récentes</Text>
+                <Pressable
+                  onPress={() => {
+                    LayoutAnimation.configureNext(
+                      LayoutAnimation.Presets.easeInEaseOut,
+                    );
+                    setIsCalendarVisible(!isCalendarVisible);
+                  }}
+                  style={styles.calendarToggle}
+                >
+                  <Image
+                    source={require("../../assets/icons/calendar.png")}
+                    style={{ width: 24, height: 24 }}
+                  />
+                </Pressable>
+              </View>
               {/* Activity Tabs */}
               <View style={styles.activityTabsContainer}>
                 <Pressable
@@ -960,7 +965,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#f87b1b",
-    marginBottom: 16,
+  },
+  calendarToggle: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   sectionTitle1: {
     fontSize: 18,
