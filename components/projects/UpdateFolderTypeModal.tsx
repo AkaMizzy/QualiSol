@@ -482,7 +482,7 @@ export default function UpdateFolderTypeModal({
                     !selectedFolderId && { color: "#4b5563" },
                   ]}
                 >
-                  Voir le suivi
+                Voir le suivi
                 </Text>
               </TouchableOpacity>
             </View>

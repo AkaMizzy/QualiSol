@@ -3,24 +3,24 @@ import { useAuth } from "@/contexts/AuthContext";
 import folderService from "@/services/folderService";
 import { Ged, getGedsBySource } from "@/services/gedService";
 import {
-  getArchivedStatusId,
-  getPendingStatusId,
+    getArchivedStatusId,
+    getPendingStatusId,
 } from "@/services/statusService";
 import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 type Props = {
@@ -95,15 +95,22 @@ export default function FolderAnswersSummaryModal({
         return;
       }
 
-      // 2. Fetch Answers for these questions
-      const questionIds = questions.map((q) => q.id);
-      const answers = await getGedsBySource(token, questionIds, "answer");
-
-      // 3. Group answers by question
-      const grouped: QuestionWithAnswers[] = questions.map((q) => ({
-        question: q,
-        answers: answers.filter((a) => a.idsource === q.id),
-      }));
+      // 2. We no longer fetch answers separately as they are stored on the question record
+      // 3. Group answers by question (mapping to old structure where answers is an array)
+      const grouped: QuestionWithAnswers[] = questions.map((q) => {
+        const hasAnswer =
+          q.answer ||
+          q.value ||
+          q.url ||
+          q.urlvoice ||
+          q.latitude ||
+          q.quantity !== undefined ||
+          q.price !== undefined;
+        return {
+          question: q,
+          answers: hasAnswer ? [q] : [],
+        };
+      });
 
       setData(grouped);
     } catch (error) {

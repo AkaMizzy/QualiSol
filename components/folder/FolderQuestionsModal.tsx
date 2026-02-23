@@ -1,20 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import {
-  SafeAreaView,
-  useSafeAreaInsets,
+    SafeAreaView,
+    useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -77,6 +77,7 @@ function QuestionRow({
       : rawValue;
   const hasImage =
     !!answer?.image ||
+    !!item.url ||
     (displayValue.startsWith("http") && item.type === "photo");
   const hasVoice =
     !!answer?.recordingUri || displayValue.endsWith(".m4a") || !!item.urlvoice;
@@ -148,9 +149,6 @@ export default function FolderQuestionsModal({
 }: FolderQuestionsModalProps) {
   const { token, user } = useAuth();
   const [geds, setGeds] = useState<Ged[]>([]);
-  const [initialAnswers, setInitialAnswers] = useState<Map<string, Ged>>(
-    new Map(),
-  );
   // pendingChanges basically acts as "current local state" for updated answers
   const [pendingChanges, setPendingChanges] = useState<
     Record<string, AnswerData>
@@ -179,27 +177,25 @@ export default function FolderQuestionsModal({
           (g) => g.type && SUPPORTED_TYPES.includes(g.type),
         );
 
-        // Fetch existing answers
-        const questionIds = validQuestions.map((q) => q.id);
-        const fetchedAnswers =
-          questionIds.length > 0
-            ? await gedService.getGedsBySource(token, questionIds, "answer")
-            : [];
-
-        const answersMap = new Map<string, Ged>();
         const initialPending: Record<string, AnswerData> = {};
 
-        fetchedAnswers.forEach((a) => {
-          if (a.idsource) {
-            answersMap.set(a.idsource, a);
-            const val = a.answer || a.description || a.value || "";
-            initialPending[a.idsource] = {
+        validQuestions.forEach((q) => {
+          const val = q.answer || q.value || "";
+          if (
+            val ||
+            q.url ||
+            q.urlvoice ||
+            q.quantity !== undefined ||
+            q.price !== undefined ||
+            q.latitude
+          ) {
+            initialPending[q.id] = {
               answer: val,
               value: val,
-              quantity: a.quantity ?? undefined,
-              price: a.price ?? undefined,
-              latitude: a.latitude || undefined,
-              longitude: a.longitude || undefined,
+              quantity: q.quantity ?? undefined,
+              price: q.price ?? undefined,
+              latitude: q.latitude || undefined,
+              longitude: q.longitude || undefined,
               image: undefined, // We don't verify remote images as local assets immediately
               recordingUri: undefined,
               boolValue: val === "true",
@@ -208,7 +204,6 @@ export default function FolderQuestionsModal({
         });
 
         setGeds(validQuestions);
-        setInitialAnswers(answersMap);
         setPendingChanges(initialPending);
       } catch (err) {
         console.error(err);
@@ -229,15 +224,9 @@ export default function FolderQuestionsModal({
     if (!selectedQuestion || !token || !user) return;
 
     const question = selectedQuestion;
-    const existingAnswer = initialAnswers.get(question.id);
 
-    // Base Payload
+    // Base Payload - only update answer-related fields
     const basePayload: any = {
-      idsource: question.id,
-      title: `Réponse: ${question.title}`,
-      kind: "answer",
-      author: user.id,
-      type: "answer",
       quantity: data.quantity,
       price: data.price,
       answer: data.answer || data.value,
@@ -247,57 +236,32 @@ export default function FolderQuestionsModal({
 
     try {
       let savedGed: Ged;
-      if (existingAnswer) {
-        // UPDATE
-        const filesToUpload: any = {};
-        if (data.image) {
-          filesToUpload.file = {
-            uri: data.image.uri,
-            type: data.image.mimeType || "image/jpeg",
-            name: data.image.fileName || "photo.jpg",
-          };
-        }
-        if (data.recordingUri) {
-          filesToUpload.audioFile = {
-            uri: data.recordingUri,
-            type: "audio/m4a",
-            name: `voice-${Date.now()}.m4a`,
-          };
-        }
+      // UPDATE directly on the question record
+      const filesToUpload: any = {};
+      if (data.image) {
+        filesToUpload.file = {
+          uri: data.image.uri,
+          type: data.image.mimeType || "image/jpeg",
+          name: data.image.fileName || "photo.jpg",
+        };
+      }
+      if (data.recordingUri) {
+        filesToUpload.audioFile = {
+          uri: data.recordingUri,
+          type: "audio/m4a",
+          name: `voice-${Date.now()}.m4a`,
+        };
+      }
 
-        if (Object.keys(filesToUpload).length > 0) {
-          savedGed = await gedService.uploadGedFiles(
-            token,
-            existingAnswer.id,
-            filesToUpload,
-            basePayload,
-          );
-        } else {
-          savedGed = await gedService.updateGed(
-            token,
-            existingAnswer.id,
-            basePayload,
-          );
-        }
+      if (Object.keys(filesToUpload).length > 0) {
+        savedGed = await gedService.uploadGedFiles(
+          token,
+          question.id,
+          filesToUpload,
+          basePayload,
+        );
       } else {
-        // CREATE
-        const createPayload = { ...basePayload };
-        if (data.image) {
-          createPayload.file = {
-            uri: data.image.uri,
-            type: data.image.mimeType || "image/jpeg",
-            name: data.image.fileName || "photo.jpg",
-          };
-        }
-        if (data.recordingUri) {
-          createPayload.audioFile = {
-            uri: data.recordingUri,
-            type: "audio/m4a",
-            name: `voice-${Date.now()}.m4a`,
-          };
-        }
-        const res = await gedService.createGed(token, createPayload);
-        savedGed = res.data;
+        savedGed = await gedService.updateGed(token, question.id, basePayload);
       }
 
       // Update local state
@@ -309,12 +273,8 @@ export default function FolderQuestionsModal({
         },
       }));
 
-      // Also update initialAnswers so next open has correct ID
-      setInitialAnswers((prev) => {
-        const newMap = new Map(prev);
-        newMap.set(question.id, savedGed);
-        return newMap;
-      });
+      // Update geds array so the photo displays correctly immediately
+      setGeds((prev) => prev.map((g) => (g.id === question.id ? savedGed : g)));
     } catch (e) {
       console.error(e);
       Alert.alert("Erreur", "Echec de l'enregistrement de la réponse");
