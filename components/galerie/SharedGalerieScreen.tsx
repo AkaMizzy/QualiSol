@@ -567,7 +567,12 @@ export default function SharedGalerieScreen({
       pages.push(allImages.slice(i, i + IMAGES_PER_PAGE));
     }
     return pages;
-  }, [allImages]);
+  }, [allImages, IMAGES_PER_PAGE]);
+
+  // Reset trailing current page index back to 0 if the limit settings dynamically squash the number of pages available underneath it
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [IMAGES_PER_PAGE]);
 
   const currentPageImages = useMemo(() => {
     return paginatedData[currentPage] || [];

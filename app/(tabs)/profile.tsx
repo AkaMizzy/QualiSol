@@ -308,7 +308,6 @@ export default function ProfileScreen() {
           if (!user) return false;
           try {
             await updateUser(data);
-            Alert.alert("Succès", "Paramètres mis à jour.");
             return true;
           } catch (err: any) {
             Alert.alert(
