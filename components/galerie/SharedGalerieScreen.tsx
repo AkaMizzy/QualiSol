@@ -793,7 +793,7 @@ export default function SharedGalerieScreen({
           }
           buttonText={
             creationMode === "capture"
-              ? "Ajouter nouveau constat"
+              ? "Nouveau constat"
               : "Ajouter nouvelle image"
           }
         />

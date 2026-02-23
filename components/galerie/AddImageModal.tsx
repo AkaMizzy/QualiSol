@@ -152,6 +152,73 @@ export default function AddImageModal({
   const [captureModalVisible, setCaptureModalVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Auto-save state
+  const [autoSaveCountdown, setAutoSaveCountdown] = useState<number | null>(
+    null,
+  );
+  const skipCountdownRef = useRef(false);
+
+  // Auto-save tick and trigger logic
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval>;
+    if (
+      autoSaveCountdown !== null &&
+      autoSaveCountdown > 0 &&
+      !isSubmitting &&
+      !isAnnotatorVisible &&
+      !editingField &&
+      !isSessionLimitReached &&
+      !isStorageQuotaReached
+    ) {
+      timer = setInterval(() => {
+        setAutoSaveCountdown((prev) =>
+          prev !== null && prev > 0 ? prev - 1 : 0,
+        );
+      }, 1000);
+    } else if (autoSaveCountdown === 0) {
+      // Trigger save immediately
+      setAutoSaveCountdown(null); // Prevent re-trigger
+      if (!isSubmitting && !isSessionLimitReached && !isStorageQuotaReached) {
+        handleAdd(false); // save and reopen
+      }
+    }
+    return () => clearInterval(timer);
+  }, [
+    autoSaveCountdown,
+    isSubmitting,
+    isAnnotatorVisible,
+    editingField,
+    isSessionLimitReached,
+    isStorageQuotaReached,
+  ]);
+
+  // Handle new capture
+  useEffect(() => {
+    if (visible && image && mode === "capture" && !isAnnotatorVisible) {
+      if (skipCountdownRef.current) {
+        skipCountdownRef.current = false;
+        setAutoSaveCountdown(null);
+        return;
+      }
+      const tb = user?.timebetween !== undefined ? user.timebetween : 5;
+      if (tb > 0 && !isSessionLimitReached && !isStorageQuotaReached) {
+        setAutoSaveCountdown(tb);
+      } else {
+        setAutoSaveCountdown(null);
+      }
+    } else {
+      setAutoSaveCountdown(null);
+    }
+  }, [
+    image,
+    mode,
+    visible,
+    isSessionLimitReached,
+    isStorageQuotaReached,
+    isAnnotatorVisible,
+    user?.timebetween,
+  ]);
+
   // Ref for voice note recorder cleanup
   const voiceNoteRecorderRef = useRef<VoiceNoteRecorderRef>(null);
 
@@ -560,9 +627,10 @@ export default function AddImageModal({
     setSelectedCategorie(null);
     setAnnotatorVisible(false);
     setAnnotatorBaseUri(null);
-    setAnnotatorBaseUri(null);
     setMode("upload");
     setIsSubmitting(false);
+    setAutoSaveCountdown(null);
+    skipCountdownRef.current = false;
     // Note: sessionImageCount is NOT reset here — it persists across "Ajouter nouveau" cycles
     // within the same session. It only resets when the modal closes.
   };
@@ -608,6 +676,7 @@ export default function AddImageModal({
 
     // Set loading state
     setIsSubmitting(true);
+    setAutoSaveCountdown(null); // Ensure countdown is completely stopped when manually submitting
 
     let authorName = "Unknown User";
 
@@ -712,6 +781,9 @@ export default function AddImageModal({
     name: string;
     type: string;
   }) => {
+    // Prevent auto-save countdown from triggering after annotation
+    skipCountdownRef.current = true;
+
     // Replace current image with annotated version
     // ImagePickerAsset requires width/height, use original dimensions or defaults
     setImage({
@@ -1101,12 +1173,18 @@ export default function AddImageModal({
                   <View style={styles.buttonContainer}>
                     <TouchableOpacity
                       style={[styles.button, styles.cancelButton]}
-                      onPress={() => handleAdd(true)}
+                      onPress={() => {
+                        if (autoSaveCountdown !== null) {
+                          setAutoSaveCountdown(null);
+                        } else {
+                          handleAdd(true);
+                        }
+                      }}
                     >
                       <Text
                         style={[styles.buttonText, styles.cancelButtonText]}
                       >
-                        Terminer
+                        {autoSaveCountdown !== null ? "Arrêter" : "Terminer"}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -1116,10 +1194,17 @@ export default function AddImageModal({
                         (isStorageQuotaReached || isSessionLimitReached) &&
                           styles.addButtonDisabled,
                       ]}
-                      onPress={() => handleAdd(false)}
+                      onPress={() => {
+                        setAutoSaveCountdown(null);
+                        handleAdd(false);
+                      }}
                       disabled={isStorageQuotaReached || isSessionLimitReached}
                     >
-                      <Text style={styles.buttonText}>{buttonText}</Text>
+                      <Text style={styles.buttonText}>
+                        {autoSaveCountdown !== null
+                          ? `Nouveau dans ${autoSaveCountdown}s`
+                          : buttonText}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>

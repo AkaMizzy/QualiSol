@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../components/AppHeader";
+import SettingsModal from "../../components/profile/SettingsModal";
 import UpdateIdentifierModal from "../../components/profile/UpdateIdentifierModal";
 import companyService from "../../services/companyService";
 import { Company } from "../../types/company";
@@ -29,6 +30,7 @@ export default function ProfileScreen() {
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const [isIdentifierModalVisible, setIsIdentifierModalVisible] =
     useState(false);
+  const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const [company, setCompany] = useState<Company | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -246,6 +248,14 @@ export default function ProfileScreen() {
             <Text style={styles.menuText}>Changer de mot de passe</Text>
             <Ionicons name="chevron-forward" size={20} color="#f87b1b" />
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => setIsSettingsModalVisible(true)}
+          >
+            <Ionicons name="settings-outline" size={20} color="#f87b1b" />
+            <Text style={styles.menuText}>Paramètres</Text>
+            <Ionicons name="chevron-forward" size={20} color="#f87b1b" />
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -284,6 +294,26 @@ export default function ProfileScreen() {
             Alert.alert(
               "Erreur",
               err.message || "Impossible de mettre à jour l'identifiant.",
+            );
+            return false;
+          }
+        }}
+      />
+
+      <SettingsModal
+        visible={isSettingsModalVisible}
+        onClose={() => setIsSettingsModalVisible(false)}
+        user={user}
+        onUpdate={async (data) => {
+          if (!user) return false;
+          try {
+            await updateUser(data);
+            Alert.alert("Succès", "Paramètres mis à jour.");
+            return true;
+          } catch (err: any) {
+            Alert.alert(
+              "Erreur",
+              err.message || "Impossible de mettre à jour les paramètres.",
             );
             return false;
           }

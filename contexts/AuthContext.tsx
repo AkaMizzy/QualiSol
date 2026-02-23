@@ -26,6 +26,7 @@ export interface User {
   company_id: string | null;
   identifier: string;
   photo?: string | null;
+  timebetween?: number;
 }
 
 interface AuthState {
