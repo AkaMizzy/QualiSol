@@ -1577,8 +1577,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginTop: SIZES.large,
     width: "100%",
-    paddingBottom: 0, // Reduced from 40 to eliminate gap
-    marginBottom: 0, // Reduced from 20 to eliminate gap
+    paddingBottom: 0,
+    marginBottom: 0,
   },
   button: {
     flex: 1,

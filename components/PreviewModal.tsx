@@ -3,16 +3,16 @@ import { Audio, ResizeMode, Video } from "expo-av";
 import { Image } from "expo-image";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Linking,
-  Modal,
-  Pressable,
-  Share,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Linking,
+    Modal,
+    Pressable,
+    Share,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 
 interface PreviewModalProps {
@@ -278,6 +278,104 @@ export default function PreviewModal({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  /**
+   * Renders a description string using HTML-like styled elements.
+   * Supported patterns:
+   *   # Heading        → large bold heading
+   *   ## Sub-heading   → medium bold heading
+   *   **bold**         → bold inline text
+   *   --- or ***       → horizontal rule
+   *   blank line       → paragraph separator
+   */
+  const renderHtmlDescription = (text: string) => {
+    const lines = text.split(/\r?\n/);
+    const elements: React.ReactNode[] = [];
+
+    lines.forEach((line, index) => {
+      const trimmed = line.trim();
+
+      // Horizontal rule: ---, ***, ___
+      if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+        elements.push(<View key={index} style={styles.descHr} />);
+        return;
+      }
+
+      // H1: # heading
+      if (trimmed.startsWith("# ")) {
+        elements.push(
+          <Text key={index} style={styles.descH1}>
+            {trimmed.slice(2)}
+          </Text>,
+        );
+        return;
+      }
+
+      // H2: ## heading
+      if (trimmed.startsWith("## ")) {
+        elements.push(
+          <Text key={index} style={styles.descH2}>
+            {trimmed.slice(3)}
+          </Text>,
+        );
+        return;
+      }
+
+      // H3: ### heading
+      if (trimmed.startsWith("### ")) {
+        elements.push(
+          <Text key={index} style={styles.descH3}>
+            {trimmed.slice(4)}
+          </Text>,
+        );
+        return;
+      }
+
+      // Empty line → spacer
+      if (trimmed === "") {
+        elements.push(<View key={index} style={styles.descSpacer} />);
+        return;
+      }
+
+      // Bullet list item: - item or * item
+      if (/^[-*]\s/.test(trimmed)) {
+        const content = trimmed.slice(2);
+        elements.push(
+          <View key={index} style={styles.descListItem}>
+            <Text style={styles.descBullet}>{"•"}</Text>
+            <Text style={styles.descParagraph}>{renderInline(content)}</Text>
+          </View>,
+        );
+        return;
+      }
+
+      // Regular paragraph with optional inline bold
+      elements.push(
+        <Text key={index} style={styles.descParagraph}>
+          {renderInline(trimmed)}
+        </Text>,
+      );
+    });
+
+    return <View style={styles.descContainer}>{elements}</View>;
+  };
+
+  /**
+   * Parses inline **bold** markers and returns mixed Text nodes.
+   */
+  const renderInline = (text: string): React.ReactNode[] => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return (
+          <Text key={i} style={styles.descBold}>
+            {part.slice(2, -2)}
+          </Text>
+        );
+      }
+      return <Text key={i}>{part}</Text>;
+    });
   };
 
   if (!mediaUrl || !mediaType) {
@@ -737,21 +835,25 @@ export default function PreviewModal({
                         setIsDescriptionExpanded(!isDescriptionExpanded)
                       }
                     >
-                      <Text
-                        style={styles.metadataValue}
-                        numberOfLines={isDescriptionExpanded ? undefined : 2}
-                      >
-                        {description}
-                      </Text>
-                      {description.length > 50 && (
+                      {isDescriptionExpanded ? (
+                        renderHtmlDescription(description)
+                      ) : (
+                        <Text style={styles.metadataValue} numberOfLines={2}>
+                          {description.replace(/[#*_\-]+/g, "").trim()}
+                        </Text>
+                      )}
+                      {description.length > 80 && (
                         <Text
                           style={{
-                            color: "#007AFF",
+                            color: "#f87b1b",
                             fontSize: 12,
                             marginTop: 4,
+                            fontWeight: "600",
                           }}
                         >
-                          {isDescriptionExpanded ? "Voir moins" : "Voir plus"}
+                          {isDescriptionExpanded
+                            ? "▲ Voir moins"
+                            : "▼ Voir plus"}
                         </Text>
                       )}
                     </Pressable>
@@ -1078,5 +1180,60 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     width: 65,
     textAlign: "right",
+  },
+  // ── HTML-style description renderer styles ──────────────────────────────
+  descContainer: {
+    gap: 2,
+  },
+  descH1: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
+  descH2: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#f87b1b",
+    marginBottom: 2,
+    letterSpacing: 0.2,
+  },
+  descH3: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#CCCCCC",
+    marginBottom: 2,
+  },
+  descHr: {
+    height: 1,
+    backgroundColor: "rgba(248, 123, 27, 0.4)",
+    marginVertical: 6,
+    borderRadius: 1,
+  },
+  descParagraph: {
+    fontSize: 14,
+    color: "#E0E0E0",
+    lineHeight: 20,
+    flexShrink: 1,
+  },
+  descBold: {
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  descSpacer: {
+    height: 6,
+  },
+  descListItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    paddingLeft: 4,
+  },
+  descBullet: {
+    fontSize: 14,
+    color: "#f87b1b",
+    lineHeight: 20,
+    marginTop: 1,
   },
 });
