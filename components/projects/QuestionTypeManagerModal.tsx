@@ -389,9 +389,7 @@ export default function QuestionTypeManagerModal({
     <View style={styles.itemCard}>
       <View style={styles.itemTextContainer}>
         <Text style={styles.itemTitle}>{item.title}</Text>
-        {item.description ? (
-          <Text style={styles.itemDescription}>{item.description}</Text>
-        ) : null}
+
         <Text
           style={[
             styles.itemDescription,
