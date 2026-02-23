@@ -58,64 +58,80 @@ const FormComponent = ({
   onCancel,
   onPickImage,
   imageUri,
-}: FormComponentProps) => (
-  <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-    <View style={styles.formCard}>
-      <Text style={styles.formTitle}>
-        {isEditing ? "Modifier le type" : "Nouveau type de dossier"}
-      </Text>
-      <TouchableOpacity onPress={onPickImage} style={styles.imagePicker}>
-        {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.previewImage} />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <Ionicons name="camera" size={24} color="#f87b1b" />
-            <Text style={styles.imagePickerText}>Ajouter une image</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-      <View style={styles.inputWrap}>
-        <Ionicons name="text-outline" size={16} color="#f87b1b" />
-        <TextInput
-          placeholder="Titre"
-          placeholderTextColor="#f87b1b"
-          value={title}
-          onChangeText={onTitleChange}
-          style={styles.input}
-        />
-      </View>
-      <View
-        style={[
-          styles.inputWrap,
-          { height: 80, alignItems: "flex-start", paddingTop: 12 },
-        ]}
-      >
-        <Ionicons name="document-text-outline" size={16} color="#f87b1b" />
-        <TextInput
-          placeholder="Description (optionnel)"
-          placeholderTextColor="#f87b1b"
-          value={description}
-          onChangeText={onDescriptionChange}
-          style={[styles.input, { height: "100%" }]}
-          multiline
-        />
-      </View>
-      <View style={styles.formActions}>
-        <TouchableOpacity onPress={onCancel} style={styles.cancelButton}>
-          <Text style={styles.cancelButtonText}>Annuler</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={onSubmit}
-          style={styles.submitButton}
-          disabled={isSubmitting}
-        >
-          <Text style={styles.submitButtonText}>
-            {isEditing ? "Enregistrer" : "Créer"}
+  visible,
+}: FormComponentProps & { visible: boolean }) => (
+  <Modal visible={visible} transparent animationType="fade">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.modalOverlay}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.formCard}>
+          <Text style={styles.formTitle}>
+            {isEditing ? "Modifier le type" : "Nouveau type de controle"}
           </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </TouchableWithoutFeedback>
+
+          <View style={styles.topRow}>
+            <TouchableOpacity onPress={onPickImage} style={styles.imagePicker}>
+              {imageUri ? (
+                <Image source={{ uri: imageUri }} style={styles.previewImage} />
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <Ionicons name="camera" size={24} color="#f87b1b" />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <View style={[styles.inputWrap, { flex: 1 }]}>
+              <Ionicons name="text-outline" size={16} color="#f87b1b" />
+              <TextInput
+                placeholder="Titre"
+                placeholderTextColor="#f87b1b"
+                value={title}
+                onChangeText={onTitleChange}
+                style={styles.input}
+              />
+            </View>
+          </View>
+
+          <View
+            style={[
+              styles.inputWrap,
+              { height: 120, alignItems: "flex-start", paddingTop: 12 },
+            ]}
+          >
+            <Ionicons name="document-text-outline" size={16} color="#f87b1b" />
+            <TextInput
+              placeholder="Description (optionnel)"
+              placeholderTextColor="#f87b1b"
+              value={description}
+              onChangeText={onDescriptionChange}
+              style={[
+                styles.input,
+                { height: "100%", textAlignVertical: "top" },
+              ]}
+              multiline
+            />
+          </View>
+
+          <View style={styles.formActions}>
+            <TouchableOpacity onPress={onCancel} style={styles.cancelButton}>
+              <Text style={styles.cancelButtonText}>Annuler</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onSubmit}
+              style={styles.submitButton}
+              disabled={isSubmitting}
+            >
+              <Text style={styles.submitButtonText}>
+                {isEditing ? "Enregistrer" : "Créer"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
+  </Modal>
 );
 
 type Props = {
@@ -404,20 +420,19 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
           </View>
 
           <View style={styles.contentContainer}>
-            {isAdding && (
-              <FormComponent
-                isEditing={false}
-                isSubmitting={isSubmitting}
-                title={title}
-                description={description}
-                onTitleChange={setTitle}
-                onDescriptionChange={setDescription}
-                onSubmit={handleSubmit}
-                onCancel={handleCancel}
-                onPickImage={handlePickImage}
-                imageUri={image?.uri}
-              />
-            )}
+            <FormComponent
+              visible={isAdding}
+              isEditing={false}
+              isSubmitting={isSubmitting}
+              title={title}
+              description={description}
+              onTitleChange={setTitle}
+              onDescriptionChange={setDescription}
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+              onPickImage={handlePickImage}
+              imageUri={image?.uri}
+            />
 
             {isLoading && !isAdding ? (
               <ActivityIndicator
@@ -432,7 +447,7 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
                 renderItem={renderItem}
                 contentContainerStyle={{
                   paddingBottom: 20,
-                  paddingTop: isAdding ? 0 : 16,
+                  paddingTop: 16,
                 }}
                 ListEmptyComponent={
                   !isLoading ? (
@@ -520,45 +535,57 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#f87b1b",
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    padding: 16,
+  },
   // Form Styles
   formCard: {
     backgroundColor: "white",
     borderRadius: 16,
-    padding: 16,
-    marginTop: 16,
-    marginBottom: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: "#e5e7eb",
-    gap: 12,
+    gap: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   formTitle: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: "700",
     color: "#11224e",
+    marginBottom: 4,
+  },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   imagePicker: {
     alignItems: "center",
     justifyContent: "center",
-    height: 120,
-    borderRadius: 12,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     borderWidth: 2,
     borderColor: "#f87b1b",
     borderStyle: "dashed",
     backgroundColor: "#fff7ed",
+    overflow: "hidden",
   },
   previewImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 10,
+    borderRadius: 32,
   },
   imagePlaceholder: {
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-  },
-  imagePickerText: {
-    color: "#f87b1b",
-    fontWeight: "600",
   },
   inputWrap: {
     flexDirection: "row",
@@ -566,7 +593,7 @@ const styles = StyleSheet.create({
     gap: 10,
     backgroundColor: "#f8fafc",
     borderWidth: 1,
-    borderColor: "#f87b1b",
+    borderColor: "#e5e7eb",
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -575,7 +602,7 @@ const styles = StyleSheet.create({
   formActions: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    gap: 8,
+    gap: 12,
     marginTop: 8,
   },
   submitButton: {
