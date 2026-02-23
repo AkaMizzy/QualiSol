@@ -112,6 +112,18 @@ export async function deleteQuestionType(
   });
 }
 
+export async function updateQuestionTypesOrder(
+  token: string,
+  items: { id: string; order: number }[],
+): Promise<any> {
+  const response = await api.put(
+    "/api/questiotypes/order",
+    { items },
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  return response.data;
+}
+
 export async function bulkImportQuestionTypes(
   folderTypeId: string,
   file: any, // DocumentPickerResult asset

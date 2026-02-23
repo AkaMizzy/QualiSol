@@ -7,6 +7,7 @@ import {
   getQuestionTypesByFolder,
   QuestionType,
   updateQuestionType,
+  updateQuestionTypesOrder,
 } from "@/services/questionTypeService";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
@@ -28,6 +29,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import DraggableFlatList, {
+  RenderItemParams,
+  ScaleDecorator,
+} from "react-native-draggable-flatlist";
 // Removed react-native-safe-area-context import as we use native SafeAreaView// Form Component
 type FormComponentProps = {
   isEditing: boolean;
@@ -240,13 +245,28 @@ export default function QuestionTypeManagerModal({
   const [price, setPrice] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
 
   const fetchQuestionTypes = useCallback(async () => {
     if (!token) return;
     setIsLoading(true);
     try {
       const types = await getQuestionTypesByFolder(folderType.id, token);
-      setQuestionTypes(types);
+      // Ensure we sort by order and fallback to created_at if order is not set
+      const sorted = [...types].sort((a, b) => {
+        if (
+          a.order !== null &&
+          a.order !== undefined &&
+          b.order !== null &&
+          b.order !== undefined
+        ) {
+          return a.order - b.order;
+        }
+        return (
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+      });
+      setQuestionTypes(sorted);
     } catch (error) {
       console.error("Failed to fetch question types:", error);
     } finally {
@@ -346,6 +366,35 @@ export default function QuestionTypeManagerModal({
     }
   };
 
+  const handleDragEnd = async ({ data }: { data: QuestionType[] }) => {
+    // 1. Optimistic update
+    setQuestionTypes(data);
+
+    if (!token) return;
+
+    // 2. Map new order to payload
+    const updates = data.map((item, index) => ({
+      id: item.id,
+      order: index,
+    }));
+
+    setIsReordering(true);
+    try {
+      await updateQuestionTypesOrder(token, updates);
+      // Optional: you could re-fetch here to ensure absolute sync, but optimistic should be fine
+    } catch (error) {
+      console.error("Failed to update question types order:", error);
+      Alert.alert(
+        "Erreur",
+        "Impossible de sauvegarder le nouvel ordre des questions.",
+      );
+      // Revert if needed by refetching
+      fetchQuestionTypes();
+    } finally {
+      setIsReordering(false);
+    }
+  };
+
   const handleImport = async () => {
     if (!token) return;
     try {
@@ -385,35 +434,55 @@ export default function QuestionTypeManagerModal({
     }
   };
 
-  const renderItem = ({ item }: { item: QuestionType }) => (
-    <View style={styles.itemCard}>
-      <View style={styles.itemTextContainer}>
-        <Text style={styles.itemTitle}>{item.title}</Text>
-
-        <Text
-          style={[
-            styles.itemDescription,
-            { fontStyle: "italic", marginTop: 4 },
-          ]}
-        >
-          Type: {item.type}
-        </Text>
-      </View>
-      <View style={styles.itemActions}>
-        <TouchableOpacity
-          onPress={() => handleBeginEdit(item)}
-          style={styles.iconButton}
-        >
-          <Ionicons name="pencil" size={20} color="#11224e" />
+  const renderItem = ({
+    item,
+    drag,
+    isActive,
+  }: RenderItemParams<QuestionType>) => (
+    <ScaleDecorator>
+      <TouchableOpacity
+        activeOpacity={1}
+        onLongPress={drag}
+        disabled={isActive}
+        style={[
+          styles.itemCard,
+          isActive && {
+            backgroundColor: "#f3f4f6",
+            elevation: 5,
+            shadowOpacity: 0.2,
+          },
+        ]}
+      >
+        <TouchableOpacity onPressIn={drag} style={styles.dragHandle}>
+          <Ionicons name="reorder-two" size={24} color="#9ca3af" />
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => handleDelete(item.id)}
-          style={styles.iconButton}
-        >
-          <Ionicons name="trash" size={20} color="#ef4444" />
-        </TouchableOpacity>
-      </View>
-    </View>
+        <View style={styles.itemTextContainer}>
+          <Text style={styles.itemTitle}>{item.title}</Text>
+          <Text
+            style={[
+              styles.itemDescription,
+              { fontStyle: "italic", marginTop: 4 },
+            ]}
+          >
+            Type: {item.type}
+          </Text>
+        </View>
+        <View style={styles.itemActions}>
+          <TouchableOpacity
+            onPress={() => handleBeginEdit(item)}
+            style={styles.iconButton}
+          >
+            <Ionicons name="pencil" size={20} color="#11224e" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleDelete(item.id)}
+            style={styles.iconButton}
+          >
+            <Ionicons name="trash" size={20} color="#ef4444" />
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </ScaleDecorator>
   );
 
   return (
@@ -510,21 +579,38 @@ export default function QuestionTypeManagerModal({
                 size="large"
               />
             ) : (
-              <FlatList
-                data={questionTypes}
-                keyExtractor={(item) => item.id}
-                renderItem={renderItem}
-                scrollEnabled={false}
-                contentContainerStyle={{ paddingTop: isAdding ? 0 : 16 }}
-                ListEmptyComponent={
-                  !isLoading ? (
-                    <Text style={styles.emptyText}>
-                      Aucune question. Appuyez sur &quot;Ajouter&quot; pour en
-                      créer une.
-                    </Text>
-                  ) : null
-                }
-              />
+              <View style={{ flex: 1, minHeight: 200 }}>
+                {isReordering && (
+                  <ActivityIndicator
+                    style={{
+                      position: "absolute",
+                      top: 10,
+                      right: 10,
+                      zIndex: 10,
+                    }}
+                    color="#f87b1b"
+                    size="small"
+                  />
+                )}
+                <DraggableFlatList
+                  data={questionTypes}
+                  keyExtractor={(item) => item.id}
+                  renderItem={renderItem}
+                  onDragEnd={handleDragEnd}
+                  contentContainerStyle={{
+                    paddingTop: isAdding ? 0 : 16,
+                    paddingBottom: 100,
+                  }}
+                  ListEmptyComponent={
+                    !isLoading ? (
+                      <Text style={styles.emptyText}>
+                        Aucune question. Appuyez sur &quot;Ajouter&quot; pour en
+                        créer une.
+                      </Text>
+                    ) : null
+                  }
+                />
+              </View>
             )}
           </ScrollView>
         </SafeAreaView>
@@ -702,6 +788,10 @@ const styles = StyleSheet.create({
     elevation: 1,
     borderLeftWidth: 4,
     borderLeftColor: "#f87b1b",
+  },
+  dragHandle: {
+    paddingRight: 12,
+    justifyContent: "center",
   },
   itemTextContainer: { flex: 1, marginRight: 16 },
   itemTitle: { fontSize: 16, fontWeight: "600", color: "#11224e" },
