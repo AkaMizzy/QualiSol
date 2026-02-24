@@ -541,9 +541,11 @@ export default function AddImageModal({
             getUsers(),
           ]);
 
-        let availableFolders = fetchedFolders;
+        let availableFolders = fetchedFolders.filter(
+          (f) => f.foldertype_id === null || f.foldertype_id === undefined,
+        );
         if (!["Super Admin", "Admin"].includes(user.role)) {
-          availableFolders = fetchedFolders.filter(
+          availableFolders = availableFolders.filter(
             (f) => String(f.owner_id) === String(user.id),
           );
         }

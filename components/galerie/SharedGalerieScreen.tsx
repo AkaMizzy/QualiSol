@@ -8,6 +8,7 @@ import { ICONS } from "@/constants/Icons";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { getConnectivity } from "@/services/connectivity";
+import folderService, { Project } from "@/services/folderService";
 import {
   Ged,
   deleteGed,
@@ -96,6 +97,7 @@ export default function SharedGalerieScreen({
   // Assignment state
   const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [companyUsers, setCompanyUsers] = useState<CompanyUser[]>([]);
+  const [companyProjects, setCompanyProjects] = useState<Project[]>([]);
   const [itemToAssign, setItemToAssign] = useState<Ged | null>(null);
 
   const isTablet = width >= 768;
@@ -145,6 +147,17 @@ export default function SharedGalerieScreen({
     }
   }, [token]);
 
+  const fetchProjects = useCallback(async () => {
+    if (token) {
+      try {
+        const projects = await folderService.getAllProjects(token);
+        setCompanyProjects(projects);
+      } catch (error) {
+        console.error("Failed to fetch projects:", error);
+      }
+    }
+  }, [token]);
+
   const checkNetworkStatus = useCallback(async () => {
     if (!allowOffline) {
       setNetworkStatus("online"); // Always assume online when offline mode disabled
@@ -159,6 +172,10 @@ export default function SharedGalerieScreen({
     fetchOfflineRecords();
     checkNetworkStatus();
   }, [fetchGeds, fetchOfflineRecords, checkNetworkStatus]);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
 
   // Start sync monitoring when token is available
   useEffect(() => {
@@ -204,6 +221,7 @@ export default function SharedGalerieScreen({
     if (enableAssignment) {
       void fetchUsers();
     }
+    void fetchProjects();
     setRefreshing(false);
   }, [
     fetchGeds,
@@ -211,6 +229,7 @@ export default function SharedGalerieScreen({
     checkNetworkStatus,
     enableAssignment,
     fetchUsers,
+    fetchProjects,
   ]);
 
   // Initial fetch for users
@@ -668,10 +687,24 @@ export default function SharedGalerieScreen({
                     ? authorUser.identifier
                     : item.author;
 
+                  let displayChantier = item.chantier;
+                  if (item.chantier) {
+                    const matchedProject = companyProjects.find(
+                      (p) => p.id === item.chantier,
+                    );
+                    if (matchedProject) {
+                      displayChantier = matchedProject.title;
+                    }
+                  }
+
                   return (
                     <View key={item.id} style={styles.imageContainer}>
                       <GalerieCard
-                        item={{ ...item, author: displayAuthor }}
+                        item={{
+                          ...item,
+                          author: displayAuthor,
+                          chantier: displayChantier,
+                        }}
                         onPress={() => {
                           // Optimistically update local state
                           setGeds((prevGeds) =>
