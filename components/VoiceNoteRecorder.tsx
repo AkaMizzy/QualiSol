@@ -24,21 +24,36 @@ export interface VoiceNoteRecorderRef {
 
 type VoiceNoteRecorderProps = {
   onRecordingComplete: (uri: string | null) => void;
+  initialUri?: string | null;
 };
 
 const VoiceNoteRecorder = forwardRef<
   VoiceNoteRecorderRef,
   VoiceNoteRecorderProps
->(({ onRecordingComplete }, ref) => {
+>(({ onRecordingComplete, initialUri }, ref) => {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [recordingUri, setRecordingUri] = useState<string | null>(null);
+  const [recordingUri, setRecordingUri] = useState<string | null>(
+    initialUri || null,
+  );
   const [permissionResponse, requestPermission] = Audio.usePermissions();
   const [status, setStatus] = useState<
     "idle" | "recording" | "recorded" | "playing"
-  >("idle");
+  >(initialUri ? "recorded" : "idle");
   const [duration, setDuration] = useState(0);
   const { token } = useAuth();
+
+  // When initialUri changes (e.g. modal reopened with existing audio), sync state
+  useEffect(() => {
+    if (initialUri) {
+      setRecordingUri(initialUri);
+      setStatus("recorded");
+    } else {
+      setRecordingUri(null);
+      setStatus("idle");
+      setDuration(0);
+    }
+  }, [initialUri]);
 
   useEffect(() => {
     return sound

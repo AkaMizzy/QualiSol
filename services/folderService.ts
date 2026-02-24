@@ -41,6 +41,8 @@ export interface Folder {
   urlreport1?: string;
   urlreport2?: string;
   urlreport3?: string;
+  dd?: string;
+  df?: string;
 }
 
 export interface Project {
@@ -68,6 +70,8 @@ export type CreateFolderPayload = Pick<
   | "technicien_id"
   | "foldertype"
   | "foldertype_id"
+  | "dd"
+  | "df"
 >;
 
 export type UpdateFolderPayload = Partial<Folder>;

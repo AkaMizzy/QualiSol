@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import CaptureModal from "../CaptureModal";
 import VoiceNoteRecorder from "../VoiceNoteRecorder";
 import MapSelectionModal from "./MapSelectionModal";
 
@@ -79,6 +80,7 @@ export default function AnswerModal({
   // UI State
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [isMapVisible, setMapVisible] = useState(false);
+  const [isCaptureModalVisible, setCaptureModalVisible] = useState(false);
 
   // Audio Playback
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -93,8 +95,18 @@ export default function AnswerModal({
       setBoolValue(initialAnswer?.boolValue ?? val === "true");
       setLatitude(initialAnswer?.latitude);
       setLongitude(initialAnswer?.longitude);
-      setImage(initialAnswer?.image);
-      setVoiceNoteUri(initialAnswer?.recordingUri);
+      // Initialize media from local state or fallback to backend URL
+      if (initialAnswer?.image) {
+        setImage(initialAnswer.image);
+      } else if (question.url) {
+        setImage({ uri: question.url, width: 0, height: 0 } as any);
+      } else {
+        setImage(undefined);
+      }
+
+      setVoiceNoteUri(
+        initialAnswer?.recordingUri || question.urlvoice || undefined,
+      );
 
       // Special handling for GPS text if needed
       if (question.type === "GPS" && !initialAnswer?.latitude && val) {
@@ -176,20 +188,8 @@ export default function AnswerModal({
     Alert.alert("Ajouter une image", "Choisir la source", [
       {
         text: "Caméra",
-        onPress: async () => {
-          const { status } = await ImagePicker.requestCameraPermissionsAsync();
-          if (status !== "granted") {
-            alert("Permission refusée");
-            return;
-          }
-          const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            quality: 0.5,
-            allowsEditing: true, // Optional: allow cropping
-          });
-          if (!result.canceled) {
-            setImage(result.assets[0]);
-          }
+        onPress: () => {
+          setCaptureModalVisible(true);
         },
       },
       {
@@ -203,7 +203,8 @@ export default function AnswerModal({
           }
           const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            quality: 0.5,
+            quality: 0.8,
+            allowsEditing: false, // Ensure no forced cropping
           });
           if (!result.canceled) {
             setImage(result.assets[0]);
@@ -330,6 +331,21 @@ export default function AnswerModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
+      <CaptureModal
+        visible={isCaptureModalVisible}
+        onClose={() => setCaptureModalVisible(false)}
+        onMediaCaptured={(media) => {
+          setImage({
+            uri: media.uri,
+            width: media.width || 0,
+            height: media.height || 0,
+            type: "image",
+            fileName: media.uri.split("/").pop() || "photo.jpg",
+            mimeType: "image/jpeg",
+          });
+          setCaptureModalVisible(false);
+        }}
+      />
       <View
         style={[
           styles.container,
@@ -447,6 +463,9 @@ export default function AnswerModal({
               {/* Voice Note */}
               <View style={styles.voiceSection}>
                 <VoiceNoteRecorder
+                  initialUri={
+                    initialAnswer?.recordingUri || question.urlvoice || null
+                  }
                   onRecordingComplete={(uri) =>
                     setVoiceNoteUri(uri || undefined)
                   }

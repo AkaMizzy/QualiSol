@@ -1,26 +1,27 @@
 import { useAuth } from "@/contexts/AuthContext";
 import folderService, {
-    CreateFolderPayload,
-    Project,
+  CreateFolderPayload,
+  Project,
 } from "@/services/folderService";
 import { FolderType } from "@/services/folderTypeService";
 import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 import AppHeader from "../AppHeader";
 import ProjectSelectionModal from "./ProjectSelectionModal";
 import UserSelectionModal from "./UserSelectionModal";
@@ -48,6 +49,17 @@ export default function CreateFolderModal({
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+
+  const [ddDate, setDdDate] = useState<Date | null>(null);
+  const [isDdPickerVisible, setDdPickerVisibility] = useState(false);
+
+  const [dfDate, setDfDate] = useState<Date | null>(null);
+  const [isDfPickerVisible, setDfPickerVisibility] = useState(false);
+
+  const formatDate = (date: Date | null) => {
+    if (!date) return "Une date";
+    return date.toLocaleDateString("fr-FR");
+  };
 
   const getSelectedUserName = () => {
     if (!selectedUserId) return "Sélectionner un propriétaire";
@@ -90,13 +102,17 @@ export default function CreateFolderModal({
         zone_id: undefined,
         control_id: undefined,
         technicien_id: undefined,
+        dd: ddDate ? ddDate.toISOString() : undefined,
+        df: dfDate ? dfDate.toISOString() : undefined,
       };
 
       await folderService.createFolder(payload, token);
-      
+
       setSelectedUserId("");
       setSelectedProjectId("");
       setNewFolderTitle("");
+      setDdDate(null);
+      setDfDate(null);
       onClose();
     } catch (error) {
       console.error("Failed to create folder from type:", error);
@@ -135,13 +151,21 @@ export default function CreateFolderModal({
                   size={24}
                   color="#f87b1b"
                 />
-                <Text style={styles.sectionTitle}>Créer un contrôle</Text>
+                <Text
+                  style={[styles.sectionTitle, { flexShrink: 1 }]}
+                  numberOfLines={2}
+                >
+                  Créer un contrôle -{" "}
+                  {folderType?.title && (
+                    <Text style={{ color: "#f87b1b" }}>{folderType.title}</Text>
+                  )}
+                </Text>
               </View>
             </View>
 
             {/* New Folder Title Input */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Titre du dossier (optionnel)</Text>
+              <Text style={styles.label}>Titre du contrôle</Text>
               <View style={styles.inputWrapper}>
                 <TextInput
                   value={newFolderTitle}
@@ -153,23 +177,69 @@ export default function CreateFolderModal({
               </View>
             </View>
 
-            {/* User Picker */}
-            <View style={[styles.pickerContainer, { zIndex: 20 }]}>
-              <Text style={styles.label}>Propriétaire</Text>
-              <TouchableOpacity
-                style={styles.pickerButton}
-                onPress={() => setShowUserModal(true)}
-              >
-                <Text
-                  style={[
-                    styles.pickerButtonText,
-                    !selectedUserId && { color: "#9ca3af" },
-                  ]}
+            {/* Date Pickers Row */}
+            <View style={{ flexDirection: "row", gap: 16 }}>
+              {/* Date Début Picker */}
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Date de début</Text>
+                <TouchableOpacity
+                  style={[styles.pickerButton, { paddingHorizontal: 12 }]}
+                  onPress={() => setDdPickerVisibility(true)}
                 >
-                  {getSelectedUserName()}
-                </Text>
-                <Ionicons name="chevron-down" size={20} color="#6b7280" />
-              </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.pickerButtonText,
+                      !ddDate && { color: "#9ca3af" },
+                      { flexShrink: 1, marginRight: 4 },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {formatDate(ddDate)}
+                  </Text>
+                  {ddDate ? (
+                    <TouchableOpacity onPress={() => setDdDate(null)}>
+                      <Ionicons name="close-circle" size={20} color="#6b7280" />
+                    </TouchableOpacity>
+                  ) : (
+                    <Ionicons
+                      name="calendar-outline"
+                      size={20}
+                      color="#6b7280"
+                    />
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {/* Date Fin Picker */}
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Date de fin</Text>
+                <TouchableOpacity
+                  style={[styles.pickerButton, { paddingHorizontal: 12 }]}
+                  onPress={() => setDfPickerVisibility(true)}
+                >
+                  <Text
+                    style={[
+                      styles.pickerButtonText,
+                      !dfDate && { color: "#9ca3af" },
+                      { flexShrink: 1, marginRight: 4 },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {formatDate(dfDate)}
+                  </Text>
+                  {dfDate ? (
+                    <TouchableOpacity onPress={() => setDfDate(null)}>
+                      <Ionicons name="close-circle" size={20} color="#6b7280" />
+                    </TouchableOpacity>
+                  ) : (
+                    <Ionicons
+                      name="calendar-outline"
+                      size={20}
+                      color="#6b7280"
+                    />
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Project Picker */}
@@ -186,6 +256,24 @@ export default function CreateFolderModal({
                   ]}
                 >
                   {getSelectedProjectTitle()}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+            {/* User Picker */}
+            <View style={[styles.pickerContainer, { zIndex: 20 }]}>
+              <Text style={styles.label}>Assigner à</Text>
+              <TouchableOpacity
+                style={styles.pickerButton}
+                onPress={() => setShowUserModal(true)}
+              >
+                <Text
+                  style={[
+                    styles.pickerButtonText,
+                    !selectedUserId && { color: "#9ca3af" },
+                  ]}
+                >
+                  {getSelectedUserName()}
                 </Text>
                 <Ionicons name="chevron-down" size={20} color="#6b7280" />
               </TouchableOpacity>
@@ -247,6 +335,35 @@ export default function CreateFolderModal({
             onSelect={setSelectedProjectId}
             selectedProjectId={selectedProjectId}
           />
+
+          <DateTimePickerModal
+            isVisible={isDdPickerVisible}
+            mode="date"
+            onConfirm={(date) => {
+              setDdDate(date);
+              // if a dfDate exists and is now earlier than the new ddDate, reset it
+              if (dfDate && date > dfDate) {
+                setDfDate(null);
+              }
+              setDdPickerVisibility(false);
+            }}
+            onCancel={() => setDdPickerVisibility(false)}
+            confirmTextIOS="Confirmer"
+            cancelTextIOS="Annuler"
+          />
+
+          <DateTimePickerModal
+            isVisible={isDfPickerVisible}
+            mode="date"
+            minimumDate={ddDate || undefined}
+            onConfirm={(date) => {
+              setDfDate(date);
+              setDfPickerVisibility(false);
+            }}
+            onCancel={() => setDfPickerVisibility(false)}
+            confirmTextIOS="Confirmer"
+            cancelTextIOS="Annuler"
+          />
         </SafeAreaView>
       </KeyboardAvoidingView>
     </Modal>
@@ -296,7 +413,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#f9fafb",
     paddingHorizontal: 16,
-    paddingVertical: 14,
   },
   input: {
     fontSize: 15,

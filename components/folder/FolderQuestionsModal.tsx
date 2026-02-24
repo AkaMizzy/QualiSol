@@ -236,14 +236,14 @@ export default function FolderQuestionsModal({
       let savedGed: Ged;
       // UPDATE directly on the question record
       const filesToUpload: any = {};
-      if (data.image) {
+      if (data.image && !data.image.uri.startsWith("http")) {
         filesToUpload.file = {
           uri: data.image.uri,
           type: data.image.mimeType || "image/jpeg",
           name: data.image.fileName || "photo.jpg",
         };
       }
-      if (data.recordingUri) {
+      if (data.recordingUri && !data.recordingUri.startsWith("http")) {
         filesToUpload.audioFile = {
           uri: data.recordingUri,
           type: "audio/m4a",
@@ -268,6 +268,8 @@ export default function FolderQuestionsModal({
         [question.id]: {
           ...data,
           answer: data.answer || data.value,
+          image: undefined,
+          recordingUri: undefined,
         },
       }));
 
