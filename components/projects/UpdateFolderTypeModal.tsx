@@ -371,7 +371,7 @@ export default function UpdateFolderTypeModal({
                     size={20}
                     color="#f87b1b"
                   />
-                  <Text style={styles.sectionTitle}>Suivi des Dossiers</Text>
+                  <Text style={styles.sectionTitle}>Suivi des contrôles</Text>
                 </View>
               </View>
 

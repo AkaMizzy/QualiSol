@@ -313,7 +313,7 @@ export default function CreateFolderModal({
                       },
                     ]}
                   >
-                    Créer le dossier
+                    Créer le contrôle
                   </Text>
                 )}
               </TouchableOpacity>
