@@ -860,7 +860,12 @@ export default function SharedGalerieScreen({
           createdAt={selectedItem.created_at}
           type={selectedItem.type}
           categorie={selectedItem.categorie}
-          chantier={selectedItem.chantier}
+          chantier={
+            selectedItem.chantier
+              ? companyProjects.find((p) => p.id === selectedItem.chantier)
+                  ?.title || selectedItem.chantier
+              : undefined
+          }
           latitude={selectedItem.latitude}
           longitude={selectedItem.longitude}
           level={selectedItem.level}
