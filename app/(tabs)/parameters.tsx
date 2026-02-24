@@ -72,15 +72,6 @@ const PARAMETER_CARDS: ParameterCard[] = [
   },
 ];
 
-/** Card shown ONLY to the super-user account */
-const CREATE_COMPANY_CARD: ParameterCard = {
-  title: "Créer un organisme",
-  description: "Créer une nouvelle entreprise et son compte administrateur",
-  image: require("../../assets/icons/company.png"),
-  route: "action:createCompany",
-  color: "#6366f1",
-};
-
 export default function ParametersScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -90,16 +81,9 @@ export default function ParametersScreen() {
 
   const isSuperUser = user?.email === SUPER_USER_EMAIL;
 
-  // Build the card list: super-user gets an extra card at the bottom
-  const visibleCards: ParameterCard[] = isSuperUser
-    ? [...PARAMETER_CARDS, CREATE_COMPANY_CARD]
-    : PARAMETER_CARDS;
-
   const handleCardPress = (route: string) => {
     if (route === "action:folderTypes") {
       setFolderTypeManagerVisible(true);
-    } else if (route === "action:createCompany") {
-      setCreateCompanyVisible(true);
     } else {
       router.push(route as any);
     }
@@ -121,6 +105,14 @@ export default function ParametersScreen() {
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Paramètres</Text>
+        {isSuperUser && (
+          <Pressable
+            style={styles.superUserIconBtn}
+            onPress={() => setCreateCompanyVisible(true)}
+          >
+            <Ionicons name="add-circle" size={28} color="#f87b1b" />
+          </Pressable>
+        )}
       </View>
 
       <ScrollView
@@ -128,13 +120,12 @@ export default function ParametersScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {visibleCards.map((card) => (
+        {PARAMETER_CARDS.map((card) => (
           <Pressable
             key={card.title}
             style={({ pressed }) => [
               styles.card,
               pressed && styles.cardPressed,
-              card.route === "action:createCompany" && styles.superUserCard,
             ]}
             onPress={() => handleCardPress(card.route)}
           >
@@ -174,7 +165,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   header: {
-    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     backgroundColor: "white",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
@@ -205,9 +200,8 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  superUserCard: {
-    borderColor: "#c7d2fe",
-    backgroundColor: "#eef2ff",
+  superUserIconBtn: {
+    padding: 4,
   },
   cardPressed: {
     transform: [{ scale: 0.98 }],

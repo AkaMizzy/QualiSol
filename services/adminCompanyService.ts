@@ -13,16 +13,11 @@ export interface CreateCompanyResult {
   error?: string;
 }
 
-/**
- * Create a new company + linked admin user via the internal, super-user-only endpoint.
- * The caller must be authenticated as muntadaacom@gmail.com; the backend will reject
- * any other identity with a 403.
- */
+
 export async function adminCreateCompany(
   data: CreateCompanyInput,
 ): Promise<CreateCompanyResult> {
   try {
-    // Map frontend field names to backend schema field names
     const payload = {
       title: data.title,
       email: data.email,

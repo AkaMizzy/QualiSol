@@ -1,4 +1,6 @@
+import AppHeader from "@/components/AppHeader";
 import CustomAlert from "@/components/CustomAlert";
+import { useAuth } from "@/contexts/AuthContext";
 import { adminCreateCompany } from "@/services/adminCompanyService";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -29,6 +31,7 @@ interface Props {
 }
 
 export default function CreateCompanyModal({ visible, onClose }: Props) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: "",
     pays: "",
@@ -177,14 +180,14 @@ export default function CreateCompanyModal({ visible, onClose }: Props) {
       presentationStyle="fullScreen"
     >
       <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color="#11224e" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Nouvel organisme</Text>
-          <View style={{ width: 44 }} />
-        </View>
+        <AppHeader
+          user={user || undefined}
+          rightComponent={
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={28} color="#11224e" />
+            </TouchableOpacity>
+          }
+        />
 
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -422,26 +425,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8fafc",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-  },
   closeButton: {
     width: 44,
     height: 44,
     alignItems: "center",
     justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#11224e",
   },
   scrollContent: {
     padding: 20,
@@ -491,7 +479,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#9ca3af",
   },
   submitButton: {
-    backgroundColor: "#11224e",
+    backgroundColor: "#f87b1b",
     borderRadius: 30,
     height: 52,
     justifyContent: "center",
