@@ -1,4 +1,5 @@
 import FolderTypeManagerModal from "@/components/projects/FolderTypeManagerModal";
+import CreateCompanyModal from "@/components/settings/CreateCompanyModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -7,6 +8,9 @@ import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../components/AppHeader";
+
+/** Email of the single platform super-user allowed to create new companies */
+const SUPER_USER_EMAIL = "muntadaacom@gmail.com";
 
 type ParameterCard = {
   title: string;
@@ -27,7 +31,7 @@ const PARAMETER_CARDS: ParameterCard[] = [
   {
     title: "contrôles",
     description: "Configurer les types de dossiers de contrôles",
-    image: require("../../assets/icons/approved.png"), // Assuming a generic folder icon or reusing existing
+    image: require("../../assets/icons/approved.png"),
     route: "action:folderTypes",
     color: "#10b981",
   },
@@ -38,7 +42,6 @@ const PARAMETER_CARDS: ParameterCard[] = [
     route: "/projects",
     color: "#ec4899",
   },
-  
   {
     title: "Anomalie niveau 1",
     description: "Configuration des anomalies de niveau 1",
@@ -69,15 +72,34 @@ const PARAMETER_CARDS: ParameterCard[] = [
   },
 ];
 
+/** Card shown ONLY to the super-user account */
+const CREATE_COMPANY_CARD: ParameterCard = {
+  title: "Créer un organisme",
+  description: "Créer une nouvelle entreprise et son compte administrateur",
+  image: require("../../assets/icons/company.png"),
+  route: "action:createCompany",
+  color: "#6366f1",
+};
+
 export default function ParametersScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [folderTypeManagerVisible, setFolderTypeManagerVisible] =
     useState(false);
+  const [createCompanyVisible, setCreateCompanyVisible] = useState(false);
+
+  const isSuperUser = user?.email === SUPER_USER_EMAIL;
+
+  // Build the card list: super-user gets an extra card at the bottom
+  const visibleCards: ParameterCard[] = isSuperUser
+    ? [...PARAMETER_CARDS, CREATE_COMPANY_CARD]
+    : PARAMETER_CARDS;
 
   const handleCardPress = (route: string) => {
     if (route === "action:folderTypes") {
       setFolderTypeManagerVisible(true);
+    } else if (route === "action:createCompany") {
+      setCreateCompanyVisible(true);
     } else {
       router.push(route as any);
     }
@@ -90,8 +112,6 @@ export default function ParametersScreen() {
   }, [user, router]);
 
   if (!user || !["Super Admin", "Admin"].includes(user.role)) {
-    // Optionally render nothing or a loading spinner while redirecting
-    // But since we want to "completely remove access", returning null avoids flash of content
     return null;
   }
 
@@ -108,12 +128,13 @@ export default function ParametersScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {PARAMETER_CARDS.map((card, index) => (
+        {visibleCards.map((card) => (
           <Pressable
             key={card.title}
             style={({ pressed }) => [
               styles.card,
               pressed && styles.cardPressed,
+              card.route === "action:createCompany" && styles.superUserCard,
             ]}
             onPress={() => handleCardPress(card.route)}
           >
@@ -137,6 +158,11 @@ export default function ParametersScreen() {
       <FolderTypeManagerModal
         visible={folderTypeManagerVisible}
         onClose={() => setFolderTypeManagerVisible(false)}
+      />
+
+      <CreateCompanyModal
+        visible={createCompanyVisible}
+        onClose={() => setCreateCompanyVisible(false)}
       />
     </SafeAreaView>
   );
@@ -163,7 +189,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    gap: 12
+    gap: 12,
   },
   card: {
     flexDirection: "row",
@@ -178,6 +204,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+  },
+  superUserCard: {
+    borderColor: "#c7d2fe",
+    backgroundColor: "#eef2ff",
   },
   cardPressed: {
     transform: [{ scale: 0.98 }],
