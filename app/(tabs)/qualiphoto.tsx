@@ -4,20 +4,21 @@ import QualiPhotoDetail from "@/components/reception/QualiPhotoDetail";
 import { ICONS } from "@/constants/Icons";
 import { useAuth } from "@/contexts/AuthContext";
 import folderService, { Folder, Project } from "@/services/folderService";
+import { getArchivedStatusId } from "@/services/statusService";
 import { getUsers } from "@/services/userService";
 import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -77,6 +78,7 @@ export default function QualiPhotoGalleryScreen() {
   // Guards to prevent re-entrant and out-of-order updates
   const fetchingRef = useRef(false);
   const requestIdRef = useRef(0);
+  const archivedStatusIdRef = useRef<string | null>(null);
 
   const filteredFolders = React.useMemo(() => {
     return folders.filter((folder) => {
@@ -98,15 +100,27 @@ export default function QualiPhotoGalleryScreen() {
     const requestId = ++requestIdRef.current;
 
     try {
+      // Resolve archived status ID once and cache it
+      if (!archivedStatusIdRef.current) {
+        archivedStatusIdRef.current = await getArchivedStatusId(token);
+      }
+      const archivedId = archivedStatusIdRef.current;
+
       const items = await folderService.getAllFolders(token);
 
       if (requestId !== requestIdRef.current) return;
 
-      // Filter folders for standard users - access control
+      // Filter folders based on role
       let availableFolders = items;
-      if (!["Super Admin", "Admin"].includes(user.role)) {
+      if (["Super Admin", "Admin"].includes(user.role)) {
+        // Admins see all folders regardless of status
+        availableFolders = items;
+      } else {
+        // Standard users: only own folders and not archived
         availableFolders = items.filter(
-          (f) => String(f.owner_id) === String(user.id),
+          (f) =>
+            String(f.owner_id) === String(user.id) &&
+            (!archivedId || f.status_id !== archivedId),
         );
       }
 

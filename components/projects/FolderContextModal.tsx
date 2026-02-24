@@ -5,6 +5,7 @@ import UserSelectionModal from "@/components/UserSelectionModal";
 import { useAuth } from "@/contexts/AuthContext";
 import folderService, { Folder } from "@/services/folderService";
 import { deleteGed, Ged, getGedsBySource } from "@/services/gedService";
+import { getArchivedStatusId } from "@/services/statusService";
 import { getUsers } from "@/services/userService";
 import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,7 +21,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -49,6 +50,8 @@ export default function FolderContextModal({
   const [currentFolder, setCurrentFolder] = useState<Folder | null>(folder);
   const { user } = useAuth();
   const [projectTitle, setProjectTitle] = useState<string | null>(null);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [archivedStatusId, setArchivedStatusId] = useState<string | null>(null);
 
   useEffect(() => {
     setCurrentFolder(folder);
@@ -57,6 +60,12 @@ export default function FolderContextModal({
   useEffect(() => {
     if (visible && token) {
       loadUsers();
+      // Resolve archived status ID once per session
+      if (!archivedStatusId) {
+        getArchivedStatusId(token)
+          .then((id) => setArchivedStatusId(id))
+          .catch(() => {});
+      }
     }
   }, [visible, token]);
 
@@ -115,6 +124,47 @@ export default function FolderContextModal({
     } catch (error) {
       console.error(error);
     }
+  };
+
+  const handleArchiveFolder = async () => {
+    if (!token || !currentFolder) return;
+    const archiveId = archivedStatusId || (await getArchivedStatusId(token));
+    if (!archiveId) {
+      Alert.alert("Erreur", "Impossible de récupérer le statut Archivé.");
+      return;
+    }
+    Alert.alert(
+      "Valider le dossier",
+      `Voulez-vous valider "${currentFolder.title}" ? Il ne sera plus visible pour les utilisateurs standard.`,
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Valider",
+          style: "destructive",
+          onPress: async () => {
+            setIsArchiving(true);
+            try {
+              const updated = await folderService.updateFolder(
+                currentFolder.id,
+                { status_id: archiveId },
+                token,
+              );
+              // Force-set status_id locally regardless of API response shape
+              setCurrentFolder({
+                ...(updated ?? currentFolder),
+                status_id: archiveId,
+              });
+              if (onUpdate) onUpdate();
+              Alert.alert("Succès", "Le dossier a été validé.");
+            } catch (err: any) {
+              Alert.alert("Erreur", err.message || "Échec de l'archivage.");
+            } finally {
+              setIsArchiving(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleOpenReport = (url: string | null | undefined) => {
@@ -306,6 +356,7 @@ export default function FolderContextModal({
             <Text style={styles.headerTitle} numberOfLines={1}>
               {currentFolder?.title || "Dossier"}
             </Text>
+           
             <TouchableOpacity
               onPress={() => setIsUserModalVisible(true)}
               style={{ padding: 4 }}
@@ -338,7 +389,16 @@ export default function FolderContextModal({
               }
               return null;
             })()}
+             {/* Validated badge */}
+            {archivedStatusId &&
+              currentFolder?.status_id === archivedStatusId && (
+                <View style={styles.validatedBadge}>
+                  <Ionicons name="checkmark-circle" size={13} color="#fff" />
+                  <Text style={styles.validatedBadgeText}>Validé</Text>
+                </View>
+              )}
           </View>
+
         </View>
 
         {/* PDF Buttons Row */}
@@ -364,6 +424,21 @@ export default function FolderContextModal({
             <Ionicons name="document-text-outline" size={16} color="#f87b1b" />
             <Text style={styles.ctaText}>PDF 3</Text>
           </TouchableOpacity>
+
+          {/* Archive button — hidden if already archived */}
+          {archivedStatusId &&
+            currentFolder?.status_id !== archivedStatusId && (
+              <TouchableOpacity
+                onPress={handleArchiveFolder}
+                disabled={isArchiving}
+                style={[styles.ctaButton, styles.archiveButton]}
+              >
+                <Ionicons name="archive-outline" size={16} color="#6b7280" />
+                <Text style={styles.archiveText}>
+                  {isArchiving ? "…" : "Valider"}
+                </Text>
+              </TouchableOpacity>
+            )}
         </View>
 
         {isLoading ? (
@@ -521,6 +596,24 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
   },
   ctaText: { color: "#f87b1b", fontWeight: "600", fontSize: 12 },
+  archiveButton: {
+    borderColor: "#9ca3af",
+  },
+  archiveText: { color: "#6b7280", fontWeight: "600", fontSize: 12 },
+  validatedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#16a34a",
+    borderRadius: 99,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  validatedBadgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
+  },
 
   card: {
     flex: 1,

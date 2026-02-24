@@ -6,6 +6,7 @@ import {
   Project,
   updateProject,
 } from "@/services/projectService";
+import { getArchivedStatusId } from "@/services/statusService";
 import { getUsers } from "@/services/userService";
 import { CompanyUser } from "@/types/user";
 import { formatDisplayDate } from "@/utils/dateFormat";
@@ -91,6 +92,7 @@ export default function ProjectDetailModal({
     folders: new Animated.Value(1),
     more: new Animated.Value(0),
   }).current;
+  const archivedStatusIdRef = useRef<string | null>(null);
 
   function toggleSection(section: "overview" | "folders" | "more") {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -282,6 +284,11 @@ export default function ProjectDetailModal({
       // Load folders
       setIsLoadingFolders(true);
       try {
+        // Resolve archived status ID once and cache
+        if (!archivedStatusIdRef.current) {
+          archivedStatusIdRef.current = await getArchivedStatusId(token);
+        }
+
         const [allFolders, allUsers] = await Promise.all([
           folderService.getAllFolders(token),
           getUsers(),
@@ -694,14 +701,45 @@ export default function ProjectDetailModal({
                             ) : null}
                           </View>
                         </View>
-                        {/* Optional status or icon */}
+                        {/* Right side: validated badge + delete + chevron */}
                         <View
                           style={{
                             flexDirection: "row",
                             alignItems: "center",
-                            gap: 12,
+                            gap: 8,
                           }}
                         >
+                          {/* Validé badge — shown when folder is archived */}
+                          {archivedStatusIdRef.current &&
+                            folder.status_id ===
+                              archivedStatusIdRef.current && (
+                              <View
+                                style={{
+                                  flexDirection: "row",
+                                  alignItems: "center",
+                                  gap: 3,
+                                  backgroundColor: "#16a34a",
+                                  borderRadius: 99,
+                                  paddingHorizontal: 7,
+                                  paddingVertical: 3,
+                                }}
+                              >
+                                <Ionicons
+                                  name="checkmark-circle"
+                                  size={11}
+                                  color="#fff"
+                                />
+                                <Text
+                                  style={{
+                                    color: "#fff",
+                                    fontSize: 10,
+                                    fontWeight: "700",
+                                  }}
+                                >
+                                  Validé
+                                </Text>
+                              </View>
+                            )}
                           {/* Folder Icon - purely visual now, or keep as part of row */}
                           {/* Delete Button */}
                           <TouchableOpacity
@@ -741,6 +779,19 @@ export default function ProjectDetailModal({
           folder={selectedFolder}
           onClose={() => setSelectedFolder(null)}
           token={token || null}
+          onUpdate={async () => {
+            // Refresh folders list when a folder is updated (e.g. archived)
+            if (project && token) {
+              try {
+                const allFolders = await folderService.getAllFolders(token);
+                setFolders(
+                  allFolders.filter((f) => f.project_id === project.id),
+                );
+              } catch (e) {
+                console.error("Failed to reload folders after update", e);
+              }
+            }
+          }}
         />
 
         <CreateFolderModal
