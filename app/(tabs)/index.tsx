@@ -7,16 +7,16 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Alert,
-  FlatList,
-  LayoutAnimation,
-  Linking,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
+    Alert,
+    FlatList,
+    LayoutAnimation,
+    Linking,
+    Pressable,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../components/AppHeader";
@@ -45,11 +45,6 @@ const SYSTEM_GRID_ITEMS: {
   {
     title: "transfert",
     image: require("../../assets/icons/transfer.png"),
-    type: "system",
-  },
-  {
-    title: "To-Do",
-    image: require("../../assets/icons/danger.png"),
     type: "system",
   },
   {
@@ -530,7 +525,6 @@ export default function DashboardScreen() {
               ]}
             >
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Activités Récentes</Text>
                 <Pressable
                   onPress={() => {
                     LayoutAnimation.configureNext(
@@ -542,6 +536,18 @@ export default function DashboardScreen() {
                 >
                   <Image
                     source={require("../../assets/icons/calendar.png")}
+                    style={{ width: 24, height: 24 }}
+                  />
+                </Pressable>
+
+                <Text style={styles.sectionTitle}>Activités Récentes</Text>
+
+                <Pressable
+                  onPress={() => router.push("/danger")}
+                  style={styles.calendarToggle}
+                >
+                  <Image
+                    source={require("../../assets/icons/danger.png")}
                     style={{ width: 24, height: 24 }}
                   />
                 </Pressable>
