@@ -1,9 +1,8 @@
 import API_CONFIG from "@/app/config/api";
 import { useAuth } from "@/contexts/AuthContext";
 import folderService, {
-  CreateFolderPayload,
   Folder,
-  Project,
+  Project
 } from "@/services/folderService";
 import { FolderType, updateFolderType } from "@/services/folderTypeService";
 import { createGed, updateGedFile } from "@/services/gedService";
@@ -29,10 +28,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../AppHeader";
+import CreateFolderModal from "./CreateFolderModal";
 import FolderAnswersSummaryModal from "./FolderAnswersSummaryModal";
 import FolderSelectionModal from "./FolderSelectionModal";
-import ProjectSelectionModal from "./ProjectSelectionModal";
-import UserSelectionModal from "./UserSelectionModal";
 
 type Props = {
   visible: boolean;
@@ -58,15 +56,10 @@ export default function UpdateFolderTypeModal({
 
   // Folder Creation State
   const [users, setUsers] = useState<CompanyUser[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<string>("");
-  const [showUserModal, setShowUserModal] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
-  const [showProjectModal, setShowProjectModal] = useState(false);
-  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
-  const [newFolderTitle, setNewFolderTitle] = useState("");
+  const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
 
   // Folder Answers View State
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -137,23 +130,6 @@ export default function UpdateFolderTypeModal({
     } finally {
       setLoadingFolders(false);
     }
-  };
-
-  const getSelectedUserName = () => {
-    if (!selectedUserId) return "Sélectionner un propriétaire";
-    const user = users.find((u) => u.id === selectedUserId);
-    if (!user) return "Utilisateur inconnu";
-    return (
-      `${user.firstname || ""} ${user.lastname || ""}`.trim() ||
-      user.email ||
-      "Utilisateur sans nom"
-    );
-  };
-
-  const getSelectedProjectTitle = () => {
-    if (!selectedProjectId) return "Sélectionner un chantier";
-    const project = projects.find((p) => p.id === selectedProjectId);
-    return project?.title || "Chantier inconnu";
   };
 
   const getSelectedFolderTitle = () => {
@@ -260,47 +236,6 @@ export default function UpdateFolderTypeModal({
       Alert.alert("Erreur", "Échec de la mise à jour.");
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleCreateFolder = async () => {
-    if (!selectedUserId) {
-      Alert.alert("Erreur", "Veuillez sélectionner un propriétaire.");
-      return;
-    }
-    if (!selectedProjectId) {
-      Alert.alert("Erreur", "Veuillez sélectionner un chantier.");
-      return;
-    }
-    if (!folderType || !token) return;
-
-    setIsCreatingFolder(true);
-    try {
-      const payload: CreateFolderPayload = {
-        code: `F-${Date.now().toString(36).toUpperCase()}`,
-        title: newFolderTitle.trim() || folderType.title,
-        description: folderType.description || undefined,
-        owner_id: selectedUserId,
-        foldertype_id: folderType.id,
-        foldertype: folderType.id, // Backend controller expects 'foldertype' to map to 'foldertype_id'
-        project_id: selectedProjectId,
-        zone_id: undefined,
-        control_id: undefined,
-        technicien_id: undefined,
-      };
-
-      await folderService.createFolder(payload, token);
-      Alert.alert("Succès", "Dossier créé avec succès !");
-      // Optional: Close modal or reset selection
-      // Optional: Close modal or reset selection
-      setSelectedUserId("");
-      setSelectedProjectId("");
-      onClose();
-    } catch (error) {
-      console.error("Failed to create folder from type:", error);
-      Alert.alert("Erreur", "Échec de la création du dossier.");
-    } finally {
-      setIsCreatingFolder(false);
     }
   };
 
@@ -482,12 +417,12 @@ export default function UpdateFolderTypeModal({
                     !selectedFolderId && { color: "#4b5563" },
                   ]}
                 >
-                Voir le suivi
+                  Voir le suivi
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* Create Folder Section - Moved to Bottom */}
+            {/* Create Folder Section - Dedicated Modal Trigger */}
             <View style={styles.createFolderSection}>
               <View style={styles.sectionHeaderRow}>
                 <View style={styles.sectionHeader}>
@@ -496,106 +431,23 @@ export default function UpdateFolderTypeModal({
                     size={20}
                     color="#f87b1b"
                   />
-                  <Text style={styles.sectionTitle}>Créer un contrôle</Text>
+                  <Text style={styles.sectionTitle}>Nouveau Contrôle</Text>
                 </View>
               </View>
-
-              {/* New Folder Title Input */}
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Titre du dossier (optionnel)</Text>
-                <View style={styles.inputWrapper}>
-                  <TextInput
-                    value={newFolderTitle}
-                    onChangeText={setNewFolderTitle}
-                    placeholder={`Par défaut: ${folderType.title}`}
-                    style={styles.input}
-                    placeholderTextColor="#9ca3af"
-                  />
-                </View>
-              </View>
-
-              {/* User Picker */}
-              <View style={[styles.userPickerContainer, { zIndex: 20 }]}>
-                <Text style={styles.label}>Propriétaire</Text>
-                <TouchableOpacity
-                  style={styles.pickerButton}
-                  onPress={() => setShowUserModal(true)}
-                >
-                  <Text
-                    style={[
-                      styles.pickerButtonText,
-                      !selectedUserId && { color: "#9ca3af" },
-                    ]}
-                  >
-                    {getSelectedUserName()}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Project Picker */}
-              <View style={[styles.userPickerContainer, { zIndex: 10 }]}>
-                <Text style={styles.label}>Chantier</Text>
-                <TouchableOpacity
-                  style={styles.pickerButton}
-                  onPress={() => setShowProjectModal(true)}
-                >
-                  <Text
-                    style={[
-                      styles.pickerButtonText,
-                      !selectedProjectId && { color: "#9ca3af" },
-                    ]}
-                  >
-                    {getSelectedProjectTitle()}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
-                </TouchableOpacity>
-              </View>
-
-              {/* New Create Folder Button */}
               <TouchableOpacity
                 style={[
                   styles.button,
                   {
                     backgroundColor: "#f87b1b",
-                    marginTop: 12,
+                    marginTop: 4,
                     flexDirection: "row",
                     gap: 8,
                   },
-                  (!selectedUserId ||
-                    !selectedProjectId ||
-                    isCreatingFolder) && { backgroundColor: "#f3f4f6" },
                 ]}
-                onPress={handleCreateFolder}
-                disabled={
-                  !selectedUserId || !selectedProjectId || isCreatingFolder
-                }
+                onPress={() => setShowCreateFolderModal(true)}
               >
-                {isCreatingFolder ? (
-                  <ActivityIndicator size="small" color="#f87b1b" />
-                ) : (
-                  <>
-                    <Ionicons
-                      name="add"
-                      size={24}
-                      color={
-                        !selectedUserId || !selectedProjectId
-                          ? "#9ca3af"
-                          : "white"
-                      }
-                    />
-                    <Text
-                      style={[
-                        styles.submitButtonText,
-                        (!selectedUserId || !selectedProjectId) && {
-                          color: "#4b5563",
-                        },
-                      ]}
-                    >
-                      Créer le dossier
-                    </Text>
-                  </>
-                )}
+                <Ionicons name="add-circle-outline" size={20} color="white" />
+                <Text style={styles.submitButtonText}>Créer un contrôle</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -616,20 +468,12 @@ export default function UpdateFolderTypeModal({
             selectedFolderId={selectedFolderId}
           />
 
-          <UserSelectionModal
-            visible={showUserModal}
-            onClose={() => setShowUserModal(false)}
+          <CreateFolderModal
+            visible={showCreateFolderModal}
+            onClose={() => setShowCreateFolderModal(false)}
+            folderType={folderType}
             users={users}
-            onSelect={setSelectedUserId}
-            selectedUserId={selectedUserId}
-          />
-
-          <ProjectSelectionModal
-            visible={showProjectModal}
-            onClose={() => setShowProjectModal(false)}
             projects={projects}
-            onSelect={setSelectedProjectId}
-            selectedProjectId={selectedProjectId}
           />
 
           <View style={styles.footer}>
@@ -746,7 +590,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "#f9fafb",
     paddingHorizontal: 12,
-
   },
   input: {
     fontSize: 14,

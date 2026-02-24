@@ -11,17 +11,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { ResizeMode, Video } from "expo-av";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    Linking,
-    Modal,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  Linking,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -49,6 +48,7 @@ export default function FolderContextModal({
   const [isUserModalVisible, setIsUserModalVisible] = useState(false);
   const [currentFolder, setCurrentFolder] = useState<Folder | null>(folder);
   const { user } = useAuth();
+  const [projectTitle, setProjectTitle] = useState<string | null>(null);
 
   useEffect(() => {
     setCurrentFolder(folder);
@@ -59,6 +59,21 @@ export default function FolderContextModal({
       loadUsers();
     }
   }, [visible, token]);
+
+  // Resolve project title from folder's project_id
+  useEffect(() => {
+    if (!token || !folder?.project_id) {
+      setProjectTitle(null);
+      return;
+    }
+    folderService
+      .getAllProjects(token)
+      .then((projects) => {
+        const match = projects.find((p) => p.id === folder.project_id);
+        setProjectTitle(match?.title ?? null);
+      })
+      .catch(() => setProjectTitle(null));
+  }, [token, folder?.project_id]);
 
   const loadUsers = async () => {
     try {
@@ -302,20 +317,28 @@ export default function FolderContextModal({
               />
             </TouchableOpacity>
           </View>
-          {currentFolder?.code && (
-            <Text style={styles.headerSubtitle}>{currentFolder.code}</Text>
-          )}
-          {(() => {
-            const owner = users.find((u) => u.id === currentFolder?.owner_id);
-            if (owner) {
-              return (
-                <Text style={styles.ownerText}>
-                  Resp: {owner.firstname} {owner.lastname}
+          <View style={styles.subInfoRow}>
+            {projectTitle ? (
+              <View style={styles.projectRow}>
+                <Ionicons name="business-outline" size={12} color="#f87b1b" />
+                <Text style={styles.projectTitleText} numberOfLines={1}>
+                  {projectTitle}
                 </Text>
-              );
-            }
-            return null;
-          })()}
+              </View>
+            ) : null}
+            {(() => {
+              const owner = users.find((u) => u.id === currentFolder?.owner_id);
+              if (owner) {
+                return (
+                  <Text style={styles.ownerText}>
+                    {projectTitle ? " • " : ""}Resp: {owner.firstname}{" "}
+                    {owner.lastname}
+                  </Text>
+                );
+              }
+              return null;
+            })()}
+          </View>
         </View>
 
         {/* PDF Buttons Row */}
@@ -387,7 +410,6 @@ export default function FolderContextModal({
                 : undefined
             }
             audiotxt={selectedGed.audiotxt}
-            iatxt={selectedGed.iatxt}
             type={selectedGed.type}
             categorie={selectedGed.categorie}
             chantier={selectedGed.chantier}
@@ -431,12 +453,13 @@ const styles = StyleSheet.create({
     color: "#11224e",
     textAlign: "center",
   },
-  headerSubtitle: {
-    fontSize: 12,
-    color: "#6b7280",
-    marginTop: 2,
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
-    textAlign: "center",
+  subInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    marginTop: 4,
+    gap: 4,
   },
   loadingContainer: {
     flex: 1,
@@ -465,7 +488,16 @@ const styles = StyleSheet.create({
   ownerText: {
     fontSize: 11,
     color: "#6b7280",
-    marginTop: 2,
+  },
+  projectRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  projectTitleText: {
+    fontSize: 12,
+    color: "#f87b1b",
+    fontWeight: "600",
   },
   pdfRow: {
     flexDirection: "row",
