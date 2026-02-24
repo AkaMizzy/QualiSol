@@ -709,14 +709,6 @@ export default function AddImageModal({
       return;
     }
 
-    if (!selectedChantier || !selectedFolderId) {
-      Alert.alert(
-        "Informations manquantes",
-        "Vous devez sélectionner un chantier et un dossier pour continuer.",
-      );
-      return;
-    }
-
     if (isStorageQuotaReached) {
       Alert.alert(
         "Quota de stockage dépassé",
@@ -1591,7 +1583,7 @@ const styles = StyleSheet.create({
   },
   imagePicker: {
     width: "100%",
-    height: 280,
+    height: 220,
     backgroundColor: COLORS.lightWhite,
     justifyContent: "center",
     alignItems: "center",
