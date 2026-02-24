@@ -7,8 +7,11 @@ import { Anomalie1, getAllAnomalies1 } from "@/services/anomalie1Service";
 import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
 import companyService from "@/services/companyService";
 import { getConnectivity } from "@/services/connectivity";
+import folderService, { Folder, Project } from "@/services/folderService";
 import { getAllGeds } from "@/services/gedService";
+import { getUsers } from "@/services/userService";
 import { Company } from "@/types/company";
+import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
 import { ResizeMode, Video } from "expo-av";
 import { randomUUID } from "expo-crypto";
@@ -38,6 +41,8 @@ import {
 import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
 import PictureAnnotator from "../PictureAnnotator";
+import FolderSelectionModal from "../projects/FolderSelectionModal";
+import ProjectSelectionModal from "../projects/ProjectSelectionModal";
 
 interface AddImageModalProps {
   visible: boolean;
@@ -60,6 +65,7 @@ interface AddImageModalProps {
       type: string | null;
       categorie: string | null;
       chantier?: string;
+      idsource?: string;
       audiotxt?: string;
       iatxt?: string;
       mode?: "upload" | "capture";
@@ -119,6 +125,16 @@ export default function AddImageModal({
   }>({ visible: false, title: "", message: "", type: "success" });
 
   const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
+
+  // Contextual states
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [users, setUsers] = useState<CompanyUser[]>([]);
+  const [selectedChantier, setSelectedChantier] = useState<string | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [projectModalVisible, setProjectModalVisible] = useState(false);
+  const [folderModalVisible, setFolderModalVisible] = useState(false);
+  const [loadingContext, setLoadingContext] = useState(true);
 
   // Storage quota state
   const [currentStorageGB, setCurrentStorageGB] = useState(0);
@@ -474,6 +490,8 @@ export default function AddImageModal({
       setIsGeneratingDescription(false);
       setLevel(5);
       setSelectedType(null);
+      setSelectedChantier(null);
+      setSelectedFolderId(null);
       setIsSubmitting(false);
       setSessionImageCount(0); // Reset session counter when modal closes
     }
@@ -510,6 +528,39 @@ export default function AddImageModal({
       fetchLimitInfo();
     }
   }, [visible, token]);
+
+  useEffect(() => {
+    async function fetchContextData() {
+      if (!token || !user) return;
+      setLoadingContext(true);
+      try {
+        const [fetchedProjects, fetchedFolders, fetchedUsers] =
+          await Promise.all([
+            folderService.getAllProjects(token),
+            folderService.getAllFolders(token),
+            getUsers(),
+          ]);
+
+        let availableFolders = fetchedFolders;
+        if (!["Super Admin", "Admin"].includes(user.role)) {
+          availableFolders = fetchedFolders.filter(
+            (f) => String(f.owner_id) === String(user.id),
+          );
+        }
+
+        setProjects(fetchedProjects);
+        setFolders(availableFolders);
+        setUsers(fetchedUsers);
+      } catch (err) {
+        console.error("Failed to fetch context data", err);
+      } finally {
+        setLoadingContext(false);
+      }
+    }
+    if (visible) {
+      fetchContextData();
+    }
+  }, [visible, token, user]);
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -656,6 +707,14 @@ export default function AddImageModal({
       return;
     }
 
+    if (!selectedChantier || !selectedFolderId) {
+      Alert.alert(
+        "Informations manquantes",
+        "Vous devez sélectionner un chantier et un dossier pour continuer.",
+      );
+      return;
+    }
+
     if (isStorageQuotaReached) {
       Alert.alert(
         "Quota de stockage dépassé",
@@ -747,6 +806,8 @@ export default function AddImageModal({
             level,
             type: selectedType,
             categorie: selectedCategorie,
+            chantier: selectedChantier || undefined,
+            idsource: selectedFolderId || undefined,
             iatxt: iaText,
             mode: mode,
           },
@@ -935,12 +996,72 @@ export default function AddImageModal({
                   </View>
                 )}
               </View>
+
               {/* COMPACT SECTION - Always Visible */}
               <View style={styles.compactSection}>
                 <VoiceNoteRecorder
                   ref={voiceNoteRecorderRef}
                   onRecordingComplete={handleRecordingComplete}
                 />
+
+                {/* CONTEXTUAL SECTION */}
+                <View style={[styles.contextualSection, { marginTop: 15 }]}>
+                  <Text style={styles.label}>Chantier *</Text>
+                  <TouchableOpacity
+                    style={styles.selectBtn}
+                    onPress={() => setProjectModalVisible(true)}
+                    disabled={loadingContext}
+                  >
+                    <Text
+                      style={
+                        selectedChantier
+                          ? styles.selectText
+                          : styles.selectPlaceholder
+                      }
+                    >
+                      {loadingContext
+                        ? "Chargement..."
+                        : projects.find((p) => p.id === selectedChantier)
+                            ?.title || "Sélectionner un chantier"}
+                    </Text>
+                    <Ionicons
+                      name="chevron-down"
+                      size={20}
+                      color={COLORS.gray}
+                    />
+                  </TouchableOpacity>
+
+                  {selectedChantier && (
+                    <>
+                      <Text style={[styles.label, { marginTop: 15 }]}>
+                        Dossier *
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.selectBtn}
+                        onPress={() => setFolderModalVisible(true)}
+                        disabled={loadingContext}
+                      >
+                        <Text
+                          style={
+                            selectedFolderId
+                              ? styles.selectText
+                              : styles.selectPlaceholder
+                          }
+                        >
+                          {loadingContext
+                            ? "Chargement..."
+                            : folders.find((f) => f.id === selectedFolderId)
+                                ?.title || "Sélectionner un dossier"}
+                        </Text>
+                        <Ionicons
+                          name="chevron-down"
+                          size={20}
+                          color={COLORS.gray}
+                        />
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
 
                 {/* First Button Set - Compact Section */}
                 <View style={styles.buttonContainer}>
@@ -1345,6 +1466,26 @@ export default function AddImageModal({
         onClose={() => setCaptureModalVisible(false)}
         onMediaCaptured={handleMediaCaptured}
       />
+
+      <ProjectSelectionModal
+        visible={projectModalVisible}
+        onClose={() => setProjectModalVisible(false)}
+        projects={projects}
+        onSelect={(id) => {
+          setSelectedChantier(id);
+          setSelectedFolderId(null);
+        }}
+        selectedProjectId={selectedChantier || undefined}
+      />
+
+      <FolderSelectionModal
+        visible={folderModalVisible}
+        onClose={() => setFolderModalVisible(false)}
+        folders={folders.filter((f) => f.project_id === selectedChantier)}
+        users={users}
+        onSelect={(id) => setSelectedFolderId(id)}
+        selectedFolderId={selectedFolderId || undefined}
+      />
     </Modal>
   );
 }
@@ -1503,6 +1644,30 @@ const styles = StyleSheet.create({
     fontSize: SIZES.medium,
     borderWidth: 1,
     borderColor: COLORS.gray2,
+  },
+  contextualSection: {
+    marginBottom: SIZES.medium,
+    width: "100%",
+  },
+  selectBtn: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: SIZES.medium,
+    backgroundColor: COLORS.lightWhite,
+    borderRadius: SIZES.small,
+    borderWidth: 1,
+    borderColor: COLORS.gray2,
+  },
+  selectText: {
+    fontSize: SIZES.medium,
+    color: "#11224e",
+    flex: 1,
+  },
+  selectPlaceholder: {
+    fontSize: SIZES.medium,
+    color: COLORS.gray,
+    flex: 1,
   },
   compactSection: {
     marginBottom: SIZES.medium,
