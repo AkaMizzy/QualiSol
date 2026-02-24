@@ -85,6 +85,7 @@ export default function FolderListScreen({
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isQuestionsModalVisible, setIsQuestionsModalVisible] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
 
   // Filter states
   const [projects, setProjects] = useState<Project[]>([]);
@@ -96,6 +97,7 @@ export default function FolderListScreen({
     undefined,
   );
   const [archivedStatusId, setArchivedStatusId] = useState<string | null>(null);
+  const [projectMap, setProjectMap] = useState<Record<string, string>>({});
 
   const [projectOpen, setProjectOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -163,6 +165,21 @@ export default function FolderListScreen({
     }
   }, [token]);
 
+  // Load projects and build a lookup map id -> title
+  useEffect(() => {
+    if (!token) return;
+    folderService
+      .getAllProjects(token)
+      .then((projectList) => {
+        const map: Record<string, string> = {};
+        projectList.forEach((p) => {
+          map[p.id] = p.title;
+        });
+        setProjectMap(map);
+      })
+      .catch((err) => console.error("Failed to load projects:", err));
+  }, [token]);
+
   if (isLoading) {
     return (
       <View style={styles.center}>
@@ -179,8 +196,9 @@ export default function FolderListScreen({
     );
   }
 
-  const handleOpenQuestionsModal = (folderId: string) => {
-    setSelectedFolderId(folderId);
+  const handleOpenQuestionsModal = (folder: Folder) => {
+    setSelectedFolderId(folder.id);
+    setSelectedFolder(folder);
     setIsQuestionsModalVisible(true);
   };
 
@@ -195,14 +213,24 @@ export default function FolderListScreen({
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader user={user || undefined} />
+      {/* Dynamic section title */}
+      <View style={styles.sectionTitleBar}>
+        <Text style={styles.sectionTitleText} numberOfLines={1}>
+          {folderTypeTitle}
+        </Text>
+      </View>
       <View style={styles.listContainer}>
         <FlatList
           data={filteredFolders}
           renderItem={({ item }) => {
+            const projectTitle = item.project_id
+              ? projectMap[item.project_id]
+              : undefined;
             return (
               <FolderCard
                 item={item}
-                onPress={() => handleOpenQuestionsModal(item.id)}
+                projectTitle={projectTitle}
+                onPress={() => handleOpenQuestionsModal(item)}
               />
             );
           }}
@@ -218,6 +246,13 @@ export default function FolderListScreen({
         onClose={() => setIsQuestionsModalVisible(false)}
         folderId={selectedFolderId}
         onDelete={fetchFolders}
+        folderTitle={selectedFolder?.title}
+        folderTypeTitle={selectedFolder?.foldertype || folderTypeTitle}
+        projectTitle={
+          selectedFolder?.project_id
+            ? projectMap[selectedFolder.project_id]
+            : undefined
+        }
       />
     </SafeAreaView>
   );
@@ -227,6 +262,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
+  },
+  sectionTitleBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: "#f87b1b",
+  },
+  sectionTitleText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#ffffff",
+    textAlign: "center",
   },
   listContainer: {
     flex: 1,

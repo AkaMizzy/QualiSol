@@ -1,20 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    SafeAreaView,
-    useSafeAreaInsets,
+  SafeAreaView,
+  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,6 +43,9 @@ interface FolderQuestionsModalProps {
   visible: boolean;
   onClose: () => void;
   onDelete?: () => void;
+  folderTitle?: string;
+  projectTitle?: string;
+  folderTypeTitle?: string;
 }
 
 interface AnswerData {
@@ -99,14 +102,6 @@ function QuestionRow({
           >
             {item.title}
           </Text>
-          {!!item.description && (
-            <Ionicons
-              name="information-circle-outline"
-              size={16}
-              color="#f87b1b"
-              style={{ marginLeft: 4 }}
-            />
-          )}
         </View>
       </View>
 
@@ -146,6 +141,9 @@ export default function FolderQuestionsModal({
   visible,
   onClose,
   onDelete,
+  folderTitle,
+  projectTitle,
+  folderTypeTitle,
 }: FolderQuestionsModalProps) {
   const { token, user } = useAuth();
   const [geds, setGeds] = useState<Ged[]>([]);
@@ -302,8 +300,23 @@ export default function FolderQuestionsModal({
           showProfile={true}
           onLogoPress={onClose}
         />
-        <View style={styles.headerTitleRow}>
-          <Text style={styles.headerTitleCentered}>Questions</Text>
+        <View style={styles.contextBanner}>
+          {folderTypeTitle ? (
+            <View style={styles.contextTypeTag}>
+              <Ionicons name="folder-outline" size={12} color="#fff" />
+              <Text style={styles.contextTypeText} numberOfLines={1}>
+                {folderTypeTitle}
+              </Text>
+            </View>
+          ) : null}
+          {projectTitle ? (
+            <View style={styles.contextProjectRow}>
+              <Ionicons name="business-outline" size={12} color="#f87b1b" />
+              <Text style={styles.contextProjectText} numberOfLines={1}>
+                {projectTitle}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.tableHeader}>
@@ -357,20 +370,49 @@ const styles = StyleSheet.create({
     borderColor: "#eee",
   },
   headerTitle: { fontSize: 18, fontWeight: "bold", color: "#11224e" },
-  headerTitleRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  contextBanner: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#ffffff",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
+    gap: 8,
   },
-  headerTitleCentered: {
-    fontSize: 18,
+  contextTypeTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#f87b1b",
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    flexShrink: 0,
+  },
+  contextTypeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#fff",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  contextFolderTitle: {
+    flex: 1,
+    fontSize: 15,
     fontWeight: "700",
     color: "#11224e",
-    textAlign: "center",
+  },
+  contextProjectRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 0,
+  },
+  contextProjectText: {
+    fontSize: 12,
+    color: "#f87b1b",
+    fontWeight: "600",
   },
 
   tableHeader: {
@@ -385,7 +427,7 @@ const styles = StyleSheet.create({
 
   // Columns
   colTitle: { flex: 3, paddingRight: 8 },
-  colAnswer: { flex: 1, paddingLeft: 8 },
+  colAnswer: { flex: 2, paddingLeft: 8 },
 
   listContent: { paddingBottom: 100 },
   row: {
