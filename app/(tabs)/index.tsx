@@ -104,26 +104,19 @@ const FolderCard = ({
     ]}
     onPress={onPress}
   >
-    {/* Icon */}
-    <View style={styles.folderCardIconWrap}>
-      {iconSource ? (
+    {/* Header: icon left, title right */}
+    <View style={styles.folderCardHeader}>
+      <View style={styles.folderCardIconWrap}>
         <Image
-          source={iconSource}
+          source={iconSource ?? require("../../assets/icons/folder.png")}
           style={styles.folderCardIcon}
           contentFit="contain"
         />
-      ) : (
-        <Image
-          source={require("../../assets/icons/folder.png")}
-          style={styles.folderCardIcon}
-          contentFit="contain"
-        />
-      )}
+      </View>
+      <Text style={styles.folderCardTitle} numberOfLines={2}>
+        {item.title}
+      </Text>
     </View>
-    {/* Title */}
-    <Text style={styles.folderCardTitle} numberOfLines={2}>
-      {item.title}
-    </Text>
     {/* Type badge */}
     {folderTypeTitle ? (
       <View style={styles.folderTypeBadge}>
@@ -1057,13 +1050,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "#f87b1b",
-    padding: 12,
+    padding: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
     elevation: 2,
-    alignItems: "center",
     gap: 6,
   },
   folderCardPressed: {
@@ -1073,24 +1065,29 @@ const styles = StyleSheet.create({
   folderCardPlaceholder: {
     flex: 1,
   },
+  folderCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   folderCardIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: "#fff4ec",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 4,
+    flexShrink: 0,
   },
   folderCardIcon: {
-    width: 32,
-    height: 32,
+    width: 22,
+    height: 22,
   },
   folderCardTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: "#11224e",
-    textAlign: "center",
+    flex: 1,
   },
   folderTypeBadge: {
     backgroundColor: "#fff4ec",
