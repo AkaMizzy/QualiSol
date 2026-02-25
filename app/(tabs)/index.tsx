@@ -5,14 +5,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+    ActivityIndicator,
     Alert,
     FlatList,
     LayoutAnimation,
     Linking,
     Pressable,
     RefreshControl,
+    ScrollView,
     StyleSheet,
     Text,
     View,
@@ -23,10 +25,13 @@ import AppHeader from "../../components/AppHeader";
 import CalendarComp from "../../components/calander/CalendarComp";
 import CreateCalendarEventModal from "../../components/calander/CreateCalendarEventModal";
 import DayEventsModal from "../../components/calander/DayEventsModal";
+import FolderQuestionsModal from "../../components/folder/FolderQuestionsModal";
 
 import { ICONS } from "@/constants/Icons";
 import companyService from "@/services/companyService";
+import folderService, { Folder, Project } from "@/services/folderService";
 import { getGedsBySource } from "@/services/gedService";
+import { getArchivedStatusId } from "@/services/statusService";
 import API_CONFIG from "../config/api";
 
 // System items that are not folder types
@@ -54,32 +59,263 @@ const SYSTEM_GRID_ITEMS: {
   },
 ];
 
-// const GRID_ITEMS: { title: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-//   { title: 'Manifold', icon: 'people-circle-outline' },
-//   { title: 'Déclarations', icon: 'briefcase-outline' },
-//   { title: 'Projets', icon: 'construct-outline' },
-//   { title: 'Rapports', icon: 'document-text-outline' },
-//   { title: 'Inventaires', icon: 'file-tray-full-outline' },
-//   { title: 'Contrôles', icon: 'shield-checkmark-outline' },
-//   { title: 'Fournisseurs', icon: 'business-outline' },
-//   { title: 'Employés', icon: 'people-outline' },
-//   { title: 'Paramètres', icon: 'settings-outline' },
-// ];
-
 type GridItem = {
   title: string;
   icon?: keyof typeof Ionicons.glyphMap;
   image?: any;
   disabled?: boolean;
   type: "system" | "folderType";
-  imageUrl?: string; // For folder types with GED images
+  imageUrl?: string;
+  folderTypeData?: FolderType & { imageUrl?: string };
 };
 
+function formatDateForGrid(dateStr?: string | null): string {
+  if (!dateStr) return "";
+  try {
+    const compliantDateStr = dateStr.includes("T")
+      ? dateStr
+      : dateStr.replace(" ", "T");
+    return new Intl.DateTimeFormat("fr-FR", {
+      month: "short",
+      day: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(compliantDateStr));
+  } catch {
+    return "";
+  }
+}
+
+// ─── Inline Folder Card ────────────────────────────────────────────────────
+const InlineFolderCard = ({
+  item,
+  projectTitle,
+  folderTypeImageUrl,
+  onPress,
+}: {
+  item: Folder;
+  projectTitle?: string;
+  folderTypeImageUrl?: string;
+  onPress: () => void;
+}) => (
+  <Pressable
+    style={({ pressed }) => [
+      inlineStyles.card,
+      pressed && inlineStyles.pressed,
+    ]}
+    onPress={onPress}
+  >
+    {/* FolderType icon at the top of the card */}
+    <View style={inlineStyles.cardIconRow}>
+      {folderTypeImageUrl ? (
+        <Image
+          source={{ uri: folderTypeImageUrl }}
+          style={inlineStyles.cardTypeIcon}
+          contentFit="contain"
+        />
+      ) : (
+        <Image
+          source={require("../../assets/icons/folder.png")}
+          style={inlineStyles.cardTypeIcon}
+          contentFit="contain"
+        />
+      )}
+    </View>
+    <View style={inlineStyles.cardBody}>
+      <Text style={inlineStyles.cardTitle} numberOfLines={2}>
+        {item.title}
+      </Text>
+      <View style={inlineStyles.infoRow}>
+        <Image source={ICONS.chantierPng} style={{ width: 14, height: 14 }} />
+        <Text style={inlineStyles.infoText} numberOfLines={1}>
+          {projectTitle || "N/A"}
+        </Text>
+      </View>
+      <View style={inlineStyles.infoRow}>
+        <Ionicons name="calendar-outline" size={14} color="#f87b1b" />
+        <Text style={inlineStyles.infoText}>
+          {formatDateForGrid(item.created_at)}
+        </Text>
+      </View>
+    </View>
+  </Pressable>
+);
+
+// ─── Inline Folder Section (rendered below the grid in index.tsx) ──────────
+function InlineFolderSection({
+  folderType,
+  token,
+  user,
+  onClose,
+}: {
+  folderType: FolderType & { imageUrl?: string };
+  token: string;
+  user: any;
+  onClose: () => void;
+}) {
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [projectMap, setProjectMap] = useState<Record<string, string>>({});
+  const [archivedStatusId, setArchivedStatusId] = useState<string | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
+  const [isQuestionsModalVisible, setIsQuestionsModalVisible] = useState(false);
+
+  const fetchFolders = useCallback(async () => {
+    if (!token || !user) {
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const fetchedFolders = await folderService.getAllFolders(
+        token,
+        folderType.title,
+      );
+
+      // Filter by access control
+      let available = fetchedFolders;
+      if (!["Super Admin", "Admin"].includes(user?.role)) {
+        available = fetchedFolders.filter(
+          (f) => String(f.owner_id) === String(user.id),
+        );
+      }
+
+      // Filter out archived
+      const filtered = available.filter(
+        (f) => !archivedStatusId || f.status_id !== archivedStatusId,
+      );
+
+      const sorted = filtered.sort((a, b) => {
+        const da = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return db - da;
+      });
+      setFolders(sorted);
+    } catch (err) {
+      console.error("Failed to load folders:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token, user, folderType.title, archivedStatusId]);
+
+  // Load archived status
+  useEffect(() => {
+    if (token) {
+      getArchivedStatusId(token).then(setArchivedStatusId);
+    }
+  }, [token]);
+
+  // Load projects for title lookup
+  useEffect(() => {
+    if (!token) return;
+    folderService
+      .getAllProjects(token)
+      .then((list: Project[]) => {
+        const map: Record<string, string> = {};
+        list.forEach((p) => {
+          map[p.id] = p.title;
+        });
+        setProjectMap(map);
+      })
+      .catch(console.error);
+  }, [token]);
+
+  // Fetch folders when visible or archivedStatusId changes
+  useEffect(() => {
+    fetchFolders();
+  }, [fetchFolders]);
+
+  const handleOpenQuestions = (folder: Folder) => {
+    setSelectedFolderId(folder.id);
+    setSelectedFolder(folder);
+    setIsQuestionsModalVisible(true);
+  };
+
+  return (
+    <View style={inlineStyles.section}>
+      {/* Section header */}
+      <View style={inlineStyles.sectionHeader}>
+        <View style={inlineStyles.sectionHeaderLeft}>
+          {folderType.imageUrl ? (
+            <Image
+              source={{ uri: folderType.imageUrl }}
+              style={inlineStyles.sectionHeaderIcon}
+              contentFit="contain"
+            />
+          ) : (
+            <Image
+              source={require("../../assets/icons/folder.png")}
+              style={inlineStyles.sectionHeaderIcon}
+              contentFit="contain"
+            />
+          )}
+          <Text style={inlineStyles.sectionTitle} numberOfLines={1}>
+            {folderType.title}
+          </Text>
+        </View>
+        <Pressable onPress={onClose} style={inlineStyles.closeBtn} hitSlop={8}>
+          <Ionicons name="close-circle" size={26} color="#f87b1b" />
+        </Pressable>
+      </View>
+
+      {/* Content */}
+      {isLoading ? (
+        <ActivityIndicator
+          size="large"
+          color="#f87b1b"
+          style={{ marginVertical: 24 }}
+        />
+      ) : folders.length === 0 ? (
+        <View style={inlineStyles.emptyWrap}>
+          <Text style={inlineStyles.emptyText}>
+            Aucun dossier pour le moment
+          </Text>
+        </View>
+      ) : (
+        <View style={inlineStyles.folderGrid}>
+          {folders.map((folder) => {
+            const projectTitle = folder.project_id
+              ? projectMap[folder.project_id]
+              : undefined;
+            return (
+              <InlineFolderCard
+                key={folder.id}
+                item={folder}
+                projectTitle={projectTitle}
+                folderTypeImageUrl={folderType.imageUrl}
+                onPress={() => handleOpenQuestions(folder)}
+              />
+            );
+          })}
+        </View>
+      )}
+
+      {/* Folder Questions Modal */}
+      <FolderQuestionsModal
+        visible={isQuestionsModalVisible}
+        onClose={() => setIsQuestionsModalVisible(false)}
+        folderId={selectedFolderId}
+        onDelete={fetchFolders}
+        folderTitle={selectedFolder?.title}
+        folderTypeTitle={selectedFolder?.foldertype || folderType.title}
+        projectTitle={
+          selectedFolder?.project_id
+            ? projectMap[selectedFolder.project_id]
+            : undefined
+        }
+      />
+    </View>
+  );
+}
+
+// ─── Main Dashboard ────────────────────────────────────────────────────────
 export default function DashboardScreen() {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   const [eventModalVisible, setEventModalVisible] = useState(false);
   const [isCalendarVisible, setIsCalendarVisible] = useState(false);
   const [eventsByDate, setEventsByDate] = useState<Record<string, string[]>>(
@@ -104,10 +340,18 @@ export default function DashboardScreen() {
   const [companyTitle, setCompanyTitle] = useState<string>("");
 
   // Dynamic folder types
-  const [folderTypes, setFolderTypes] = useState<FolderType[]>([]);
+  const [folderTypes, setFolderTypes] = useState<
+    (FolderType & { imageUrl?: string })[]
+  >([]);
   const [gridItems, setGridItems] = useState<GridItem[]>(SYSTEM_GRID_ITEMS);
   const [loadingFolderTypes, setLoadingFolderTypes] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Inline folder display
+  const [selectedFolderType, setSelectedFolderType] = useState<
+    (FolderType & { imageUrl?: string }) | null
+  >(null);
+  const folderSectionRef = useRef<ScrollView>(null);
 
   const isTablet = width >= 768;
   const numColumns = isTablet ? 6 : 3;
@@ -122,88 +366,12 @@ export default function DashboardScreen() {
     loadAuthData();
   }, []);
 
-  // Fetch folder types and merge with system items
+  // Fetch folder types and resolve GED icons
   const loadFolderTypes = useCallback(async () => {
     if (!token) return;
     setLoadingFolderTypes(true);
     try {
       const fetchedFolderTypes = await getAllFolderTypes(token);
-      setFolderTypes(fetchedFolderTypes);
-
-      // Fetch GED images for each folder type (same logic as FolderTypeManagerModal)
-      const typesWithImages = await Promise.all(
-        fetchedFolderTypes.map(async (type) => {
-          try {
-            const geds = await getGedsBySource(
-              token,
-              type.id,
-              "folder_type_icon",
-            );
-            if (geds.length > 0 && geds[0].url) {
-              return {
-                ...type,
-                imageUrl: `${API_CONFIG.BASE_URL}${geds[0].url}`,
-                imageGedId: geds[0].id,
-              };
-            }
-          } catch (error) {
-            console.error(
-              `Failed to fetch GED image for folder type ${type.title}:`,
-              error,
-            );
-          }
-          return type;
-        }),
-      );
-
-      // Convert folder types to grid items
-      const folderTypeItems: GridItem[] = typesWithImages.map((ft) => ({
-        title: ft.title,
-        // Use imageUrl from GED if available, otherwise use default folder icon
-        image: ft.imageUrl
-          ? { uri: ft.imageUrl }
-          : require("../../assets/icons/folder.png"),
-        imageUrl: ft.imageUrl,
-        type: "folderType" as const,
-      }));
-
-      // Merge system items with folder type items
-      // Filter out Paramètres first if user is not Super Admin
-      const filteredSystemItems = ["Super Admin", "Admin"].includes(user?.role)
-        ? SYSTEM_GRID_ITEMS
-        : SYSTEM_GRID_ITEMS.filter((item) => item.title !== "Paramètres");
-
-      setGridItems([...filteredSystemItems, ...folderTypeItems]);
-    } catch (error) {
-      console.error("Failed to load folder types:", error);
-      // On error, still show system items
-      // Filter out Paramètres if not Super Admin
-      const filteredSystemItems = ["Super Admin", "Admin"].includes(user?.role)
-        ? SYSTEM_GRID_ITEMS
-        : SYSTEM_GRID_ITEMS.filter((item) => item.title !== "Paramètres");
-
-      setGridItems(filteredSystemItems);
-    } finally {
-      setLoadingFolderTypes(false);
-    }
-  }, [token, user]);
-
-  // Auto-refresh folder types when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      loadFolderTypes();
-    }, [loadFolderTypes]),
-  );
-
-  // Pull-to-refresh handler
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      if (!token) return;
-
-      // Reload folder types with their images
-      const fetchedFolderTypes = await getAllFolderTypes(token);
-      setFolderTypes(fetchedFolderTypes);
 
       // Fetch GED images for each folder type
       const typesWithImages = await Promise.all(
@@ -231,11 +399,9 @@ export default function DashboardScreen() {
         }),
       );
 
-      // Update grid items
-      const filteredSystemItems = ["Super Admin", "Admin"].includes(user?.role)
-        ? SYSTEM_GRID_ITEMS
-        : SYSTEM_GRID_ITEMS.filter((item) => item.title !== "Paramètres");
+      setFolderTypes(typesWithImages);
 
+      // Convert to grid items
       const folderTypeItems: GridItem[] = typesWithImages.map((ft) => ({
         title: ft.title,
         image: ft.imageUrl
@@ -243,21 +409,48 @@ export default function DashboardScreen() {
           : require("../../assets/icons/folder.png"),
         imageUrl: ft.imageUrl,
         type: "folderType" as const,
+        folderTypeData: ft,
       }));
+
+      const filteredSystemItems = ["Super Admin", "Admin"].includes(user?.role)
+        ? SYSTEM_GRID_ITEMS
+        : SYSTEM_GRID_ITEMS.filter((item) => item.title !== "Paramètres");
 
       setGridItems([...filteredSystemItems, ...folderTypeItems]);
     } catch (error) {
-      console.error("Failed to refresh folder types:", error);
+      console.error("Failed to load folder types:", error);
+      const filteredSystemItems = ["Super Admin", "Admin"].includes(user?.role)
+        ? SYSTEM_GRID_ITEMS
+        : SYSTEM_GRID_ITEMS.filter((item) => item.title !== "Paramètres");
+      setGridItems(filteredSystemItems);
+    } finally {
+      setLoadingFolderTypes(false);
+    }
+  }, [token, user]);
+
+  // Auto-refresh on focus
+  useFocusEffect(
+    useCallback(() => {
+      loadFolderTypes();
+    }, [loadFolderTypes]),
+  );
+
+  // Pull-to-refresh
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadFolderTypes();
+    } catch (error) {
+      console.error("Failed to refresh:", error);
     } finally {
       setRefreshing(false);
     }
-  }, [token, user]);
+  }, [loadFolderTypes]);
 
   useEffect(() => {
     (async () => {
       if (!token) return;
       try {
-        // Fetch stats
         const statsRes = await fetch(`${API_CONFIG.BASE_URL}/actions/stats`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -266,43 +459,27 @@ export default function DashboardScreen() {
           throw new Error(statsData.error || "Failed to load stats");
         setStats(statsData);
 
-        // Fetch today's activities
         const activitiesRes = await fetch(
           `${API_CONFIG.BASE_URL}/today-activities`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
+          { headers: { Authorization: `Bearer ${token}` } },
         );
         const activitiesData = await activitiesRes.json();
-        if (activitiesRes.ok) {
-          setTodayActivities(activitiesData);
-        }
+        if (activitiesRes.ok) setTodayActivities(activitiesData);
 
-        // Fetch overdue activities
         const overdueRes = await fetch(
           `${API_CONFIG.BASE_URL}/overdue-activities`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
+          { headers: { Authorization: `Bearer ${token}` } },
         );
         const overdueData = await overdueRes.json();
-        if (overdueRes.ok) {
-          setOverdueActivities(overdueData);
-        }
+        if (overdueRes.ok) setOverdueActivities(overdueData);
 
-        // Fetch upcoming activities
         const upcomingRes = await fetch(
           `${API_CONFIG.BASE_URL}/upcoming-activities`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
+          { headers: { Authorization: `Bearer ${token}` } },
         );
         const upcomingData = await upcomingRes.json();
-        if (upcomingRes.ok) {
-          setUpcomingActivities(upcomingData);
-        }
+        if (upcomingRes.ok) setUpcomingActivities(upcomingData);
 
-        // Fetch company info
         try {
           const companyData = await companyService.getCompany();
           if (companyData && companyData.title) {
@@ -312,7 +489,6 @@ export default function DashboardScreen() {
           console.error("Failed to fetch company info:", error);
         }
       } catch {
-        // keep UI functional without stats
         setStats({
           pending: 0,
           today: 0,
@@ -332,7 +508,6 @@ export default function DashboardScreen() {
     setExpandedSection(expandedSection === section ? null : section);
   };
 
-  // Helper function to format time
   const formatTime = (dateString: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -342,27 +517,16 @@ export default function DashboardScreen() {
     });
   };
 
-  // Helper function to get status icon and text with activity type
   const getStatusInfo = (
     status: number,
     activityType?: "overdue" | "today" | "upcoming",
   ) => {
-    // For overdue activities, always show warning icon
-    if (activityType === "overdue") {
+    if (activityType === "overdue")
       return { icon: "warning", color: "#FF3B30", text: "En retard" };
-    }
-
-    // For upcoming activities, show calendar icon
-    if (activityType === "upcoming") {
+    if (activityType === "upcoming")
       return { icon: "calendar", color: "#007AFF", text: "À venir" };
-    }
-
-    // For today's activities, show pending icon
-    if (activityType === "today") {
+    if (activityType === "today")
       return { icon: "time", color: "#FF9500", text: "Aujourd'hui" };
-    }
-
-    // Default status-based logic for other cases
     switch (status) {
       case 0:
         return { icon: "time", color: "#FF9500", text: "En attente" };
@@ -381,11 +545,7 @@ export default function DashboardScreen() {
         if (!token) return;
         const res = await fetch(
           `${API_CONFIG.BASE_URL}/calendar?start_date=${startIso}&end_date=${endIso}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
+          { headers: { Authorization: `Bearer ${token}` } },
         );
         const data = await res.json();
         if (!res.ok) return;
@@ -402,65 +562,80 @@ export default function DashboardScreen() {
     [token],
   );
 
-  const renderGridItem = ({ item }: { item: GridItem }) => (
-    <Pressable
-      style={[
-        styles.gridButton,
-        {
-          width: `${100 / numColumns - 3}%`, // Dynamic width based on numColumns
-        },
-        item.disabled && styles.gridButtonDisabled,
-      ]}
-      onPress={() => {
-        // Handle folder types dynamically
-        if (item.type === "folderType") {
-          router.push(`/folders/${item.title}` as any);
-        }
-        // Handle system items with fixed routes
-        else if (item.title === "Suivi") {
-          router.push("/qualiphoto");
-        } else if (item.title === "To-Do") {
-          router.push("/danger");
-        } else if (item.title === "Calendrier") {
-          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-          setIsCalendarVisible((prevState) => !prevState);
-        } else if (item.title === "Constat") {
-          router.push("/constat");
-        } else if (item.title === "transfert") {
-          router.push("/transfert");
-        } else if (item.title === "Paramètres") {
-          router.push("/parameters");
-        } else {
-          Alert.alert(
-            "Bientôt disponible",
-            `La fonctionnalité ${item.title} est en cours de développement.`,
-          );
-        }
-      }}
-      disabled={item.disabled}
-    >
-      {item.image ? (
-        <Image
-          source={item.image}
-          style={[styles.gridImage, item.disabled && { opacity: 0.5 }]}
-        />
-      ) : (
-        <Ionicons
-          name={item.icon!}
-          size={32}
-          color={item.disabled ? "#a0a0a0" : "#f87b1b"}
-        />
-      )}
-      <Text
+  const handleFolderTypeTap = (item: GridItem) => {
+    if (item.type !== "folderType" || !item.folderTypeData) return;
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    // Toggle: if already selected, close
+    if (selectedFolderType?.id === item.folderTypeData.id) {
+      setSelectedFolderType(null);
+    } else {
+      setSelectedFolderType(item.folderTypeData);
+    }
+  };
+
+  const renderGridItem = ({ item }: { item: GridItem }) => {
+    const isActive =
+      item.type === "folderType" && selectedFolderType?.title === item.title;
+
+    return (
+      <Pressable
         style={[
-          styles.gridButtonText,
-          item.disabled && styles.gridButtonTextDisabled,
+          styles.gridButton,
+          { width: `${100 / numColumns - 3}%` },
+          item.disabled && styles.gridButtonDisabled,
+          isActive && styles.gridButtonActive,
         ]}
+        onPress={() => {
+          if (item.type === "folderType") {
+            handleFolderTypeTap(item);
+          } else if (item.title === "Suivi") {
+            router.push("/qualiphoto");
+          } else if (item.title === "To-Do") {
+            router.push("/danger");
+          } else if (item.title === "Calendrier") {
+            LayoutAnimation.configureNext(
+              LayoutAnimation.Presets.easeInEaseOut,
+            );
+            setIsCalendarVisible((prev) => !prev);
+          } else if (item.title === "Constat") {
+            router.push("/constat");
+          } else if (item.title === "transfert") {
+            router.push("/transfert");
+          } else if (item.title === "Paramètres") {
+            router.push("/parameters");
+          } else {
+            Alert.alert(
+              "Bientôt disponible",
+              `La fonctionnalité ${item.title} est en cours de développement.`,
+            );
+          }
+        }}
+        disabled={item.disabled}
       >
-        {item.title}
-      </Text>
-    </Pressable>
-  );
+        {item.image ? (
+          <Image
+            source={item.image}
+            style={[styles.gridImage, item.disabled && { opacity: 0.5 }]}
+          />
+        ) : (
+          <Ionicons
+            name={item.icon!}
+            size={32}
+            color={item.disabled ? "#a0a0a0" : "#f87b1b"}
+          />
+        )}
+        <Text
+          style={[
+            styles.gridButtonText,
+            item.disabled && styles.gridButtonTextDisabled,
+            isActive && styles.gridButtonTextActive,
+          ]}
+        >
+          {item.title}
+        </Text>
+      </Pressable>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -471,7 +646,7 @@ export default function DashboardScreen() {
         renderItem={renderGridItem}
         keyExtractor={(item) => item.title}
         numColumns={numColumns}
-        key={numColumns} // Re-renders the list when numColumns changes
+        key={numColumns}
         contentContainerStyle={styles.gridContainer}
         refreshControl={
           <RefreshControl
@@ -483,7 +658,23 @@ export default function DashboardScreen() {
         }
         ListFooterComponent={
           <>
-            {/* Calendar */}
+            {/* ── Inline Folder Section ─────────────────────────────── */}
+            {selectedFolderType && token && user && (
+              <InlineFolderSection
+                key={selectedFolderType.id}
+                folderType={selectedFolderType}
+                token={token}
+                user={user}
+                onClose={() => {
+                  LayoutAnimation.configureNext(
+                    LayoutAnimation.Presets.easeInEaseOut,
+                  );
+                  setSelectedFolderType(null);
+                }}
+              />
+            )}
+
+            {/* ── Calendar ─────────────────────────────────────────── */}
             {isCalendarVisible && (
               <View style={styles.calendarContainer}>
                 <CalendarComp
@@ -499,9 +690,7 @@ export default function DashboardScreen() {
                     try {
                       const res = await fetch(
                         `${API_CONFIG.BASE_URL}/calendar?start_date=${dateIso}&end_date=${dateIso}`,
-                        {
-                          headers: { Authorization: `Bearer ${token}` },
-                        },
+                        { headers: { Authorization: `Bearer ${token}` } },
                       );
                       const data = await res.json();
                       if (!res.ok) throw new Error("Failed");
@@ -517,7 +706,7 @@ export default function DashboardScreen() {
               </View>
             )}
 
-            {/* Recent Activity */}
+            {/* ── Recent Activity ───────────────────────────────────── */}
             <View
               style={[
                 styles.section,
@@ -552,6 +741,7 @@ export default function DashboardScreen() {
                   />
                 </Pressable>
               </View>
+
               {/* Activity Tabs */}
               <View style={styles.activityTabsContainer}>
                 <Pressable
@@ -598,7 +788,6 @@ export default function DashboardScreen() {
                         <Pressable
                           key={activity.id}
                           style={styles.activityItem}
-                          // onPress={() => router.push('/(tabs)/tasks')}
                         >
                           <View style={styles.activityIcon}>
                             <Ionicons
@@ -648,7 +837,6 @@ export default function DashboardScreen() {
                         <Pressable
                           key={activity.id}
                           style={styles.activityItem}
-                          // onPress={() => router.push('/(tabs)/tasks')}
                         >
                           <View style={styles.activityIcon}>
                             <Ionicons name="time" size={16} color="#f87b1b" />
@@ -694,7 +882,6 @@ export default function DashboardScreen() {
                         <Pressable
                           key={activity.id}
                           style={styles.activityItem}
-                          // onPress={() => router.push('/(tabs)/tasks')}
                         >
                           <View style={styles.activityIcon}>
                             <Ionicons
@@ -740,7 +927,7 @@ export default function DashboardScreen() {
               </View>
             </View>
 
-            {/* Spacer for custom tab bar */}
+            {/* Spacer for tab bar */}
             <View style={{ height: 100 }} />
           </>
         }
@@ -804,9 +991,8 @@ export default function DashboardScreen() {
             token,
           );
           Alert.alert("Succès", "Événement créé avec succès");
-          // Optimistically update indicators on the calendar
           try {
-            const key = vals.date; // use the submitted local ISO (YYYY-MM-DD) to avoid TZ shifts
+            const key = vals.date;
             setEventsByDate((prev) => {
               const next = { ...prev };
               const list = next[key] ? [...next[key]] : [];
@@ -827,6 +1013,122 @@ export default function DashboardScreen() {
   );
 }
 
+// ─── Inline folder section styles ─────────────────────────────────────────
+const inlineStyles = StyleSheet.create({
+  section: {
+    marginHorizontal: 12,
+    marginTop: 12,
+    marginBottom: 4,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "#f87b1b",
+    overflow: "hidden",
+    shadowColor: "#f87b1b",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: "#fff8f3",
+    borderBottomWidth: 1,
+    borderBottomColor: "#ffe5cc",
+  },
+  sectionHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+  sectionHeaderIcon: {
+    width: 28,
+    height: 28,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#f87b1b",
+    flex: 1,
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  folderGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    padding: 10,
+    gap: 10,
+  },
+  card: {
+    width: "47%",
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    padding: 10,
+    alignItems: "center",
+  },
+  pressed: {
+    transform: [{ scale: 0.97 }],
+    backgroundColor: "#fff8f3",
+  },
+  cardIconRow: {
+    marginBottom: 6,
+    alignItems: "center",
+  },
+  cardTypeIcon: {
+    width: 36,
+    height: 36,
+  },
+  cardBody: {
+    width: "100%",
+    gap: 6,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#f87b1b",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#f8fafc",
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 5,
+  },
+  infoText: {
+    fontSize: 11,
+    color: "#4b5563",
+    flex: 1,
+  },
+  emptyWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 32,
+  },
+  emptyText: {
+    color: "#9ca3af",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+});
+
+// ─── Main dashboard styles ─────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -863,6 +1165,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
     borderColor: "#d0d0d0",
   },
+  gridButtonActive: {
+    backgroundColor: "#fff3e8",
+    borderColor: "#e06a0b",
+    borderWidth: 2,
+  },
   gridImage: {
     width: 32,
     height: 32,
@@ -877,70 +1184,13 @@ const styles = StyleSheet.create({
   gridButtonTextDisabled: {
     color: "#a0a0a0",
   },
-
+  gridButtonTextActive: {
+    color: "#f87b1b",
+  },
   statsContainer: {
     flexDirection: "row",
     padding: 20,
     gap: 12,
-  },
-  statsFrame: {
-    marginHorizontal: 20,
-    marginTop: 12,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E5E5EA",
-    overflow: "hidden",
-  },
-  statRowSingle: {
-    flexDirection: "row",
-  },
-  statGridRow: {
-    flexDirection: "row",
-  },
-  rowTopDivider: {
-    borderTopWidth: 1,
-    borderTopColor: "#F2F2F7",
-  },
-  statCell: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    gap: 4,
-  },
-  cellRightDivider: {
-    borderRightWidth: 1,
-    borderRightColor: "#F2F2F7",
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  statIcon: {
-    marginBottom: 8,
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#1C1C1E",
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#8E8E93",
-    textAlign: "center",
   },
   section: {
     padding: 20,
@@ -955,17 +1205,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 8,
-  },
-  sectionTitleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    width: "100%",
-    gap: 12,
-  },
-  sectionTitleIcon: {
-    width: 30,
-    height: 30,
   },
   sectionTitle: {
     fontSize: 18,
@@ -984,111 +1223,11 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  sectionTitle1: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#FF3B30",
-    marginBottom: 16,
-  },
-  sectionTitle2: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#007AFF",
-    marginBottom: 16,
-  },
-  tasksButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#f87b1b",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginLeft: 12,
-    shadowColor: "#f87b1b",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  tasksButtonIcon: {
-    width: 25,
-    height: 25,
-  },
-  tasksButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#f87b1b",
-    marginLeft: 6,
-  },
-  linkButton: {
-    color: "#f87b1b",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  quickActionsFrame: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E5EA",
-    borderRadius: 24,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 1,
-  },
-  actionsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  actionCard: {
-    width: "47%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  actionText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#1C1C1E",
-    marginTop: 8,
-    textAlign: "center",
-  },
   activityContainer: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     overflow: "hidden",
     marginTop: 8,
-  },
-  activityContainer1: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#FF3B30",
-    overflow: "hidden",
-  },
-  activityContainer2: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#007AFF",
-    overflow: "hidden",
   },
   activityItem: {
     flexDirection: "row",
@@ -1112,17 +1251,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#8E8E93",
   },
-  activityTable: {
-    marginTop: 16,
-  },
-  activityRowHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E5EA",
-  },
   activityTabsContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -1144,53 +1272,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   activityContentPlaceholder: {
-    minHeight: 10, // Ensures LayoutAnimation has a container to animate
-  },
-  kpiContainer: {
-    marginHorizontal: 20,
-    marginTop: 12,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#f87b1b",
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  kpiRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingVertical: 16,
-  },
-  kpiCard: {
-    alignItems: "center",
-    flex: 1,
-  },
-  kpiIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#F8F9FA",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#E9ECEF",
-  },
-  kpiNumber: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1C1C1E",
-    marginBottom: 4,
-  },
-  kpiLabel: {
-    fontSize: 12,
-    color: "#8E8E93",
-    textAlign: "center",
-    fontWeight: "500",
+    minHeight: 10,
   },
   footer: {
     flexDirection: "row",
