@@ -39,34 +39,16 @@ function formatDateForGrid(dateStr?: string | null): string {
 const FolderCard = ({
   item,
   projectTitle,
-  typeIconUrl,
   onPress,
 }: {
   item: Folder;
   projectTitle?: string;
-  typeIconUrl?: string;
   onPress: () => void;
 }) => (
   <Pressable
     style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     onPress={onPress}
   >
-    {/* FolderType icon derived from GED relationship */}
-    <View style={styles.cardIconRow}>
-      {typeIconUrl ? (
-        <Image
-          source={{ uri: typeIconUrl }}
-          style={styles.cardTypeIcon}
-          contentFit="contain"
-        />
-      ) : (
-        <Image
-          source={ICONS.folder}
-          style={styles.cardTypeIcon}
-          contentFit="contain"
-        />
-      )}
-    </View>
     <View style={styles.cardBody}>
       <Text style={styles.cardTitle} numberOfLines={2}>
         {item.title}
@@ -90,13 +72,11 @@ const FolderCard = ({
 interface FolderListScreenProps {
   folderTypeTitle: string;
   folderTypeIcon?: any;
-  folderTypeImageUrl?: string; // GED-resolved icon URL
 }
 
 export default function FolderListScreen({
   folderTypeTitle,
   folderTypeIcon,
-  folderTypeImageUrl,
 }: FolderListScreenProps) {
   const { token, user } = useAuth();
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -250,7 +230,6 @@ export default function FolderListScreen({
               <FolderCard
                 item={item}
                 projectTitle={projectTitle}
-                typeIconUrl={folderTypeImageUrl}
                 onPress={() => handleOpenQuestionsModal(item)}
               />
             );
@@ -418,15 +397,6 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
     padding: 12,
-    alignItems: "center",
-  },
-  cardIconRow: {
-    marginBottom: 6,
-    alignItems: "center",
-  },
-  cardTypeIcon: {
-    width: 36,
-    height: 36,
   },
   pressed: {
     transform: [{ scale: 0.98 }],

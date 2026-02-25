@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -14,7 +14,6 @@ import {
     Linking,
     Pressable,
     RefreshControl,
-    ScrollView,
     StyleSheet,
     Text,
     View,
@@ -25,8 +24,8 @@ import AppHeader from "../../components/AppHeader";
 import CalendarComp from "../../components/calander/CalendarComp";
 import CreateCalendarEventModal from "../../components/calander/CreateCalendarEventModal";
 import DayEventsModal from "../../components/calander/DayEventsModal";
-import FolderQuestionsModal from "../../components/folder/FolderQuestionsModal";
 
+import FolderQuestionsModal from "@/components/folder/FolderQuestionsModal";
 import { ICONS } from "@/constants/Icons";
 import companyService from "@/services/companyService";
 import folderService, { Folder, Project } from "@/services/folderService";
@@ -64,11 +63,10 @@ type GridItem = {
   icon?: keyof typeof Ionicons.glyphMap;
   image?: any;
   disabled?: boolean;
-  type: "system" | "folderType";
-  imageUrl?: string;
-  folderTypeData?: FolderType & { imageUrl?: string };
+  type: "system";
 };
 
+// Helper to format date for folder cards
 function formatDateForGrid(dateStr?: string | null): string {
   if (!dateStr) return "";
   try {
@@ -79,243 +77,89 @@ function formatDateForGrid(dateStr?: string | null): string {
       month: "short",
       day: "2-digit",
       year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     }).format(new Date(compliantDateStr));
   } catch {
     return "";
   }
 }
 
-// ─── Inline Folder Card ────────────────────────────────────────────────────
-const InlineFolderCard = ({
+// Folder card component for the grid
+const FolderCard = ({
   item,
+  iconSource,
   projectTitle,
-  folderTypeImageUrl,
+  folderTypeTitle,
   onPress,
 }: {
   item: Folder;
+  iconSource?: any;
   projectTitle?: string;
-  folderTypeImageUrl?: string;
+  folderTypeTitle?: string;
   onPress: () => void;
 }) => (
   <Pressable
     style={({ pressed }) => [
-      inlineStyles.card,
-      pressed && inlineStyles.pressed,
+      styles.folderCard,
+      pressed && styles.folderCardPressed,
     ]}
     onPress={onPress}
   >
-    {/* FolderType icon at the top of the card */}
-    <View style={inlineStyles.cardIconRow}>
-      {folderTypeImageUrl ? (
+    {/* Icon */}
+    <View style={styles.folderCardIconWrap}>
+      {iconSource ? (
         <Image
-          source={{ uri: folderTypeImageUrl }}
-          style={inlineStyles.cardTypeIcon}
+          source={iconSource}
+          style={styles.folderCardIcon}
           contentFit="contain"
         />
       ) : (
         <Image
           source={require("../../assets/icons/folder.png")}
-          style={inlineStyles.cardTypeIcon}
+          style={styles.folderCardIcon}
           contentFit="contain"
         />
       )}
     </View>
-    <View style={inlineStyles.cardBody}>
-      <Text style={inlineStyles.cardTitle} numberOfLines={2}>
-        {item.title}
+    {/* Title */}
+    <Text style={styles.folderCardTitle} numberOfLines={2}>
+      {item.title}
+    </Text>
+    {/* Type badge */}
+    {folderTypeTitle ? (
+      <View style={styles.folderTypeBadge}>
+        <Text style={styles.folderTypeBadgeText} numberOfLines={1}>
+          {folderTypeTitle}
+        </Text>
+      </View>
+    ) : null}
+    {/* Project row */}
+    {projectTitle ? (
+      <View style={styles.folderCardInfoRow}>
+        <Image
+          source={ICONS.chantierPng}
+          style={{ width: 12, height: 12 }}
+          contentFit="contain"
+        />
+        <Text style={styles.folderCardInfoText} numberOfLines={1}>
+          {projectTitle}
+        </Text>
+      </View>
+    ) : null}
+    {/* Date row */}
+    <View style={styles.folderCardInfoRow}>
+      <Ionicons name="calendar-outline" size={12} color="#f87b1b" />
+      <Text style={styles.folderCardInfoText}>
+        {formatDateForGrid(item.created_at)}
       </Text>
-      <View style={inlineStyles.infoRow}>
-        <Image source={ICONS.chantierPng} style={{ width: 14, height: 14 }} />
-        <Text style={inlineStyles.infoText} numberOfLines={1}>
-          {projectTitle || "N/A"}
-        </Text>
-      </View>
-      <View style={inlineStyles.infoRow}>
-        <Ionicons name="calendar-outline" size={14} color="#f87b1b" />
-        <Text style={inlineStyles.infoText}>
-          {formatDateForGrid(item.created_at)}
-        </Text>
-      </View>
     </View>
   </Pressable>
 );
 
-// ─── Inline Folder Section (rendered below the grid in index.tsx) ──────────
-function InlineFolderSection({
-  folderType,
-  token,
-  user,
-  onClose,
-}: {
-  folderType: FolderType & { imageUrl?: string };
-  token: string;
-  user: any;
-  onClose: () => void;
-}) {
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [projectMap, setProjectMap] = useState<Record<string, string>>({});
-  const [archivedStatusId, setArchivedStatusId] = useState<string | null>(null);
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
-  const [isQuestionsModalVisible, setIsQuestionsModalVisible] = useState(false);
-
-  const fetchFolders = useCallback(async () => {
-    if (!token || !user) {
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const fetchedFolders = await folderService.getAllFolders(
-        token,
-        folderType.title,
-      );
-
-      // Filter by access control
-      let available = fetchedFolders;
-      if (!["Super Admin", "Admin"].includes(user?.role)) {
-        available = fetchedFolders.filter(
-          (f) => String(f.owner_id) === String(user.id),
-        );
-      }
-
-      // Filter out archived
-      const filtered = available.filter(
-        (f) => !archivedStatusId || f.status_id !== archivedStatusId,
-      );
-
-      const sorted = filtered.sort((a, b) => {
-        const da = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const db = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return db - da;
-      });
-      setFolders(sorted);
-    } catch (err) {
-      console.error("Failed to load folders:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [token, user, folderType.title, archivedStatusId]);
-
-  // Load archived status
-  useEffect(() => {
-    if (token) {
-      getArchivedStatusId(token).then(setArchivedStatusId);
-    }
-  }, [token]);
-
-  // Load projects for title lookup
-  useEffect(() => {
-    if (!token) return;
-    folderService
-      .getAllProjects(token)
-      .then((list: Project[]) => {
-        const map: Record<string, string> = {};
-        list.forEach((p) => {
-          map[p.id] = p.title;
-        });
-        setProjectMap(map);
-      })
-      .catch(console.error);
-  }, [token]);
-
-  // Fetch folders when visible or archivedStatusId changes
-  useEffect(() => {
-    fetchFolders();
-  }, [fetchFolders]);
-
-  const handleOpenQuestions = (folder: Folder) => {
-    setSelectedFolderId(folder.id);
-    setSelectedFolder(folder);
-    setIsQuestionsModalVisible(true);
-  };
-
-  return (
-    <View style={inlineStyles.section}>
-      {/* Section header */}
-      <View style={inlineStyles.sectionHeader}>
-        <View style={inlineStyles.sectionHeaderLeft}>
-          {folderType.imageUrl ? (
-            <Image
-              source={{ uri: folderType.imageUrl }}
-              style={inlineStyles.sectionHeaderIcon}
-              contentFit="contain"
-            />
-          ) : (
-            <Image
-              source={require("../../assets/icons/folder.png")}
-              style={inlineStyles.sectionHeaderIcon}
-              contentFit="contain"
-            />
-          )}
-          <Text style={inlineStyles.sectionTitle} numberOfLines={1}>
-            {folderType.title}
-          </Text>
-        </View>
-        <Pressable onPress={onClose} style={inlineStyles.closeBtn} hitSlop={8}>
-          <Ionicons name="close-circle" size={26} color="#f87b1b" />
-        </Pressable>
-      </View>
-
-      {/* Content */}
-      {isLoading ? (
-        <ActivityIndicator
-          size="large"
-          color="#f87b1b"
-          style={{ marginVertical: 24 }}
-        />
-      ) : folders.length === 0 ? (
-        <View style={inlineStyles.emptyWrap}>
-          <Text style={inlineStyles.emptyText}>
-            Aucun dossier pour le moment
-          </Text>
-        </View>
-      ) : (
-        <View style={inlineStyles.folderGrid}>
-          {folders.map((folder) => {
-            const projectTitle = folder.project_id
-              ? projectMap[folder.project_id]
-              : undefined;
-            return (
-              <InlineFolderCard
-                key={folder.id}
-                item={folder}
-                projectTitle={projectTitle}
-                folderTypeImageUrl={folderType.imageUrl}
-                onPress={() => handleOpenQuestions(folder)}
-              />
-            );
-          })}
-        </View>
-      )}
-
-      {/* Folder Questions Modal */}
-      <FolderQuestionsModal
-        visible={isQuestionsModalVisible}
-        onClose={() => setIsQuestionsModalVisible(false)}
-        folderId={selectedFolderId}
-        onDelete={fetchFolders}
-        folderTitle={selectedFolder?.title}
-        folderTypeTitle={selectedFolder?.foldertype || folderType.title}
-        projectTitle={
-          selectedFolder?.project_id
-            ? projectMap[selectedFolder.project_id]
-            : undefined
-        }
-      />
-    </View>
-  );
-}
-
-// ─── Main Dashboard ────────────────────────────────────────────────────────
 export default function DashboardScreen() {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const [eventModalVisible, setEventModalVisible] = useState(false);
   const [isCalendarVisible, setIsCalendarVisible] = useState(false);
   const [eventsByDate, setEventsByDate] = useState<Record<string, string[]>>(
@@ -339,19 +183,26 @@ export default function DashboardScreen() {
   );
   const [companyTitle, setCompanyTitle] = useState<string>("");
 
-  // Dynamic folder types
-  const [folderTypes, setFolderTypes] = useState<
-    (FolderType & { imageUrl?: string })[]
-  >([]);
-  const [gridItems, setGridItems] = useState<GridItem[]>(SYSTEM_GRID_ITEMS);
-  const [loadingFolderTypes, setLoadingFolderTypes] = useState(false);
+  // System grid items only (no folder types in grid)
+  const [gridItems] = useState<GridItem[]>(SYSTEM_GRID_ITEMS);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Inline folder display
-  const [selectedFolderType, setSelectedFolderType] = useState<
-    (FolderType & { imageUrl?: string }) | null
-  >(null);
-  const folderSectionRef = useRef<ScrollView>(null);
+  // ─── Folder section state ─────────────────────────────────────────────────
+  const [folders, setFolders] = useState<Folder[]>([]);
+  // Map: foldertype_id → image source (uri string or require())
+  const [folderIconMap, setFolderIconMap] = useState<Record<string, any>>({});
+  // Map: foldertype_id → title
+  const [folderTypeMap, setFolderTypeMap] = useState<Record<string, string>>(
+    {},
+  );
+  // Map: project_id → title
+  const [projectMap, setProjectMap] = useState<Record<string, string>>({});
+  const [archivedStatusId, setArchivedStatusId] = useState<string | null>(null);
+  const [loadingFolders, setLoadingFolders] = useState(false);
+
+  // FolderQuestionsModal state
+  const [isQuestionsModalVisible, setIsQuestionsModalVisible] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
 
   const isTablet = width >= 768;
   const numColumns = isTablet ? 6 : 3;
@@ -366,91 +217,144 @@ export default function DashboardScreen() {
     loadAuthData();
   }, []);
 
-  // Fetch folder types and resolve GED icons
-  const loadFolderTypes = useCallback(async () => {
+  // ─── Load archived status ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (token) {
+      getArchivedStatusId(token).then(setArchivedStatusId);
+    }
+  }, [token]);
+
+  // ─── Load projects map ────────────────────────────────────────────────────
+  useEffect(() => {
     if (!token) return;
-    setLoadingFolderTypes(true);
+    folderService
+      .getAllProjects(token)
+      .then((projectList: Project[]) => {
+        const map: Record<string, string> = {};
+        projectList.forEach((p) => {
+          map[p.id] = p.title;
+        });
+        setProjectMap(map);
+      })
+      .catch((err: any) => console.error("Failed to load projects:", err));
+  }, [token]);
+
+  // ─── Load all folders (grouped by folder type with GED icons) ─────────────
+  const loadAllFolders = useCallback(async () => {
+    if (!token || !user) return;
+    setLoadingFolders(true);
     try {
+      // 1. Fetch all folder types + their GED icons
       const fetchedFolderTypes = await getAllFolderTypes(token);
 
-      // Fetch GED images for each folder type
-      const typesWithImages = await Promise.all(
-        fetchedFolderTypes.map(async (type) => {
+      // 2. Build icon map and type title map
+      const iconMap: Record<string, any> = {};
+      const typeMap: Record<string, string> = {};
+
+      await Promise.all(
+        fetchedFolderTypes.map(async (ft: FolderType) => {
+          typeMap[ft.id] = ft.title;
           try {
             const geds = await getGedsBySource(
               token,
-              type.id,
+              ft.id,
               "folder_type_icon",
             );
             if (geds.length > 0 && geds[0].url) {
-              return {
-                ...type,
-                imageUrl: `${API_CONFIG.BASE_URL}${geds[0].url}`,
-                imageGedId: geds[0].id,
-              };
+              iconMap[ft.id] = { uri: `${API_CONFIG.BASE_URL}${geds[0].url}` };
+            } else {
+              iconMap[ft.id] = require("../../assets/icons/folder.png");
             }
-          } catch (error) {
-            console.error(
-              `Failed to fetch GED image for folder type ${type.title}:`,
-              error,
-            );
+          } catch {
+            iconMap[ft.id] = require("../../assets/icons/folder.png");
           }
-          return type;
         }),
       );
 
-      setFolderTypes(typesWithImages);
+      setFolderIconMap(iconMap);
+      setFolderTypeMap(typeMap);
 
-      // Convert to grid items
-      const folderTypeItems: GridItem[] = typesWithImages.map((ft) => ({
-        title: ft.title,
-        image: ft.imageUrl
-          ? { uri: ft.imageUrl }
-          : require("../../assets/icons/folder.png"),
-        imageUrl: ft.imageUrl,
-        type: "folderType" as const,
-        folderTypeData: ft,
-      }));
+      // 3. Fetch all folders for each folder type (by UUID)
+      const allFolderArrays = await Promise.all(
+        fetchedFolderTypes.map((ft: FolderType) =>
+          folderService.getAllFolders(token, ft.id).catch(() => [] as Folder[]),
+        ),
+      );
 
-      const filteredSystemItems = ["Super Admin", "Admin"].includes(user?.role)
-        ? SYSTEM_GRID_ITEMS
-        : SYSTEM_GRID_ITEMS.filter((item) => item.title !== "Paramètres");
+      // 4. Flatten and deduplicate by id
+      const seen = new Set<string>();
+      const combined: Folder[] = [];
+      for (const arr of allFolderArrays) {
+        for (const f of arr) {
+          if (!seen.has(f.id)) {
+            seen.add(f.id);
+            combined.push(f);
+          }
+        }
+      }
 
-      setGridItems([...filteredSystemItems, ...folderTypeItems]);
+      // 5. Apply role-based access filter
+      let available = combined;
+      if (!["Super Admin", "Admin"].includes(user.role)) {
+        available = combined.filter(
+          (f) => String(f.owner_id) === String(user.id),
+        );
+      }
+
+      // 6. Sort by most recent
+      const sorted = available.sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      setFolders(sorted);
     } catch (error) {
-      console.error("Failed to load folder types:", error);
-      const filteredSystemItems = ["Super Admin", "Admin"].includes(user?.role)
-        ? SYSTEM_GRID_ITEMS
-        : SYSTEM_GRID_ITEMS.filter((item) => item.title !== "Paramètres");
-      setGridItems(filteredSystemItems);
+      console.error("Failed to load folders:", error);
     } finally {
-      setLoadingFolderTypes(false);
+      setLoadingFolders(false);
     }
   }, [token, user]);
 
-  // Auto-refresh on focus
+  // Auto-refresh when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      loadFolderTypes();
-    }, [loadFolderTypes]),
+      loadAllFolders();
+    }, [loadAllFolders]),
   );
 
-  // Pull-to-refresh
+  // ─── Apply archived filter (computed) ─────────────────────────────────────
+  const visibleFolders = React.useMemo(() => {
+    if (!archivedStatusId) return folders;
+    return folders.filter((f) => f.status_id !== archivedStatusId);
+  }, [folders, archivedStatusId]);
+
+  // Pull-to-refresh handler
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await loadFolderTypes();
+      await loadAllFolders();
+
+      if (!token) return;
+      // Also refresh project map
+      const projectList = await folderService.getAllProjects(token);
+      const map: Record<string, string> = {};
+      projectList.forEach((p: Project) => {
+        map[p.id] = p.title;
+      });
+      setProjectMap(map);
     } catch (error) {
       console.error("Failed to refresh:", error);
     } finally {
       setRefreshing(false);
     }
-  }, [loadFolderTypes]);
+  }, [loadAllFolders, token]);
 
   useEffect(() => {
     (async () => {
       if (!token) return;
       try {
+        // Fetch stats
         const statsRes = await fetch(`${API_CONFIG.BASE_URL}/actions/stats`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -459,27 +363,43 @@ export default function DashboardScreen() {
           throw new Error(statsData.error || "Failed to load stats");
         setStats(statsData);
 
+        // Fetch today's activities
         const activitiesRes = await fetch(
           `${API_CONFIG.BASE_URL}/today-activities`,
-          { headers: { Authorization: `Bearer ${token}` } },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
         );
         const activitiesData = await activitiesRes.json();
-        if (activitiesRes.ok) setTodayActivities(activitiesData);
+        if (activitiesRes.ok) {
+          setTodayActivities(activitiesData);
+        }
 
+        // Fetch overdue activities
         const overdueRes = await fetch(
           `${API_CONFIG.BASE_URL}/overdue-activities`,
-          { headers: { Authorization: `Bearer ${token}` } },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
         );
         const overdueData = await overdueRes.json();
-        if (overdueRes.ok) setOverdueActivities(overdueData);
+        if (overdueRes.ok) {
+          setOverdueActivities(overdueData);
+        }
 
+        // Fetch upcoming activities
         const upcomingRes = await fetch(
           `${API_CONFIG.BASE_URL}/upcoming-activities`,
-          { headers: { Authorization: `Bearer ${token}` } },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
         );
         const upcomingData = await upcomingRes.json();
-        if (upcomingRes.ok) setUpcomingActivities(upcomingData);
+        if (upcomingRes.ok) {
+          setUpcomingActivities(upcomingData);
+        }
 
+        // Fetch company info
         try {
           const companyData = await companyService.getCompany();
           if (companyData && companyData.title) {
@@ -489,6 +409,7 @@ export default function DashboardScreen() {
           console.error("Failed to fetch company info:", error);
         }
       } catch {
+        // keep UI functional without stats
         setStats({
           pending: 0,
           today: 0,
@@ -508,6 +429,7 @@ export default function DashboardScreen() {
     setExpandedSection(expandedSection === section ? null : section);
   };
 
+  // Helper function to format time
   const formatTime = (dateString: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -517,35 +439,17 @@ export default function DashboardScreen() {
     });
   };
 
-  const getStatusInfo = (
-    status: number,
-    activityType?: "overdue" | "today" | "upcoming",
-  ) => {
-    if (activityType === "overdue")
-      return { icon: "warning", color: "#FF3B30", text: "En retard" };
-    if (activityType === "upcoming")
-      return { icon: "calendar", color: "#007AFF", text: "À venir" };
-    if (activityType === "today")
-      return { icon: "time", color: "#FF9500", text: "Aujourd'hui" };
-    switch (status) {
-      case 0:
-        return { icon: "time", color: "#FF9500", text: "En attente" };
-      case 1:
-        return { icon: "checkmark-circle", color: "#34C759", text: "Terminé" };
-      case 2:
-        return { icon: "close-circle", color: "#FF3B30", text: "Annulé" };
-      default:
-        return { icon: "help-circle", color: "#8E8E93", text: "Inconnu" };
-    }
-  };
-
   const onMonthChange = useCallback(
     async (startIso: string, endIso: string) => {
       try {
         if (!token) return;
         const res = await fetch(
           `${API_CONFIG.BASE_URL}/calendar?start_date=${startIso}&end_date=${endIso}`,
-          { headers: { Authorization: `Bearer ${token}` } },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
         );
         const data = await res.json();
         if (!res.ok) return;
@@ -562,79 +466,118 @@ export default function DashboardScreen() {
     [token],
   );
 
-  const handleFolderTypeTap = (item: GridItem) => {
-    if (item.type !== "folderType" || !item.folderTypeData) return;
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    // Toggle: if already selected, close
-    if (selectedFolderType?.id === item.folderTypeData.id) {
-      setSelectedFolderType(null);
-    } else {
-      setSelectedFolderType(item.folderTypeData);
-    }
-  };
-
-  const renderGridItem = ({ item }: { item: GridItem }) => {
-    const isActive =
-      item.type === "folderType" && selectedFolderType?.title === item.title;
-
-    return (
-      <Pressable
+  const renderGridItem = ({ item }: { item: GridItem }) => (
+    <Pressable
+      style={[
+        styles.gridButton,
+        {
+          width: `${100 / numColumns - 3}%`,
+        },
+        item.disabled && styles.gridButtonDisabled,
+      ]}
+      onPress={() => {
+        if (item.title === "Suivi") {
+          router.push("/qualiphoto");
+        } else if (item.title === "To-Do") {
+          router.push("/danger");
+        } else if (item.title === "Calendrier") {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setIsCalendarVisible((prevState) => !prevState);
+        } else if (item.title === "Constat") {
+          router.push("/constat");
+        } else if (item.title === "transfert") {
+          router.push("/transfert");
+        } else if (item.title === "Paramètres") {
+          router.push("/parameters");
+        } else {
+          Alert.alert(
+            "Bientôt disponible",
+            `La fonctionnalité ${item.title} est en cours de développement.`,
+          );
+        }
+      }}
+      disabled={item.disabled}
+    >
+      {item.image ? (
+        <Image
+          source={item.image}
+          style={[styles.gridImage, item.disabled && { opacity: 0.5 }]}
+        />
+      ) : (
+        <Ionicons
+          name={item.icon!}
+          size={32}
+          color={item.disabled ? "#a0a0a0" : "#f87b1b"}
+        />
+      )}
+      <Text
         style={[
-          styles.gridButton,
-          { width: `${100 / numColumns - 3}%` },
-          item.disabled && styles.gridButtonDisabled,
-          isActive && styles.gridButtonActive,
+          styles.gridButtonText,
+          item.disabled && styles.gridButtonTextDisabled,
         ]}
-        onPress={() => {
-          if (item.type === "folderType") {
-            handleFolderTypeTap(item);
-          } else if (item.title === "Suivi") {
-            router.push("/qualiphoto");
-          } else if (item.title === "To-Do") {
-            router.push("/danger");
-          } else if (item.title === "Calendrier") {
-            LayoutAnimation.configureNext(
-              LayoutAnimation.Presets.easeInEaseOut,
-            );
-            setIsCalendarVisible((prev) => !prev);
-          } else if (item.title === "Constat") {
-            router.push("/constat");
-          } else if (item.title === "transfert") {
-            router.push("/transfert");
-          } else if (item.title === "Paramètres") {
-            router.push("/parameters");
-          } else {
-            Alert.alert(
-              "Bientôt disponible",
-              `La fonctionnalité ${item.title} est en cours de développement.`,
-            );
-          }
-        }}
-        disabled={item.disabled}
       >
-        {item.image ? (
-          <Image
-            source={item.image}
-            style={[styles.gridImage, item.disabled && { opacity: 0.5 }]}
-          />
-        ) : (
-          <Ionicons
-            name={item.icon!}
-            size={32}
-            color={item.disabled ? "#a0a0a0" : "#f87b1b"}
-          />
-        )}
-        <Text
-          style={[
-            styles.gridButtonText,
-            item.disabled && styles.gridButtonTextDisabled,
-            isActive && styles.gridButtonTextActive,
-          ]}
-        >
-          {item.title}
-        </Text>
-      </Pressable>
-    );
+        {item.title}
+      </Text>
+    </Pressable>
+  );
+
+  // ─── Folder grid: render 2 columns ────────────────────────────────────────
+  const renderFolderRows = () => {
+    if (loadingFolders) {
+      return (
+        <View style={styles.foldersLoadingWrap}>
+          <ActivityIndicator size="small" color="#f87b1b" />
+          <Text style={styles.foldersLoadingText}>
+            Chargement des dossiers…
+          </Text>
+        </View>
+      );
+    }
+
+    if (visibleFolders.length === 0) {
+      return (
+        <View style={styles.foldersEmptyWrap}>
+          <Text style={styles.foldersEmptyText}>Aucun dossier disponible</Text>
+        </View>
+      );
+    }
+
+    // Build rows of 2
+    const rows: Folder[][] = [];
+    for (let i = 0; i < visibleFolders.length; i += 2) {
+      rows.push(visibleFolders.slice(i, i + 2));
+    }
+
+    return rows.map((row, rowIndex) => (
+      <View key={rowIndex} style={styles.folderRow}>
+        {row.map((folder) => {
+          const iconSource = folder.foldertype_id
+            ? folderIconMap[folder.foldertype_id]
+            : undefined;
+          const ftTitle = folder.foldertype_id
+            ? folderTypeMap[folder.foldertype_id]
+            : folder.foldertype || undefined;
+          const projTitle = folder.project_id
+            ? projectMap[folder.project_id]
+            : undefined;
+          return (
+            <FolderCard
+              key={folder.id}
+              item={folder}
+              iconSource={iconSource}
+              projectTitle={projTitle}
+              folderTypeTitle={ftTitle}
+              onPress={() => {
+                setSelectedFolder(folder);
+                setIsQuestionsModalVisible(true);
+              }}
+            />
+          );
+        })}
+        {/* Fill empty slot if row has only 1 item */}
+        {row.length === 1 && <View style={styles.folderCardPlaceholder} />}
+      </View>
+    ));
   };
 
   return (
@@ -658,23 +601,14 @@ export default function DashboardScreen() {
         }
         ListFooterComponent={
           <>
-            {/* ── Inline Folder Section ─────────────────────────────── */}
-            {selectedFolderType && token && user && (
-              <InlineFolderSection
-                key={selectedFolderType.id}
-                folderType={selectedFolderType}
-                token={token}
-                user={user}
-                onClose={() => {
-                  LayoutAnimation.configureNext(
-                    LayoutAnimation.Presets.easeInEaseOut,
-                  );
-                  setSelectedFolderType(null);
-                }}
-              />
-            )}
+            {/* ── Folders Grid Section ── */}
+            <View style={styles.foldersSectionHeader}>
+              <Ionicons name="folder-open-outline" size={20} color="#f87b1b" />
+              <Text style={styles.foldersSectionTitle}>Dossiers</Text>
+            </View>
+            <View style={styles.foldersSection}>{renderFolderRows()}</View>
 
-            {/* ── Calendar ─────────────────────────────────────────── */}
+            {/* Calendar */}
             {isCalendarVisible && (
               <View style={styles.calendarContainer}>
                 <CalendarComp
@@ -690,7 +624,9 @@ export default function DashboardScreen() {
                     try {
                       const res = await fetch(
                         `${API_CONFIG.BASE_URL}/calendar?start_date=${dateIso}&end_date=${dateIso}`,
-                        { headers: { Authorization: `Bearer ${token}` } },
+                        {
+                          headers: { Authorization: `Bearer ${token}` },
+                        },
                       );
                       const data = await res.json();
                       if (!res.ok) throw new Error("Failed");
@@ -706,7 +642,7 @@ export default function DashboardScreen() {
               </View>
             )}
 
-            {/* ── Recent Activity ───────────────────────────────────── */}
+            {/* Recent Activity */}
             <View
               style={[
                 styles.section,
@@ -741,7 +677,6 @@ export default function DashboardScreen() {
                   />
                 </Pressable>
               </View>
-
               {/* Activity Tabs */}
               <View style={styles.activityTabsContainer}>
                 <Pressable
@@ -927,7 +862,7 @@ export default function DashboardScreen() {
               </View>
             </View>
 
-            {/* Spacer for tab bar */}
+            {/* Spacer for custom tab bar */}
             <View style={{ height: 100 }} />
           </>
         }
@@ -991,6 +926,7 @@ export default function DashboardScreen() {
             token,
           );
           Alert.alert("Succès", "Événement créé avec succès");
+          // Optimistically update indicators on the calendar
           try {
             const key = vals.date;
             setEventsByDate((prev) => {
@@ -1009,126 +945,38 @@ export default function DashboardScreen() {
         events={dayEvents}
         onClose={() => setDayModalVisible(false)}
       />
+
+      {/* Folder Questions Modal */}
+      <FolderQuestionsModal
+        visible={isQuestionsModalVisible}
+        onClose={() => {
+          setIsQuestionsModalVisible(false);
+          setSelectedFolder(null);
+          // Refresh folders after closing modal (in case of deletion)
+          loadAllFolders();
+        }}
+        folderId={selectedFolder?.id ?? null}
+        folderTitle={selectedFolder?.title}
+        folderTypeTitle={
+          selectedFolder?.foldertype_id
+            ? folderTypeMap[selectedFolder.foldertype_id]
+            : selectedFolder?.foldertype || undefined
+        }
+        projectTitle={
+          selectedFolder?.project_id
+            ? projectMap[selectedFolder.project_id]
+            : undefined
+        }
+        onDelete={() => {
+          setIsQuestionsModalVisible(false);
+          setSelectedFolder(null);
+          loadAllFolders();
+        }}
+      />
     </SafeAreaView>
   );
 }
 
-// ─── Inline folder section styles ─────────────────────────────────────────
-const inlineStyles = StyleSheet.create({
-  section: {
-    marginHorizontal: 12,
-    marginTop: 12,
-    marginBottom: 4,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: "#f87b1b",
-    overflow: "hidden",
-    shadowColor: "#f87b1b",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: "#fff8f3",
-    borderBottomWidth: 1,
-    borderBottomColor: "#ffe5cc",
-  },
-  sectionHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flex: 1,
-  },
-  sectionHeaderIcon: {
-    width: 28,
-    height: 28,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#f87b1b",
-    flex: 1,
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  folderGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 10,
-    gap: 10,
-  },
-  card: {
-    width: "47%",
-    backgroundColor: "#ffffff",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#f87b1b",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-    padding: 10,
-    alignItems: "center",
-  },
-  pressed: {
-    transform: [{ scale: 0.97 }],
-    backgroundColor: "#fff8f3",
-  },
-  cardIconRow: {
-    marginBottom: 6,
-    alignItems: "center",
-  },
-  cardTypeIcon: {
-    width: 36,
-    height: 36,
-  },
-  cardBody: {
-    width: "100%",
-    gap: 6,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#f87b1b",
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: "#f8fafc",
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 5,
-  },
-  infoText: {
-    fontSize: 11,
-    color: "#4b5563",
-    flex: 1,
-  },
-  emptyWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 32,
-  },
-  emptyText: {
-    color: "#9ca3af",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-});
-
-// ─── Main dashboard styles ─────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1165,11 +1013,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
     borderColor: "#d0d0d0",
   },
-  gridButtonActive: {
-    backgroundColor: "#fff3e8",
-    borderColor: "#e06a0b",
-    borderWidth: 2,
-  },
   gridImage: {
     width: 32,
     height: 32,
@@ -1184,13 +1027,183 @@ const styles = StyleSheet.create({
   gridButtonTextDisabled: {
     color: "#a0a0a0",
   },
-  gridButtonTextActive: {
+
+  // ── Folders section ──────────────────────────────────────────────────────
+  foldersSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 10,
+  },
+  foldersSectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
     color: "#f87b1b",
   },
+  foldersSection: {
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+  folderRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 12,
+  },
+  folderCard: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+    padding: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+    alignItems: "center",
+    gap: 6,
+  },
+  folderCardPressed: {
+    transform: [{ scale: 0.97 }],
+    backgroundColor: "#fff8f3",
+  },
+  folderCardPlaceholder: {
+    flex: 1,
+  },
+  folderCardIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#fff4ec",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  folderCardIcon: {
+    width: 32,
+    height: 32,
+  },
+  folderCardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#11224e",
+    textAlign: "center",
+  },
+  folderTypeBadge: {
+    backgroundColor: "#fff4ec",
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    maxWidth: "100%",
+  },
+  folderTypeBadgeText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#f87b1b",
+    textAlign: "center",
+  },
+  folderCardInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "stretch",
+    backgroundColor: "#f8fafc",
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  folderCardInfoText: {
+    fontSize: 11,
+    color: "#4b5563",
+    flex: 1,
+  },
+  foldersLoadingWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingVertical: 24,
+  },
+  foldersLoadingText: {
+    fontSize: 14,
+    color: "#9ca3af",
+  },
+  foldersEmptyWrap: {
+    alignItems: "center",
+    paddingVertical: 24,
+  },
+  foldersEmptyText: {
+    fontSize: 14,
+    color: "#9ca3af",
+  },
+
+  // ── Stats / Activity ───────────────────────────────────────────────────────
   statsContainer: {
     flexDirection: "row",
     padding: 20,
     gap: 12,
+  },
+  statsFrame: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+    overflow: "hidden",
+  },
+  statRowSingle: {
+    flexDirection: "row",
+  },
+  statGridRow: {
+    flexDirection: "row",
+  },
+  rowTopDivider: {
+    borderTopWidth: 1,
+    borderTopColor: "#F2F2F7",
+  },
+  statCell: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    gap: 4,
+  },
+  cellRightDivider: {
+    borderRightWidth: 1,
+    borderRightColor: "#F2F2F7",
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statIcon: {
+    marginBottom: 8,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1C1C1E",
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: "#8E8E93",
+    textAlign: "center",
   },
   section: {
     padding: 20,
@@ -1205,6 +1218,17 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 8,
+  },
+  sectionTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    width: "100%",
+    gap: 12,
+  },
+  sectionTitleIcon: {
+    width: 30,
+    height: 30,
   },
   sectionTitle: {
     fontSize: 18,
@@ -1223,11 +1247,111 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  sectionTitle1: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#FF3B30",
+    marginBottom: 16,
+  },
+  sectionTitle2: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#007AFF",
+    marginBottom: 16,
+  },
+  tasksButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginLeft: 12,
+    shadowColor: "#f87b1b",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  tasksButtonIcon: {
+    width: 25,
+    height: 25,
+  },
+  tasksButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#f87b1b",
+    marginLeft: 6,
+  },
+  linkButton: {
+    color: "#f87b1b",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  quickActionsFrame: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+    borderRadius: 24,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  actionsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  actionCard: {
+    width: "47%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  actionText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#1C1C1E",
+    marginTop: 8,
+    textAlign: "center",
+  },
   activityContainer: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     overflow: "hidden",
     marginTop: 8,
+  },
+  activityContainer1: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#FF3B30",
+    overflow: "hidden",
+  },
+  activityContainer2: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#007AFF",
+    overflow: "hidden",
   },
   activityItem: {
     flexDirection: "row",
@@ -1251,6 +1375,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#8E8E93",
   },
+  activityTable: {
+    marginTop: 16,
+  },
+  activityRowHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E5EA",
+  },
   activityTabsContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -1273,6 +1408,52 @@ const styles = StyleSheet.create({
   },
   activityContentPlaceholder: {
     minHeight: 10,
+  },
+  kpiContainer: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#f87b1b",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  kpiRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingVertical: 16,
+  },
+  kpiCard: {
+    alignItems: "center",
+    flex: 1,
+  },
+  kpiIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F8F9FA",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#E9ECEF",
+  },
+  kpiNumber: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1C1C1E",
+    marginBottom: 4,
+  },
+  kpiLabel: {
+    fontSize: 12,
+    color: "#8E8E93",
+    textAlign: "center",
+    fontWeight: "500",
   },
   footer: {
     flexDirection: "row",
