@@ -7,7 +7,7 @@ import { Anomalie1, getAllAnomalies1 } from "@/services/anomalie1Service";
 import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
 import companyService from "@/services/companyService";
 import { getConnectivity } from "@/services/connectivity";
-import folderService, { Folder, Project } from "@/services/folderService";
+import folderService, { Folder } from "@/services/folderService";
 import { getAllGeds } from "@/services/gedService";
 import { getUsers } from "@/services/userService";
 import { Company } from "@/types/company";
@@ -42,7 +42,6 @@ import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
 import PictureAnnotator from "../PictureAnnotator";
 import FolderSelectionModal from "../projects/FolderSelectionModal";
-import ProjectSelectionModal from "../projects/ProjectSelectionModal";
 
 interface AddImageModalProps {
   visible: boolean;
@@ -127,12 +126,9 @@ export default function AddImageModal({
   const [companyInfo, setCompanyInfo] = useState<Company | null>(null);
 
   // Contextual states
-  const [projects, setProjects] = useState<Project[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [users, setUsers] = useState<CompanyUser[]>([]);
-  const [selectedChantier, setSelectedChantier] = useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [projectModalVisible, setProjectModalVisible] = useState(false);
   const [folderModalVisible, setFolderModalVisible] = useState(false);
   const [loadingContext, setLoadingContext] = useState(true);
 
@@ -210,7 +206,13 @@ export default function AddImageModal({
 
   // Handle new capture
   useEffect(() => {
-    if (visible && image && mode === "capture" && !isAnnotatorVisible) {
+    if (
+      visible &&
+      image &&
+      mode === "capture" &&
+      !isAnnotatorVisible &&
+      selectedFolderId
+    ) {
       if (skipCountdownRef.current) {
         skipCountdownRef.current = false;
         setAutoSaveCountdown(null);
@@ -229,6 +231,7 @@ export default function AddImageModal({
     image,
     mode,
     visible,
+    selectedFolderId,
     isSessionLimitReached,
     isStorageQuotaReached,
     isAnnotatorVisible,
@@ -490,7 +493,6 @@ export default function AddImageModal({
       setIsGeneratingDescription(false);
       setLevel(5);
       setSelectedType(null);
-      setSelectedChantier(null);
       setSelectedFolderId(null);
       setIsSubmitting(false);
       setSessionImageCount(0); // Reset session counter when modal closes
@@ -534,12 +536,10 @@ export default function AddImageModal({
       if (!token || !user) return;
       setLoadingContext(true);
       try {
-        const [fetchedProjects, fetchedFolders, fetchedUsers] =
-          await Promise.all([
-            folderService.getAllProjects(token),
-            folderService.getAllFolders(token),
-            getUsers(),
-          ]);
+        const [fetchedFolders, fetchedUsers] = await Promise.all([
+          folderService.getAllFolders(token),
+          getUsers(),
+        ]);
 
         let availableFolders = fetchedFolders.filter(
           (f) => f.foldertype_id === null || f.foldertype_id === undefined,
@@ -550,7 +550,6 @@ export default function AddImageModal({
           );
         }
 
-        setProjects(fetchedProjects);
         setFolders(availableFolders);
         setUsers(fetchedUsers);
       } catch (err) {
@@ -563,6 +562,13 @@ export default function AddImageModal({
       fetchContextData();
     }
   }, [visible, token, user]);
+
+  // Auto-select the only folder when exactly one is available
+  useEffect(() => {
+    if (!loadingContext && folders.length === 1) {
+      setSelectedFolderId(folders[0].id);
+    }
+  }, [loadingContext, folders]);
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -800,7 +806,6 @@ export default function AddImageModal({
             level,
             type: selectedType,
             categorie: selectedCategorie,
-            chantier: selectedChantier || undefined,
             idsource: selectedFolderId || undefined,
             iatxt: iaText,
             mode: mode,
@@ -1000,60 +1005,53 @@ export default function AddImageModal({
 
                 {/* CONTEXTUAL SECTION */}
                 <View style={[styles.contextualSection, { marginTop: 15 }]}>
-                  <Text style={styles.label}>Chantier *</Text>
-                  <TouchableOpacity
-                    style={styles.selectBtn}
-                    onPress={() => setProjectModalVisible(true)}
-                    disabled={loadingContext}
-                  >
-                    <Text
-                      style={
-                        selectedChantier
-                          ? styles.selectText
-                          : styles.selectPlaceholder
-                      }
-                    >
-                      {loadingContext
-                        ? "Chargement..."
-                        : projects.find((p) => p.id === selectedChantier)
-                            ?.title || "Sélectionner un chantier"}
-                    </Text>
-                    <Ionicons
-                      name="chevron-down"
-                      size={20}
-                      color={COLORS.gray}
-                    />
-                  </TouchableOpacity>
-
-                  {selectedChantier && (
-                    <>
-                      <Text style={[styles.label, { marginTop: 15 }]}>
-                        Dossier *
+                  <Text style={styles.label}>Voulez-vous choisir un dossier</Text>
+                  {loadingContext ? (
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                  ) : folders.length === 0 ? (
+                    <View style={styles.noFolderBanner}>
+                      <Ionicons
+                        name="folder-open-outline"
+                        size={18}
+                        color="#b45309"
+                      />
+                      <Text style={styles.noFolderText}>
+                        Contactez votre administrateur pour obtenir des
+                        dossiers.
                       </Text>
-                      <TouchableOpacity
-                        style={styles.selectBtn}
-                        onPress={() => setFolderModalVisible(true)}
-                        disabled={loadingContext}
+                    </View>
+                  ) : folders.length === 1 ? (
+                    <View style={styles.autoSelectedBanner}>
+                      <Ionicons
+                        name="folder-outline"
+                        size={18}
+                        color={COLORS.primary}
+                      />
+                      <Text style={styles.autoSelectedText}>
+                        {folders[0].title}
+                      </Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.selectBtn}
+                      onPress={() => setFolderModalVisible(true)}
+                    >
+                      <Text
+                        style={
+                          selectedFolderId
+                            ? styles.selectText
+                            : styles.selectPlaceholder
+                        }
                       >
-                        <Text
-                          style={
-                            selectedFolderId
-                              ? styles.selectText
-                              : styles.selectPlaceholder
-                          }
-                        >
-                          {loadingContext
-                            ? "Chargement..."
-                            : folders.find((f) => f.id === selectedFolderId)
-                                ?.title || "Sélectionner un dossier"}
-                        </Text>
-                        <Ionicons
-                          name="chevron-down"
-                          size={20}
-                          color={COLORS.gray}
-                        />
-                      </TouchableOpacity>
-                    </>
+                        {folders.find((f) => f.id === selectedFolderId)
+                          ?.title || "Sélectionner un dossier"}
+                      </Text>
+                      <Ionicons
+                        name="chevron-down"
+                        size={20}
+                        color={COLORS.gray}
+                      />
+                    </TouchableOpacity>
                   )}
                 </View>
 
@@ -1461,21 +1459,10 @@ export default function AddImageModal({
         onMediaCaptured={handleMediaCaptured}
       />
 
-      <ProjectSelectionModal
-        visible={projectModalVisible}
-        onClose={() => setProjectModalVisible(false)}
-        projects={projects}
-        onSelect={(id) => {
-          setSelectedChantier(id);
-          setSelectedFolderId(null);
-        }}
-        selectedProjectId={selectedChantier || undefined}
-      />
-
       <FolderSelectionModal
         visible={folderModalVisible}
         onClose={() => setFolderModalVisible(false)}
-        folders={folders.filter((f) => f.project_id === selectedChantier)}
+        folders={folders}
         users={users}
         onSelect={(id) => setSelectedFolderId(id)}
         selectedFolderId={selectedFolderId || undefined}
@@ -2161,5 +2148,41 @@ const styles = StyleSheet.create({
     fontFamily: FONT.regular,
     textAlign: "right",
     marginTop: 4,
+  },
+  noFolderBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fef3c7",
+    borderColor: "#fbbf24",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 6,
+  },
+  noFolderText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: FONT.regular,
+    color: "#92400e",
+  },
+  autoSelectedBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#eff6ff",
+    borderColor: COLORS.primary,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 6,
+  },
+  autoSelectedText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: FONT.medium,
+    color: COLORS.primary,
   },
 });

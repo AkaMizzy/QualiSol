@@ -10,16 +10,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getConnectivity } from "@/services/connectivity";
 import folderService, { Project } from "@/services/folderService";
 import {
-  Ged,
-  deleteGed,
-  getMyGeds,
-  updateGed,
-  updateGedFile,
+    Ged,
+    deleteGed,
+    getMyGeds,
+    updateGed,
+    updateGedFile,
 } from "@/services/gedService";
 import {
-  createOfflineRecord,
-  deleteOfflineRecord,
-  getOfflineRecords,
+    createOfflineRecord,
+    deleteOfflineRecord,
+    getOfflineRecords,
 } from "@/services/offlineStorageService";
 import { startSyncMonitoring, triggerManualSync } from "@/services/syncService";
 import { getUsers } from "@/services/userService";
@@ -31,23 +31,23 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
+    ActivityIndicator,
+    Alert,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import UserSelectionModal from "../UserSelectionModal";
@@ -388,9 +388,10 @@ export default function SharedGalerieScreen({
           .catch((e) => console.warn("[Galerie] Background sync failed:", e))
           .finally(async () => {
             setIsSyncing(false);
-            // Refresh gallery once sync finishes so newly uploaded items appear
+            // Refresh both online gallery AND offline records so that the
+            // just-synced offline copy is removed and no duplicate appears.
             try {
-              await fetchGeds();
+              await Promise.all([fetchGeds(), fetchOfflineRecords()]);
             } catch (_) {}
           });
       }

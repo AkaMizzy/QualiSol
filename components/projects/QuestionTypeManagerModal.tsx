@@ -586,9 +586,9 @@ export default function QuestionTypeManagerModal({
                       size={22}
                       color="#11224e"
                     />
-                    <Text style={[styles.addButtonText, { color: "#11224e" }]}>
+                    {/* <Text style={[styles.addButtonText, { color: "#11224e" }]}>
                       Importer Excel
-                    </Text>
+                    </Text> */}
                   </>
                 )}
               </TouchableOpacity>
