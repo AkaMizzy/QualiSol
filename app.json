@@ -19,7 +19,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.QualiSol_V2"
+      "package": "com.muntadaacom.qualisol",
+      "versionCode": 1
     },
     "web": {
       "output": "static",
