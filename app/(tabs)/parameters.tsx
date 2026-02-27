@@ -9,9 +9,6 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../components/AppHeader";
 
-/** Email of the single platform super-user allowed to create new companies */
-const SUPER_USER_EMAIL = "muntadaacom@gmail.com";
-
 type ParameterCard = {
   title: string;
   description: string;
@@ -43,18 +40,11 @@ const PARAMETER_CARDS: ParameterCard[] = [
     color: "#ec4899",
   },
   {
-    title: "Anomalie niveau 1",
-    description: "Configuration des anomalies de niveau 1",
+    title: "Anomalies",
+    description: "Configuration des anomalies niveaux 1 et 2",
     image: require("../../assets/icons/anomalie.png"),
-    route: "/anomalie1",
+    route: "/anomalies",
     color: "#f59e0b",
-  },
-  {
-    title: "Anomalie niveau 2",
-    description: "Configuration des anomalies de niveau 2",
-    image: require("../../assets/icons/anomalie.png"),
-    route: "/anomalie2",
-    color: "#ef4444",
   },
   {
     title: "Utilisateurs",
@@ -79,7 +69,7 @@ export default function ParametersScreen() {
     useState(false);
   const [createCompanyVisible, setCreateCompanyVisible] = useState(false);
 
-  const isSuperUser = user?.email === SUPER_USER_EMAIL;
+  const isAdmin = user?.role === "Admin" || user?.role === "Super Admin";
 
   const handleCardPress = (route: string) => {
     if (route === "action:folderTypes") {
@@ -105,14 +95,6 @@ export default function ParametersScreen() {
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Paramètres</Text>
-        {isSuperUser && (
-          <Pressable
-            style={styles.superUserIconBtn}
-            onPress={() => setCreateCompanyVisible(true)}
-          >
-            <Ionicons name="add-circle" size={28} color="#f87b1b" />
-          </Pressable>
-        )}
       </View>
 
       <ScrollView
@@ -144,6 +126,30 @@ export default function ParametersScreen() {
             <Ionicons name="chevron-forward" size={24} color="#d1d5db" />
           </Pressable>
         ))}
+
+        {/* Parrainer card — visible only to Admin users */}
+        {isAdmin && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.card,
+              pressed && styles.cardPressed,
+            ]}
+            onPress={() => setCreateCompanyVisible(true)}
+          >
+            <View
+              style={[styles.iconContainer, { backgroundColor: "#f87b1b20" }]}
+            >
+              <Ionicons name="people" size={24} color="#f87b1b" />
+            </View>
+            <View style={styles.cardContent}>
+              <Text style={styles.cardTitle}>Parrainer</Text>
+              <Text style={styles.cardDescription}>
+                Créer un nouvel organisme
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#d1d5db" />
+          </Pressable>
+        )}
       </ScrollView>
 
       <FolderTypeManagerModal

@@ -29,6 +29,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppHeader from '../../components/AppHeader';
+import { any } from 'zod';
 
 export default function Anomalie2Screen() {
   const { user, token } = useAuth();
@@ -186,6 +187,7 @@ export default function Anomalie2Screen() {
             type: asset.type || 'image/jpeg',
             name: asset.fileName || `anomalie2_${Date.now()}.jpg`,
           },
+          answer: any
         });
       } catch (error: any) {
         console.error('Failed to upload image:', error);

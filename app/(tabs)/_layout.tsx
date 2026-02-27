@@ -35,6 +35,7 @@ export default function TabLayout() {
       <Tabs.Screen name="parameters" />
       <Tabs.Screen name="anomalie1" />
       <Tabs.Screen name="anomalie2" />
+      <Tabs.Screen name="anomalies" />
     </Tabs>
   );
 }

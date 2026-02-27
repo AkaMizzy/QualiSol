@@ -524,6 +524,7 @@ export default function DashboardScreen() {
           <>
             {/* ── Folders Grid Section ── */}
             <View style={styles.foldersSectionHeader}>
+              <View style={styles.folderSectionHeaderSide} />
               <View style={styles.foldersSectionTitleContainer}>
                 <Ionicons
                   name="folder-open-outline"
@@ -532,17 +533,19 @@ export default function DashboardScreen() {
                 />
                 <Text style={styles.foldersSectionTitle}>Contrôles</Text>
               </View>
-              <Pressable
-                onPress={() => router.push("/danger")}
-                style={styles.todoHeaderButton}
-              >
-                <Image
-                  source={require("../../assets/icons/danger.png")}
-                  style={{ width: 20, height: 20 }}
-                  contentFit="contain"
-                />
-                <Text style={styles.todoHeaderText}>To-Do</Text>
-              </Pressable>
+              <View style={styles.folderSectionHeaderSide}>
+                <Pressable
+                  onPress={() => router.push("/danger")}
+                  style={styles.todoHeaderButton}
+                >
+                  <Image
+                    source={require("../../assets/icons/danger.png")}
+                    style={{ width: 16, height: 16 }}
+                    contentFit="contain"
+                  />
+                  <Text style={styles.todoHeaderText}>To-Do</Text>
+                </Pressable>
+              </View>
             </View>
             <View style={styles.foldersSection}>{renderFolderRows()}</View>
 
@@ -750,14 +753,18 @@ const styles = StyleSheet.create({
   foldersSectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 10,
   },
+  folderSectionHeaderSide: {
+    flex: 1,
+    alignItems: "flex-end",
+  },
   foldersSectionTitleContainer: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   todoHeaderButton: {
