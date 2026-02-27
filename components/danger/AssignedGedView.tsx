@@ -17,6 +17,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import RenderHTML from "react-native-render-html";
 
 import API_CONFIG from "@/app/config/api";
 import AppHeader from "@/components/AppHeader";
@@ -1026,9 +1027,29 @@ export const AssignedGedView: React.FC<AssignedGedViewProps> = ({
                         <Text style={styles.infoLabel}>Description</Text>
                       </View>
                       <View style={[styles.inputWrap, { minHeight: 80 }]}>
-                        <Text style={styles.descriptionText} numberOfLines={4}>
-                          {avantDescription || "Aucune description."}
-                        </Text>
+                        {avantDescription ? (
+                          <RenderHTML
+                            contentWidth={width / 2 - 32}
+                            source={{ html: avantDescription }}
+                            baseStyle={{
+                              fontSize: 14,
+                              color: "#374151",
+                              lineHeight: 20,
+                            }}
+                            defaultTextProps={{ selectable: true }}
+                            tagsStyles={{
+                              b: { fontWeight: "bold" },
+                              strong: { fontWeight: "bold" },
+                              u: { textDecorationLine: "underline" },
+                              i: { fontStyle: "italic" },
+                              em: { fontStyle: "italic" },
+                            }}
+                          />
+                        ) : (
+                          <Text style={styles.descriptionText}>
+                            Aucune description.
+                          </Text>
+                        )}
                       </View>
                     </TouchableOpacity>
                   </View>
@@ -1043,10 +1064,29 @@ export const AssignedGedView: React.FC<AssignedGedViewProps> = ({
                         <Text style={styles.infoLabel}>Description</Text>
                       </View>
                       <View style={[styles.inputWrap, { minHeight: 80 }]}>
-                        <Text style={styles.descriptionText} numberOfLines={4}>
-                          {associatedGeds[0]?.description ||
-                            "Aucune description."}
-                        </Text>
+                        {associatedGeds[0]?.description ? (
+                          <RenderHTML
+                            contentWidth={width / 2 - 32}
+                            source={{ html: associatedGeds[0].description }}
+                            baseStyle={{
+                              fontSize: 14,
+                              color: "#374151",
+                              lineHeight: 20,
+                            }}
+                            defaultTextProps={{ selectable: true }}
+                            tagsStyles={{
+                              b: { fontWeight: "bold" },
+                              strong: { fontWeight: "bold" },
+                              u: { textDecorationLine: "underline" },
+                              i: { fontStyle: "italic" },
+                              em: { fontStyle: "italic" },
+                            }}
+                          />
+                        ) : (
+                          <Text style={styles.descriptionText}>
+                            Aucune description.
+                          </Text>
+                        )}
                       </View>
                     </TouchableOpacity>
                   </View>

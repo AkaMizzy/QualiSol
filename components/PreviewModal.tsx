@@ -1007,11 +1007,13 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   metadataCard: {
-    backgroundColor: "rgba(0, 0, 0, 0.85)",
+    backgroundColor: "rgba(17, 34, 78, 0.92)",
     borderRadius: 16,
     padding: 16,
     gap: 12,
     backdropFilter: "blur(10px)",
+    borderWidth: 1,
+    borderColor: "#f87b1b",
   },
   metadataSection: {
     gap: 4,
