@@ -4,10 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../components/AppHeader";
+import companyService from "../../services/companyService";
+import { Company } from "../../types/company";
 
 type ParameterCard = {
   title: string;
@@ -68,6 +70,14 @@ export default function ParametersScreen() {
   const [folderTypeManagerVisible, setFolderTypeManagerVisible] =
     useState(false);
   const [createCompanyVisible, setCreateCompanyVisible] = useState(false);
+  const [company, setCompany] = useState<Company | null>(null);
+
+  useEffect(() => {
+    companyService
+      .getCompany()
+      .then(setCompany)
+      .catch(() => {});
+  }, []);
 
   const isAdmin = user?.role === "Admin" || user?.role === "Super Admin";
 
@@ -95,6 +105,9 @@ export default function ParametersScreen() {
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Paramètres</Text>
+        {!!company?.message && (
+          <Text style={styles.headerMessage}>{company.message}</Text>
+        )}
       </View>
 
       <ScrollView
@@ -171,9 +184,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   header: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
     paddingHorizontal: 16,
     paddingVertical: 14,
     backgroundColor: "white",
@@ -183,7 +195,14 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#11224e",
+    color: "#f87b1b",
+    textAlign: "center",
+  },
+  headerMessage: {
+    fontSize: 13,
+    color: "#6b7280",
+    textAlign: "center",
+    marginTop: 4,
   },
   content: {
     flex: 1,

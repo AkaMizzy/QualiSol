@@ -36,4 +36,10 @@ export interface Company {
   prompt4?: string | null;
   prompt5?: string | null;
   powredby?: string | null;
+  partener?: number | null;
+  modetest?: string | null;
+  idparain?: string | null;
+  parain?: string | null;
+  parainage?: number | null;
+  message?: number | null;
 }
