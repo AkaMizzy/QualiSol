@@ -144,7 +144,7 @@ export default function ParametersScreen() {
             <View style={styles.cardContent}>
               <Text style={styles.cardTitle}>Parrainer</Text>
               <Text style={styles.cardDescription}>
-                Créer un nouvel organisme
+                Profitez et bénéficiez de nos offres de parrainage
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#d1d5db" />
