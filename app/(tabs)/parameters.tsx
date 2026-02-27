@@ -118,18 +118,37 @@ export default function ParametersScreen() {
             <RenderHTML
               contentWidth={width - 32}
               source={{ html: company.message }}
-              tagsStyles={{
-                body: {
-                  fontSize: 13,
-                  color: "#6b7280",
-                  textAlign: "center",
-                },
-                b: { fontWeight: "bold" },
-                strong: { fontWeight: "bold" },
-                u: { textDecorationLine: "underline" },
-                i: { fontStyle: "italic" },
-                em: { fontStyle: "italic" },
+              baseStyle={{
+                fontSize: 13,
+                color: "#6b7280",
+                textAlign: "center",
               }}
+              defaultTextProps={{ selectable: true }}
+              tagsStyles={{
+                          b: { fontWeight: "bold", color: "#FFFFFF" },
+                          strong: { fontWeight: "bold", color: "#FFFFFF" },
+                          u: { textDecorationLine: "underline" },
+                          i: { fontStyle: "italic" },
+                          em: { fontStyle: "italic" },
+                          h1: {
+                            fontSize: 17,
+                            fontWeight: "bold",
+                            color: "#FFFFFF",
+                            marginBottom: 4,
+                          },
+                          h2: {
+                            fontSize: 15,
+                            fontWeight: "bold",
+                            color: "#f87b1b",
+                            marginBottom: 2,
+                          },
+                          h3: {
+                            fontSize: 14,
+                            fontWeight: "600",
+                            color: "#CCCCCC",
+                            marginBottom: 2,
+                          },
+                        }}
             />
           </View>
         )}

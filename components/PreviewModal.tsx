@@ -3,17 +3,19 @@ import { Audio, ResizeMode, Video } from "expo-av";
 import { Image } from "expo-image";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Linking,
-    Modal,
-    Pressable,
-    Share,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Linking,
+  Modal,
+  Pressable,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
 } from "react-native";
+import RenderHTML from "react-native-render-html";
 
 interface PreviewModalProps {
   visible: boolean;
@@ -91,6 +93,7 @@ export default function PreviewModal({
   const [showMetadata, setShowMetadata] = useState(mediaType === "image");
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [timeLeft, setTimeLeft] = useState(wait);
+  const { width } = useWindowDimensions();
 
   const [forceShowClose, setForceShowClose] = useState(false);
 
@@ -278,104 +281,6 @@ export default function PreviewModal({
     } finally {
       setIsLoading(false);
     }
-  };
-
-  /**
-   * Renders a description string using HTML-like styled elements.
-   * Supported patterns:
-   *   # Heading        → large bold heading
-   *   ## Sub-heading   → medium bold heading
-   *   **bold**         → bold inline text
-   *   --- or ***       → horizontal rule
-   *   blank line       → paragraph separator
-   */
-  const renderHtmlDescription = (text: string) => {
-    const lines = text.split(/\r?\n/);
-    const elements: React.ReactNode[] = [];
-
-    lines.forEach((line, index) => {
-      const trimmed = line.trim();
-
-      // Horizontal rule: ---, ***, ___
-      if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
-        elements.push(<View key={index} style={styles.descHr} />);
-        return;
-      }
-
-      // H1: # heading
-      if (trimmed.startsWith("# ")) {
-        elements.push(
-          <Text key={index} style={styles.descH1}>
-            {trimmed.slice(2)}
-          </Text>,
-        );
-        return;
-      }
-
-      // H2: ## heading
-      if (trimmed.startsWith("## ")) {
-        elements.push(
-          <Text key={index} style={styles.descH2}>
-            {trimmed.slice(3)}
-          </Text>,
-        );
-        return;
-      }
-
-      // H3: ### heading
-      if (trimmed.startsWith("### ")) {
-        elements.push(
-          <Text key={index} style={styles.descH3}>
-            {trimmed.slice(4)}
-          </Text>,
-        );
-        return;
-      }
-
-      // Empty line → spacer
-      if (trimmed === "") {
-        elements.push(<View key={index} style={styles.descSpacer} />);
-        return;
-      }
-
-      // Bullet list item: - item or * item
-      if (/^[-*]\s/.test(trimmed)) {
-        const content = trimmed.slice(2);
-        elements.push(
-          <View key={index} style={styles.descListItem}>
-            <Text style={styles.descBullet}>{"•"}</Text>
-            <Text style={styles.descParagraph}>{renderInline(content)}</Text>
-          </View>,
-        );
-        return;
-      }
-
-      // Regular paragraph with optional inline bold
-      elements.push(
-        <Text key={index} style={styles.descParagraph}>
-          {renderInline(trimmed)}
-        </Text>,
-      );
-    });
-
-    return <View style={styles.descContainer}>{elements}</View>;
-  };
-
-  /**
-   * Parses inline **bold** markers and returns mixed Text nodes.
-   */
-  const renderInline = (text: string): React.ReactNode[] => {
-    const parts = text.split(/(\*\*[^*]+\*\*)/g);
-    return parts.map((part, i) => {
-      if (part.startsWith("**") && part.endsWith("**")) {
-        return (
-          <Text key={i} style={styles.descBold}>
-            {part.slice(2, -2)}
-          </Text>
-        );
-      }
-      return <Text key={i}>{part}</Text>;
-    });
   };
 
   if (!mediaUrl || !mediaType) {
@@ -729,10 +634,19 @@ export default function PreviewModal({
                       </Text>
                     </View>
                   )}
+                  {chantier && (
+                    <View style={styles.metadataItem}>
+                      <Ionicons
+                        name="business-outline"
+                        size={16}
+                        color="#f87b1b"
+                      />
+                      <Text style={styles.metadataSmallValue}>{chantier}</Text>
+                    </View>
+                  )}
                 </View>
                 {voiceNoteUrl && (
                   <View style={styles.metadataSection}>
-                    <Text style={styles.metadataLabel}>Note Vocale</Text>
                     <View style={styles.miniPlayerContainer}>
                       <Pressable
                         style={styles.miniPlayButton}
@@ -820,43 +734,45 @@ export default function PreviewModal({
                   </View>
                 )}
 
-                {chantier && (
-                  <View style={styles.metadataSection}>
-                    <Text style={styles.metadataLabel}>Chantier</Text>
-                    <Text style={styles.metadataValue}>{chantier}</Text>
-                  </View>
-                )}
-
                 {description && (
                   <View style={styles.metadataSection}>
-                    <Text style={styles.metadataLabel}>Description</Text>
-                    <Pressable
-                      onPress={() =>
-                        setIsDescriptionExpanded(!isDescriptionExpanded)
-                      }
-                    >
-                      {isDescriptionExpanded ? (
-                        renderHtmlDescription(description)
-                      ) : (
-                        <Text style={styles.metadataValue} numberOfLines={2}>
-                          {description.replace(/[#*_\-]+/g, "").trim()}
-                        </Text>
-                      )}
-                      {description.length > 80 && (
-                        <Text
-                          style={{
+                    <View style={{ width: "100%", marginTop: 4 }}>
+                      <RenderHTML
+                        contentWidth={width - 64}
+                        source={{ html: description }}
+                        baseStyle={{
+                          fontSize: 15,
+                          color: "#E0E0E0",
+                          lineHeight: 20,
+                        }}
+                        defaultTextProps={{ selectable: true }}
+                        tagsStyles={{
+                          b: { fontWeight: "bold", color: "#FFFFFF" },
+                          strong: { fontWeight: "bold", color: "#FFFFFF" },
+                          u: { textDecorationLine: "underline" },
+                          i: { fontStyle: "italic" },
+                          em: { fontStyle: "italic" },
+                          h1: {
+                            fontSize: 17,
+                            fontWeight: "bold",
+                            color: "#FFFFFF",
+                            marginBottom: 4,
+                          },
+                          h2: {
+                            fontSize: 15,
+                            fontWeight: "bold",
                             color: "#f87b1b",
-                            fontSize: 12,
-                            marginTop: 4,
+                            marginBottom: 2,
+                          },
+                          h3: {
+                            fontSize: 14,
                             fontWeight: "600",
-                          }}
-                        >
-                          {isDescriptionExpanded
-                            ? "▲ Voir moins"
-                            : "▼ Voir plus"}
-                        </Text>
-                      )}
-                    </Pressable>
+                            color: "#CCCCCC",
+                            marginBottom: 2,
+                          },
+                        }}
+                      />
+                    </View>
                   </View>
                 )}
 
@@ -1115,6 +1031,7 @@ const styles = StyleSheet.create({
   metadataRow: {
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "center",
     gap: 12,
   },
   metadataItem: {
