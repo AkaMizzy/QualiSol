@@ -5,7 +5,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import RenderHTML from "react-native-render-html";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../components/AppHeader";
 import companyService from "../../services/companyService";
@@ -71,6 +79,7 @@ export default function ParametersScreen() {
     useState(false);
   const [createCompanyVisible, setCreateCompanyVisible] = useState(false);
   const [company, setCompany] = useState<Company | null>(null);
+  const { width } = useWindowDimensions();
 
   useEffect(() => {
     companyService
@@ -106,7 +115,19 @@ export default function ParametersScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Paramètres</Text>
         {!!company?.message && (
-          <Text style={styles.headerMessage}>{company.message}</Text>
+          <View style={styles.messageWrapper}>
+            <RenderHTML
+              contentWidth={width - 32} // padding horizontal 16*2
+              source={{ html: company.message }}
+              tagsStyles={{
+                body: {
+                  fontSize: 13,
+                  color: "#6b7280",
+                  textAlign: "center",
+                },
+              }}
+            />
+          </View>
         )}
       </View>
 
@@ -198,11 +219,10 @@ const styles = StyleSheet.create({
     color: "#f87b1b",
     textAlign: "center",
   },
-  headerMessage: {
-    fontSize: 13,
-    color: "#6b7280",
-    textAlign: "center",
+  messageWrapper: {
     marginTop: 4,
+    width: "100%",
+    alignItems: "center",
   },
   content: {
     flex: 1,

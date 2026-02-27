@@ -41,5 +41,5 @@ export interface Company {
   idparain?: string | null;
   parain?: string | null;
   parainage?: number | null;
-  message?: number | null;
+  message?: string | null;
 }
