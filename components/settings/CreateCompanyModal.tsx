@@ -6,17 +6,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -194,6 +194,14 @@ export default function CreateCompanyModal({ visible, onClose }: Props) {
           style={{ flex: 1 }}
         >
           <ScrollView contentContainerStyle={styles.scrollContent}>
+            {/* Page title */}
+            <View style={styles.titleBlock}>
+              <Ionicons name="gift" size={32} color="#f87b1b" />
+              <Text style={styles.titleText}>
+                Parrainer un confrère et bénéficier de nombreux avantages
+              </Text>
+            </View>
+
             <View style={styles.infoBox}>
               <Ionicons
                 name="shield-checkmark"
@@ -434,6 +442,19 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     gap: 14,
+  },
+  titleBlock: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 8,
+  },
+  titleText: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#f87b1b",
+    lineHeight: 24,
   },
   infoBox: {
     flexDirection: "row",

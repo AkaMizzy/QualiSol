@@ -23,6 +23,7 @@ type Props = {
   folders: Folder[];
   onSelect: (folderId: string) => void;
   users: CompanyUser[];
+  projects: { id: string; title: string }[];
   selectedFolderId?: string;
 };
 
@@ -32,6 +33,7 @@ export default function FolderSelectionModal({
   folders,
   onSelect,
   users,
+  projects,
   selectedFolderId,
 }: Props) {
   const { token } = useAuth();
@@ -52,20 +54,24 @@ export default function FolderSelectionModal({
       const ownerName = owner
         ? `${owner.firstname || ""} ${owner.lastname || ""}`
         : "";
+      const project = projects.find((p) => p.id === f.project_id);
+      const projectTitle = project?.title || "";
 
       return (
         f.title.toLowerCase().includes(lowerQuery) ||
         f.code.toLowerCase().includes(lowerQuery) ||
-        ownerName.toLowerCase().includes(lowerQuery)
+        ownerName.toLowerCase().includes(lowerQuery) ||
+        projectTitle.toLowerCase().includes(lowerQuery)
       );
     });
-  }, [folders, searchQuery, users]);
+  }, [folders, searchQuery, users, projects]);
 
   const renderItem = ({ item }: { item: Folder }) => {
     const owner = users.find((u) => u.id === item.owner_id);
     const ownerName = owner
       ? `${owner.firstname || ""} ${owner.lastname || ""}`.trim() || owner.email
       : "Propriétaire inconnu";
+    const project = projects.find((p) => p.id === item.project_id);
     const isSelected = item.id === selectedFolderId;
 
     return (
@@ -77,9 +83,28 @@ export default function FolderSelectionModal({
         }}
       >
         <View style={styles.itemContent}>
-          <Text style={[styles.itemTitle, isSelected && styles.textSelected]}>
-            {item.title}
-          </Text>
+          <View style={styles.itemTitleRow}>
+            <Text style={[styles.itemTitle, isSelected && styles.textSelected]}>
+              {item.title}
+            </Text>
+            {project && (
+              <View
+                style={[
+                  styles.projectBadge,
+                  isSelected && styles.projectBadgeSelected,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.projectBadgeText,
+                    isSelected && styles.projectBadgeTextSelected,
+                  ]}
+                >
+                  {project.title}
+                </Text>
+              </View>
+            )}
+          </View>
           <Text
             style={[styles.itemSubtitle, isSelected && styles.textSelected]}
           >
@@ -227,11 +252,37 @@ const styles = StyleSheet.create({
   itemContent: {
     flex: 1,
   },
+  itemTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 4,
+  },
   itemTitle: {
     fontSize: 16,
     fontWeight: "600",
     color: "#111827",
-    marginBottom: 4,
+  },
+  projectBadge: {
+    backgroundColor: "#fff7ed",
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  projectBadgeSelected: {
+    backgroundColor: "#f87b1b",
+    borderColor: "#f87b1b",
+  },
+  projectBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#f87b1b",
+  },
+  projectBadgeTextSelected: {
+    color: "#fff",
   },
   itemSubtitle: {
     fontSize: 14,

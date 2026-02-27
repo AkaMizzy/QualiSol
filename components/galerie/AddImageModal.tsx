@@ -128,6 +128,7 @@ export default function AddImageModal({
   // Contextual states
   const [folders, setFolders] = useState<Folder[]>([]);
   const [users, setUsers] = useState<CompanyUser[]>([]);
+  const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [folderModalVisible, setFolderModalVisible] = useState(false);
   const [loadingContext, setLoadingContext] = useState(true);
@@ -536,10 +537,12 @@ export default function AddImageModal({
       if (!token || !user) return;
       setLoadingContext(true);
       try {
-        const [fetchedFolders, fetchedUsers] = await Promise.all([
-          folderService.getAllFolders(token),
-          getUsers(),
-        ]);
+        const [fetchedFolders, fetchedUsers, fetchedProjects] =
+          await Promise.all([
+            folderService.getAllFolders(token),
+            getUsers(),
+            folderService.getAllProjects(token),
+          ]);
 
         let availableFolders = fetchedFolders.filter(
           (f) => f.foldertype_id === null || f.foldertype_id === undefined,
@@ -552,6 +555,7 @@ export default function AddImageModal({
 
         setFolders(availableFolders);
         setUsers(fetchedUsers);
+        setProjects(fetchedProjects);
       } catch (err) {
         console.error("Failed to fetch context data", err);
       } finally {
@@ -1005,7 +1009,7 @@ export default function AddImageModal({
 
                 {/* CONTEXTUAL SECTION */}
                 <View style={[styles.contextualSection, { marginTop: 15 }]}>
-                  <Text style={styles.label}>Voulez-vous choisir un dossier</Text>
+                  <Text style={styles.label}>Sélectionner un dossier</Text>
                   {loadingContext ? (
                     <ActivityIndicator size="small" color={COLORS.primary} />
                   ) : folders.length === 0 ? (
@@ -1043,8 +1047,18 @@ export default function AddImageModal({
                             : styles.selectPlaceholder
                         }
                       >
-                        {folders.find((f) => f.id === selectedFolderId)
-                          ?.title || "Sélectionner un dossier"}
+                        {(() => {
+                          const f = folders.find(
+                            (f) => f.id === selectedFolderId,
+                          );
+                          if (!f) return "Sélectionner un dossier";
+                          const proj = projects.find(
+                            (p) => p.id === f.project_id,
+                          );
+                          return proj
+                            ? `${f.title}  ·  ${proj.title}`
+                            : f.title;
+                        })()}
                       </Text>
                       <Ionicons
                         name="chevron-down"
@@ -1464,6 +1478,7 @@ export default function AddImageModal({
         onClose={() => setFolderModalVisible(false)}
         folders={folders}
         users={users}
+        projects={projects}
         onSelect={(id) => setSelectedFolderId(id)}
         selectedFolderId={selectedFolderId || undefined}
       />
@@ -1638,7 +1653,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.lightWhite,
     borderRadius: SIZES.small,
     borderWidth: 1,
-    borderColor: COLORS.gray2,
+    borderColor: "#f87b1b",
   },
   selectText: {
     fontSize: SIZES.medium,
