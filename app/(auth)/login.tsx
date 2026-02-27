@@ -310,6 +310,12 @@ export default function LoginScreen() {
               entering={FadeInUp.delay(600).springify().damping(12)}
               style={[styles.footer, { paddingBottom: Math.max(16, bottom) }]}
             >
+              <View style={styles.signUpRow}>
+                <Text style={styles.footerText}>Pas encore de compte? </Text>
+                <TouchableOpacity onPress={() => router.push("/Register")}>
+                  <Text style={styles.footerLink}>S'inscrire</Text>
+                </TouchableOpacity>
+              </View>
               <Text style={styles.copyrightText}>
                 <Text style={styles.copyrightBrand}>QUALIsol</Text> ©
                 {new Date().getFullYear()}. Tous droits réservés.
@@ -604,6 +610,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: 20,
     flexShrink: 0,
+  },
+  signUpRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
   },
   footerText: {
     fontSize: 14,

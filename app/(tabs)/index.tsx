@@ -7,17 +7,17 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    LayoutAnimation,
-    Linking,
-    Pressable,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    View,
-    useWindowDimensions,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  LayoutAnimation,
+  Linking,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../components/AppHeader";
@@ -27,7 +27,6 @@ import DayEventsModal from "../../components/calander/DayEventsModal";
 
 import FolderQuestionsModal from "@/components/folder/FolderQuestionsModal";
 import { ICONS } from "@/constants/Icons";
-import companyService from "@/services/companyService";
 import folderService, { Folder, Project } from "@/services/folderService";
 import { getGedsBySource } from "@/services/gedService";
 import { getArchivedStatusId } from "@/services/statusService";
@@ -168,12 +167,6 @@ export default function DashboardScreen() {
     retard: number;
     canceled: number;
   } | null>(null);
-  const [todayActivities, setTodayActivities] = useState<any[]>([]);
-  const [overdueActivities, setOverdueActivities] = useState<any[]>([]);
-  const [upcomingActivities, setUpcomingActivities] = useState<any[]>([]);
-  const [expandedSection, setExpandedSection] = useState<string | null>(
-    "overdue",
-  );
   const [companyTitle, setCompanyTitle] = useState<string>("");
 
   // System grid items only (no folder types in grid)
@@ -355,54 +348,7 @@ export default function DashboardScreen() {
         if (!statsRes.ok)
           throw new Error(statsData.error || "Failed to load stats");
         setStats(statsData);
-
-        // Fetch today's activities
-        const activitiesRes = await fetch(
-          `${API_CONFIG.BASE_URL}/today-activities`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
-        const activitiesData = await activitiesRes.json();
-        if (activitiesRes.ok) {
-          setTodayActivities(activitiesData);
-        }
-
-        // Fetch overdue activities
-        const overdueRes = await fetch(
-          `${API_CONFIG.BASE_URL}/overdue-activities`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
-        const overdueData = await overdueRes.json();
-        if (overdueRes.ok) {
-          setOverdueActivities(overdueData);
-        }
-
-        // Fetch upcoming activities
-        const upcomingRes = await fetch(
-          `${API_CONFIG.BASE_URL}/upcoming-activities`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
-        const upcomingData = await upcomingRes.json();
-        if (upcomingRes.ok) {
-          setUpcomingActivities(upcomingData);
-        }
-
-        // Fetch company info
-        try {
-          const companyData = await companyService.getCompany();
-          if (companyData && companyData.title) {
-            setCompanyTitle(companyData.title);
-          }
-        } catch (error) {
-          console.error("Failed to fetch company info:", error);
-        }
       } catch {
-        // keep UI functional without stats
         setStats({
           pending: 0,
           today: 0,
@@ -410,27 +356,9 @@ export default function DashboardScreen() {
           retard: 0,
           canceled: 0,
         });
-        setTodayActivities([]);
-        setOverdueActivities([]);
-        setUpcomingActivities([]);
       }
     })();
   }, [token]);
-
-  const toggleSection = (section: string) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setExpandedSection(expandedSection === section ? null : section);
-  };
-
-  // Helper function to format time
-  const formatTime = (dateString: string) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("fr-FR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   const onMonthChange = useCallback(
     async (startIso: string, endIso: string) => {
@@ -596,8 +524,25 @@ export default function DashboardScreen() {
           <>
             {/* ── Folders Grid Section ── */}
             <View style={styles.foldersSectionHeader}>
-              <Ionicons name="folder-open-outline" size={20} color="#f87b1b" />
-              <Text style={styles.foldersSectionTitle}>Dossiers</Text>
+              <View style={styles.foldersSectionTitleContainer}>
+                <Ionicons
+                  name="folder-open-outline"
+                  size={20}
+                  color="#f87b1b"
+                />
+                <Text style={styles.foldersSectionTitle}>Contrôles</Text>
+              </View>
+              <Pressable
+                onPress={() => router.push("/danger")}
+                style={styles.todoHeaderButton}
+              >
+                <Image
+                  source={require("../../assets/icons/danger.png")}
+                  style={{ width: 20, height: 20 }}
+                  contentFit="contain"
+                />
+                <Text style={styles.todoHeaderText}>To-Do</Text>
+              </Pressable>
             </View>
             <View style={styles.foldersSection}>{renderFolderRows()}</View>
 
@@ -634,226 +579,6 @@ export default function DashboardScreen() {
                 />
               </View>
             )}
-
-            {/* Recent Activity */}
-            <View
-              style={[
-                styles.section,
-                !isCalendarVisible && styles.sectionNoCalendar,
-              ]}
-            >
-              <View style={styles.sectionHeader}>
-                <Pressable
-                  onPress={() => {
-                    LayoutAnimation.configureNext(
-                      LayoutAnimation.Presets.easeInEaseOut,
-                    );
-                    setIsCalendarVisible(!isCalendarVisible);
-                  }}
-                  style={styles.calendarToggle}
-                >
-                  <Image
-                    source={require("../../assets/icons/calendar.png")}
-                    style={{ width: 24, height: 24 }}
-                  />
-                </Pressable>
-
-                <Text style={styles.sectionTitle}>Activités Récentes</Text>
-
-                <Pressable
-                  onPress={() => router.push("/danger")}
-                  style={styles.calendarToggle}
-                >
-                  <Image
-                    source={require("../../assets/icons/danger.png")}
-                    style={{ width: 24, height: 24 }}
-                  />
-                </Pressable>
-              </View>
-              {/* Activity Tabs */}
-              <View style={styles.activityTabsContainer}>
-                <Pressable
-                  onPress={() => toggleSection("overdue")}
-                  style={[
-                    styles.activityTab,
-                    expandedSection === "overdue" && styles.activeTab,
-                  ]}
-                >
-                  <Text style={[styles.activityTabText, { color: "#FF3B30" }]}>
-                    En Retard ({overdueActivities.length})
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => toggleSection("today")}
-                  style={[
-                    styles.activityTab,
-                    expandedSection === "today" && styles.activeTab,
-                  ]}
-                >
-                  <Text style={[styles.activityTabText, { color: "#f87b1b" }]}>
-                    Aujourd&apos;hui ({todayActivities.length})
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => toggleSection("upcoming")}
-                  style={[
-                    styles.activityTab,
-                    expandedSection === "upcoming" && styles.activeTab,
-                  ]}
-                >
-                  <Text style={[styles.activityTabText, { color: "#007AFF" }]}>
-                    À Venir ({upcomingActivities.length})
-                  </Text>
-                </Pressable>
-              </View>
-
-              {/* Expanded Content */}
-              <View style={styles.activityContentPlaceholder}>
-                {expandedSection === "overdue" && (
-                  <View style={styles.activityContainer}>
-                    {overdueActivities.length > 0 ? (
-                      overdueActivities.map((activity) => (
-                        <Pressable
-                          key={activity.id}
-                          style={styles.activityItem}
-                        >
-                          <View style={styles.activityIcon}>
-                            <Ionicons
-                              name="warning"
-                              size={16}
-                              color="#FF3B30"
-                            />
-                          </View>
-                          <View style={styles.activityContent}>
-                            <Text
-                              style={[
-                                styles.activityText,
-                                { color: "#FF3B30" },
-                              ]}
-                            >
-                              {activity.title || "Activité sans titre"}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.activityTime,
-                                { color: "#FF3B30" },
-                              ]}
-                            >
-                              {formatTime(activity.date_planification)} • En
-                              retard
-                              {activity.declaration_title &&
-                                ` • ${activity.declaration_title}`}
-                            </Text>
-                          </View>
-                        </Pressable>
-                      ))
-                    ) : (
-                      <View style={styles.activityItem}>
-                        <Text
-                          style={[styles.activityText, { color: "#FF3B30" }]}
-                        >
-                          Aucune activité en retard
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-                {expandedSection === "today" && (
-                  <View style={styles.activityContainer}>
-                    {todayActivities.length > 0 ? (
-                      todayActivities.map((activity) => (
-                        <Pressable
-                          key={activity.id}
-                          style={styles.activityItem}
-                        >
-                          <View style={styles.activityIcon}>
-                            <Ionicons name="time" size={16} color="#f87b1b" />
-                          </View>
-                          <View style={styles.activityContent}>
-                            <Text
-                              style={[
-                                styles.activityText,
-                                { color: "#f87b1b" },
-                              ]}
-                            >
-                              {activity.title || "Activité sans titre"}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.activityTime,
-                                { color: "#f87b1b" },
-                              ]}
-                            >
-                              {formatTime(activity.date_planification)} •
-                              Aujourd&apos;hui
-                              {activity.declaration_title &&
-                                ` • ${activity.declaration_title}`}
-                            </Text>
-                          </View>
-                        </Pressable>
-                      ))
-                    ) : (
-                      <View style={styles.activityItem}>
-                        <Text
-                          style={[styles.activityText, { color: "#f87b1b" }]}
-                        >
-                          Aucune activité prévue aujourd&apos;hui
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-                {expandedSection === "upcoming" && (
-                  <View style={styles.activityContainer}>
-                    {upcomingActivities.length > 0 ? (
-                      upcomingActivities.map((activity) => (
-                        <Pressable
-                          key={activity.id}
-                          style={styles.activityItem}
-                        >
-                          <View style={styles.activityIcon}>
-                            <Ionicons
-                              name="calendar"
-                              size={16}
-                              color="#007AFF"
-                            />
-                          </View>
-                          <View style={styles.activityContent}>
-                            <Text
-                              style={[
-                                styles.activityText,
-                                { color: "#007AFF" },
-                              ]}
-                            >
-                              {activity.title || "Activité sans titre"}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.activityTime,
-                                { color: "#007AFF" },
-                              ]}
-                            >
-                              {formatTime(activity.date_planification)} • À
-                              venir
-                              {activity.declaration_title &&
-                                ` • ${activity.declaration_title}`}
-                            </Text>
-                          </View>
-                        </Pressable>
-                      ))
-                    ) : (
-                      <View style={styles.activityItem}>
-                        <Text
-                          style={[styles.activityText, { color: "#007AFF" }]}
-                        >
-                          Aucune activité à venir
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-              </View>
-            </View>
 
             {/* Spacer for custom tab bar */}
             <View style={{ height: 100 }} />
@@ -1025,10 +750,31 @@ const styles = StyleSheet.create({
   foldersSectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 10,
+  },
+  foldersSectionTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  todoHeaderButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff8f3",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+    gap: 6,
+  },
+  todoHeaderText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#f87b1b",
   },
   foldersSectionTitle: {
     fontSize: 18,

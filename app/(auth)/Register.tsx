@@ -1,12 +1,12 @@
-import CaptchaModal from '@/components/CaptchaModal';
-import CustomAlert from '@/components/CustomAlert';
-import { ICONS } from '@/constants/Icons';
-import { checkEmailExists, signup } from '@/services/authService';
-import { Ionicons } from '@expo/vector-icons';
-import Checkbox from 'expo-checkbox';
-import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import CaptchaModal from "@/components/CaptchaModal";
+import CustomAlert from "@/components/CustomAlert";
+import { ICONS } from "@/constants/Icons";
+import { checkEmailExists, signup } from "@/services/authService";
+import { Ionicons } from "@expo/vector-icons";
+import Checkbox from "expo-checkbox";
+import { Image } from "expo-image";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -20,9 +20,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface Country {
   name: string;
@@ -32,29 +31,33 @@ interface Country {
 export default function RegisterScreen() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    title: '',
-    pays: '',
-    ville: '',
-    phone: '',
-    email: '',
+    title: "",
+    pays: "",
+    ville: "",
+    phone: "",
+    email: "",
   });
   const [countries, setCountries] = useState<Country[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   const [isCountryModalVisible, setCountryModalVisible] = useState(false);
   const [isCityModalVisible, setCityModalVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [isFetchingCities, setIsFetchingCities] = useState(false);
-  const [emailError, setEmailError] = useState('');
+  const [emailError, setEmailError] = useState("");
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [alertState, setAlertState] = useState({ visible: false, type: 'success' as 'success' | 'error', title: '', message: '' });
+  const [alertState, setAlertState] = useState({
+    visible: false,
+    type: "success" as "success" | "error",
+    title: "",
+    message: "",
+  });
   const [isEmailAvailable, setIsEmailAvailable] = useState(false);
   const [termsAccepted1, setTermsAccepted1] = useState(false);
   const [termsAccepted2, setTermsAccepted2] = useState(false);
-  const [captcha, setCaptcha] = useState('');
-  const [validationError, setValidationError] = useState('');
+  const [captcha, setCaptcha] = useState("");
+  const [validationError, setValidationError] = useState("");
   const [isCaptchaModalVisible, setCaptchaModalVisible] = useState(false);
-
 
   function isValidEmail(email: string) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -62,8 +65,9 @@ export default function RegisterScreen() {
   }
 
   const generateCaptcha = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
+    const chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let result = "";
     for (let i = 0; i < 4; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
@@ -73,7 +77,9 @@ export default function RegisterScreen() {
   useEffect(() => {
     const fetchCountries = async () => {
       try {
-        const response = await fetch('https://countriesnow.space/api/v0.1/countries/flag/images');
+        const response = await fetch(
+          "https://countriesnow.space/api/v0.1/countries/flag/images",
+        );
         const data = await response.json();
         if (!data.error) {
           setCountries(data.data);
@@ -91,11 +97,14 @@ export default function RegisterScreen() {
       const fetchCities = async () => {
         setIsFetchingCities(true);
         try {
-          const response = await fetch('https://countriesnow.space/api/v0.1/countries/cities', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ country: selectedCountry })
-          });
+          const response = await fetch(
+            "https://countriesnow.space/api/v0.1/countries/cities",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ country: selectedCountry }),
+            },
+          );
           const data = await response.json();
           if (!data.error) {
             setCities(data.data);
@@ -122,16 +131,16 @@ export default function RegisterScreen() {
   }, [isCaptchaModalVisible]);
 
   const handleInputChange = (field: string, value: string) => {
-    if (field === 'pays') {
-      setFormData(prev => ({ ...prev, [field]: value, ville: '' }));
+    if (field === "pays") {
+      setFormData((prev) => ({ ...prev, [field]: value, ville: "" }));
     } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
+      setFormData((prev) => ({ ...prev, [field]: value }));
     }
   };
 
   const checkEmailAvailability = async () => {
     if (!formData.email) {
-      setEmailError('');
+      setEmailError("");
       setIsEmailAvailable(false);
       return;
     }
@@ -144,10 +153,10 @@ export default function RegisterScreen() {
     try {
       const { exists } = await checkEmailExists(formData.email);
       if (exists) {
-        setEmailError('Cet email est déjà utilisé.');
+        setEmailError("Cet email est déjà utilisé.");
         setIsEmailAvailable(false);
       } else {
-        setEmailError('');
+        setEmailError("");
         setIsEmailAvailable(true);
       }
     } catch (error) {
@@ -164,35 +173,61 @@ export default function RegisterScreen() {
     setIsLoading(false);
 
     if (result.success) {
-      setAlertState({ visible: true, type: 'success', title: 'Succès', message: '✅ Votre compte a été créé avec succès. Consultez votre boîte mail pour le mot de passe.' });
-      setTimeout(() => router.push('/login'), 1200);
+      setAlertState({
+        visible: true,
+        type: "success",
+        title: "Succès",
+        message:
+          "✅ Votre compte a été créé avec succès. Consultez votre boîte mail pour le mot de passe.",
+      });
+      setTimeout(() => router.push("/login"), 1200);
     } else {
-      setAlertState({ visible: true, type: 'error', title: 'Erreur', message: `⚠️ ${result.error}` });
+      setAlertState({
+        visible: true,
+        type: "error",
+        title: "Erreur",
+        message: `⚠️ ${result.error}`,
+      });
     }
   };
 
-
   const handleSubmit = async () => {
     if (!termsAccepted1 || !termsAccepted2) {
-      setValidationError('Veuillez accepter les deux conditions avant de continuer.');
+      setValidationError(
+        "Veuillez accepter les deux conditions avant de continuer.",
+      );
       return;
     }
 
-    setValidationError('');
-
+    setValidationError("");
 
     if (!isValidEmail(formData.email)) {
-      setAlertState({ visible: true, type: 'error', title: 'Erreur', message: "Adresse e-mail invalide." });
+      setAlertState({
+        visible: true,
+        type: "error",
+        title: "Erreur",
+        message: "Adresse e-mail invalide.",
+      });
       return;
     }
     if (emailError) {
-      setAlertState({ visible: true, type: 'error', title: 'Erreur', message: emailError });
+      setAlertState({
+        visible: true,
+        type: "error",
+        title: "Erreur",
+        message: emailError,
+      });
       return;
     }
-    const requiredFields = ['title', 'email', 'phone', 'pays', 'ville'];
+    const requiredFields = ["title", "email", "phone", "pays", "ville"];
     for (const field of requiredFields) {
       if (!formData[field as keyof typeof formData]) {
-        setAlertState({ visible: true, type: 'error', title: 'Champs requis', message: `Le champ '${field}' est requis.` });
+        setAlertState({
+          visible: true,
+          type: "error",
+          title: "Champs requis",
+          message: `Le champ '${field}' est requis.`,
+        });
         return;
       }
     }
@@ -210,30 +245,37 @@ export default function RegisterScreen() {
     }
   };
 
-
   const handleSelectCountry = (countryName: string) => {
-    handleInputChange('pays', countryName);
+    handleInputChange("pays", countryName);
     setCountryModalVisible(false);
-    setSearchQuery('');
+    setSearchQuery("");
   };
 
   const handleSelectCity = (cityName: string) => {
-    handleInputChange('ville', cityName);
+    handleInputChange("ville", cityName);
     setCityModalVisible(false);
-    setSearchQuery('');
+    setSearchQuery("");
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scrollViewContent}>
           <View style={styles.header}>
-            <Image source={ICONS.icon} style={styles.logo} contentFit="contain" />
+            <View style={styles.logoContainer}>
+              <Image
+                source={ICONS.authIcon}
+                style={styles.logo}
+                contentFit="contain"
+              />
+            </View>
             <Text style={styles.title}>Créer un compte</Text>
-            <Text style={styles.subtitle}>Rejoignez la communauté qualisol</Text>
+            <Text style={styles.subtitle}>
+              Rejoignez la communauté qualisol
+            </Text>
           </View>
 
           <View style={styles.form}>
@@ -243,7 +285,7 @@ export default function RegisterScreen() {
                 placeholder="Nom de l'entreprise"
                 style={styles.input}
                 value={formData.title}
-                onChangeText={(text) => handleInputChange('title', text)}
+                onChangeText={(text) => handleInputChange("title", text)}
                 placeholderTextColor="#888"
               />
             </View>
@@ -253,7 +295,11 @@ export default function RegisterScreen() {
                 placeholder="Email"
                 style={styles.input}
                 value={formData.email}
-                onChangeText={(text) => { setIsEmailAvailable(false); setEmailError(''); handleInputChange('email', text); }}
+                onChangeText={(text) => {
+                  setIsEmailAvailable(false);
+                  setEmailError("");
+                  handleInputChange("email", text);
+                }}
                 onBlur={checkEmailAvailability}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -261,41 +307,54 @@ export default function RegisterScreen() {
               />
               {isCheckingEmail ? (
                 <ActivityIndicator size="small" />
-              ) : (
-                isEmailAvailable && !emailError ? (
-                  <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                ) : null
-              )}
+              ) : isEmailAvailable && !emailError ? (
+                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+              ) : null}
             </View>
-            {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+            {emailError ? (
+              <Text style={styles.errorText}>{emailError}</Text>
+            ) : null}
 
             <View style={styles.inputGroup}>
               <Ionicons name="call-outline" style={styles.inputIcon} />
               <TextInput
                 placeholder="Téléphone"
-                style={styles.input}  
+                style={styles.input}
                 value={formData.phone}
-                onChangeText={(text) => handleInputChange('phone', text)}
+                onChangeText={(text) => handleInputChange("phone", text)}
                 keyboardType="phone-pad"
                 placeholderTextColor="#888"
               />
             </View>
 
-            <TouchableOpacity style={styles.inputGroup} onPress={() => setCountryModalVisible(true)}>
+            <TouchableOpacity
+              style={styles.inputGroup}
+              onPress={() => setCountryModalVisible(true)}
+            >
               <Ionicons name="globe-outline" style={styles.inputIcon} />
-              <Text style={[styles.input, !formData.pays && styles.placeholderText]}>
-                {formData.pays || 'Pays'}
+              <Text
+                style={[styles.input, !formData.pays && styles.placeholderText]}
+              >
+                {formData.pays || "Pays"}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.inputGroup, !formData.pays && styles.disabledInput]}
+              style={[
+                styles.inputGroup,
+                !formData.pays && styles.disabledInput,
+              ]}
               onPress={() => formData.pays && setCityModalVisible(true)}
               disabled={!formData.pays}
             >
               <Ionicons name="map-outline" style={styles.inputIcon} />
-              <Text style={[styles.input, !formData.ville && styles.placeholderText]}>
-                {formData.ville || 'Ville'}
+              <Text
+                style={[
+                  styles.input,
+                  !formData.ville && styles.placeholderText,
+                ]}
+              >
+                {formData.ville || "Ville"}
               </Text>
               {isFetchingCities && <ActivityIndicator size="small" />}
             </TouchableOpacity>
@@ -305,9 +364,12 @@ export default function RegisterScreen() {
                 style={styles.checkbox}
                 value={termsAccepted1}
                 onValueChange={setTermsAccepted1}
-                color={termsAccepted1 ? '#f87b1b' : undefined}
+                color={termsAccepted1 ? "#f87b1b" : undefined}
               />
-              <Text style={styles.checkboxLabel}>J&apos;accepte le règlement interne et la confidentialité de QualiSol</Text>
+              <Text style={styles.checkboxLabel}>
+                J&apos;accepte le règlement interne et la confidentialité de
+                QualiSol
+              </Text>
             </View>
 
             <View style={styles.checkboxContainer}>
@@ -315,18 +377,32 @@ export default function RegisterScreen() {
                 style={styles.checkbox}
                 value={termsAccepted2}
                 onValueChange={setTermsAccepted2}
-                color={termsAccepted2 ? '#f87b1b' : undefined}
+                color={termsAccepted2 ? "#f87b1b" : undefined}
               />
-              <Text style={styles.checkboxLabel}>J&apos;accepte les conditions de Qualisol</Text>
+              <Text style={styles.checkboxLabel}>
+                J&apos;accepte les conditions de Qualisol
+              </Text>
             </View>
-            <TouchableOpacity onPress={() => Linking.openURL('https://www.muntadaa.com/qualisol/terms')}>
+            <TouchableOpacity
+              onPress={() =>
+                Linking.openURL("https://www.muntadaa.com/qualisol/terms")
+              }
+            >
               <Text style={styles.link}>Lire les conditions générales</Text>
             </TouchableOpacity>
-            
-            {validationError ? <Text style={styles.errorText}>{validationError}</Text> : null}
 
+            {validationError ? (
+              <Text style={styles.errorText}>{validationError}</Text>
+            ) : null}
 
-            <TouchableOpacity style={[styles.submitButton, (!termsAccepted1 || !termsAccepted2) && styles.disabledButton]} onPress={handleSubmit} disabled={isLoading || !termsAccepted1 || !termsAccepted2}>
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                (!termsAccepted1 || !termsAccepted2) && styles.disabledButton,
+              ]}
+              onPress={handleSubmit}
+              disabled={isLoading || !termsAccepted1 || !termsAccepted2}
+            >
               {isLoading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
@@ -337,7 +413,7 @@ export default function RegisterScreen() {
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Vous avez déjà un compte?</Text>
-            <TouchableOpacity onPress={() => router.push('/login')}>
+            <TouchableOpacity onPress={() => router.push("/login")}>
               <Text style={styles.signInText}>Se connecter</Text>
             </TouchableOpacity>
           </View>
@@ -352,7 +428,10 @@ export default function RegisterScreen() {
         statusBarTranslucent={false}
         presentationStyle="fullScreen"
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF' }} edges={['top', 'bottom']}>
+        <SafeAreaView
+          style={{ flex: 1, backgroundColor: "#FFF" }}
+          edges={["top", "bottom"]}
+        >
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Sélectionner un pays</Text>
             <TouchableOpacity onPress={() => setCountryModalVisible(false)}>
@@ -366,10 +445,15 @@ export default function RegisterScreen() {
             onChangeText={setSearchQuery}
           />
           <FlatList
-            data={countries.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))}
+            data={countries.filter((c) =>
+              c.name.toLowerCase().includes(searchQuery.toLowerCase()),
+            )}
             keyExtractor={(item) => item.name}
             renderItem={({ item }) => (
-              <TouchableOpacity style={styles.countryItem} onPress={() => handleSelectCountry(item.name)}>
+              <TouchableOpacity
+                style={styles.countryItem}
+                onPress={() => handleSelectCountry(item.name)}
+              >
                 <Image source={{ uri: item.flag }} style={styles.flag} />
                 <Text style={styles.countryName}>{item.name}</Text>
               </TouchableOpacity>
@@ -386,7 +470,10 @@ export default function RegisterScreen() {
         statusBarTranslucent={false}
         presentationStyle="fullScreen"
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF' }} edges={['top', 'bottom']}>
+        <SafeAreaView
+          style={{ flex: 1, backgroundColor: "#FFF" }}
+          edges={["top", "bottom"]}
+        >
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Sélectionner une ville</Text>
             <TouchableOpacity onPress={() => setCityModalVisible(false)}>
@@ -400,14 +487,21 @@ export default function RegisterScreen() {
             onChangeText={setSearchQuery}
           />
           <FlatList
-            data={cities.filter(c => c.toLowerCase().includes(searchQuery.toLowerCase()))}
+            data={cities.filter((c) =>
+              c.toLowerCase().includes(searchQuery.toLowerCase()),
+            )}
             keyExtractor={(item) => item}
             renderItem={({ item }) => (
-              <TouchableOpacity style={styles.cityItem} onPress={() => handleSelectCity(item)}>
+              <TouchableOpacity
+                style={styles.cityItem}
+                onPress={() => handleSelectCity(item)}
+              >
                 <Text style={styles.cityName}>{item}</Text>
               </TouchableOpacity>
             )}
-            ListEmptyComponent={<Text style={styles.emptyListText}>Aucune ville trouvée.</Text>}
+            ListEmptyComponent={
+              <Text style={styles.emptyListText}>Aucune ville trouvée.</Text>
+            }
           />
         </SafeAreaView>
       </Modal>
@@ -417,7 +511,7 @@ export default function RegisterScreen() {
         type={alertState.type}
         title={alertState.title}
         message={alertState.message}
-        onClose={() => setAlertState(prev => ({ ...prev, visible: false }))}
+        onClose={() => setAlertState((prev) => ({ ...prev, visible: false }))}
         duration={5000}
       />
       <CaptchaModal
@@ -434,125 +528,140 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   scrollViewContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: 20,
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 30,
   },
+  logoContainer: {
+    width: 110,
+    aspectRatio: 1,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#11224e",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 15,
+    elevation: 10,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: "#f87b1b",
+  },
   logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 20,
+    width: "80%",
+    height: "80%",
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#11224e',
+    fontWeight: "bold",
+    color: "#11224e",
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     marginTop: 5,
   },
   form: {
-    width: '100%',
+    width: "100%",
   },
   inputGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f2f2f2',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f2f2f2",
     borderRadius: 10,
     paddingHorizontal: 15,
     marginBottom: 15,
     height: 50,
     borderWidth: 1,
-    borderColor: '#f87b1b',
+    borderColor: "#f87b1b",
   },
   inputIcon: {
     fontSize: 20,
-    color: '#888',
+    color: "#888",
     marginRight: 10,
   },
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   placeholderText: {
-    color: '#888',
+    color: "#888",
   },
   disabledInput: {
-    backgroundColor: '#e9ecef',
+    backgroundColor: "#e9ecef",
   },
   disabledButton: {
-    backgroundColor: '#cccccc',
+    backgroundColor: "#cccccc",
   },
   submitButton: {
-    backgroundColor: '#f87b1b',
+    backgroundColor: "#f87b1b",
     borderRadius: 30,
     height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 10,
   },
   submitButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 20,
   },
   footerText: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
   },
   signInText: {
     fontSize: 16,
-    color: '#f87b1b',
-    fontWeight: 'bold',
+    color: "#f87b1b",
+    fontWeight: "bold",
     marginLeft: 5,
   },
   errorText: {
-    color: 'red',
+    color: "red",
     marginBottom: 10,
     marginLeft: 5,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   searchInput: {
     height: 40,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderWidth: 1,
     borderRadius: 5,
     paddingHorizontal: 10,
     margin: 20,
   },
   countryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   flag: {
     width: 30,
@@ -565,51 +674,51 @@ const styles = StyleSheet.create({
   cityItem: {
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   cityName: {
     fontSize: 16,
   },
   emptyListText: {
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 20,
-    color: '#666',
+    color: "#666",
   },
   checkboxContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 15,
-    alignItems: 'center',
+    alignItems: "center",
   },
   checkbox: {
     marginRight: 10,
   },
   checkboxLabel: {
     fontSize: 14,
-    color: '#333',
+    color: "#333",
     flex: 1,
   },
   link: {
-    color: '#f87b1b',
-    textDecorationLine: 'underline',
-    textAlign: 'center',
+    color: "#f87b1b",
+    textDecorationLine: "underline",
+    textAlign: "center",
     marginBottom: 15,
   },
   captchaContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f2f2f2',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f2f2f2",
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#f87b1b',
+    borderColor: "#f87b1b",
   },
   captchaText: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     letterSpacing: 5,
-    color: '#11224e',
+    color: "#11224e",
     marginRight: 15,
   },
 });
