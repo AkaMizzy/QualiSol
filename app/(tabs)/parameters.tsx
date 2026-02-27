@@ -113,11 +113,10 @@ export default function ParametersScreen() {
       <AppHeader user={user || undefined} />
 
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Paramètres</Text>
         {!!company?.message && (
           <View style={styles.messageWrapper}>
             <RenderHTML
-              contentWidth={width - 32} // padding horizontal 16*2
+              contentWidth={width - 32}
               source={{ html: company.message }}
               tagsStyles={{
                 body: {
@@ -125,6 +124,11 @@ export default function ParametersScreen() {
                   color: "#6b7280",
                   textAlign: "center",
                 },
+                b: { fontWeight: "bold" },
+                strong: { fontWeight: "bold" },
+                u: { textDecorationLine: "underline" },
+                i: { fontStyle: "italic" },
+                em: { fontStyle: "italic" },
               }}
             />
           </View>
