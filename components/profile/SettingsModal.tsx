@@ -104,7 +104,7 @@ export default function SettingsModal({
           </View>
 
           <View style={styles.content}>
-            <Text style={styles.label}>Délai auto-capture (secondes)</Text>
+            <Text style={styles.label}>Délai auto-capture entre deux images (secondes)</Text>
             <TextInput
               style={styles.input}
               value={timebetweenStr}
@@ -114,7 +114,7 @@ export default function SettingsModal({
             />
 
             <Text style={[styles.label, { marginTop: 16 }]}>
-              Images par page
+              Nombre d'images par page
             </Text>
             <TextInput
               style={styles.input}

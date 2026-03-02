@@ -31,6 +31,7 @@ import { ICONS } from "@/constants/Icons";
 import folderService, { Folder, Project } from "@/services/folderService";
 import { getGedsBySource } from "@/services/gedService";
 import { getArchivedStatusId } from "@/services/statusService";
+import companyService from "../../services/companyService";
 import API_CONFIG from "../config/api";
 
 // System items that are not folder types
@@ -169,6 +170,7 @@ export default function DashboardScreen() {
     canceled: number;
   } | null>(null);
   const [companyTitle, setCompanyTitle] = useState<string>("");
+  const [controleHelp, setControleHelp] = useState<string | null>(null);
 
   // System grid items only (no folder types in grid)
   const [gridItems] = useState<GridItem[]>(SYSTEM_GRID_ITEMS);
@@ -203,6 +205,15 @@ export default function DashboardScreen() {
     }
     loadAuthData();
   }, []);
+
+  // ─── Load company controlehelp ────────────────────────────────────────────
+  useEffect(() => {
+    if (!token) return;
+    companyService
+      .getCompany()
+      .then((c) => setControleHelp(c?.controlehelp ?? null))
+      .catch(() => {});
+  }, [token]);
 
   // ─── Load archived status ─────────────────────────────────────────────────
   useEffect(() => {
@@ -459,7 +470,7 @@ export default function DashboardScreen() {
     if (visibleFolders.length === 0) {
       return (
         <View style={styles.foldersEmptyWrap}>
-          <Text style={styles.foldersEmptyText}>Aucun dossier disponible</Text>
+          <Text style={styles.foldersEmptyText}>Aucun contrôle disponible</Text>
         </View>
       );
     }
@@ -520,30 +531,30 @@ export default function DashboardScreen() {
             }}
             defaultTextProps={{ selectable: true }}
             tagsStyles={{
-                          b: { fontWeight: "bold", color: "#FFFFFF" },
-                          strong: { fontWeight: "bold", color: "#FFFFFF" },
-                          u: { textDecorationLine: "underline" },
-                          i: { fontStyle: "italic" },
-                          em: { fontStyle: "italic" },
-                          h1: {
-                            fontSize: 17,
-                            fontWeight: "bold",
-                            color: "#FFFFFF",
-                            marginBottom: 4,
-                          },
-                          h2: {
-                            fontSize: 15,
-                            fontWeight: "bold",
-                            color: "#f87b1b",
-                            marginBottom: 2,
-                          },
-                          h3: {
-                            fontSize: 14,
-                            fontWeight: "600",
-                            color: "#CCCCCC",
-                            marginBottom: 2,
-                          },
-                        }}
+              b: { fontWeight: "bold", color: "#FFFFFF" },
+              strong: { fontWeight: "bold", color: "#FFFFFF" },
+              u: { textDecorationLine: "underline" },
+              i: { fontStyle: "italic" },
+              em: { fontStyle: "italic" },
+              h1: {
+                fontSize: 17,
+                fontWeight: "bold",
+                color: "#FFFFFF",
+                marginBottom: 4,
+              },
+              h2: {
+                fontSize: 15,
+                fontWeight: "bold",
+                color: "#f87b1b",
+                marginBottom: 2,
+              },
+              h3: {
+                fontSize: 14,
+                fontWeight: "600",
+                color: "#CCCCCC",
+                marginBottom: 2,
+              },
+            }}
           />
         </View>
       )}
@@ -590,6 +601,28 @@ export default function DashboardScreen() {
                 </Pressable>
               </View>
             </View>
+            {/* Contrôle Help Banner */}
+            {!!controleHelp && (
+              <View style={styles.helpBanner}>
+                <Ionicons
+                  name="information-circle-outline"
+                  size={16}
+                  color="#f87b1b"
+                  style={{ marginTop: 2 }}
+                />
+                <RenderHTML
+                  contentWidth={width - 64}
+                  source={{ html: controleHelp }}
+                  baseStyle={{ fontSize: 13, color: "#374151", flex: 1 }}
+                  tagsStyles={{
+                    b: { fontWeight: "bold", color: "#11224e" },
+                    strong: { fontWeight: "bold", color: "#11224e" },
+                    i: { fontStyle: "italic" },
+                    em: { fontStyle: "italic" },
+                  }}
+                />
+              </View>
+            )}
             <View style={styles.foldersSection}>{renderFolderRows()}</View>
 
             {/* Calendar */}
@@ -634,7 +667,7 @@ export default function DashboardScreen() {
       <View style={styles.footer}>
         <Pressable
           onPress={() =>
-            Linking.openURL("https://www.muntadaa.com/qualisol/help")
+            Linking.openURL("https://www.muntadaa.com/qualisol/help.html")
           }
           style={{ padding: 8 }}
         >
@@ -657,7 +690,7 @@ export default function DashboardScreen() {
             </Text>
           ) : null}
           <Text style={styles.footerText}>
-            © 2025 Qualisol. Tous droits réservés.
+            © 2026 Qualisol. Tous droits réservés.
           </Text>
         </View>
         {["Super Admin", "Admin"].includes(user?.role) && (
@@ -1267,5 +1300,15 @@ const styles = StyleSheet.create({
   footerText: {
     color: "#f87b1b",
     fontSize: 12,
+  },
+  helpBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: "#fff7ed",
+    borderBottomWidth: 1,
+    borderBottomColor: "#fed7aa",
   },
 });

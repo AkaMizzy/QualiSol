@@ -3,19 +3,22 @@ import { AssignedGedView } from "@/components/danger/AssignedGedView";
 import GalerieCard from "@/components/galerie/GalerieCard";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
+import companyService from "@/services/companyService";
 import { Folder } from "@/services/folderService";
 import { Ged, getAssignedGeds } from "@/services/gedService";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Modal,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from "react-native";
+import RenderHTML from "react-native-render-html";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const ITEMS_PER_PAGE = 2;
@@ -40,6 +43,8 @@ function formatDateForGrid(dateStr?: string | null): string {
 
 export default function DangerScreen() {
   const { user, token } = useAuth();
+  const { width } = useWindowDimensions();
+  const [todoHelp, setTodoHelp] = useState<string | null>(null);
   const [assignedGeds, setAssignedGeds] = useState<Ged[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -94,6 +99,14 @@ export default function DangerScreen() {
     }
   }, [token, fetchAssignedGeds]);
 
+  // Load company help on mount
+  useEffect(() => {
+    companyService
+      .getCompany()
+      .then((c) => setTodoHelp(c?.todohelp ?? null))
+      .catch(() => {});
+  }, [token]);
+
   useEffect(() => {
     if (token) {
       fetchAssignedGeds();
@@ -137,6 +150,29 @@ export default function DangerScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader user={user || undefined} />
+
+      {/* Contextual Help Banner */}
+      {!!todoHelp && (
+        <View style={styles.helpBanner}>
+          <Ionicons
+            name="information-circle-outline"
+            size={16}
+            color="#f87b1b"
+            style={{ marginTop: 2 }}
+          />
+          <RenderHTML
+            contentWidth={width - 64}
+            source={{ html: todoHelp }}
+            baseStyle={{ fontSize: 13, color: "#374151", flex: 1 }}
+            tagsStyles={{
+              b: { fontWeight: "bold", color: "#11224e" },
+              strong: { fontWeight: "bold", color: "#11224e" },
+              i: { fontStyle: "italic" },
+              em: { fontStyle: "italic" },
+            }}
+          />
+        </View>
+      )}
 
       {isLoading && !isRefreshing ? (
         <View style={styles.skeletonContainer}>
@@ -366,5 +402,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#E0E0E0",
     borderRadius: SIZES.medium,
     marginBottom: SIZES.medium,
+  },
+  helpBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: "#fff7ed",
+    borderBottomWidth: 1,
+    borderBottomColor: "#fed7aa",
   },
 });

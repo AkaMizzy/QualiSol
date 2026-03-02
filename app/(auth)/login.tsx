@@ -1,7 +1,7 @@
 import * as authService from "@/services/authService";
 import {
-  getConnectivity,
-  startConnectivityMonitoring,
+    getConnectivity,
+    startConnectivityMonitoring,
 } from "@/services/connectivity";
 import { getHealthStatus, startHealthPolling } from "@/services/health";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,19 +12,19 @@ import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import {
-  SafeAreaView,
-  useSafeAreaInsets,
+    SafeAreaView,
+    useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import ConnectivityModal from "../../components/Connectivity/ConnectivityModal";
 import CustomAlert from "../../components/CustomAlert";
@@ -321,7 +321,7 @@ export default function LoginScreen() {
                 {new Date().getFullYear()}. Tous droits réservés.
               </Text>
               <TouchableOpacity
-                onPress={() => Linking.openURL("https://www.muntadaa.com")}
+                onPress={() => Linking.openURL("https://www.muntadaa.com/qualisol/help.html")}
                 accessibilityRole="link"
                 accessibilityHint="Ouvre www.muntaada.com dans le navigateur"
               >
@@ -467,24 +467,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   logoContainer: {
-    width: 110,
-    aspectRatio: 1,
-    borderRadius: 20,
-    backgroundColor: "#FFFFFF",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#11224e",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
-    elevation: 10,
     marginBottom: 8,
-    borderWidth: 2,
-    borderColor: "#f87b1b",
+    alignItems: "center",
+    justifyContent: "center",
   },
   logoImage: {
-    width: "80%",
-    height: "80%",
+    width: 230,
+    height: 90,
   },
   title: {
     fontSize: 28,

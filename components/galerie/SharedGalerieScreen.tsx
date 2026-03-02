@@ -49,6 +49,7 @@ import {
     View,
     useWindowDimensions,
 } from "react-native";
+import RenderHTML from "react-native-render-html";
 import { SafeAreaView } from "react-native-safe-area-context";
 import UserSelectionModal from "../UserSelectionModal";
 import BulkAddImageModal from "./BulkAddImageModal";
@@ -56,11 +57,12 @@ import BulkAddImageModal from "./BulkAddImageModal";
 interface SharedGalerieScreenProps {
   creationMode: "upload" | "capture";
   customButtonIcon?: any;
-  allowOffline?: boolean; // Default: false - controls offline storage/sync functionality
-  useBulkModal?: boolean; // Default: false - use BulkAddImageModal instead of AddImageModal
-  fetchData?: (token: string) => Promise<Ged[]>; // Optional custom fetch function
+  allowOffline?: boolean;
+  useBulkModal?: boolean;
+  fetchData?: (token: string) => Promise<Ged[]>;
   enableAssignment?: boolean;
   openModalOnFocus?: boolean;
+  helpMessage?: string | null;
 }
 
 export default function SharedGalerieScreen({
@@ -71,6 +73,7 @@ export default function SharedGalerieScreen({
   fetchData,
   enableAssignment = false,
   openModalOnFocus = false,
+  helpMessage,
 }: SharedGalerieScreenProps) {
   const { token, user } = useAuth();
   const IMAGES_PER_PAGE = user?.limitpage || 2;
@@ -616,6 +619,29 @@ export default function SharedGalerieScreen({
     <SafeAreaView style={styles.container}>
       <AppHeader user={user || undefined} />
 
+      {/* Contextual Help Banner */}
+      {!!helpMessage && (
+        <View style={styles.helpBanner}>
+          <Ionicons
+            name="information-circle-outline"
+            size={16}
+            color="#f87b1b"
+            style={{ marginTop: 2 }}
+          />
+          <RenderHTML
+            contentWidth={width - 64}
+            source={{ html: helpMessage }}
+            baseStyle={{ fontSize: 13, color: "#374151", flex: 1 }}
+            tagsStyles={{
+              b: { fontWeight: "bold", color: "#11224e" },
+              strong: { fontWeight: "bold", color: "#11224e" },
+              i: { fontStyle: "italic" },
+              em: { fontStyle: "italic" },
+            }}
+          />
+        </View>
+      )}
+
       {/* Network status indicator - only show when offline AND allowOffline enabled */}
       {allowOffline && networkStatus === "offline" && (
         <View
@@ -1059,5 +1085,15 @@ const styles = StyleSheet.create({
     fontSize: SIZES.small,
     color: COLORS.white,
     marginLeft: 4,
+  },
+  helpBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: "#fff7ed",
+    borderBottomWidth: 1,
+    borderBottomColor: "#fed7aa",
   },
 });

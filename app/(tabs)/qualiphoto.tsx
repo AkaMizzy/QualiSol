@@ -3,6 +3,7 @@ import CreateQualiPhotoModal from "@/components/reception/CreateQualiPhotoModal"
 import QualiPhotoDetail from "@/components/reception/QualiPhotoDetail";
 import { ICONS } from "@/constants/Icons";
 import { useAuth } from "@/contexts/AuthContext";
+import companyService from "@/services/companyService";
 import folderService, { Folder, Project } from "@/services/folderService";
 import { getArchivedStatusId } from "@/services/statusService";
 import { getUsers } from "@/services/userService";
@@ -19,7 +20,9 @@ import {
     StyleSheet,
     Text,
     View,
+    useWindowDimensions,
 } from "react-native";
+import RenderHTML from "react-native-render-html";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 function formatDateForGrid(dateStr?: string | null): string {
@@ -43,6 +46,8 @@ function formatDateForGrid(dateStr?: string | null): string {
 
 export default function QualiPhotoGalleryScreen() {
   const { user, token } = useAuth();
+  const { width } = useWindowDimensions();
+  const [suiviHelp, setSuiviHelp] = useState<string | null>(null);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -156,6 +161,14 @@ export default function QualiPhotoGalleryScreen() {
       setIsRefreshing(false);
     }
   }, [token, fetchFolders]);
+
+  // Load company help on mount
+  useEffect(() => {
+    companyService
+      .getCompany()
+      .then((c) => setSuiviHelp(c?.suivihelp ?? null))
+      .catch(() => {});
+  }, [token]);
 
   // Load folders on mount/token change
   useEffect(() => {
@@ -318,6 +331,29 @@ export default function QualiPhotoGalleryScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader user={user || undefined} />
+
+      {/* Contextual Help Banner */}
+      {!!suiviHelp && (
+        <View style={styles.helpBanner}>
+          <Ionicons
+            name="information-circle-outline"
+            size={16}
+            color="#f87b1b"
+            style={{ marginTop: 2 }}
+          />
+          <RenderHTML
+            contentWidth={width - 64}
+            source={{ html: suiviHelp }}
+            baseStyle={{ fontSize: 13, color: "#374151", flex: 1 }}
+            tagsStyles={{
+              b: { fontWeight: "bold", color: "#11224e" },
+              strong: { fontWeight: "bold", color: "#11224e" },
+              i: { fontStyle: "italic" },
+              em: { fontStyle: "italic" },
+            }}
+          />
+        </View>
+      )}
       <View style={styles.header}>
         <View style={styles.filterContainer}>
           <View style={styles.filtersRow}>
@@ -804,5 +840,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#6b7280",
     fontWeight: "600",
+  },
+  helpBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: "#fff7ed",
+    borderBottomWidth: 1,
+    borderBottomColor: "#fed7aa",
   },
 });
