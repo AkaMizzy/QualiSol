@@ -10,6 +10,7 @@ import { getUsers } from "@/services/userService";
 import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
 import { ResizeMode, Video } from "expo-av";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -49,6 +50,7 @@ export default function FolderContextModal({
   const [isUserModalVisible, setIsUserModalVisible] = useState(false);
   const [currentFolder, setCurrentFolder] = useState<Folder | null>(folder);
   const { user } = useAuth();
+  const router = useRouter();
   const [projectTitle, setProjectTitle] = useState<string | null>(null);
   const [isArchiving, setIsArchiving] = useState(false);
   const [archivedStatusId, setArchivedStatusId] = useState<string | null>(null);
@@ -344,11 +346,10 @@ export default function FolderContextModal({
           showNotifications={false}
           showProfile={true}
           onLogoPress={onClose}
-          rightComponent={
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color="#6b7280" />
-            </TouchableOpacity>
-          }
+          onProfilePress={() => {
+            onClose();
+            router.push("/(tabs)/profile");
+          }}
         />
 
         <View style={styles.headerTitleRow}>
@@ -356,7 +357,7 @@ export default function FolderContextModal({
             <Text style={styles.headerTitle} numberOfLines={1}>
               {currentFolder?.title || "Dossier"}
             </Text>
-           
+
             <TouchableOpacity
               onPress={() => setIsUserModalVisible(true)}
               style={{ padding: 4 }}
@@ -389,7 +390,7 @@ export default function FolderContextModal({
               }
               return null;
             })()}
-             {/* Validated badge */}
+            {/* Validated badge */}
             {archivedStatusId &&
               currentFolder?.status_id === archivedStatusId && (
                 <View style={styles.validatedBadge}>
@@ -398,7 +399,6 @@ export default function FolderContextModal({
                 </View>
               )}
           </View>
-
         </View>
 
         {/* PDF Buttons Row */}

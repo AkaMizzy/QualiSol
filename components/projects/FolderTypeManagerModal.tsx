@@ -13,6 +13,7 @@ import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { ImagePickerAsset } from "expo-image-picker";
+import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -141,6 +142,7 @@ type Props = {
 
 export default function FolderTypeManagerModal({ visible, onClose }: Props) {
   const { token, user } = useAuth();
+  const router = useRouter();
   const [folderTypes, setFolderTypes] = useState<FolderType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -398,11 +400,10 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
             showNotifications={false}
             showProfile={true}
             onLogoPress={onClose}
-            rightComponent={
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color="#6b7280" />
-              </TouchableOpacity>
-            }
+            onProfilePress={() => {
+              onClose();
+              router.push("/(tabs)/profile");
+            }}
           />
           <View style={styles.headerTitleRow}>
             <View

@@ -12,6 +12,7 @@ import { CompanyUser } from "@/types/user";
 import { formatDisplayDate } from "@/utils/dateFormat";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
+import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -324,6 +325,8 @@ export default function ProjectDetailModal({
 
   if (!project) return null;
 
+  const router = useRouter();
+
   return (
     <Modal
       visible={visible}
@@ -336,12 +339,11 @@ export default function ProjectDetailModal({
           user={user || undefined}
           showNotifications={false}
           showProfile={true}
-          onLogoPress={onClose} // Use logo to close or navigate back
-          rightComponent={
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color="#6b7280" />
-            </TouchableOpacity>
-          }
+          onLogoPress={onClose}
+          onProfilePress={() => {
+            onClose();
+            router.push("/(tabs)/profile");
+          }}
         />
         {/* Loading/Error */}
         {isLoading ? (
