@@ -22,7 +22,6 @@ import {
   Linking,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -360,47 +359,76 @@ export default function ProjectDetailModal({
           </View>
         ) : null}
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* CTA Row */}
-          <View style={styles.ctaRow}>
+        {/* Header Title Row — matches FolderContextModal design */}
+        <View style={styles.headerTitleRow}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {project.title || "Chantier"}
+            </Text>
+          </View>
+          <View style={styles.subInfoRow}>
+            {(() => {
+              const owner = usersList.find((u) => u.id === project.owner_id);
+              if (owner) {
+                return (
+                  <View style={styles.projectRow}>
+                    <Ionicons
+                      name="person-circle-outline"
+                      size={13}
+                      color="#f87b1b"
+                    />
+                    <Text style={styles.ownerText}>
+                      {owner.firstname} {owner.lastname}
+                    </Text>
+                  </View>
+                );
+              }
+              return null;
+            })()}
+            {project.dd || project.df ? (
+              <View style={styles.projectRow}>
+                <Ionicons name="calendar-outline" size={12} color="#f87b1b" />
+                <Text style={styles.projectTitleText} numberOfLines={1}>
+                  {project.dd ? formatDisplayDate(project.dd) : "—"}
+                  {" → "}
+                  {project.df ? formatDisplayDate(project.df) : "—"}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+
+        {/* Action + PDF Buttons – single block, two internal rows */}
+        <View style={styles.pdfRow}>
+          {/* Row 1: Modifier / Supprimer (or Save / Annuler) */}
+          <View style={styles.buttonInnerRow}>
             {!isEditing ? (
-              <Pressable
+              <TouchableOpacity
                 onPress={() => setIsEditing(true)}
-                android_ripple={{ color: "#fde7d4" }}
                 style={styles.ctaButton}
               >
                 <Ionicons name="create-outline" size={16} color="#f87b1b" />
                 <Text style={styles.ctaText}>Modifier</Text>
-              </Pressable>
+              </TouchableOpacity>
             ) : null}
             {!isEditing ? (
-              <Pressable
+              <TouchableOpacity
                 onPress={handleDelete}
-                android_ripple={{ color: "#fde7d4" }}
-                style={styles.ctaButton}
+                style={[styles.ctaButton, styles.deleteButton]}
               >
-                <Ionicons name="trash-outline" size={16} color="#f87b1b" />
-                <Text style={styles.ctaText}>Supprimer</Text>
-              </Pressable>
+                <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                <Text style={styles.deleteText}>Supprimer</Text>
+              </TouchableOpacity>
             ) : null}
-
             {isEditing ? (
-              <Pressable
+              <TouchableOpacity
                 disabled={isSaving}
                 onPress={async () => {
                   if (!project || !token) return;
-
-                  // Validation
                   if (!editTitle.trim()) {
                     Alert.alert("Erreur", "Le titre est requis");
                     return;
                   }
-
-                  // Check for duplicate role assignments (Removed as we only have Owner)
-                  // const roles = [editOwner].filter(Boolean);
-                  // const uniqueRoles = new Set(roles);
-
-                  // Date validation
                   if (editDd && editDf) {
                     const start = new Date(editDd);
                     const end = new Date(editDf);
@@ -416,7 +444,6 @@ export default function ProjectDetailModal({
                       return;
                     }
                   }
-
                   try {
                     setIsSaving(true);
                     await updateProject(token, project.id, {
@@ -424,10 +451,8 @@ export default function ProjectDetailModal({
                       description: editDescription || undefined,
                       dd: editDd,
                       df: editDf,
-                      // owner_id not updated here as relations section is removed
                     });
                     setIsEditing(false);
-                    // reflect local change quickly
                     if (onUpdated) onUpdated();
                     Alert.alert("Succès", "Projet mis à jour avec succès");
                   } catch (e: any) {
@@ -436,46 +461,42 @@ export default function ProjectDetailModal({
                     setIsSaving(false);
                   }
                 }}
-                android_ripple={{ color: "#fde7d4" }}
                 style={[styles.ctaButton, isSaving && { opacity: 0.6 }]}
               >
                 <Ionicons name="save-outline" size={16} color="#f87b1b" />
                 <Text style={styles.ctaText}>
                   {isSaving ? "Sauvegarde..." : "Enregistrer"}
                 </Text>
-              </Pressable>
+              </TouchableOpacity>
             ) : null}
             {isEditing ? (
-              <Pressable
+              <TouchableOpacity
                 onPress={() => {
                   setIsEditing(false);
                   if (project) {
-                    // setEditOwner removed
                     setEditTitle(project.title || "");
                     setEditDescription(project.description || "");
                     setEditDd(project.dd || "");
                     setEditDf(project.df || "");
                   }
                 }}
-                android_ripple={{ color: "#fde7d4" }}
-                style={styles.ctaButton}
+                style={[styles.ctaButton, styles.cancelButton]}
               >
                 <Ionicons
                   name="close-circle-outline"
                   size={16}
-                  color="#f87b1b"
+                  color="#6b7280"
                 />
-                <Text style={styles.ctaText}>Annuler</Text>
-              </Pressable>
+                <Text style={styles.cancelText}>Annuler</Text>
+              </TouchableOpacity>
             ) : null}
           </View>
 
-          {/* PDF Buttons Row */}
+          {/* Row 2: PDF buttons (only in view mode) */}
           {!isEditing ? (
-            <View style={styles.pdfRow}>
-              <Pressable
+            <View style={styles.buttonInnerRow}>
+              <TouchableOpacity
                 onPress={() => handleOpenReport(project.urlreport1)}
-                android_ripple={{ color: "#fde7d4" }}
                 style={styles.ctaButton}
               >
                 <Ionicons
@@ -484,10 +505,9 @@ export default function ProjectDetailModal({
                   color="#f87b1b"
                 />
                 <Text style={styles.ctaText}>PDF 1</Text>
-              </Pressable>
-              <Pressable
+              </TouchableOpacity>
+              <TouchableOpacity
                 onPress={() => handleOpenReport(project.urlreport2)}
-                android_ripple={{ color: "#fde7d4" }}
                 style={styles.ctaButton}
               >
                 <Ionicons
@@ -496,10 +516,9 @@ export default function ProjectDetailModal({
                   color="#f87b1b"
                 />
                 <Text style={styles.ctaText}>PDF 2</Text>
-              </Pressable>
-              <Pressable
+              </TouchableOpacity>
+              <TouchableOpacity
                 onPress={() => handleOpenReport(project.urlreport3)}
-                android_ripple={{ color: "#fde7d4" }}
                 style={styles.ctaButton}
               >
                 <Ionicons
@@ -508,71 +527,39 @@ export default function ProjectDetailModal({
                   color="#f87b1b"
                 />
                 <Text style={styles.ctaText}>PDF 3</Text>
-              </Pressable>
+              </TouchableOpacity>
             </View>
           ) : null}
+        </View>
 
-          {/* Overview Card (always visible) */}
-          <View style={styles.card}>
-            <View style={{ marginTop: 8, gap: 6 }}>
-              {/* 2. Title - editable or view-only */}
-              {!isEditing ? (
-                <Pressable
-                  android_ripple={{ color: "#f3f4f6" }}
-                  style={styles.itemRow}
-                >
-                  <Text style={styles.meta}>
-                    Titre : {project.title || "—"}
-                  </Text>
-                </Pressable>
-              ) : (
-                <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-                >
-                  <View
-                    style={{
-                      flex: 1,
-                      borderWidth: 1,
-                      borderColor: "#e5e7eb",
-                      borderRadius: 12,
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    <Ionicons name="text-outline" size={16} color="#6b7280" />
-                    <TextInput
-                      placeholder="Titre du projet"
-                      placeholderTextColor="#9ca3af"
-                      value={editTitle}
-                      onChangeText={setEditTitle}
-                      style={{ flex: 1, color: "#111827", fontSize: 14 }}
-                    />
-                  </View>
-
-                  {/* Compact GPS Button */}
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Title edit card — only visible in edit mode */}
+          {isEditing ? (
+            <View style={[styles.card, { marginTop: 16 }]}>
+              <Text style={styles.cardTitle}>Modifier le chantier</Text>
+              <View style={{ marginTop: 12, gap: 10 }}>
+                {/* Title */}
+                <View style={styles.editFieldRow}>
+                  <Ionicons name="text-outline" size={16} color="#6b7280" />
+                  <TextInput
+                    placeholder="Titre du chantier"
+                    placeholderTextColor="#9ca3af"
+                    value={editTitle}
+                    onChangeText={setEditTitle}
+                    style={styles.editInput}
+                  />
+                  {/* GPS Button */}
                   <TouchableOpacity
                     onPress={handleCaptureLocation}
                     disabled={isCapturingLocation}
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 12,
-                      backgroundColor: "#f9fafb",
-                      borderWidth: 1,
-                      borderColor: "#e5e7eb",
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
+                    style={styles.gpsButton}
                   >
                     {isCapturingLocation ? (
                       <ActivityIndicator size="small" color="#f87b1b" />
                     ) : (
                       <Ionicons
                         name="location"
-                        size={20}
+                        size={18}
                         color={
                           !project.latitude || !project.longitude
                             ? "#ef4444"
@@ -582,16 +569,15 @@ export default function ProjectDetailModal({
                     )}
                   </TouchableOpacity>
                 </View>
-              )}
+              </View>
             </View>
-          </View>
+          ) : null}
 
           {/* Folders List Section (New) */}
           <View style={styles.card}>
-            <Pressable
+            <TouchableOpacity
               onPress={() => toggleSection("folders")}
               style={styles.cardHeader}
-              android_ripple={{ color: "#f3f4f6" }}
             >
               <View
                 style={{
@@ -622,7 +608,7 @@ export default function ProjectDetailModal({
                 </TouchableOpacity>
               </View>
               <Chevron section="folders" />
-            </Pressable>
+            </TouchableOpacity>
             {foldersOpen && (
               <View style={{ marginTop: 8 }}>
                 {isLoadingFolders ? (
@@ -854,20 +840,40 @@ export default function ProjectDetailModal({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
 
+  // Header title block (matches FolderContextModal)
   headerTitleRow: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 16,
     paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
   },
-  closeButton: { padding: 8 },
-  headerTitle: { fontSize: 22, fontWeight: "700", color: "#11224e" },
-  headerSubtitle: {
-    fontSize: 14,
-    color: "#6b7280",
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#11224e",
+    textAlign: "center",
+  },
+  subInfoRow: {
+    flexDirection: "column",
+    alignItems: "center",
     marginTop: 4,
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    gap: 4,
   },
+  projectRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  projectTitleText: {
+    fontSize: 12,
+    color: "#f87b1b",
+    fontWeight: "600",
+  },
+
+  closeButton: { padding: 8 },
   alertBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -901,15 +907,29 @@ const styles = StyleSheet.create({
   meta: { color: "#374151", marginTop: 2 },
   ctaRow: {
     flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 8,
-    paddingTop: 8,
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    flexWrap: "wrap",
   },
   pdfRow: {
+    flexDirection: "column",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    backgroundColor: "#FFFFFF",
+  },
+  buttonInnerRow: {
     flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 8,
-    marginTop: 12,
+    justifyContent: "center",
+    flexWrap: "wrap",
+    gap: 8,
   },
   ctaButton: {
     flexDirection: "row",
@@ -918,11 +938,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderWidth: 1,
     borderColor: "#f87b1b",
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 9999,
   },
   ctaText: { color: "#f87b1b", fontWeight: "600", fontSize: 12 },
+  deleteButton: { borderColor: "#ef4444" },
+  deleteText: { color: "#ef4444", fontWeight: "600", fontSize: 12 },
+  cancelButton: { borderColor: "#9ca3af" },
+  cancelText: { color: "#6b7280", fontWeight: "600", fontSize: 12 },
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -933,5 +957,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     paddingVertical: 6,
+  },
+  editFieldRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  editInput: {
+    flex: 1,
+    color: "#111827",
+    fontSize: 14,
+  },
+  gpsButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#f9fafb",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  ownerText: {
+    fontSize: 11,
+    color: "#6b7280",
   },
 });

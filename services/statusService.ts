@@ -19,6 +19,20 @@ export const getAllStatuses = async (token: string): Promise<Status[]> => {
   }
 };
 
+// Get the ID of the Active status
+export const getActiveStatusId = async (
+  token: string,
+): Promise<string | null> => {
+  try {
+    const statuses = await getAllStatuses(token);
+    const activeStatus = statuses.find((s) => s.status === "Active");
+    return activeStatus?.id || null;
+  } catch (error) {
+    console.error("Failed to get Active status:", error);
+    throw error;
+  }
+}
+
 // Get the ID of the Inactive status
 export const getInactiveStatusId = async (
   token: string,

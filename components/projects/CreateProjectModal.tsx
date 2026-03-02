@@ -238,7 +238,6 @@ export default function CreateProjectModal({
       setError(null);
       if (onCreated) await onCreated();
       onClose();
-      Alert.alert("Succès", "Chantier créé avec succès");
     } catch (e: any) {
       // Handle 403 error specifically for limit reached
       if (

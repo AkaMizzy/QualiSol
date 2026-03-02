@@ -515,7 +515,11 @@ export default function SharedGalerieScreen({
   // Merge online GEDs and offline records
   const allImages = useMemo(() => {
     const onlineImages = geds
-      .filter((g) => g.kind === "qualiphoto")
+      .filter(
+        (g) =>
+          ["qualiphoto", "photoavant", "photoapres"].includes(g.kind) &&
+          g.idauthor === user?.id,
+      )
       .map((g) => ({
         ...g,
         isOffline: false,
@@ -523,25 +527,31 @@ export default function SharedGalerieScreen({
         syncStatus: undefined,
       }));
 
-    const offlineImages = offlineRecords.map((r) => ({
-      ...r,
-      id: r.id,
-      url: null,
-      size: null,
-      status_id: "",
-      company_id: "",
-      position: null,
-      level: undefined,
-      isOffline: true,
-      localImagePath: r.local_image_path,
-      syncStatus: r.sync_status,
-    })) as any[];
+    const offlineImages = offlineRecords
+      .filter(
+        (r) =>
+          ["qualiphoto", "photoavant", "photoapres"].includes(r.kind) &&
+          r.idauthor === user?.id,
+      )
+      .map((r) => ({
+        ...r,
+        id: r.id,
+        url: null,
+        size: null,
+        status_id: "",
+        company_id: "",
+        position: null,
+        level: undefined,
+        isOffline: true,
+        localImagePath: r.local_image_path,
+        syncStatus: r.sync_status,
+      })) as any[];
 
     return [...onlineImages, ...offlineImages].sort(
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
-  }, [geds, offlineRecords]);
+  }, [geds, offlineRecords, user?.id]);
 
   const totalPages = Math.ceil(allImages.length / IMAGES_PER_PAGE);
 

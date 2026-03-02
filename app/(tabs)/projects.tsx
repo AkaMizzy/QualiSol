@@ -162,7 +162,7 @@ export default function ProjectsScreen() {
                         if (owner) {
                           return (
                             <Text style={styles.cardMeta}>
-                              Resp: {owner.firstname} {owner.lastname}
+                              {owner.firstname} {owner.lastname}
                             </Text>
                           );
                         }
