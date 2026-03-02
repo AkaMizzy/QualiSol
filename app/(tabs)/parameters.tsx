@@ -125,30 +125,30 @@ export default function ParametersScreen() {
               }}
               defaultTextProps={{ selectable: true }}
               tagsStyles={{
-                          b: { fontWeight: "bold", color: "#FFFFFF" },
-                          strong: { fontWeight: "bold", color: "#FFFFFF" },
-                          u: { textDecorationLine: "underline" },
-                          i: { fontStyle: "italic" },
-                          em: { fontStyle: "italic" },
-                          h1: {
-                            fontSize: 17,
-                            fontWeight: "bold",
-                            color: "#FFFFFF",
-                            marginBottom: 4,
-                          },
-                          h2: {
-                            fontSize: 15,
-                            fontWeight: "bold",
-                            color: "#f87b1b",
-                            marginBottom: 2,
-                          },
-                          h3: {
-                            fontSize: 14,
-                            fontWeight: "600",
-                            color: "#CCCCCC",
-                            marginBottom: 2,
-                          },
-                        }}
+                b: { fontWeight: "bold", color: "#FFFFFF" },
+                strong: { fontWeight: "bold", color: "#FFFFFF" },
+                u: { textDecorationLine: "underline" },
+                i: { fontStyle: "italic" },
+                em: { fontStyle: "italic" },
+                h1: {
+                  fontSize: 17,
+                  fontWeight: "bold",
+                  color: "#FFFFFF",
+                  marginBottom: 4,
+                },
+                h2: {
+                  fontSize: 15,
+                  fontWeight: "bold",
+                  color: "#f87b1b",
+                  marginBottom: 2,
+                },
+                h3: {
+                  fontSize: 14,
+                  fontWeight: "600",
+                  color: "#CCCCCC",
+                  marginBottom: 2,
+                },
+              }}
             />
           </View>
         )}
@@ -184,8 +184,8 @@ export default function ParametersScreen() {
           </Pressable>
         ))}
 
-        {/* Parrainer card — visible only to Admin users */}
-        {isAdmin && (
+        {/* Parrainer card — visible only to Admin users and when partener is not 0 */}
+        {isAdmin && company?.partener !== 0 && (
           <Pressable
             style={({ pressed }) => [
               styles.card,
