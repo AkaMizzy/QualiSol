@@ -11,16 +11,16 @@ import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-    useWindowDimensions,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import RenderHTML from "react-native-render-html";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -89,10 +89,12 @@ export default function QualiPhotoGalleryScreen() {
     return folders.filter((folder) => {
       const projectMatch =
         !selectedProject || folder.project_id === selectedProject;
-      // const zoneMatch = !selectedZone || folder.zone_id === selectedZone;
-      return projectMatch;
+      // User filter: only applied when a user is selected (admin only in practice)
+      const userMatch =
+        !selectedUser || String(folder.owner_id) === String(selectedUser);
+      return projectMatch && userMatch;
     });
-  }, [folders, selectedProject]);
+  }, [folders, selectedProject, selectedUser]);
 
   const fetchFolders = useCallback(async () => {
     if (!token || !user) return; // Ensure user is available
@@ -118,14 +120,15 @@ export default function QualiPhotoGalleryScreen() {
       // Filter folders based on role
       let availableFolders = items;
       if (["Super Admin", "Admin"].includes(user.role)) {
-        // Admins see all folders regardless of status
-        availableFolders = items;
+        // Admins see all folders without a folder type
+        availableFolders = items.filter((f) => !f.foldertype_id);
       } else {
-        // Standard users: only own folders and not archived
+        // Standard users: only own folders, not archived, and no folder type
         availableFolders = items.filter(
           (f) =>
             String(f.owner_id) === String(user.id) &&
-            (!archivedId || f.status_id !== archivedId),
+            (!archivedId || f.status_id !== archivedId) &&
+            !f.foldertype_id,
         );
       }
 
@@ -492,21 +495,23 @@ export default function QualiPhotoGalleryScreen() {
               </View>
             </View>
             <View style={styles.actionsWrapper}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Nouveau dossier"
-                onPress={() => setModalVisible(true)}
-                disabled={!selectedProject}
-                style={[
-                  styles.addFolderButton,
-                  !selectedProject && styles.addFolderButtonDisabled,
-                ]}
-              >
-                <Image
-                  source={ICONS.folder}
-                  style={{ width: 32, height: 32 }}
-                />
-              </Pressable>
+              {["Super Admin", "Admin"].includes(user?.role ?? "") && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Nouveau dossier"
+                  onPress={() => setModalVisible(true)}
+                  disabled={!selectedProject}
+                  style={[
+                    styles.addFolderButton,
+                    !selectedProject && styles.addFolderButtonDisabled,
+                  ]}
+                >
+                  <Image
+                    source={ICONS.folder}
+                    style={{ width: 32, height: 32 }}
+                  />
+                </Pressable>
+              )}
             </View>
           </View>
         </View>
