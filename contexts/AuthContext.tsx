@@ -1,19 +1,19 @@
 import {
-  createContext,
-  ReactNode,
-  useContext,
-  useEffect,
-  useState,
+    createContext,
+    ReactNode,
+    useContext,
+    useEffect,
+    useState,
 } from "react";
 import CustomAlert from "../components/CustomAlert";
 import { setAuthToken, setOnUnauthorized } from "../services/api";
 import {
-  clearAuthToken,
-  clearUser,
-  getAuthToken,
-  getUser,
-  saveAuthToken,
-  saveUser,
+    clearAuthToken,
+    clearUser,
+    getAuthToken,
+    getUser,
+    saveAuthToken,
+    saveUser,
 } from "../services/secureStore";
 
 // Types
@@ -28,6 +28,7 @@ export interface User {
   photo?: string | null;
   timebetween?: number;
   limitpage?: number;
+  message?: string | null;
 }
 
 interface AuthState {

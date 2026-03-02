@@ -3,22 +3,22 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../components/AppHeader";
 import * as authService from "../../services/authService";
 
 export default function ChangePasswordScreen() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -48,10 +48,10 @@ export default function ChangePasswordScreen() {
     try {
       const result = await authService.changePassword(newPassword);
       if (result.success) {
-        setSuccess("✅ Votre mot de passe a été changé avec succès.");
+        setSuccess("✅ Mot de passe mis à jour. Déconnexion en cours…");
         setNewPassword("");
         setConfirmPassword("");
-        setTimeout(() => router.back(), 2000);
+        setTimeout(() => logout(), 1500);
       } else {
         setError(result.error);
       }
@@ -79,7 +79,12 @@ export default function ChangePasswordScreen() {
           >
             <Ionicons name="arrow-back" size={24} color="#11224e" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Changer de mot de passe</Text>
+          <View style={{ flex: 1, flexDirection: "column" }}>
+            <Text style={styles.headerTitle}>Changer mot de passe</Text>
+            <Text style={styles.headerSubtitle}>
+              Pensez à changer votre mot de passe régulièrement.
+            </Text>
+          </View>
         </View>
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <View style={styles.form}>
@@ -189,6 +194,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#11224e",
     marginLeft: 16,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginLeft: 16,
+    marginTop: 2,
   },
   scrollContainer: {
     flexGrow: 1,

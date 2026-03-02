@@ -1,22 +1,22 @@
 import API_CONFIG from "@/app/config/api";
 import PreviewModal from "@/components/PreviewModal";
-import { ICONS } from "@/constants/Icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
-  Image,
+  Linking,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
+import RenderHTML from "react-native-render-html";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../../components/AppHeader";
 import SettingsModal from "../../components/profile/SettingsModal";
@@ -26,6 +26,7 @@ import { Company } from "../../types/company";
 
 export default function ProfileScreen() {
   const { user, logout, updateUser, token } = useAuth();
+  const { width } = useWindowDimensions();
   const [isUploading, setIsUploading] = useState(false);
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const [isIdentifierModalVisible, setIsIdentifierModalVisible] =
@@ -151,27 +152,8 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = async () => {
-    Alert.alert(
-      "Confirmer la déconnexion",
-      "Êtes-vous sûr de vouloir vous déconnecter ?",
-      [
-        {
-          text: "Annuler",
-          style: "cancel",
-        },
-        {
-          text: "Déconnexion",
-          style: "destructive",
-          onPress: async () => {
-            console.log("Logging out...");
-            await logout();
-            console.log(
-              "Logout completed, navigation will be handled by AuthWrapper.",
-            );
-          },
-        },
-      ],
-    );
+    console.log("Logging out...");
+    await logout();
   };
 
   return (
@@ -194,24 +176,7 @@ export default function ProfileScreen() {
         {/* Header Card */}
         <View style={styles.headerCard}>
           <View style={styles.headerTopRow}>
-            <TouchableOpacity
-              style={styles.avatarLarge}
-              onPress={() =>
-                (company?.logo || user?.photo) && setIsPreviewVisible(true)
-              }
-              disabled={isUploading || (!company?.logo && !user?.photo)}
-            >
-              {isUploading ? (
-                <ActivityIndicator size="large" color="#f87b1b" />
-              ) : company?.logo ? (
-                <Image
-                  source={{ uri: company.logo }}
-                  style={styles.avatarImage}
-                />
-              ) : (
-                <Image source={ICONS.newIcon} style={styles.avatarImage} />
-              )}
-            </TouchableOpacity>
+            <Ionicons name="person-circle" size={72} color="#f87b1b" />
             <View style={{ flex: 1 }}>
               <Text style={styles.nameText} numberOfLines={1}>
                 {user ? `${user.firstname} ${user.lastname}` : "Chargement..."}
@@ -224,6 +189,45 @@ export default function ProfileScreen() {
               </View>
             </View>
           </View>
+          {/* User Message */}
+          {!!user?.message && (
+            <RenderHTML
+              contentWidth={width - 32}
+              source={{ html: user.message }}
+              baseStyle={{
+                fontSize: 14,
+                color: "#11224e",
+                textAlign: "center",
+                marginTop: 12,
+              }}
+              defaultTextProps={{ selectable: true }}
+              tagsStyles={{
+                b: { fontWeight: "bold", color: "#11224e" },
+                strong: { fontWeight: "bold", color: "#11224e" },
+                u: { textDecorationLine: "underline" },
+                i: { fontStyle: "italic" },
+                em: { fontStyle: "italic" },
+                h1: {
+                  fontSize: 17,
+                  fontWeight: "bold",
+                  color: "#11224e",
+                  marginBottom: 4,
+                },
+                h2: {
+                  fontSize: 15,
+                  fontWeight: "bold",
+                  color: "#f87b1b",
+                  marginBottom: 2,
+                },
+                h3: {
+                  fontSize: 14,
+                  fontWeight: "600",
+                  color: "#6b7280",
+                  marginBottom: 2,
+                },
+              }}
+            />
+          )}
         </View>
 
         {/* Menu */}
@@ -258,10 +262,94 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* ── Contextual Help Section ── */}
+        {(() => {
+          const helpEntries = [
+            "constahelp",
+            "transferhelp",
+            "suivihelp",
+            "todohelp",
+            "controlehelp",
+          ].filter((key) => !!company?.[key as keyof typeof company]);
+
+          if (helpEntries.length === 0) return null;
+
+          return (
+            <View style={styles.helpCard}>
+              {helpEntries.map((key) => (
+                <View key={key} style={styles.helpRow}>
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={16}
+                    color="#f87b1b"
+                    style={styles.helpRowIcon}
+                  />
+                  <RenderHTML
+                    contentWidth={width - 96}
+                    source={{
+                      html: company![key as keyof typeof company] as string,
+                    }}
+                    baseStyle={{
+                      fontSize: 13,
+                      color: "#374151",
+                    }}
+                    defaultTextProps={{ selectable: true }}
+                    tagsStyles={{
+                      b: { fontWeight: "bold", color: "#11224e" },
+                      strong: { fontWeight: "bold", color: "#11224e" },
+                      u: { textDecorationLine: "underline" },
+                      i: { fontStyle: "italic" },
+                      em: { fontStyle: "italic" },
+                      h1: {
+                        fontSize: 16,
+                        fontWeight: "bold",
+                        color: "#11224e",
+                        marginBottom: 4,
+                      },
+                      h2: {
+                        fontSize: 14,
+                        fontWeight: "bold",
+                        color: "#f87b1b",
+                        marginBottom: 2,
+                      },
+                      h3: {
+                        fontSize: 13,
+                        fontWeight: "600",
+                        color: "#6b7280",
+                        marginBottom: 2,
+                      },
+                    }}
+                  />
+                </View>
+              ))}
+            </View>
+          );
+        })()}
+
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color="#f87b1b" />
           <Text style={styles.logoutText}>Se déconnecter</Text>
         </TouchableOpacity>
+
+        {/* ── Multilingual Help Links ── */}
+        <View style={styles.helpLangRow}>
+          {[
+            { label: "مساعدة", lang: "ar" },
+            { label: "Aide", lang: "fr" },
+            { label: "Help", lang: "en" },
+          ].map(({ label, lang }) => (
+            <TouchableOpacity
+              key={lang}
+              style={styles.helpLangBtn}
+              onPress={() =>
+                Linking.openURL("https://www.muntadaa.com/qualisol/help.html")
+              }
+            >
+              <Ionicons name="globe-outline" size={14} color="#f87b1b" />
+              <Text style={styles.helpLangText}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </ScrollView>
 
       {/* Image Preview Modal */}
@@ -327,6 +415,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F2F2F7",
   },
+  userMessageWrapper: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    alignItems: "center",
+    width: "100%",
+  },
   scrollView: {
     flex: 1,
   },
@@ -351,12 +445,11 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "#F2F2F7",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#E5E5EA",
-    overflow: "hidden", // To keep the image within the circle
+    overflow: "hidden",
   },
   avatarImage: {
     width: "100%",
@@ -416,5 +509,55 @@ const styles = StyleSheet.create({
     color: "#f87b1b",
     fontWeight: "500",
     marginLeft: 8,
+  },
+  helpCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+    marginBottom: 12,
+    gap: 8,
+  },
+  helpCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  helpCardLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#f87b1b",
+  },
+  helpDivider: {
+    alignItems: "center",
+    paddingVertical: 6,
+  },
+  helpRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginBottom: 4,
+  },
+  helpRowIcon: {
+    marginTop: 2,
+  },
+  helpLangRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 20,
+    marginBottom: 12,
+    paddingVertical: 8,
+  },
+  helpLangBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  helpLangText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#f87b1b",
   },
 });

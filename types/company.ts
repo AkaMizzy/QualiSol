@@ -42,4 +42,9 @@ export interface Company {
   parain?: string | null;
   parainage?: number | null;
   message?: string | null;
+  constahelp?: string | null;
+  transferhelp?: string | null;
+  suivihelp?: string | null;
+  todohelp?: string | null;
+  controlehelp?: string | null;
 }

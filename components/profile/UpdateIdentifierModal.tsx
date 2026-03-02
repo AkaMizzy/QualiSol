@@ -89,7 +89,9 @@ export default function UpdateIdentifierModal({
           </View>
 
           <View style={styles.content}>
-            <Text style={styles.label}>Nouvel identifiant</Text>
+            <Text style={styles.label}>
+              Identifiant unique pourra être utilisé pour votre connexion
+            </Text>
             <TextInput
               style={styles.input}
               value={identifier}
