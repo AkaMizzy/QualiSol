@@ -10,16 +10,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getConnectivity } from "@/services/connectivity";
 import folderService, { Project } from "@/services/folderService";
 import {
-    Ged,
-    deleteGed,
-    getMyGeds,
-    updateGed,
-    updateGedFile,
+  Ged,
+  deleteGed,
+  getMyGeds,
+  updateGed,
+  updateGedFile,
 } from "@/services/gedService";
 import {
-    createOfflineRecord,
-    deleteOfflineRecord,
-    getOfflineRecords,
+  createOfflineRecord,
+  deleteOfflineRecord,
+  getOfflineRecords,
 } from "@/services/offlineStorageService";
 import { startSyncMonitoring, triggerManualSync } from "@/services/syncService";
 import { getUsers } from "@/services/userService";
@@ -31,23 +31,23 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import RenderHTML from "react-native-render-html";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -878,11 +878,14 @@ export default function SharedGalerieScreen({
           onClose={closePreview}
           mediaUrl={`${API_CONFIG.BASE_URL}${selectedItem.url}`}
           mediaType={
-            isVideoFile(selectedItem.url)
+            selectedItem.url?.toLowerCase().endsWith(".mp4") ||
+            selectedItem.url?.toLowerCase().endsWith(".mov")
               ? "video"
-              : selectedItem.kind === "qualiphoto"
-                ? "image"
-                : "file"
+              : selectedItem.url?.toLowerCase().endsWith(".pdf") ||
+                  selectedItem.url?.toLowerCase().endsWith(".doc") ||
+                  selectedItem.url?.toLowerCase().endsWith(".docx")
+                ? "file"
+                : "image"
           }
           title={selectedItem.title}
           onAnnotate={handleOpenAnnotator}

@@ -3,17 +3,17 @@ import { Audio, ResizeMode, Video } from "expo-av";
 import { Image } from "expo-image";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Linking,
-  Modal,
-  Pressable,
-  Share,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Linking,
+    Modal,
+    Pressable,
+    Share,
+    StyleSheet,
+    Text,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import RenderHTML from "react-native-render-html";
 
@@ -49,6 +49,7 @@ interface PreviewModalProps {
   wait?: number;
   ianalyse?: number;
   onTimerEnd?: () => void;
+  iatxt?: string;
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");

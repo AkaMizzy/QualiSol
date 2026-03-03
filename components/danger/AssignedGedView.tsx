@@ -3,19 +3,19 @@ import { Audio, ResizeMode, Video } from "expo-av";
 import * as Linking from "expo-linking";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from "react-native";
 import RenderHTML from "react-native-render-html";
 
@@ -25,10 +25,10 @@ import { ICONS } from "@/constants/Icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { Folder } from "@/services/folderService";
 import {
-  Ged,
-  getGedsBySource,
-  updateGed,
-  updateGedFile,
+    Ged,
+    getGedsBySource,
+    updateGed,
+    updateGedFile,
 } from "@/services/gedService";
 import { getAllStatuses, Status } from "@/services/statusService";
 import { isVideoFile } from "@/utils/mediaUtils";
@@ -1175,7 +1175,16 @@ export const AssignedGedView: React.FC<AssignedGedViewProps> = ({
           visible={isPreviewModalVisible}
           onClose={handleClosePreview}
           mediaUrl={previewMedia.url}
-          mediaType={previewMedia.type}
+          mediaType={
+            previewMedia.url?.toLowerCase().endsWith(".mp4") ||
+            previewMedia.url?.toLowerCase().endsWith(".mov")
+              ? "video"
+              : previewMedia.url?.toLowerCase().endsWith(".pdf") ||
+                  previewMedia.url?.toLowerCase().endsWith(".doc") ||
+                  previewMedia.url?.toLowerCase().endsWith(".docx")
+                ? "file"
+                : "image"
+          }
           title={previewedItem?.title || "Aperçu"}
           onAnnotate={previewedItem ? handleOpenAnnotator : undefined}
           description={previewedItem?.description}

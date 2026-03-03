@@ -512,9 +512,14 @@ export default function FolderContextModal({
             onClose={() => setSelectedGed(null)}
             mediaUrl={`${API_CONFIG.BASE_URL}${selectedGed.url}`}
             mediaType={
-              selectedGed.url?.toLowerCase().endsWith(".mp4")
+              selectedGed.url?.toLowerCase().endsWith(".mp4") ||
+              selectedGed.url?.toLowerCase().endsWith(".mov")
                 ? "video"
-                : "image"
+                : selectedGed.url?.toLowerCase().endsWith(".pdf") ||
+                    selectedGed.url?.toLowerCase().endsWith(".doc") ||
+                    selectedGed.url?.toLowerCase().endsWith(".docx")
+                  ? "file"
+                  : "image"
             }
             title={selectedGed.title}
             description={selectedGed.description}
