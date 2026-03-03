@@ -426,12 +426,7 @@ export default function UpdateFolderTypeModal({
             <View style={styles.createFolderSection}>
               <View style={styles.sectionHeaderRow}>
                 <View style={styles.sectionHeader}>
-                  <Ionicons
-                    name="folder-open-outline"
-                    size={20}
-                    color="#f87b1b"
-                  />
-                  <Text style={styles.sectionTitle}>Nouveau Contrôle</Text>
+                
                 </View>
               </View>
               <TouchableOpacity
@@ -447,7 +442,7 @@ export default function UpdateFolderTypeModal({
                 onPress={() => setShowCreateFolderModal(true)}
               >
                 <Ionicons name="add-circle-outline" size={20} color="white" />
-                <Text style={styles.submitButtonText}>Créer un contrôle</Text>
+                <Text style={styles.submitButtonText}>Assigner un contrôle</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -464,9 +459,8 @@ export default function UpdateFolderTypeModal({
               setTimeout(() => {
                 setShowAnswersModal(true);
               }, 400);
-            }}
-            selectedFolderId={selectedFolderId}
-          />
+            } }
+            selectedFolderId={selectedFolderId} projects={[]}          />
 
           <CreateFolderModal
             visible={showCreateFolderModal}

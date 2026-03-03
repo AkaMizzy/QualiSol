@@ -33,6 +33,7 @@ export default function TabLayout() {
       <Tabs.Screen name="qualiphoto" />
       <Tabs.Screen name="users" />
       <Tabs.Screen name="parameters" />
+      <Tabs.Screen name="suivi" />
       <Tabs.Screen name="anomalie1" />
       <Tabs.Screen name="anomalie2" />
       <Tabs.Screen name="anomalies" />

@@ -6,12 +6,12 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-    useWindowDimensions,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import RenderHTML from "react-native-render-html";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -50,6 +50,13 @@ const PARAMETER_CARDS: ParameterCard[] = [
     color: "#ec4899",
   },
   {
+    title: "Suivi",
+    description: "Visualiser les dossiers et leurs images associées",
+    image: require("../../assets/icons/folder.png"),
+    route: "/suivi",
+    color: "#f87b1b",
+  },
+  {
     title: "Anomalies",
     description: "Configuration des anomalies niveaux 1 et 2",
     image: require("../../assets/icons/anomalie.png"),
@@ -70,6 +77,7 @@ const PARAMETER_CARDS: ParameterCard[] = [
     route: "/company",
     color: "#3b82f6",
   },
+  
 ];
 
 export default function ParametersScreen() {

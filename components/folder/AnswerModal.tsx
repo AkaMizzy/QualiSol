@@ -1,24 +1,30 @@
+import AppHeader from "@/components/AppHeader";
+import { useAuth } from "@/contexts/AuthContext";
 import { Ged } from "@/services/gedService";
 import { Ionicons } from "@expo/vector-icons";
 import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import CaptureModal from "../CaptureModal";
 import VoiceNoteRecorder from "../VoiceNoteRecorder";
 import MapSelectionModal from "./MapSelectionModal";
@@ -59,6 +65,8 @@ export default function AnswerModal({
   onSave,
 }: AnswerModalProps) {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State
@@ -346,20 +354,28 @@ export default function AnswerModal({
           setCaptureModalVisible(false);
         }}
       />
-      <View
+      <SafeAreaView
         style={[
           styles.container,
-          Platform.OS === "android" && { paddingTop: insets.top },
+          Platform.OS === "android" && { paddingTop: 0 },
         ]}
       >
-        {/* Header */}
+        <AppHeader
+          user={user || undefined}
+          showNotifications={false}
+          showProfile={true}
+          onLogoPress={onClose}
+          onProfilePress={() => {
+            onClose();
+            router.push("/(tabs)/profile");
+          }}
+        />
+
+        {/* Question title sub-header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
+          <Text style={styles.headerTitle} numberOfLines={2}>
             {question.title}
           </Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-            <Ionicons name="close" size={24} color="#000" />
-          </TouchableOpacity>
         </View>
 
         <KeyboardAvoidingView
@@ -492,7 +508,7 @@ export default function AnswerModal({
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -503,23 +519,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9fafb",
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderColor: "#eee",
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: 16,
+    fontWeight: "700",
     color: "#11224e",
     flex: 1,
-    marginRight: 10,
-  },
-  closeBtn: {
-    padding: 4,
   },
   content: {
     padding: 16,

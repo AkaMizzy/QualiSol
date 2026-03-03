@@ -832,3 +832,12 @@ export async function incrementGedView(
   const newView = (currentView || 0) + 1;
   await api.put(`/api/geds/${id}`, { vue: newView });
 }
+
+/**
+ * Get the URL for downloading a PDF report of all GED images linked to a folder.
+ * The token is passed as a query param so the browser can open the URL directly
+ * without needing custom Authorization headers.
+ */
+export function getFolderGedPdfUrl(folderId: string, token: string): string {
+  return `${API_CONFIG.BASE_URL}/api/geds/folder-pdf/${folderId}?token=${encodeURIComponent(token)}`;
+}

@@ -2,9 +2,9 @@ import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import folderService, { Folder } from "@/services/folderService";
 import {
-  deleteProject,
-  Project,
-  updateProject,
+    deleteProject,
+    Project,
+    updateProject,
 } from "@/services/projectService";
 import { getArchivedStatusId } from "@/services/statusService";
 import { getUsers } from "@/services/userService";
@@ -15,21 +15,21 @@ import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Easing,
-  LayoutAnimation,
-  Linking,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  UIManager,
-  View,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Easing,
+    LayoutAnimation,
+    Linking,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    UIManager,
+    View,
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -729,23 +729,23 @@ export default function ProjectDetailModal({
                               </View>
                             )}
                           {/* Folder Icon - purely visual now, or keep as part of row */}
-                          {/* Delete Button */}
-                          <TouchableOpacity
-                            onPress={() =>
-                              handleDeleteFolder(folder.id, folder.title)
-                            }
-                            style={{
-                              padding: 6,
-                              // backgroundColor: "#fee2e2",
-                              // borderRadius: 8,
-                            }}
-                          >
-                            <Ionicons
-                              name="trash-outline"
-                              size={18}
-                              color="#ef4444"
-                            />
-                          </TouchableOpacity>
+                          {/* Delete Button — hidden for typed folders */}
+                          {!folder.foldertype_id && (
+                            <TouchableOpacity
+                              onPress={() =>
+                                handleDeleteFolder(folder.id, folder.title)
+                              }
+                              style={{
+                                padding: 6,
+                              }}
+                            >
+                              <Ionicons
+                                name="trash-outline"
+                                size={18}
+                                color="#ef4444"
+                              />
+                            </TouchableOpacity>
+                          )}
 
                           <Ionicons
                             name="chevron-forward"

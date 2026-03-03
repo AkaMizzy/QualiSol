@@ -27,7 +27,7 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View
+  View,
 } from "react-native";
 import DraggableFlatList, {
   RenderItemParams,
@@ -530,11 +530,6 @@ export default function QuestionTypeManagerModal({
             showNotifications={false}
             showProfile={true}
             onLogoPress={onClose}
-            rightComponent={
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color="#6b7280" />
-              </TouchableOpacity>
-            }
           />
           <View style={styles.headerTitleRow}>
             <Text style={styles.headerTitle}>

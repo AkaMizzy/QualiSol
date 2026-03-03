@@ -1,26 +1,28 @@
 import API_CONFIG from "@/app/config/api";
+import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import folderService from "@/services/folderService";
 import { Ged, getGedsBySource } from "@/services/gedService";
 import {
-    getArchivedStatusId,
-    getPendingStatusId,
+  getArchivedStatusId,
+  getPendingStatusId,
 } from "@/services/statusService";
 import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 type Props = {
@@ -43,13 +45,16 @@ export default function FolderAnswersSummaryModal({
   folderTitle,
   users,
 }: Props) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<QuestionWithAnswers[]>([]);
   const [statusId, setStatusId] = useState<string | null>(null);
   const [archivedStatusId, setArchivedStatusId] = useState<string | null>(null);
   const [pendingStatusId, setPendingStatusId] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [dd, setDd] = useState<string | null>(null);
+  const [df, setDf] = useState<string | null>(null);
 
   useEffect(() => {
     if (visible && folderId && token) {
@@ -80,6 +85,8 @@ export default function FolderAnswersSummaryModal({
       const folder = await folderService.getFolderById(folderId, token);
       if (folder) {
         setStatusId(folder.status_id);
+        setDd(folder.dd ?? null);
+        setDf(folder.df ?? null);
       }
 
       // 1. Fetch Questions
@@ -99,13 +106,13 @@ export default function FolderAnswersSummaryModal({
       // 3. Group answers by question (mapping to old structure where answers is an array)
       const grouped: QuestionWithAnswers[] = questions.map((q) => {
         const hasAnswer =
-          q.answer ||
-          q.value ||
-          q.url ||
-          q.urlvoice ||
-          q.latitude ||
-          q.quantity !== undefined ||
-          q.price !== undefined;
+          !!q.answer ||
+          !!q.value ||
+          !!q.url ||
+          !!q.urlvoice ||
+          !!q.latitude ||
+          q.quantity != null ||
+          q.price != null;
         return {
           question: q,
           answers: hasAnswer ? [q] : [],
@@ -172,32 +179,72 @@ export default function FolderAnswersSummaryModal({
       onRequestClose={onClose}
     >
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>{folderTitle}</Text>
+        <AppHeader
+          user={user || undefined}
+          showNotifications={false}
+          showProfile={true}
+          onLogoPress={onClose}
+          onProfilePress={() => {
+            onClose();
+            router.push("/(tabs)/profile");
+          }}
+        />
 
-          {archivedStatusId && pendingStatusId && (
-            <View style={styles.statusToggle}>
-              <Text
-                style={[
-                  styles.statusLabel,
-                  isArchived && styles.activeStatusLabel,
-                ]}
-              >
-                {isArchived ? "validé" : "En cours"}
-              </Text>
-              <Switch
-                value={isArchived}
-                onValueChange={handleToggleStatus}
-                trackColor={{ false: "#767577", true: "#f87b1b" }}
-                thumbColor={isArchived ? "white" : "#f4f3f4"}
-                disabled={updatingStatus || isArchived}
-              />
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <Text style={styles.headerTitle}>{folderTitle}</Text>
+
+            {archivedStatusId && pendingStatusId && (
+              <View style={styles.statusToggle}>
+                <Text
+                  style={[
+                    styles.statusLabel,
+                    isArchived && styles.activeStatusLabel,
+                  ]}
+                >
+                  {isArchived ? "validé" : "En cours"}
+                </Text>
+                <Switch
+                  value={isArchived}
+                  onValueChange={handleToggleStatus}
+                  trackColor={{ false: "#767577", true: "#f87b1b" }}
+                  thumbColor={isArchived ? "white" : "#f4f3f4"}
+                  disabled={updatingStatus || isArchived}
+                />
+              </View>
+            )}
+          </View>
+
+          {(dd || df) && (
+            <View style={styles.dateRow}>
+              {dd && (
+                <View style={styles.dateBadge}>
+                  <Ionicons name="calendar-outline" size={12} color="#f87b1b" />
+                  <Text style={styles.dateLabel}>Début :</Text>
+                  <Text style={styles.dateValue}>
+                    {new Date(dd).toLocaleDateString("fr-FR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
+                  </Text>
+                </View>
+              )}
+              {df && (
+                <View style={styles.dateBadge}>
+                  <Ionicons name="calendar-outline" size={12} color="#6b7280" />
+                  <Text style={styles.dateLabel}>Fin :</Text>
+                  <Text style={styles.dateValue}>
+                    {new Date(df).toLocaleDateString("fr-FR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
-
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color="#6b7280" />
-          </TouchableOpacity>
         </View>
 
         {loading ? (
@@ -218,7 +265,9 @@ export default function FolderAnswersSummaryModal({
                       {index + 1}. {item.question.title}
                     </Text>
                     <Text style={styles.questionType}>
-                      {item.question.type}
+                      {item.question.type === "boolean"
+                        ? "Oui/Non"
+                        : item.question.type}
                     </Text>
                   </View>
 
@@ -228,23 +277,6 @@ export default function FolderAnswersSummaryModal({
                     <View style={styles.answersList}>
                       {item.answers.map((ans) => (
                         <View key={ans.id} style={styles.answerItem}>
-                          <View style={styles.answerMeta}>
-                            <Text style={styles.authorName}>
-                              {getUserName(ans.author)}
-                            </Text>
-                            <Text style={styles.dateText}>
-                              {new Date(ans.created_at).toLocaleDateString(
-                                "fr-FR",
-                                {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                },
-                              )}
-                            </Text>
-                          </View>
-
                           <View style={styles.answerContent}>
                             {/* Text Content */}
                             {formatAnswerValue(ans, item.question.type) ? (
@@ -314,13 +346,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9fafb",
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
     backgroundColor: "white",
+  },
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   headerTitle: {
     fontSize: 16,
@@ -330,6 +364,33 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 4,
+  },
+  dateRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
+  },
+  dateBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#fff7ed",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#fed7aa",
+  },
+  dateLabel: {
+    fontSize: 11,
+    color: "#6b7280",
+    fontWeight: "500",
+  },
+  dateValue: {
+    fontSize: 11,
+    color: "#111827",
+    fontWeight: "600",
   },
   statusToggle: {
     flexDirection: "row",
@@ -365,6 +426,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#f87b1b",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,

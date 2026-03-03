@@ -4,7 +4,12 @@ import PreviewModal from "@/components/PreviewModal";
 import UserSelectionModal from "@/components/UserSelectionModal";
 import { useAuth } from "@/contexts/AuthContext";
 import folderService, { Folder } from "@/services/folderService";
-import { deleteGed, Ged, getGedsBySource } from "@/services/gedService";
+import {
+  deleteGed,
+  Ged,
+  getFolderGedPdfUrl,
+  getGedsBySource,
+} from "@/services/gedService";
 import { getArchivedStatusId } from "@/services/statusService";
 import { getUsers } from "@/services/userService";
 import { CompanyUser } from "@/types/user";
@@ -19,6 +24,7 @@ import {
   Image,
   Linking,
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -32,6 +38,7 @@ type Props = {
   folder: Folder | null;
   token: string | null;
   onUpdate?: () => void;
+  fetchAllGeds?: boolean;
 };
 
 export default function FolderContextModal({
@@ -40,6 +47,7 @@ export default function FolderContextModal({
   folder,
   token,
   onUpdate,
+  fetchAllGeds = false,
 }: Props) {
   const [geds, setGeds] = useState<Ged[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,6 +62,7 @@ export default function FolderContextModal({
   const [projectTitle, setProjectTitle] = useState<string | null>(null);
   const [isArchiving, setIsArchiving] = useState(false);
   const [archivedStatusId, setArchivedStatusId] = useState<string | null>(null);
+  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
   useEffect(() => {
     setCurrentFolder(folder);
@@ -179,6 +188,23 @@ export default function FolderContextModal({
     }
   };
 
+  const handleDownloadGedPdf = async () => {
+    if (!token || !currentFolder) return;
+    setIsPdfGenerating(true);
+    try {
+      // Build URL with token as query param so the browser can authenticate
+      const url = getFolderGedPdfUrl(currentFolder.id, token);
+      await Linking.openURL(url);
+    } catch (err: any) {
+      Alert.alert(
+        "Erreur",
+        err.message || "Impossible de générer le rapport PDF",
+      );
+    } finally {
+      setIsPdfGenerating(false);
+    }
+  };
+
   const handleDeleteGed = async () => {
     if (!selectedGed || !token) return;
 
@@ -215,11 +241,11 @@ export default function FolderContextModal({
     if (!folder || !token) return;
     setIsLoading(true);
     try {
-      // Fetch GEDs where idsource matches the folder ID
-      // Assuming 'qualiphoto' is the primary kind we want to show,
-      // but we might want to fetch all types or make it configurable.
-      // For now, let's fetch 'qualiphoto'.
-      const fetchedGeds = await getGedsBySource(token, folder.id, "qualiphoto");
+      // Base our fetch on whether we want to load all related GEDs or just qualiphoto.
+      // Suivi uses fetchAllGeds=true to display all images related to the folder
+      const fetchedGeds = fetchAllGeds
+        ? await getGedsBySource(token, folder.id)
+        : await getGedsBySource(token, folder.id, "qualiphoto");
       setGeds(fetchedGeds);
     } catch (error) {
       console.error("Failed to load folder GEDs", error);
@@ -364,9 +390,21 @@ export default function FolderContextModal({
             >
               <Ionicons
                 name="person-circle-outline"
-                size={20}
+                size={22}
                 color="#f87b1b"
               />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleDownloadGedPdf}
+              disabled={isPdfGenerating}
+              style={{ padding: 4 }}
+            >
+              {isPdfGenerating ? (
+                <ActivityIndicator size={18} color="#f87b1b" />
+              ) : (
+                <Ionicons name="images-outline" size={20} color="#f87b1b" />
+              )}
             </TouchableOpacity>
           </View>
           <View style={styles.subInfoRow}>
@@ -402,7 +440,12 @@ export default function FolderContextModal({
         </View>
 
         {/* PDF Buttons Row */}
-        <View style={styles.pdfRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.pdfScrollView}
+          contentContainerStyle={styles.pdfRow}
+        >
           <TouchableOpacity
             onPress={() => handleOpenReport(currentFolder?.urlreport1)}
             style={styles.ctaButton}
@@ -439,7 +482,7 @@ export default function FolderContextModal({
                 </Text>
               </TouchableOpacity>
             )}
-        </View>
+        </ScrollView>
 
         {isLoading ? (
           <View style={styles.loadingContainer}>
@@ -574,15 +617,17 @@ const styles = StyleSheet.create({
     color: "#f87b1b",
     fontWeight: "600",
   },
+  pdfScrollView: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    backgroundColor: "#FFFFFF",
+    flexGrow: 0,
+  },
   pdfRow: {
     flexDirection: "row",
     gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-    backgroundColor: "#FFFFFF",
-    justifyContent: "center",
   },
   ctaButton: {
     flexDirection: "row",
