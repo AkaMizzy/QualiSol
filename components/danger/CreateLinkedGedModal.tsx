@@ -129,6 +129,7 @@ export default function CreateLinkedGedModal({
       modalTitle="Créer un enregistrement lié"
       buttonText="Créer l'enregistrement"
       placeholderText="Prendre une photo ou vidéo"
+      hideFolderSelection={true}
     />
   );
 }

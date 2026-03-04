@@ -63,6 +63,8 @@ interface SharedGalerieScreenProps {
   enableAssignment?: boolean;
   openModalOnFocus?: boolean;
   helpMessage?: string | null;
+  disableCreation?: boolean;
+  showAllUsers?: boolean;
 }
 
 export default function SharedGalerieScreen({
@@ -74,6 +76,8 @@ export default function SharedGalerieScreen({
   enableAssignment = false,
   openModalOnFocus = false,
   helpMessage,
+  disableCreation = false,
+  showAllUsers = false,
 }: SharedGalerieScreenProps) {
   const { token, user } = useAuth();
   const IMAGES_PER_PAGE = user?.limitpage || 2;
@@ -201,17 +205,14 @@ export default function SharedGalerieScreen({
 
   useFocusEffect(
     useCallback(() => {
+      if (disableCreation) return; // creation is disabled — never auto-open
       if (openModalOnFocus) {
         setModalVisible(true);
       } else if (isFirstLoad) {
-        // Automatically open modal only if it's the right context?
-        // The original code opened modal on first load.
-        // We can keep this behavior or make it optional.
-        // For now, keeping it same as original.
         setModalVisible(true);
         setIsFirstLoad(false);
       }
-    }, [isFirstLoad, openModalOnFocus]),
+    }, [isFirstLoad, openModalOnFocus, disableCreation]),
   );
 
   const onRefresh = useCallback(async () => {
@@ -518,7 +519,7 @@ export default function SharedGalerieScreen({
       .filter(
         (g) =>
           ["qualiphoto", "photoavant", "photoapres"].includes(g.kind) &&
-          g.idauthor === user?.id,
+          (showAllUsers || g.idauthor === user?.id),
       )
       .map((g) => ({
         ...g,
@@ -531,7 +532,7 @@ export default function SharedGalerieScreen({
       .filter(
         (r) =>
           ["qualiphoto", "photoavant", "photoapres"].includes(r.kind) &&
-          r.idauthor === user?.id,
+          (showAllUsers || r.idauthor === user?.id),
       )
       .map((r) => ({
         ...r,
@@ -806,15 +807,17 @@ export default function SharedGalerieScreen({
                 />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.centerAddButton}
-                onPress={() => setModalVisible(true)}
-              >
-                <Image
-                  source={customButtonIcon || ICONS.cameraPng}
-                  style={styles.centerAddButtonIcon}
-                />
-              </TouchableOpacity>
+              {!disableCreation && (
+                <TouchableOpacity
+                  style={styles.centerAddButton}
+                  onPress={() => setModalVisible(true)}
+                >
+                  <Image
+                    source={customButtonIcon || ICONS.cameraPng}
+                    style={styles.centerAddButtonIcon}
+                  />
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={[

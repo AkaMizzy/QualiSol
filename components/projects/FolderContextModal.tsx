@@ -403,7 +403,11 @@ export default function FolderContextModal({
               {isPdfGenerating ? (
                 <ActivityIndicator size={18} color="#f87b1b" />
               ) : (
-                <Ionicons name="images-outline" size={20} color="#f87b1b" />
+                <Ionicons
+                  name="document-text-outline"
+                  size={20}
+                  color="#f87b1b"
+                />
               )}
             </TouchableOpacity>
           </View>

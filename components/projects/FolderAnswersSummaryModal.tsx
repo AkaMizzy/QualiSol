@@ -258,37 +258,65 @@ export default function FolderAnswersSummaryModal({
                 Aucune question trouvée dans ce dossier.
               </Text>
             ) : (
-              data.map((item, index) => (
-                <View key={item.question.id} style={styles.questionCard}>
-                  <View style={styles.questionHeader}>
-                    <Text style={styles.questionTitle}>
-                      {index + 1}. {item.question.title}
-                    </Text>
-                    <Text style={styles.questionType}>
-                      {item.question.type === "boolean"
-                        ? "Oui/Non"
-                        : item.question.type}
-                    </Text>
-                  </View>
+              <View style={styles.mainContainerList}>
+                {data.map((item, index) => {
+                  let questionBgColor = "white";
+                  let textColor = "#11224e";
 
-                  {item.answers.length === 0 ? (
-                    <Text style={styles.noAnswerText}>Aucune réponse</Text>
-                  ) : (
-                    <View style={styles.answersList}>
-                      {item.answers.map((ans) => (
-                        <View key={ans.id} style={styles.answerItem}>
-                          <View style={styles.answerContent}>
-                            {/* Text Content */}
-                            {formatAnswerValue(ans, item.question.type) ? (
-                              <Text style={styles.answerText}>
-                                {formatAnswerValue(ans, item.question.type)}
-                              </Text>
-                            ) : null}
+                  // Check if it's a boolean question and has an answer
+                  if (
+                    item.question.type === "boolean" &&
+                    item.answers.length > 0
+                  ) {
+                    const ansVal = item.answers[0].answer;
+                    if (ansVal === "true") {
+                      questionBgColor = "#dcfce7"; // Light green background
+                      textColor = "#166534"; // Dark green text
+                    } else if (ansVal === "false") {
+                      questionBgColor = "#ffedd5"; // Light orange background
+                      textColor = "#c2410c"; // Dark orange text
+                    }
+                  }
 
-                            {/* Quantity/Price */}
-                            {(ans.quantity !== undefined ||
-                              ans.price !== undefined) && (
+                  return (
+                    <View
+                      key={item.question.id}
+                      style={[
+                        styles.listItemRow,
+                        { backgroundColor: questionBgColor },
+                      ]}
+                    >
+                      {/* Question Section */}
+                      <View style={styles.questionSection}>
+                        <Text
+                          style={[styles.questionTitle, { color: textColor }]}
+                        >
+                          {index + 1}. {item.question.title}
+                        </Text>
+                      </View>
+
+                      <View style={styles.answerContainer}>
+                        {item.answers.length === 0 ? (
+                          <Text style={styles.noAnswerText}>
+                            Aucune réponse
+                          </Text>
+                        ) : (
+                          item.answers.map((ans) => (
+                            <View key={ans.id} style={styles.answerContent}>
                               <View style={styles.detailsRow}>
+                                {/* Text Content Inline */}
+                                {formatAnswerValue(ans, item.question.type) ? (
+                                  <Text
+                                    style={[
+                                      styles.answerText,
+                                      { color: textColor },
+                                    ]}
+                                  >
+                                    {formatAnswerValue(ans, item.question.type)}
+                                  </Text>
+                                ) : null}
+
+                                {/* Quantity/Price Inline */}
                                 {ans.quantity !== undefined && (
                                   <Text style={styles.detailTag}>
                                     Qté: {ans.quantity}
@@ -300,38 +328,42 @@ export default function FolderAnswersSummaryModal({
                                   </Text>
                                 )}
                               </View>
-                            )}
 
-                            {/* Media */}
-                            <View style={styles.mediaRow}>
-                              {ans.url && (
-                                <TouchableOpacity
-                                  onPress={() => {
-                                    // Handle image view if needed
-                                  }}
-                                >
-                                  <Image
-                                    source={{
-                                      uri: `${API_CONFIG.BASE_URL}${ans.url}`,
+                              {/* Media */}
+                              <View style={styles.mediaRow}>
+                                {ans.url && (
+                                  <TouchableOpacity
+                                    onPress={() => {
+                                      // Handle image view if needed
                                     }}
-                                    style={styles.mediaThumbnail}
-                                  />
-                                </TouchableOpacity>
-                              )}
-                              {ans.urlvoice && (
-                                <View style={styles.voiceBadge}>
-                                  <Ionicons name="mic" size={14} color="#fff" />
-                                  <Text style={styles.voiceText}>Audio</Text>
-                                </View>
-                              )}
+                                  >
+                                    <Image
+                                      source={{
+                                        uri: `${API_CONFIG.BASE_URL}${ans.url}`,
+                                      }}
+                                      style={styles.mediaThumbnail}
+                                    />
+                                  </TouchableOpacity>
+                                )}
+                                {ans.urlvoice && (
+                                  <View style={styles.voiceBadge}>
+                                    <Ionicons
+                                      name="mic"
+                                      size={14}
+                                      color="#fff"
+                                    />
+                                    <Text style={styles.voiceText}>Audio</Text>
+                                  </View>
+                                )}
+                              </View>
                             </View>
-                          </View>
-                        </View>
-                      ))}
+                          ))
+                        )}
+                      </View>
                     </View>
-                  )}
-                </View>
-              ))
+                  );
+                })}
+              </View>
             )}
           </ScrollView>
         )}
@@ -421,81 +453,63 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     marginTop: 40,
   },
-  questionCard: {
+  mainContainerList: {
     backgroundColor: "white",
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#f87b1b",
+    borderColor: "#e5e7eb",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
+    overflow: "hidden", // ensures row backgrounds don't bleed out of corners
+    marginBottom: 16,
   },
-  questionHeader: {
+  listItemRow: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6",
+  },
+  questionSection: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    justifyContent: "center",
   },
   questionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     color: "#11224e",
-    flex: 1,
-    marginRight: 8,
   },
-  questionType: {
-    fontSize: 10,
-    color: "#9ca3af",
-    backgroundColor: "#f3f4f6",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    textTransform: "uppercase",
+  answerContainer: {
+    flexShrink: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: "flex-end", // Align contents to the right
+  },
+  answerContent: {
+    alignItems: "flex-end",
+    gap: 4,
+  },
+  answerText: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#11224e",
+    textAlign: "right",
   },
   noAnswerText: {
     fontStyle: "italic",
     color: "#9ca3af",
     fontSize: 14,
   },
-  answersList: {
-    borderTopWidth: 1,
-    borderTopColor: "#f3f4f6",
-    paddingTop: 8,
-  },
-  answerItem: {
-    marginTop: 12,
-    paddingLeft: 8,
-    borderLeftWidth: 2,
-    borderLeftColor: "#f87b1b",
-    paddingBottom: 4,
-  },
-  answerMeta: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  authorName: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#374151",
-  },
-  dateText: {
-    fontSize: 10,
-    color: "#9ca3af",
-  },
-  answerContent: {
-    gap: 4,
-  },
-  answerText: {
-    fontSize: 14,
-    color: "#1f2937",
-  },
   detailsRow: {
     flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
     gap: 8,
   },
   detailTag: {

@@ -9,6 +9,8 @@ export default function ConstatsScreen() {
       allowOffline={true}
       fetchData={getCompanyImages}
       enableAssignment={true}
+      disableCreation={true}
+      showAllUsers={true}
     />
   );
 }

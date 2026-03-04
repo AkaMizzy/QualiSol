@@ -77,6 +77,7 @@ interface AddImageModalProps {
   placeholderText?: string;
   modalTitle?: string;
   buttonText?: string;
+  hideFolderSelection?: boolean;
 }
 
 export default function AddImageModal({
@@ -88,6 +89,7 @@ export default function AddImageModal({
   placeholderText = "Prendre une photo ou vidéo",
   modalTitle = "Ajouter",
   buttonText = "Ajouter l'image",
+  hideFolderSelection = false,
 }: AddImageModalProps) {
   const { token, user } = useAuth();
   const [title, setTitle] = useState("");
@@ -1017,82 +1019,88 @@ export default function AddImageModal({
                 />
 
                 {/* ACTIVE FOLDERS SECTION */}
-                <View style={[styles.contextualSection, { marginTop: 15 }]}>
-                  <Text style={styles.label}>Sélectionner un dossier</Text>
-                  {loadingContext ? (
-                    <ActivityIndicator size="small" color={COLORS.primary} />
-                  ) : folders.length === 0 ? (
-                    <View style={styles.noFolderBanner}>
-                      <Ionicons
-                        name="folder-open-outline"
-                        size={18}
-                        color="#b45309"
-                      />
-                      <Text style={styles.noFolderText}>
-                        Aucun dossier actif disponible.
-                      </Text>
-                    </View>
-                  ) : (
-                    <View style={styles.activeFolderList}>
-                      {folders.map((folder) => {
-                        const proj = projects.find(
-                          (p) => p.id === folder.project_id,
-                        );
-                        const isSelected = selectedFolderId === folder.id;
-                        return (
-                          <TouchableOpacity
-                            key={folder.id}
-                            style={[
-                              styles.activeFolderRow,
-                              isSelected && styles.activeFolderRowSelected,
-                            ]}
-                            onPress={() =>
-                              setSelectedFolderId(isSelected ? null : folder.id)
-                            }
-                            activeOpacity={0.75}
-                          >
-                            <Ionicons
-                              name="folder-open-outline"
-                              size={18}
-                              color={isSelected ? COLORS.white : COLORS.primary}
-                            />
-                            <View style={styles.activeFolderInfo}>
-                              <Text
-                                style={[
-                                  styles.activeFolderTitle,
-                                  isSelected &&
-                                    styles.activeFolderTitleSelected,
-                                ]}
-                                numberOfLines={1}
-                              >
-                                {folder.title}
-                              </Text>
-                              {proj && (
+                {!hideFolderSelection && (
+                  <View style={[styles.contextualSection, { marginTop: 15 }]}>
+                    <Text style={styles.label}>Sélectionner un dossier</Text>
+                    {loadingContext ? (
+                      <ActivityIndicator size="small" color={COLORS.primary} />
+                    ) : folders.length === 0 ? (
+                      <View style={styles.noFolderBanner}>
+                        <Ionicons
+                          name="folder-open-outline"
+                          size={18}
+                          color="#b45309"
+                        />
+                        <Text style={styles.noFolderText}>
+                          Aucun dossier actif disponible.
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={styles.activeFolderList}>
+                        {folders.map((folder) => {
+                          const proj = projects.find(
+                            (p) => p.id === folder.project_id,
+                          );
+                          const isSelected = selectedFolderId === folder.id;
+                          return (
+                            <TouchableOpacity
+                              key={folder.id}
+                              style={[
+                                styles.activeFolderRow,
+                                isSelected && styles.activeFolderRowSelected,
+                              ]}
+                              onPress={() =>
+                                setSelectedFolderId(
+                                  isSelected ? null : folder.id,
+                                )
+                              }
+                              activeOpacity={0.75}
+                            >
+                              <Ionicons
+                                name="folder-open-outline"
+                                size={18}
+                                color={
+                                  isSelected ? COLORS.white : COLORS.primary
+                                }
+                              />
+                              <View style={styles.activeFolderInfo}>
                                 <Text
                                   style={[
-                                    styles.activeFolderSubtitle,
+                                    styles.activeFolderTitle,
                                     isSelected &&
-                                      styles.activeFolderSubtitleSelected,
+                                      styles.activeFolderTitleSelected,
                                   ]}
                                   numberOfLines={1}
                                 >
-                                  {proj.title}
+                                  {folder.title}
                                 </Text>
+                                {proj && (
+                                  <Text
+                                    style={[
+                                      styles.activeFolderSubtitle,
+                                      isSelected &&
+                                        styles.activeFolderSubtitleSelected,
+                                    ]}
+                                    numberOfLines={1}
+                                  >
+                                    {proj.title}
+                                  </Text>
+                                )}
+                              </View>
+                              {isSelected && (
+                                <Ionicons
+                                  name="checkmark-circle"
+                                  size={20}
+                                  color={COLORS.white}
+                                />
                               )}
-                            </View>
-                            {isSelected && (
-                              <Ionicons
-                                name="checkmark-circle"
-                                size={20}
-                                color={COLORS.white}
-                              />
-                            )}
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  )}
-                </View>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </View>
+                )}
 
                 {/* First Button Set - Compact Section */}
                 <View style={styles.buttonContainer}>

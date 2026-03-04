@@ -84,7 +84,7 @@ export default function SuiviScreen() {
                   Suivi
                 </Text>
                 <Text style={{ marginTop: 4, color: "#6b7280" }}>
-                  Visualiser les dossiers et toutes leurs images associées
+                  Visualiser les dossiers et toutes leurs constats associés
                 </Text>
               </View>
             </View>
