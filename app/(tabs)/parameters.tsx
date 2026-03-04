@@ -36,6 +36,13 @@ const PARAMETER_CARDS: ParameterCard[] = [
     color: "#0ea5e9",
   },
   {
+    title: "Suivi",
+    description: "Visualiser les dossiers et leurs images associées",
+    image: require("../../assets/icons/folder.png"),
+    route: "/suivi",
+    color: "#f87b1b",
+  },
+  {
     title: "contrôles",
     description: "Configurer les types de dossiers de contrôles",
     image: require("../../assets/icons/approved.png"),
@@ -48,13 +55,6 @@ const PARAMETER_CARDS: ParameterCard[] = [
     image: require("../../assets/icons/project.png"),
     route: "/projects",
     color: "#ec4899",
-  },
-  {
-    title: "Suivi",
-    description: "Visualiser les dossiers et leurs images associées",
-    image: require("../../assets/icons/folder.png"),
-    route: "/suivi",
-    color: "#f87b1b",
   },
   {
     title: "Anomalies",

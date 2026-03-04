@@ -9,13 +9,13 @@ import Ionicons from "@expo/vector-icons/build/Ionicons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -35,9 +35,12 @@ export default function SuiviScreen() {
     try {
       const refreshed = await folderService.getAllFolders(token);
       if (user?.company_id) {
-        // Strict filtering: only show folders matching the user's company_id
+        // Only show folders matching the user's company_id
+        // and exclude typed folders (those belonging to a folder type)
         const filtered = refreshed.filter(
-          (f) => String(f.company_id) === String(user.company_id),
+          (f) =>
+            String(f.company_id) === String(user.company_id) &&
+            !f.foldertype_id,
         );
         setFolders(filtered);
       } else {
@@ -74,12 +77,6 @@ export default function SuiviScreen() {
             <View
               style={{ flex: 1, flexDirection: "row", alignItems: "center" }}
             >
-              <TouchableOpacity
-                onPress={() => router.back()}
-                style={{ marginRight: 12 }}
-              >
-                <Ionicons name="arrow-back" size={24} color="#11224e" />
-              </TouchableOpacity>
               <View>
                 <Text
                   style={{ fontSize: 22, fontWeight: "700", color: "#11224e" }}

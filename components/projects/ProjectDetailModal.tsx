@@ -2,9 +2,9 @@ import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import folderService, { Folder } from "@/services/folderService";
 import {
-    deleteProject,
-    Project,
-    updateProject,
+  deleteProject,
+  Project,
+  updateProject,
 } from "@/services/projectService";
 import { getArchivedStatusId } from "@/services/statusService";
 import { getUsers } from "@/services/userService";
@@ -15,21 +15,21 @@ import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Easing,
-    LayoutAnimation,
-    Linking,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    UIManager,
-    View,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Easing,
+  LayoutAnimation,
+  Linking,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  UIManager,
+  View,
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -594,7 +594,7 @@ export default function ProjectDetailModal({
                 </Text>
                 <TouchableOpacity
                   onPress={(e) => {
-                    e.stopPropagation(); // Prevent toggle
+                    e.stopPropagation();
                     setIsCreateFolderModalVisible(true);
                   }}
                   style={{
@@ -803,6 +803,14 @@ export default function ProjectDetailModal({
             setIsCreateFolderModalVisible(false);
           }}
           projectId={project?.id || ""}
+          projectOwnerId={project?.owner_id || ""}
+          projectName={project?.title || ""}
+          projectOwnerName={(() => {
+            const owner = usersList.find((u) => u.id === project?.owner_id);
+            return owner
+              ? `${owner.firstname ?? ""} ${owner.lastname ?? ""}`.trim()
+              : undefined;
+          })()}
         />
 
         {/* Date Pickers */}

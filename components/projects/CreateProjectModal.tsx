@@ -487,12 +487,10 @@ export default function CreateProjectModal({
                   </TouchableOpacity>
                 </View>
 
-                <Text style={stylesFS.sectionTitle}>ÉQUIPE</Text>
-
                 {/* Admin */}
                 <View style={{ marginBottom: 16 }}>
                   <Text style={stylesFS.label}>
-                    Administrateur (Chef de projet)
+                    Administrateur 
                   </Text>
                   <TouchableOpacity
                     style={[

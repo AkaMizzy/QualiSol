@@ -3,24 +3,24 @@ import { ICONS } from "@/constants/Icons";
 import { useAuth } from "@/contexts/AuthContext";
 import companyService from "@/services/companyService";
 import folderService, {
-    CreateFolderPayload,
-    Folder,
+  CreateFolderPayload,
+  Folder,
 } from "@/services/folderService";
 import { Company } from "@/types/company";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -29,6 +29,9 @@ type Props = {
   onClose: () => void;
   onSuccess?: (created: Folder) => void;
   projectId: string;
+  projectOwnerId?: string;
+  projectName?: string;
+  projectOwnerName?: string;
 };
 
 export default function CreateFolderModal({
@@ -36,6 +39,9 @@ export default function CreateFolderModal({
   onClose,
   onSuccess,
   projectId,
+  projectOwnerId,
+  projectName,
+  projectOwnerName,
 }: Props) {
   const { token, user } = useAuth();
 
@@ -67,12 +73,12 @@ export default function CreateFolderModal({
     [companyUsers, ownerId],
   );
 
-  // Pre-select current user on mount
+  // Pre-select project owner (falls back to logged-in user)
   useEffect(() => {
-    if (visible && user?.id) {
-      setOwnerId(user.id);
+    if (visible) {
+      setOwnerId(projectOwnerId || user?.id || "");
     }
-  }, [visible, user]);
+  }, [visible, projectOwnerId, user]);
 
   // Load folder limits
   useEffect(() => {
@@ -211,7 +217,7 @@ export default function CreateFolderModal({
   const handleClose = () => {
     setTitle("");
     setDescription("");
-    setOwnerId(user?.id || "");
+    setOwnerId(projectOwnerId || user?.id || "");
     setShowOwnerPicker(false);
     setError(null);
     onClose();
@@ -239,6 +245,24 @@ export default function CreateFolderModal({
             </View>
             <View style={styles.placeholder} />
           </View>
+
+          {/* Project Context Banner */}
+          {projectName && (
+            <View style={styles.projectContextBanner}>
+              <Ionicons name="briefcase-outline" size={15} color="#f87b1b" />
+              <Text style={styles.projectContextName} numberOfLines={1}>
+                {projectName}
+              </Text>
+              {projectOwnerName && (
+                <View style={styles.projectOwnerBadge}>
+                  <Ionicons name="person-outline" size={11} color="#f87b1b" />
+                  <Text style={styles.projectOwnerText} numberOfLines={1}>
+                    {projectOwnerName}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
 
           {error && (
             <View style={styles.alertBanner}>
@@ -561,5 +585,47 @@ const styles = StyleSheet.create({
   },
   limitInfoTextWarning: {
     color: "#b45309",
+  },
+  projectContextBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#fff7ed",
+    borderColor: "#f87b1b",
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginTop: 10,
+    borderRadius: 10,
+  },
+  projectContextLabel: {
+    fontSize: 10,
+    color: "#f87b1b",
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  projectContextName: {
+    flex: 1,
+    fontSize: 14,
+    color: "#111827",
+    fontWeight: "600",
+  },
+  projectOwnerBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+    borderRadius: 99,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  projectOwnerText: {
+    fontSize: 11,
+    color: "#f87b1b",
+    fontWeight: "600",
   },
 });

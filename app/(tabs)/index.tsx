@@ -7,17 +7,17 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  LayoutAnimation,
-  Linking,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    LayoutAnimation,
+    Linking,
+    Pressable,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import RenderHTML from "react-native-render-html";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -321,10 +321,34 @@ export default function DashboardScreen() {
     }, [loadAllFolders]),
   );
 
-  // ─── Apply archived filter (computed) ─────────────────────────────────────
+  // ─── Apply archived + date-range filter (computed) ────────────────────────
   const visibleFolders = React.useMemo(() => {
-    if (!archivedStatusId) return folders;
-    return folders.filter((f) => f.status_id !== archivedStatusId);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // compare dates only, ignore time
+
+    return folders.filter((f) => {
+      // 1. Exclude archived folders
+      if (archivedStatusId && f.status_id === archivedStatusId) return false;
+
+      // 2. Date-range filter: only show folders active today (dd ≤ today ≤ df)
+      //    If a bound is missing we treat that side as open (no restriction).
+      if (f.dd) {
+        const start = new Date(
+          f.dd.includes("T") ? f.dd : f.dd.replace(" ", "T"),
+        );
+        start.setHours(0, 0, 0, 0);
+        if (today < start) return false;
+      }
+      if (f.df) {
+        const end = new Date(
+          f.df.includes("T") ? f.df : f.df.replace(" ", "T"),
+        );
+        end.setHours(0, 0, 0, 0);
+        if (today > end) return false;
+      }
+
+      return true;
+    });
   }, [folders, archivedStatusId]);
 
   // Pull-to-refresh handler
