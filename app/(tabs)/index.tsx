@@ -7,17 +7,17 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    LayoutAnimation,
-    Linking,
-    Pressable,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    View,
-    useWindowDimensions,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  LayoutAnimation,
+  Linking,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import RenderHTML from "react-native-render-html";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -291,13 +291,10 @@ export default function DashboardScreen() {
         }
       }
 
-      // 5. Apply role-based access filter
-      let available = combined;
-      if (!["Super Admin", "Admin"].includes(user.role)) {
-        available = combined.filter(
-          (f) => String(f.owner_id) === String(user.id),
-        );
-      }
+      // 5. Filter by owner — applies to all roles equally
+      const available = combined.filter(
+        (f) => String(f.owner_id) === String(user.id),
+      );
 
       // 6. Sort by most recent
       const sorted = available.sort((a, b) => {
@@ -647,7 +644,9 @@ export default function DashboardScreen() {
                 />
               </View>
             )}
-            <View style={styles.foldersSection}>{renderFolderRows()}</View>
+            <View style={[styles.foldersSection, { marginTop: 12 }]}>
+              {renderFolderRows()}
+            </View>
 
             {/* Calendar */}
             {isCalendarVisible && (

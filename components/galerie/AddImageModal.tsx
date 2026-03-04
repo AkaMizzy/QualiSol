@@ -1,5 +1,5 @@
 import VoiceNoteRecorder, {
-  VoiceNoteRecorderRef,
+    VoiceNoteRecorderRef,
 } from "@/components/VoiceNoteRecorder";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,24 +20,24 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import {
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
+    PanGestureHandler,
+    PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
@@ -2217,19 +2217,22 @@ const styles = StyleSheet.create({
   },
   // Active folder inline list
   activeFolderList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     marginTop: 6,
   },
   activeFolderRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
     paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.primary,
     backgroundColor: "#eff6ff",
+    width: "48%",
   },
   activeFolderRowSelected: {
     backgroundColor: COLORS.primary,
