@@ -612,6 +612,30 @@ export async function generateFolderReport(
   return response.data;
 }
 
+export async function generateFolderQaPdf(
+  token: string,
+  folderId: string,
+): Promise<{ message: string; data: Ged }> {
+  const response = await api.get(`/api/geds/folder-qa-pdf/${folderId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.data;
+}
+
+export async function generateAvantApresPdf(
+  token: string,
+  avantId: string,
+): Promise<{ message: string; data: Ged }> {
+  const response = await api.get(`/api/geds/avant-apres-pdf/${avantId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.data;
+}
+
 export async function getAssignedPhotoAvant(token: string): Promise<Ged[]> {
   const response = await api.get("/api/geds/assigned/photoavant", {
     headers: {

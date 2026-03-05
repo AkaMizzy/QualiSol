@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -17,9 +18,10 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
+import API_CONFIG from "@/app/config/api";
 import { useAuth } from "@/contexts/AuthContext";
 import * as gedService from "@/services/gedService";
-import { Ged } from "@/services/gedService";
+import { Ged, generateFolderQaPdf } from "@/services/gedService";
 
 import AppHeader from "@/components/AppHeader";
 import * as ImagePicker from "expo-image-picker";
@@ -158,6 +160,7 @@ export default function FolderQuestionsModal({
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
 
   const insets = useSafeAreaInsets();
 
@@ -282,6 +285,21 @@ export default function FolderQuestionsModal({
     }
   };
 
+  const handleGeneratePdf = async () => {
+    if (!folderId || !token) return;
+    setIsPdfLoading(true);
+    try {
+      const result = await generateFolderQaPdf(token, folderId);
+      const pdfUrl = `${API_CONFIG.BASE_URL}${result.data.url}`;
+      await Linking.openURL(pdfUrl);
+    } catch (err) {
+      console.error("Failed to generate Q&A PDF:", err);
+      Alert.alert("Erreur", "Impossible de générer le PDF.");
+    } finally {
+      setIsPdfLoading(false);
+    }
+  };
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       {/* Answer Modal */}
@@ -352,6 +370,17 @@ export default function FolderQuestionsModal({
 
         {/* Footer */}
         <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>
+          <TouchableOpacity
+            style={styles.pdfButton}
+            onPress={handleGeneratePdf}
+            disabled={isPdfLoading || isLoading}
+          >
+            {isPdfLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons name="document-text-outline" size={18} color="#fff" />
+            )}
+          </TouchableOpacity>
           <TouchableOpacity style={styles.saveButton} onPress={onClose}>
             <Text style={styles.saveBtnText}>Fermer</Text>
           </TouchableOpacity>
@@ -478,8 +507,19 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: "#eee",
     backgroundColor: "#fff",
+    flexDirection: "row",
+    gap: 10,
+  },
+  pdfButton: {
+    backgroundColor: "#f87b1b",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
   },
   saveButton: {
+    flex: 1,
     backgroundColor: "#f3f4f6",
     paddingVertical: 12,
     borderRadius: 8,

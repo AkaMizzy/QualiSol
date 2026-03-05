@@ -3,19 +3,19 @@ import { Audio, ResizeMode, Video } from "expo-av";
 import * as Linking from "expo-linking";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    Share,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import RenderHTML from "react-native-render-html";
 
@@ -25,10 +25,11 @@ import { ICONS } from "@/constants/Icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { Folder } from "@/services/folderService";
 import {
-    Ged,
-    getGedsBySource,
-    updateGed,
-    updateGedFile,
+  Ged,
+  generateAvantApresPdf,
+  getGedsBySource,
+  updateGed,
+  updateGedFile,
 } from "@/services/gedService";
 import { getAllStatuses, Status } from "@/services/statusService";
 import { isVideoFile } from "@/utils/mediaUtils";
@@ -113,6 +114,7 @@ export const AssignedGedView: React.FC<AssignedGedViewProps> = ({
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [currentStatus, setCurrentStatus] = useState<Status | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
 
   const [alertInfo, setAlertInfo] = useState<{
     visible: boolean;
@@ -385,6 +387,21 @@ export const AssignedGedView: React.FC<AssignedGedViewProps> = ({
     } catch (error) {
       console.error("Error sharing photos:", error);
       Alert.alert("Erreur", "Impossible de partager les photos.");
+    }
+  };
+
+  const handleGeneratePdf = async () => {
+    if (!token || !item?.id) return;
+    setIsPdfLoading(true);
+    try {
+      const result = await generateAvantApresPdf(token, item.id);
+      const pdfUrl = `${API_CONFIG.BASE_URL}${result.data.url}`;
+      await Linking.openURL(pdfUrl);
+    } catch (error) {
+      console.error("Failed to generate Avant/Apres PDF:", error);
+      Alert.alert("Erreur", "Impossible de générer le rapport PDF.");
+    } finally {
+      setIsPdfLoading(false);
     }
   };
 
@@ -702,6 +719,18 @@ export const AssignedGedView: React.FC<AssignedGedViewProps> = ({
           accessibilityLabel="Partager"
         >
           <Ionicons name="share-social-outline" size={24} color="#f87b1b" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.shareIconButton, isPdfLoading && { opacity: 0.5 }]}
+          onPress={handleGeneratePdf}
+          disabled={isPdfLoading}
+          accessibilityLabel="Générer PDF"
+        >
+          {isPdfLoading ? (
+            <ActivityIndicator size="small" color="#f87b1b" />
+          ) : (
+            <Ionicons name="document-text-outline" size={24} color="#f87b1b" />
+          )}
         </TouchableOpacity>
       </View>
       <View style={styles.headerTitles} />

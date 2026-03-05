@@ -2,27 +2,32 @@ import API_CONFIG from "@/app/config/api";
 import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import folderService from "@/services/folderService";
-import { Ged, getGedsBySource } from "@/services/gedService";
 import {
-  getArchivedStatusId,
-  getPendingStatusId,
+    Ged,
+    generateFolderQaPdf,
+    getGedsBySource,
+} from "@/services/gedService";
+import {
+    getArchivedStatusId,
+    getPendingStatusId,
 } from "@/services/statusService";
 import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Linking,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 type Props = {
@@ -53,6 +58,7 @@ export default function FolderAnswersSummaryModal({
   const [archivedStatusId, setArchivedStatusId] = useState<string | null>(null);
   const [pendingStatusId, setPendingStatusId] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [dd, setDd] = useState<string | null>(null);
   const [df, setDf] = useState<string | null>(null);
 
@@ -171,6 +177,21 @@ export default function FolderAnswersSummaryModal({
 
   const isArchived = statusId === archivedStatusId;
 
+  const handleGeneratePdf = async () => {
+    if (!folderId || !token) return;
+    setIsPdfLoading(true);
+    try {
+      const result = await generateFolderQaPdf(token, folderId);
+      const pdfUrl = `${API_CONFIG.BASE_URL}${result.data.url}`;
+      await Linking.openURL(pdfUrl);
+    } catch (error) {
+      console.error("Failed to generate Q&A PDF:", error);
+      Alert.alert("Erreur", "Impossible de générer le PDF.");
+    } finally {
+      setIsPdfLoading(false);
+    }
+  };
+
   return (
     <Modal
       visible={visible}
@@ -194,25 +215,46 @@ export default function FolderAnswersSummaryModal({
           <View style={styles.headerTop}>
             <Text style={styles.headerTitle}>{folderTitle}</Text>
 
-            {archivedStatusId && pendingStatusId && (
-              <View style={styles.statusToggle}>
-                <Text
-                  style={[
-                    styles.statusLabel,
-                    isArchived && styles.activeStatusLabel,
-                  ]}
-                >
-                  {isArchived ? "validé" : "En cours"}
-                </Text>
-                <Switch
-                  value={isArchived}
-                  onValueChange={handleToggleStatus}
-                  trackColor={{ false: "#767577", true: "#f87b1b" }}
-                  thumbColor={isArchived ? "white" : "#f4f3f4"}
-                  disabled={updatingStatus || isArchived}
-                />
-              </View>
-            )}
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                onPress={handleGeneratePdf}
+                disabled={isPdfLoading || loading}
+                style={[
+                  styles.pdfButton,
+                  (isPdfLoading || loading) && styles.pdfButtonDisabled,
+                ]}
+              >
+                {isPdfLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons
+                    name="document-text-outline"
+                    size={18}
+                    color="#fff"
+                  />
+                )}
+              </TouchableOpacity>
+
+              {archivedStatusId && pendingStatusId && (
+                <View style={styles.statusToggle}>
+                  <Text
+                    style={[
+                      styles.statusLabel,
+                      isArchived && styles.activeStatusLabel,
+                    ]}
+                  >
+                    {isArchived ? "validé" : "En cours"}
+                  </Text>
+                  <Switch
+                    value={isArchived}
+                    onValueChange={handleToggleStatus}
+                    trackColor={{ false: "#767577", true: "#f87b1b" }}
+                    thumbColor={isArchived ? "white" : "#f4f3f4"}
+                    disabled={updatingStatus || isArchived}
+                  />
+                </View>
+              )}
+            </View>
           </View>
 
           {(dd || df) && (
@@ -387,6 +429,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  pdfButton: {
+    backgroundColor: "#f87b1b",
+    borderRadius: 8,
+    padding: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pdfButtonDisabled: {
+    opacity: 0.5,
   },
   headerTitle: {
     fontSize: 16,

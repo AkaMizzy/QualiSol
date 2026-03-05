@@ -11,16 +11,16 @@ import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import RenderHTML from "react-native-render-html";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -117,20 +117,13 @@ export default function QualiPhotoGalleryScreen() {
 
       if (requestId !== requestIdRef.current) return;
 
-      // Filter folders based on role
-      let availableFolders = items;
-      if (["Super Admin", "Admin"].includes(user.role)) {
-        // Admins see all folders without a folder type
-        availableFolders = items.filter((f) => !f.foldertype_id);
-      } else {
-        // Standard users: only own folders, not archived, and no folder type
-        availableFolders = items.filter(
-          (f) =>
-            String(f.owner_id) === String(user.id) &&
-            (!archivedId || f.status_id !== archivedId) &&
-            !f.foldertype_id,
-        );
-      }
+      // All users: only own folders, not archived, and no folder type
+      const availableFolders = items.filter(
+        (f) =>
+          String(f.owner_id) === String(user.id) &&
+          (!archivedId || f.status_id !== archivedId) &&
+          !f.foldertype_id,
+      );
 
       // Sort folders by creation date, latest first
       const sortedItems = availableFolders.sort((a, b) => {
@@ -188,16 +181,11 @@ export default function QualiPhotoGalleryScreen() {
       try {
         const fetchedProjects = await folderService.getAllProjects(token);
 
-        // Filter projects for non-admin users
-        // Only show projects where they are assigned as owner/admin
-        if (["Super Admin", "Admin"].includes(user.role)) {
-          setProjects(fetchedProjects);
-        } else {
-          const userProjects = fetchedProjects.filter(
-            (p) => String(p.owner_id) === String(user.id),
-          );
-          setProjects(userProjects);
-        }
+        // Show projects where they are assigned as owner/admin
+        const userProjects = fetchedProjects.filter(
+          (p) => String(p.owner_id) === String(user.id),
+        );
+        setProjects(userProjects);
       } catch (error) {
         console.error("Failed to load projects", error);
         // Handle error appropriately in UI
