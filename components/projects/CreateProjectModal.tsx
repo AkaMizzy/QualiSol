@@ -6,6 +6,7 @@ import { createGed } from "@/services/gedService";
 import { createProject, getAllProjects } from "@/services/projectService";
 
 import { Company } from "@/types/company";
+import { compressImage } from "@/utils/imageCompression";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useMemo, useState } from "react";
@@ -364,8 +365,16 @@ export default function CreateProjectModal({
                         quality: 0.8,
                       });
 
-                      if (!result.canceled) {
-                        setLogo(result.assets[0]);
+                      if (!result.canceled && result.assets[0]) {
+                        const compressed = await compressImage(
+                          result.assets[0].uri,
+                        );
+                        setLogo({
+                          ...result.assets[0],
+                          uri: compressed.uri,
+                          width: compressed.width,
+                          height: compressed.height,
+                        } as ImagePicker.ImagePickerAsset);
                       }
                     }}
                     style={{
@@ -489,9 +498,7 @@ export default function CreateProjectModal({
 
                 {/* Admin */}
                 <View style={{ marginBottom: 16 }}>
-                  <Text style={stylesFS.label}>
-                    Administrateur 
-                  </Text>
+                  <Text style={stylesFS.label}>Administrateur</Text>
                   <TouchableOpacity
                     style={[
                       stylesFS.inputWrap,

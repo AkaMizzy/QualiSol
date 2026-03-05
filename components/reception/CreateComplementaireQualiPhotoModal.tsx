@@ -7,6 +7,7 @@ import {
     getAllGeds,
 } from "@/services/gedService";
 import { Company } from "@/types/company";
+import { compressImage } from "@/utils/imageCompression";
 import { isVideoFile } from "@/utils/mediaUtils";
 import { Ionicons } from "@expo/vector-icons";
 import { ResizeMode, Video } from "expo-av";
@@ -40,6 +41,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import CaptureModal from "../CaptureModal";
 import PictureAnnotator from "../PictureAnnotator";
 import VoiceNoteRecorder from "../VoiceNoteRecorder";
+import { any } from "zod";
 
 export type QualiPhotoItem = {
   id: string;
@@ -281,8 +283,14 @@ function CreateComplementaireQualiPhotoForm({
         }
       }
 
+      let finalUri = uri;
+      if (!mimeType.startsWith("video/")) {
+        const compressed = await compressImage(uri);
+        finalUri = compressed.uri;
+      }
+
       const newPhoto = {
-        uri,
+        uri: finalUri,
         name: fileName,
         type: mimeType,
       };
@@ -332,6 +340,7 @@ function CreateComplementaireQualiPhotoForm({
           : undefined,
         file: photo,
         mode: mode,
+        answer: any
       });
 
       if (audioUri) {
@@ -357,6 +366,7 @@ function CreateComplementaireQualiPhotoForm({
               name: `note_${Date.now()}.m4a`,
               type: "audio/m4a",
             },
+            answer: any
           };
           await createGed(token, audioPayload);
         } catch (audioErr: any) {

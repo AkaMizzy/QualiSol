@@ -1,29 +1,30 @@
 import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { Ged } from "@/services/gedService";
+import { compressImage } from "@/utils/imageCompression";
 import { Ionicons } from "@expo/vector-icons";
 import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import {
-    SafeAreaView,
-    useSafeAreaInsets,
+  SafeAreaView,
+  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import CaptureModal from "../CaptureModal";
 import VoiceNoteRecorder from "../VoiceNoteRecorder";
@@ -214,8 +215,14 @@ export default function AnswerModal({
             quality: 0.8,
             allowsEditing: false, // Ensure no forced cropping
           });
-          if (!result.canceled) {
-            setImage(result.assets[0]);
+          if (!result.canceled && result.assets[0]) {
+            const compressed = await compressImage(result.assets[0].uri);
+            setImage({
+              ...result.assets[0],
+              uri: compressed.uri,
+              width: compressed.width,
+              height: compressed.height,
+            } as ImagePicker.ImagePickerAsset);
           }
         },
       },

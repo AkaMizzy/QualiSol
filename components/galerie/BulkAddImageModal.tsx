@@ -6,28 +6,29 @@ import companyService from "@/services/companyService";
 import { getConnectivity } from "@/services/connectivity";
 import { getAllGeds } from "@/services/gedService";
 import { Company } from "@/types/company";
+import { compressImage } from "@/utils/imageCompression";
 import { Ionicons } from "@expo/vector-icons";
 import { randomUUID } from "expo-crypto";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import {
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
+    PanGestureHandler,
+    PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import VoiceNoteRecorder, { VoiceNoteRecorderRef } from "../VoiceNoteRecorder";
 
@@ -297,14 +298,29 @@ export default function BulkAddImageModal({
     if (!result.canceled) {
       const images = result.assets;
 
-      if (images.length > MAX_IMAGES) {
+      const compressedImages = await Promise.all(
+        images.map(async (asset) => {
+          if (asset.type !== "video") {
+            const compressed = await compressImage(asset.uri);
+            return {
+              ...asset,
+              uri: compressed.uri,
+              width: compressed.width,
+              height: compressed.height,
+            } as ImagePicker.ImagePickerAsset;
+          }
+          return asset;
+        }),
+      );
+
+      if (compressedImages.length > MAX_IMAGES) {
         Alert.alert(
           "Limite dépassée",
           `Vous ne pouvez sélectionner que ${MAX_IMAGES} images maximum. Les ${MAX_IMAGES} premières ont été sélectionnées.`,
         );
-        setSelectedImages(images.slice(0, MAX_IMAGES));
+        setSelectedImages(compressedImages.slice(0, MAX_IMAGES));
       } else {
-        setSelectedImages(images);
+        setSelectedImages(compressedImages);
       }
       return false; // Return false to indicate images were selected
     }

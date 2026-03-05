@@ -128,7 +128,6 @@ export default function CompanyScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 100 }}
         >
-          {/* Header Section */}
           <View style={styles.header}>
             <TouchableOpacity onPress={handleLogoUpload} disabled={isUploading}>
               <View style={styles.logoContainer}>
@@ -161,7 +160,6 @@ export default function CompanyScreen() {
             </View>
           </View>
 
-          {/* Company Information */}
           <View style={styles.section}>
             <View style={styles.infoContainer}>
               <InfoRow icon="mail-outline" label="Email" value={company.email || '-'} />
@@ -172,7 +170,6 @@ export default function CompanyScreen() {
             </View>
           </View>
 
-          {/* Actions */}
           <View style={styles.actionsContainer}>
             <TouchableOpacity 
               style={styles.actionButton}
@@ -185,7 +182,6 @@ export default function CompanyScreen() {
         </ScrollView>
       </SafeAreaView>
       
-      {/* Edit Modal */}
       <CompanyEditModal
         visible={editModalVisible}
         onClose={() => setEditModalVisible(false)}

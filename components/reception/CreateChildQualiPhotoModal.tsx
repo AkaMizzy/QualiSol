@@ -12,6 +12,7 @@ import {
     getAllGeds,
 } from "@/services/gedService";
 import { Company } from "@/types/company";
+import { compressImage } from "@/utils/imageCompression";
 import { isVideoFile } from "@/utils/mediaUtils";
 import { Ionicons } from "@expo/vector-icons";
 import { ResizeMode, Video } from "expo-av";
@@ -49,6 +50,7 @@ import {
 import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
 import VoiceNoteRecorder from "../VoiceNoteRecorder";
+import { any } from "zod";
 
 type FormProps = {
   onClose: () => void;
@@ -406,8 +408,14 @@ export function CreateChildQualiPhotoForm({
         }
       }
 
+      let finalUri = uri;
+      if (!mimeType.startsWith("video/")) {
+        const compressed = await compressImage(uri);
+        finalUri = compressed.uri;
+      }
+
       const newPhoto = {
-        uri,
+        uri: finalUri,
         name: fileName,
         type: mimeType,
       };
@@ -487,6 +495,7 @@ export function CreateChildQualiPhotoForm({
         assigned: assigned || undefined,
         file: photo,
         mode: mode,
+        answer: any
       };
 
       const result = await createGed(token, payload);
@@ -516,6 +525,7 @@ export function CreateChildQualiPhotoForm({
               name: `note_${Date.now()}.m4a`,
               type: "audio/m4a",
             },
+            answer: any
           };
           await createGed(token, audioPayload);
         } catch (audioErr: any) {

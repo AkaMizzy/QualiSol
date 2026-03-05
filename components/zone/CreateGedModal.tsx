@@ -1,23 +1,29 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { createGed, describeImage, type CreateGedInput } from '@/services/gedService';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
-import React, { useEffect, useState } from 'react';
+import { useAuth } from "@/contexts/AuthContext";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+    createGed,
+    describeImage,
+    type CreateGedInput,
+} from "@/services/gedService";
+import { compressImage } from "@/utils/imageCompression";
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
+import React, { useEffect, useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { any } from "zod";
 
 type Props = {
   visible: boolean;
@@ -26,15 +32,21 @@ type Props = {
   onSuccess?: () => void;
 };
 
-export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: Props) {
+export default function CreateGedModal({
+  visible,
+  onClose,
+  zoneId,
+  onSuccess,
+}: Props) {
   const { token, user } = useAuth();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
-  
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [imageAsset, setImageAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [imageAsset, setImageAsset] =
+    useState<ImagePicker.ImagePickerAsset | null>(null);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,30 +69,34 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
     }
   }, [visible]);
 
-  const generateImageDescription = async (asset: ImagePicker.ImagePickerAsset) => {
+  const generateImageDescription = async (
+    asset: ImagePicker.ImagePickerAsset,
+  ) => {
     if (!token || !asset) return;
-    
+
     setIsDescribingImage(true);
     setError(null);
-    
+
     try {
       // Get file extension from URI or use default
-      const uriParts = asset.uri.split('.');
+      const uriParts = asset.uri.split(".");
       const fileType = asset.type || `image/${uriParts[uriParts.length - 1]}`;
-      const fileName = asset.fileName || `photo_${Date.now()}.${uriParts[uriParts.length - 1]}`;
-      
+      const fileName =
+        asset.fileName ||
+        `photo_${Date.now()}.${uriParts[uriParts.length - 1]}`;
+
       const generatedDescription = await describeImage(token, {
         uri: asset.uri,
         type: fileType,
         name: fileName,
       });
-      
+
       if (generatedDescription) {
         setDescription(generatedDescription);
       }
     } catch (err: any) {
       // Silently fail - description is optional
-      console.error('Error generating image description:', err);
+      console.error("Error generating image description:", err);
     } finally {
       setIsDescribingImage(false);
     }
@@ -91,8 +107,8 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
     try {
       // Request location permissions
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        console.warn('Location permission denied');
+      if (status !== "granted") {
+        console.warn("Location permission denied");
         setIsGettingLocation(false);
         return;
       }
@@ -106,7 +122,7 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
       setLatitude(location.coords.latitude);
       setLongitude(location.coords.longitude);
     } catch (err) {
-      console.error('Error getting location:', err);
+      console.error("Error getting location:", err);
       // Silently fail - location is optional
     } finally {
       setIsGettingLocation(false);
@@ -117,8 +133,11 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
     try {
       // Request camera permissions
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission refusée', 'Vous devez autoriser l\'accès à la caméra pour prendre une photo');
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission refusée",
+          "Vous devez autoriser l'accès à la caméra pour prendre une photo",
+        );
         return;
       }
 
@@ -130,25 +149,34 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
       });
 
       if (!result.canceled && result.assets[0]) {
-        setSelectedImage(result.assets[0].uri);
-        setImageAsset(result.assets[0]);
-        
+        const selectedAsset = result.assets[0];
+        const compressed = await compressImage(selectedAsset.uri);
+        const updatedAsset = {
+          ...selectedAsset,
+          uri: compressed.uri,
+          width: compressed.width,
+          height: compressed.height,
+        } as ImagePicker.ImagePickerAsset;
+
+        setSelectedImage(updatedAsset.uri);
+        setImageAsset(updatedAsset);
+
         // Automatically generate description using OpenAI
-        generateImageDescription(result.assets[0]);
+        generateImageDescription(updatedAsset);
       }
     } catch {
-      Alert.alert('Erreur', 'Impossible d\'ouvrir la caméra');
+      Alert.alert("Erreur", "Impossible d'ouvrir la caméra");
     }
   };
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      setError('Le titre est requis');
+      setError("Le titre est requis");
       return;
     }
 
     if (!selectedImage || !imageAsset) {
-      setError('Veuillez sélectionner une image');
+      setError("Veuillez sélectionner une image");
       return;
     }
 
@@ -157,21 +185,24 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
 
     try {
       // Get file extension from URI or use default
-      const uriParts = imageAsset.uri.split('.');
-      const fileType = imageAsset.type || `image/${uriParts[uriParts.length - 1]}`;
-      const fileName = imageAsset.fileName || `photo_${Date.now()}.${uriParts[uriParts.length - 1]}`;
+      const uriParts = imageAsset.uri.split(".");
+      const fileType =
+        imageAsset.type || `image/${uriParts[uriParts.length - 1]}`;
+      const fileName =
+        imageAsset.fileName ||
+        `photo_${Date.now()}.${uriParts[uriParts.length - 1]}`;
 
       // Get username from token (primary) or user object (fallback)
-      let authorName = 'Unknown User';
-      
+      let authorName = "Unknown User";
+
       // First try to get username from token (as stored by backend)
       if (token) {
         try {
-          const payload = token.split('.')[1];
+          const payload = token.split(".")[1];
           if (payload) {
-            let base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+            let base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
             while (base64.length % 4) {
-              base64 += '=';
+              base64 += "=";
             }
             const decodedString = atob(base64);
             const decodedPayload = JSON.parse(decodedString);
@@ -185,13 +216,16 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
             }
           }
         } catch (err) {
-          console.error('Error decoding token:', err);
+          console.error("Error decoding token:", err);
         }
       }
-      
+
       // Fallback to user object if token decode failed or username not in token
-      if (authorName === 'Unknown User' && user) {
-        const name = [user.firstname, user.lastname].filter(Boolean).join(' ').trim();
+      if (authorName === "Unknown User" && user) {
+        const name = [user.firstname, user.lastname]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
         if (name) {
           authorName = name;
         } else if (user.email) {
@@ -203,7 +237,7 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
         idsource: zoneId,
         title: title.trim(),
         description: description.trim() || undefined,
-        kind: 'delimitation',
+        kind: "delimitation",
         author: authorName,
         latitude: latitude?.toString(),
         longitude: longitude?.toString(),
@@ -212,13 +246,14 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
           type: fileType,
           name: fileName,
         },
+        answer: any
       };
 
       await createGed(token!, input);
-      
+
       // Reset form
-      setTitle('');
-      setDescription('');
+      setTitle("");
+      setDescription("");
       setSelectedImage(null);
       setImageAsset(null);
       setLatitude(null);
@@ -230,7 +265,7 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
       }
       onClose();
     } catch (err: any) {
-      setError(err?.message || 'Erreur lors de la création de la photo');
+      setError(err?.message || "Erreur lors de la création de la photo");
     } finally {
       setIsSubmitting(false);
     }
@@ -238,8 +273,8 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
 
   const handleClose = () => {
     if (!isSubmitting) {
-      setTitle('');
-      setDescription('');
+      setTitle("");
+      setDescription("");
       setSelectedImage(null);
       setImageAsset(null);
       setLatitude(null);
@@ -250,7 +285,12 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={handleClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={handleClose}
+    >
       <SafeAreaView style={styles.container}>
         {/* Close Button */}
         <TouchableOpacity
@@ -268,13 +308,20 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
               <Ionicons name="alert-circle" size={20} color="#dc2626" />
             </View>
             <Text style={styles.alertBannerText}>{error}</Text>
-            <TouchableOpacity onPress={() => setError(null)} style={styles.alertCloseButton}>
+            <TouchableOpacity
+              onPress={() => setError(null)}
+              style={styles.alertCloseButton}
+            >
               <Ionicons name="close" size={18} color="#dc2626" />
             </TouchableOpacity>
           </View>
         )}
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
           {/* Title Input */}
           <View style={[styles.card, styles.firstCard]}>
             <View style={styles.labelContainer}>
@@ -282,13 +329,16 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
               <Text style={styles.label}>Titre *</Text>
             </View>
             <TextInput
-              style={[styles.input, focusedInput === 'title' && styles.inputFocused]}
+              style={[
+                styles.input,
+                focusedInput === "title" && styles.inputFocused,
+              ]}
               value={title}
               onChangeText={setTitle}
               placeholder="Donnez un titre à votre photo"
               placeholderTextColor="#9ca3af"
               editable={!isSubmitting}
-              onFocus={() => setFocusedInput('title')}
+              onFocus={() => setFocusedInput("title")}
               onBlur={() => setFocusedInput(null)}
             />
           </View>
@@ -301,10 +351,13 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
             </View>
             {selectedImage ? (
               <View style={styles.imageContainer}>
-                <Image 
-                  source={{ uri: selectedImage }} 
-                  style={[styles.previewImage, isTablet && styles.previewImageTablet]} 
-                  resizeMode="cover" 
+                <Image
+                  source={{ uri: selectedImage }}
+                  style={[
+                    styles.previewImage,
+                    isTablet && styles.previewImageTablet,
+                  ]}
+                  resizeMode="cover"
                 />
                 <View style={styles.imageOverlay}>
                   <TouchableOpacity
@@ -312,7 +365,7 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
                     onPress={() => {
                       setSelectedImage(null);
                       setImageAsset(null);
-                      setDescription('');
+                      setDescription("");
                     }}
                     disabled={isSubmitting}
                   >
@@ -332,7 +385,9 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
                   <Ionicons name="camera" size={40} color="#f87b1b" />
                 </View>
                 <Text style={styles.imagePickerTitle}>Prendre une photo</Text>
-                <Text style={styles.imagePickerSubtitle}>Appuyez pour ouvrir la caméra</Text>
+                <Text style={styles.imagePickerSubtitle}>
+                  Appuyez pour ouvrir la caméra
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -340,21 +395,27 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
           {/* Description Input */}
           <View style={styles.card}>
             <View style={styles.labelContainer}>
-              <Ionicons name="document-text-outline" size={18} color="#f87b1b" />
+              <Ionicons
+                name="document-text-outline"
+                size={18}
+                color="#f87b1b"
+              />
               <Text style={styles.label}>Description</Text>
             </View>
             {isDescribingImage ? (
               <View style={styles.descriptionLoadingContainer}>
                 <ActivityIndicator color="#f87b1b" size="small" />
-                <Text style={styles.descriptionLoadingText}>Analyse de l&apos;image...</Text>
+                <Text style={styles.descriptionLoadingText}>
+                  Analyse de l&apos;image...
+                </Text>
               </View>
             ) : (
               <TextInput
                 style={[
-                  styles.input, 
-                  styles.textArea, 
+                  styles.input,
+                  styles.textArea,
                   isTablet && styles.textAreaTablet,
-                  focusedInput === 'description' && styles.inputFocused
+                  focusedInput === "description" && styles.inputFocused,
                 ]}
                 value={description}
                 onChangeText={setDescription}
@@ -363,7 +424,7 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
                 multiline
                 numberOfLines={4}
                 editable={!isSubmitting}
-                onFocus={() => setFocusedInput('description')}
+                onFocus={() => setFocusedInput("description")}
                 onBlur={() => setFocusedInput(null)}
               />
             )}
@@ -375,8 +436,12 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
               <View style={styles.locationStatusContainer}>
                 <ActivityIndicator color="#f87b1b" size="small" />
                 <View style={styles.locationStatusTextContainer}>
-                  <Text style={styles.locationStatusTitle}>Obtention de votre localisation</Text>
-                  <Text style={styles.locationStatusSubtitle}>Veuillez patienter...</Text>
+                  <Text style={styles.locationStatusTitle}>
+                    Obtention de votre localisation
+                  </Text>
+                  <Text style={styles.locationStatusSubtitle}>
+                    Veuillez patienter...
+                  </Text>
                 </View>
               </View>
             </View>
@@ -402,7 +467,10 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
 
           {/* Submit Button */}
           <TouchableOpacity
-            style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+            style={[
+              styles.submitButton,
+              isSubmitting && styles.submitButtonDisabled,
+            ]}
             onPress={handleSubmit}
             disabled={isSubmitting || !title.trim() || !selectedImage}
             activeOpacity={0.9}
@@ -423,37 +491,37 @@ export default function CreateGedModal({ visible, onClose, zoneId, onSuccess }: 
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
   closeButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 16,
     right: 16,
     zIndex: 1000,
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
   },
   alertBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
-    backgroundColor: '#fef2f2',
+    backgroundColor: "#fef2f2",
     borderLeftWidth: 4,
-    borderLeftColor: '#dc2626',
+    borderLeftColor: "#dc2626",
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginHorizontal: 16,
     marginTop: 60,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -463,15 +531,15 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#fee2e2',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#fee2e2",
+    alignItems: "center",
+    justifyContent: "center",
   },
   alertBannerText: {
-    color: '#991b1b',
+    color: "#991b1b",
     flex: 1,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   alertCloseButton: {
     padding: 4,
@@ -484,128 +552,128 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 0,
-    paddingBottom: 80,  // Increased padding to ensure submit button is fully visible and scrollable
+    paddingBottom: 80, // Increased padding to ensure submit button is fully visible and scrollable
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
     marginTop: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
+    borderColor: "#f3f4f6",
   },
   firstCard: {
     marginTop: 0,
   },
   labelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     marginBottom: 10,
   },
   label: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#11224e',
+    fontWeight: "700",
+    color: "#11224e",
     letterSpacing: -0.3,
   },
   input: {
     borderWidth: 2,
-    borderColor: '#e5e7eb',
+    borderColor: "#e5e7eb",
     borderRadius: 12,
     padding: 14,
     fontSize: 15,
-    color: '#11224e',
-    backgroundColor: '#FFFFFF',
-    fontFamily: 'System',
+    color: "#11224e",
+    backgroundColor: "#FFFFFF",
+    fontFamily: "System",
   },
   inputFocused: {
-    borderColor: '#f87b1b',
-    backgroundColor: '#fffbeb',
+    borderColor: "#f87b1b",
+    backgroundColor: "#fffbeb",
   },
   textArea: {
     minHeight: 100,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
     paddingTop: 14,
   },
   textAreaTablet: {
-    minHeight: 80,  // Reduced height for tablets
+    minHeight: 80, // Reduced height for tablets
   },
   imagePickerButton: {
     borderWidth: 2,
-    borderColor: '#e5e7eb',
-    borderStyle: 'dashed',
+    borderColor: "#e5e7eb",
+    borderStyle: "dashed",
     borderRadius: 14,
     padding: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fafafa',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fafafa",
     gap: 10,
   },
   imagePickerIconContainer: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#fef3e7',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#fef3e7",
+    alignItems: "center",
+    justifyContent: "center",
   },
   imagePickerTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#11224e',
+    fontWeight: "600",
+    color: "#11224e",
     marginTop: 6,
   },
   imagePickerSubtitle: {
     fontSize: 12,
-    color: '#6b7280',
+    color: "#6b7280",
     marginTop: 2,
   },
   imageContainer: {
-    position: 'relative',
+    position: "relative",
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   previewImage: {
-    width: '100%',
+    width: "100%",
     height: 200,
     borderRadius: 14,
   },
   previewImageTablet: {
-    height: 140,  // Reduced height for tablets to fit everything on screen
+    height: 140, // Reduced height for tablets to fit everything on screen
   },
   imageOverlay: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
     padding: 12,
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
   },
   removeImageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+    backgroundColor: "rgba(239, 68, 68, 0.9)",
     borderRadius: 8,
   },
   removeImageText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   locationStatusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     paddingVertical: 4,
   },
@@ -614,17 +682,17 @@ const styles = StyleSheet.create({
   },
   locationStatusTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#11224e',
+    fontWeight: "600",
+    color: "#11224e",
     marginBottom: 2,
   },
   locationStatusSubtitle: {
     fontSize: 13,
-    color: '#6b7280',
+    color: "#6b7280",
   },
   locationInfoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     paddingVertical: 4,
   },
@@ -632,52 +700,52 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#d1fae5',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#d1fae5",
+    alignItems: "center",
+    justifyContent: "center",
   },
   locationInfoTextContainer: {
     flex: 1,
   },
   locationInfoTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#11224e',
+    fontWeight: "600",
+    color: "#11224e",
     marginBottom: 2,
   },
   locationInfoText: {
     fontSize: 13,
-    color: '#6b7280',
-    fontFamily: 'monospace',
+    color: "#6b7280",
+    fontFamily: "monospace",
     letterSpacing: 0.5,
   },
   descriptionLoadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     borderWidth: 2,
-    borderColor: '#e5e7eb',
+    borderColor: "#e5e7eb",
     borderRadius: 12,
     padding: 14,
     minHeight: 100,
-    backgroundColor: '#fafafa',
+    backgroundColor: "#fafafa",
   },
   descriptionLoadingText: {
     fontSize: 15,
-    color: '#6b7280',
-    fontStyle: 'italic',
+    color: "#6b7280",
+    fontStyle: "italic",
   },
   submitButton: {
-    backgroundColor: '#f87b1b',
+    backgroundColor: "#f87b1b",
     borderRadius: 14,
     padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 16,
-    marginBottom: 40,  // Increased margin to ensure button is fully visible with space
-    flexDirection: 'row',
+    marginBottom: 40, // Increased margin to ensure button is fully visible with space
+    flexDirection: "row",
     gap: 8,
-    shadowColor: '#f87b1b',
+    shadowColor: "#f87b1b",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -688,9 +756,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
   },
   submitButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.3,
   },
 });

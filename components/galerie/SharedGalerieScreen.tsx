@@ -53,6 +53,7 @@ import RenderHTML from "react-native-render-html";
 import { SafeAreaView } from "react-native-safe-area-context";
 import UserSelectionModal from "../UserSelectionModal";
 import BulkAddImageModal from "./BulkAddImageModal";
+import { any } from "zod";
 
 interface SharedGalerieScreenProps {
   creationMode: "upload" | "capture";
@@ -328,7 +329,7 @@ export default function SharedGalerieScreen({
           audiotxt: data.audiotxt,
           iatxt: data.iatxt,
           mode: data.mode,
-          answer: undefined,
+          answer: any,
         });
 
         if (!skipRefresh) {

@@ -1,36 +1,35 @@
 import API_CONFIG from "@/app/config/api";
 import { useAuth } from "@/contexts/AuthContext";
-import folderService, {
-  Folder,
-  Project
-} from "@/services/folderService";
+import folderService, { Folder, Project } from "@/services/folderService";
 import { FolderType, updateFolderType } from "@/services/folderTypeService";
 import { createGed, updateGedFile } from "@/services/gedService";
 import { getUsers } from "@/services/userService";
 import { CompanyUser } from "@/types/user";
+import { compressImage } from "@/utils/imageCompression";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { ImagePickerAsset } from "expo-image-picker";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../AppHeader";
 import CreateFolderModal from "./CreateFolderModal";
 import FolderAnswersSummaryModal from "./FolderAnswersSummaryModal";
 import FolderSelectionModal from "./FolderSelectionModal";
+import { any } from "zod";
 
 type Props = {
   visible: boolean;
@@ -169,8 +168,14 @@ export default function UpdateFolderTypeModal({
       quality: 0.8,
     });
 
-    if (!result.canceled) {
-      setImage(result.assets[0]);
+    if (!result.canceled && result.assets[0]) {
+      const compressed = await compressImage(result.assets[0].uri);
+      setImage({
+        ...result.assets[0],
+        uri: compressed.uri,
+        width: compressed.width,
+        height: compressed.height,
+      } as ImagePickerAsset);
     }
   };
 
@@ -220,7 +225,7 @@ export default function UpdateFolderTypeModal({
             kind: "folder_type_icon",
             author: user.id,
             file,
-            answer: undefined,
+            answer: any,
           });
           finalType = {
             ...finalType,
@@ -425,9 +430,7 @@ export default function UpdateFolderTypeModal({
             {/* Create Folder Section - Dedicated Modal Trigger */}
             <View style={styles.createFolderSection}>
               <View style={styles.sectionHeaderRow}>
-                <View style={styles.sectionHeader}>
-                
-                </View>
+                <View style={styles.sectionHeader}></View>
               </View>
               <TouchableOpacity
                 style={[
@@ -442,7 +445,9 @@ export default function UpdateFolderTypeModal({
                 onPress={() => setShowCreateFolderModal(true)}
               >
                 <Ionicons name="add-circle-outline" size={20} color="white" />
-                <Text style={styles.submitButtonText}>Assigner un contrôle</Text>
+                <Text style={styles.submitButtonText}>
+                  Assigner un contrôle
+                </Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -459,8 +464,10 @@ export default function UpdateFolderTypeModal({
               setTimeout(() => {
                 setShowAnswersModal(true);
               }, 400);
-            } }
-            selectedFolderId={selectedFolderId} projects={[]}          />
+            }}
+            selectedFolderId={selectedFolderId}
+            projects={[]}
+          />
 
           <CreateFolderModal
             visible={showCreateFolderModal}

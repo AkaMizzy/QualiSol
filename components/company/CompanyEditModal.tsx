@@ -1,21 +1,22 @@
 import { useAuth } from "@/contexts/AuthContext";
 import companySectorService, {
-  CompanySector,
+    CompanySector,
 } from "@/services/companySectorService";
 import companyService from "@/services/companyService";
+import { compressImage } from "@/utils/imageCompression";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Company } from "../../types/company";
@@ -175,7 +176,8 @@ export default function CompanyEditModal({
       });
 
       if (!result.canceled && result.assets[0]) {
-        setLogoUri(result.assets[0].uri);
+        const compressed = await compressImage(result.assets[0].uri);
+        setLogoUri(compressed.uri);
       }
     } catch {
       Alert.alert("Erreur", "Impossible de sélectionner une image");

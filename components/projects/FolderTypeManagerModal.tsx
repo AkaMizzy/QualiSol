@@ -3,37 +3,39 @@ import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import companyService from "@/services/companyService";
 import {
-  createFolderType,
-  deleteFolderType,
-  FolderType,
-  getAllFolderTypes,
+    createFolderType,
+    deleteFolderType,
+    FolderType,
+    getAllFolderTypes,
 } from "@/services/folderTypeService";
 import { createGed, getAllGeds, getGedsBySource } from "@/services/gedService";
 import { Company } from "@/types/company";
+import { compressImage } from "@/utils/imageCompression";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { ImagePickerAsset } from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import QuestionTypeManagerModal from "./QuestionTypeManagerModal";
 import UpdateFolderTypeModal from "./UpdateFolderTypeModal";
+import { any } from "zod";
 
 type FormComponentProps = {
   isEditing: boolean;
@@ -299,7 +301,7 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
           kind: "folder_type_icon",
           author: user.id,
           file,
-          answer: undefined,
+          answer: any,
         });
 
         setFolderTypes((prev) =>
@@ -357,8 +359,14 @@ export default function FolderTypeManagerModal({ visible, onClose }: Props) {
       quality: 0.8,
     });
 
-    if (!result.canceled) {
-      setImage(result.assets[0]);
+    if (!result.canceled && result.assets[0]) {
+      const compressed = await compressImage(result.assets[0].uri);
+      setImage({
+        ...result.assets[0],
+        uri: compressed.uri,
+        width: compressed.width,
+        height: compressed.height,
+      } as ImagePickerAsset);
     }
   };
 

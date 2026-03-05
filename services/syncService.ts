@@ -7,6 +7,7 @@ import {
   getPendingSyncRecords,
   updateSyncStatus,
 } from "./offlineStorageService";
+import { any } from "zod";
 
 let syncInProgress = false;
 
@@ -85,7 +86,7 @@ export async function syncPendingRecords(token: string): Promise<SyncResult> {
                 `voice_${Date.now()}.m4a`,
             }
             : undefined,
-          answer: undefined
+          answer: any
         });
 
         // Mark as completed and delete local record

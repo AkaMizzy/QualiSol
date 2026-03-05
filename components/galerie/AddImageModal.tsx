@@ -1,5 +1,5 @@
 import VoiceNoteRecorder, {
-    VoiceNoteRecorderRef,
+  VoiceNoteRecorderRef,
 } from "@/components/VoiceNoteRecorder";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +13,7 @@ import { getActiveStatusId } from "@/services/statusService";
 import { getUsers } from "@/services/userService";
 import { Company } from "@/types/company";
 import { CompanyUser } from "@/types/user";
+import { compressImage } from "@/utils/imageCompression";
 import { Ionicons } from "@expo/vector-icons";
 import { ResizeMode, Video } from "expo-av";
 import { randomUUID } from "expo-crypto";
@@ -20,24 +21,24 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import {
-    PanGestureHandler,
-    PanGestureHandlerGestureEvent,
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
 import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
@@ -332,7 +333,14 @@ export default function AddImageModal({
     });
 
     if (!result.canceled) {
-      setImage(result.assets[0]);
+      const selectedAsset = result.assets[0];
+      const compressed = await compressImage(selectedAsset.uri);
+      setImage({
+        ...selectedAsset,
+        uri: compressed.uri,
+        width: compressed.width,
+        height: compressed.height,
+      } as ImagePicker.ImagePickerAsset);
       setMode("capture");
     }
   }, []);
@@ -423,11 +431,18 @@ export default function AddImageModal({
         return;
       }
 
-      setImage(selectedAsset);
-      setMode("upload");
       if (selectedAsset.type !== "video") {
-        // handleGenerateDescription logic if auto-generation is desired for gallery picks too
+        const compressed = await compressImage(selectedAsset.uri);
+        setImage({
+          ...selectedAsset,
+          uri: compressed.uri,
+          width: compressed.width,
+          height: compressed.height,
+        } as ImagePicker.ImagePickerAsset);
+      } else {
+        setImage(selectedAsset);
       }
+      setMode("upload");
     }
   }, []);
 
