@@ -138,7 +138,7 @@ export default function LoginScreen() {
     return () => stop();
   }, []);
 
-  // Connectivity monitoring
+
   useEffect(() => {
     const stop = startConnectivityMonitoring((res) => {
       const offline = res.status === "offline";
@@ -154,7 +154,6 @@ export default function LoginScreen() {
     return "#6B7280"; // neutral while loading/unknown
   }
 
-  // Reset dismiss when server is back online
   useEffect(() => {
     if (serverStatus === "ok") setDownModalDismissed(false);
   }, [serverStatus]);
