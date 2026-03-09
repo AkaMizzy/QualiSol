@@ -234,6 +234,11 @@ export default function UpdateFolderTypeModal({
     }
   }, [folderType, visible]);
 
+  const hasChanges = React.useMemo(() => {
+    if (!folderType) return false;
+    return title !== folderType.title || image !== null;
+  }, [title, image, folderType]);
+
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -386,17 +391,36 @@ export default function UpdateFolderTypeModal({
                 </View>
               </TouchableOpacity>
 
-              {/* Title Input */}
+              {/* Title Input and Verify Button */}
               <View style={styles.compactTitleContainer}>
                 <Text style={styles.label}>Titre</Text>
-                <View style={styles.inputWrapper}>
-                  <TextInput
-                    value={title}
-                    onChangeText={setTitle}
-                    placeholder="Nom du type de dossier"
-                    style={styles.input}
-                    placeholderTextColor="#9ca3af"
-                  />
+                <View style={styles.inputAndButtonWrapper}>
+                  <View
+                    style={[styles.inputWrapper, { flex: 1, marginRight: 8 }]}
+                  >
+                    <TextInput
+                      value={title}
+                      onChangeText={setTitle}
+                      placeholder="Nom du type de dossier"
+                      style={styles.input}
+                      placeholderTextColor="#9ca3af"
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={[
+                      styles.verifyButton,
+                      (!hasChanges || isSubmitting) &&
+                        styles.verifyButtonDisabled,
+                    ]}
+                    onPress={handleSubmit}
+                    disabled={!hasChanges || isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <Ionicons name="checkmark" size={20} color="white" />
+                    )}
+                  </TouchableOpacity>
                 </View>
               </View>
             </View>
@@ -494,27 +518,6 @@ export default function UpdateFolderTypeModal({
             users={users}
             projects={projects}
           />
-
-          <View style={styles.footer}>
-            <TouchableOpacity
-              onPress={onClose}
-              style={[styles.button, styles.cancelButton]}
-              disabled={isSubmitting}
-            >
-              <Text style={styles.cancelButtonText}>Annuler</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleSubmit}
-              style={[styles.button, styles.submitButton]}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.submitButtonText}>Enregistrer</Text>
-              )}
-            </TouchableOpacity>
-          </View>
         </SafeAreaView>
       </KeyboardAvoidingView>
     </Modal>
@@ -603,6 +606,10 @@ const styles = StyleSheet.create({
     color: "#374151",
     marginBottom: 6,
   },
+  inputAndButtonWrapper: {
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
   inputWrapper: {
     borderWidth: 1,
     borderColor: "#f87b1b",
@@ -613,13 +620,18 @@ const styles = StyleSheet.create({
   input: {
     fontSize: 14,
     color: "#111827",
+    paddingVertical: Platform.OS === "ios" ? 12 : 8,
   },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#f3f4f6",
-    flexDirection: "row",
-    gap: 12,
+  verifyButton: {
+    backgroundColor: "#10b981", // green success color
+    borderRadius: 10,
+    width: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  verifyButtonDisabled: {
+    backgroundColor: "#6ee7b7", // A lighter disabled green
+    opacity: 0.6,
   },
   button: {
     flex: 1,
@@ -627,17 +639,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-  },
-  cancelButton: {
-    backgroundColor: "#f3f4f6",
-  },
-  cancelButtonText: {
-    color: "#4b5563",
-    fontWeight: "600",
-    fontSize: 15,
-  },
-  submitButton: {
-    backgroundColor: "#f87b1b",
   },
   submitButtonText: {
     color: "white",
