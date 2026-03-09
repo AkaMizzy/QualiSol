@@ -7,17 +7,17 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  LayoutAnimation,
-  Linking,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    LayoutAnimation,
+    Linking,
+    Pressable,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import RenderHTML from "react-native-render-html";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -26,6 +26,7 @@ import CalendarComp from "../../components/calander/CalendarComp";
 import CreateCalendarEventModal from "../../components/calander/CreateCalendarEventModal";
 import DayEventsModal from "../../components/calander/DayEventsModal";
 
+import FolderCard from "@/components/folder/FolderCard";
 import FolderQuestionsModal from "@/components/folder/FolderQuestionsModal";
 import { ICONS } from "@/constants/Icons";
 import folderService, { Folder, Project } from "@/services/folderService";
@@ -66,88 +67,6 @@ type GridItem = {
   disabled?: boolean;
   type: "system";
 };
-
-// Helper to format date for folder cards
-function formatDateForGrid(dateStr?: string | null): string {
-  if (!dateStr) return "";
-  try {
-    const compliantDateStr = dateStr.includes("T")
-      ? dateStr
-      : dateStr.replace(" ", "T");
-    return new Intl.DateTimeFormat("fr-FR", {
-      month: "short",
-      day: "2-digit",
-      year: "numeric",
-    }).format(new Date(compliantDateStr));
-  } catch {
-    return "";
-  }
-}
-
-// Folder card component for the grid
-const FolderCard = ({
-  item,
-  iconSource,
-  projectTitle,
-  folderTypeTitle,
-  onPress,
-}: {
-  item: Folder;
-  iconSource?: any;
-  projectTitle?: string;
-  folderTypeTitle?: string;
-  onPress: () => void;
-}) => (
-  <Pressable
-    style={({ pressed }) => [
-      styles.folderCard,
-      pressed && styles.folderCardPressed,
-    ]}
-    onPress={onPress}
-  >
-    {/* Header: icon left, title right */}
-    <View style={styles.folderCardHeader}>
-      <View style={styles.folderCardIconWrap}>
-        <Image
-          source={iconSource ?? require("../../assets/icons/folder.png")}
-          style={styles.folderCardIcon}
-          contentFit="contain"
-        />
-      </View>
-      <Text style={styles.folderCardTitle} numberOfLines={2}>
-        {item.title}
-      </Text>
-    </View>
-    {/* Type badge */}
-    {folderTypeTitle ? (
-      <View style={styles.folderTypeBadge}>
-        <Text style={styles.folderTypeBadgeText} numberOfLines={1}>
-          {folderTypeTitle}
-        </Text>
-      </View>
-    ) : null}
-    {/* Project row */}
-    {projectTitle ? (
-      <View style={styles.folderCardInfoRow}>
-        <Image
-          source={ICONS.chantierPng}
-          style={{ width: 12, height: 12 }}
-          contentFit="contain"
-        />
-        <Text style={styles.folderCardInfoText} numberOfLines={1}>
-          {projectTitle}
-        </Text>
-      </View>
-    ) : null}
-    {/* Date row */}
-    <View style={styles.folderCardInfoRow}>
-      <Ionicons name="calendar-outline" size={12} color="#f87b1b" />
-      <Text style={styles.folderCardInfoText}>
-        {formatDateForGrid(item.created_at)}
-      </Text>
-    </View>
-  </Pressable>
-);
 
 export default function DashboardScreen() {
   const [token, setToken] = useState<string | null>(null);

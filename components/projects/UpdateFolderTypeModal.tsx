@@ -27,9 +27,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { any } from "zod";
 import AppHeader from "../AppHeader";
+import FolderCard from "../folder/FolderCard";
 import CreateFolderModal from "./CreateFolderModal";
 import FolderAnswersSummaryModal from "./FolderAnswersSummaryModal";
-import FolderSelectionModal from "./FolderSelectionModal";
 
 type Props = {
   visible: boolean;
@@ -63,8 +63,6 @@ export default function UpdateFolderTypeModal({
   // Folder Answers View State
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string>("");
-  const [showFolderSelectionModal, setShowFolderSelectionModal] =
-    useState(false);
   const [showAnswersModal, setShowAnswersModal] = useState(false);
   const [loadingFolders, setLoadingFolders] = useState(false);
 
@@ -142,6 +140,91 @@ export default function UpdateFolderTypeModal({
       : "Propriétaire inconnu";
 
     return `${folder.title} - ${ownerName}`;
+  };
+
+  const visibleFolders = React.useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // compare dates only, ignore time
+
+    return folders
+      .filter((f) => {
+        // Date-range filter: only show folders active today (dd <= today <= df)
+        if (f.dd) {
+          const start = new Date(
+            f.dd.includes("T") ? f.dd : f.dd.replace(" ", "T"),
+          );
+          start.setHours(0, 0, 0, 0);
+          if (today < start) return false;
+        }
+        if (f.df) {
+          const end = new Date(
+            f.df.includes("T") ? f.df : f.df.replace(" ", "T"),
+          );
+          end.setHours(0, 0, 0, 0);
+          if (today > end) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA; // Newest first
+      });
+  }, [folders]);
+
+  const renderFolderRows = () => {
+    if (loadingFolders) {
+      return (
+        <View style={styles.foldersLoadingWrap}>
+          <ActivityIndicator size="small" color="#f87b1b" />
+          <Text style={styles.foldersLoadingText}>
+            Chargement des contrôles…
+          </Text>
+        </View>
+      );
+    }
+
+    if (visibleFolders.length === 0) {
+      return (
+        <View style={styles.foldersEmptyWrap}>
+          <Text style={styles.foldersEmptyText}>
+            Aucun contrôle actif aujourd'hui
+          </Text>
+        </View>
+      );
+    }
+
+    const rows: Folder[][] = [];
+    for (let i = 0; i < visibleFolders.length; i += 2) {
+      rows.push(visibleFolders.slice(i, i + 2));
+    }
+
+    return rows.map((row, rowIndex) => (
+      <View key={rowIndex} style={styles.folderRow}>
+        {row.map((folder) => {
+          const projTitle = folder.project_id
+            ? projects.find((p) => p.id === folder.project_id)?.title
+            : undefined;
+          return (
+            <FolderCard
+              key={folder.id}
+              item={folder}
+              iconSource={
+                folderType?.imageUrl ? { uri: folderType.imageUrl } : undefined
+              }
+              projectTitle={projTitle}
+              folderTypeTitle={folderType?.title}
+              onPress={() => {
+                setSelectedFolderId(folder.id);
+                setShowAnswersModal(true);
+              }}
+            />
+          );
+        })}
+        {row.length === 1 && <View style={styles.folderCardPlaceholder} />}
+      </View>
+    ));
   };
 
   useEffect(() => {
@@ -400,70 +483,9 @@ export default function UpdateFolderTypeModal({
                 </View>
               </View>
 
-              <TouchableOpacity
-                style={styles.pickerButton}
-                onPress={() => setShowFolderSelectionModal(true)}
-                disabled={loadingFolders}
-              >
-                <Text
-                  style={[
-                    styles.pickerButtonText,
-                    !selectedFolderId && { color: "#9ca3af" },
-                  ]}
-                >
-                  {loadingFolders ? "Chargement..." : getSelectedFolderTitle()}
-                </Text>
-                <Ionicons name="chevron-forward" size={20} color="#6b7280" />
-              </TouchableOpacity>
-
-              {/* New View Answers Button */}
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  {
-                    backgroundColor: "#f87b1b",
-                    marginTop: 12,
-                    flexDirection: "row",
-                    gap: 8,
-                  },
-                  !selectedFolderId && { backgroundColor: "#f3f4f6" },
-                ]}
-                onPress={() => setShowAnswersModal(true)}
-                disabled={!selectedFolderId}
-              >
-                <Ionicons
-                  name="eye-outline"
-                  size={20}
-                  color={selectedFolderId ? "white" : "#9ca3af"}
-                />
-                <Text
-                  style={[
-                    styles.submitButtonText,
-                    !selectedFolderId && { color: "#4b5563" },
-                  ]}
-                >
-                  Voir le suivi
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.foldersSection}>{renderFolderRows()}</View>
             </View>
           </ScrollView>
-
-          {/* Folder Selection Modal */}
-          <FolderSelectionModal
-            visible={showFolderSelectionModal}
-            onClose={() => setShowFolderSelectionModal(false)}
-            folders={folders}
-            users={users}
-            onSelect={(id) => {
-              setSelectedFolderId(id);
-              // Open the answers modal automatically after a short delay to allow the selection modal to close
-              setTimeout(() => {
-                setShowAnswersModal(true);
-              }, 400);
-            }}
-            selectedFolderId={selectedFolderId}
-            projects={[]}
-          />
 
           <CreateFolderModal
             visible={showCreateFolderModal}
@@ -873,5 +895,35 @@ const styles = StyleSheet.create({
   answerDetailText: {
     fontSize: 10,
     color: "#6b7280",
+  },
+  foldersSection: {
+    marginTop: 8,
+  },
+  folderRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 12,
+  },
+  folderCardPlaceholder: {
+    flex: 1,
+  },
+  foldersLoadingWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingVertical: 24,
+  },
+  foldersLoadingText: {
+    fontSize: 14,
+    color: "#9ca3af",
+  },
+  foldersEmptyWrap: {
+    alignItems: "center",
+    paddingVertical: 24,
+  },
+  foldersEmptyText: {
+    fontSize: 14,
+    color: "#9ca3af",
   },
 });
