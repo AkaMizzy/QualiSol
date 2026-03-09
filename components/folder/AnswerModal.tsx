@@ -28,6 +28,7 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import CaptureModal from "../CaptureModal";
+import PreviewModal from "../PreviewModal";
 import VoiceNoteRecorder from "../VoiceNoteRecorder";
 import MapSelectionModal from "./MapSelectionModal";
 
@@ -101,6 +102,7 @@ export default function AnswerModal({
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [isMapVisible, setMapVisible] = useState(false);
   const [isCaptureModalVisible, setCaptureModalVisible] = useState(false);
+  const [isPreviewModalVisible, setPreviewModalVisible] = useState(false);
 
   // Audio Playback
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -478,37 +480,29 @@ export default function AnswerModal({
 
         {/* Context & Question Header */}
         <View style={styles.header}>
-          {/* Context Badges */}
-          <View style={styles.contextContainer}>
-            {projectTitle && (
-              <View style={styles.contextBadge}>
-                <Ionicons name="business-outline" size={14} color="#6b7280" />
-                <Text style={styles.contextText} numberOfLines={1}>
+          <View style={styles.contextBanner}>
+            {folderTypeTitle ? (
+              <View style={styles.contextTypeTag}>
+                <Ionicons name="folder-outline" size={12} color="#fff" />
+                <Text style={styles.contextTypeText} numberOfLines={1}>
+                  {folderTypeTitle}
+                </Text>
+              </View>
+            ) : null}
+            {folderTitle ? (
+              <Text style={styles.contextFolderTitle} numberOfLines={1}>
+                {folderTitle}
+              </Text>
+            ) : null}
+            {projectTitle ? (
+              <View style={styles.contextProjectRow}>
+                <Ionicons name="business-outline" size={12} color="#f87b1b" />
+                <Text style={styles.contextProjectText} numberOfLines={1}>
                   {projectTitle}
                 </Text>
               </View>
-            )}
-            {folderTitle && (
-              <View style={[styles.contextBadge, { flex: 1 }]}>
-                <Ionicons name="folder-outline" size={14} color="#f87b1b" />
-                <Text
-                  style={[
-                    styles.contextText,
-                    { color: "#f87b1b", fontWeight: "600" },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {folderTitle}
-                </Text>
-              </View>
-            )}
+            ) : null}
           </View>
-
-          {folderTypeTitle && (
-            <Text style={styles.contextSubText} numberOfLines={1}>
-              {folderTypeTitle}
-            </Text>
-          )}
 
           <Text style={styles.headerTitle} numberOfLines={2}>
             {question.title}
@@ -537,8 +531,6 @@ export default function AnswerModal({
 
             {/* Response Section (Grouped) */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Votre Réponse</Text>
-
               {renderInput()}
 
               {/* Conditional Quantity */}
@@ -574,31 +566,30 @@ export default function AnswerModal({
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Multimédia (Optionnel)</Text>
 
-              {/* Image Picker */}
               <View style={styles.imageContainer}>
-                <TouchableOpacity
-                  style={styles.imagePicker}
-                  onPress={handleImagePick}
-                >
-                  {image ? (
-                    <View style={styles.previewWrapper}>
+                {image ? (
+                  <View style={styles.previewWrapper}>
+                    <TouchableOpacity
+                      onPress={() => setPreviewModalVisible(true)}
+                    >
                       <Image
                         source={{ uri: image.uri }}
                         style={styles.imagePreviewFull}
                         resizeMode="cover"
                       />
-                      <TouchableOpacity
-                        style={styles.removeImageBtn}
-                        onPress={() => setImage(undefined)}
-                      >
-                        <Ionicons
-                          name="close-circle"
-                          size={24}
-                          color="#ef4444"
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.removeImageBtn}
+                      onPress={() => setImage(undefined)}
+                    >
+                      <Ionicons name="close-circle" size={24} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.imagePicker}
+                    onPress={handleImagePick}
+                  >
                     <View style={styles.imagePickerPlaceholder}>
                       <Ionicons
                         name="camera-outline"
@@ -609,8 +600,8 @@ export default function AnswerModal({
                         Ajouter une photo
                       </Text>
                     </View>
-                  )}
-                </TouchableOpacity>
+                  </TouchableOpacity>
+                )}
               </View>
 
               {/* Voice Note */}
@@ -651,6 +642,23 @@ export default function AnswerModal({
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+
+      <PreviewModal
+        visible={isPreviewModalVisible}
+        onClose={() => setPreviewModalVisible(false)}
+        mediaUrl={image?.uri}
+        mediaType="image"
+        title={question.title}
+        description={question.description || undefined}
+        author={
+          user?.firstname ? `${user.firstname} ${user.lastname}` : user?.email
+        }
+        createdAt={question.created_at || new Date().toISOString()}
+        companyTitle={projectTitle}
+        chantier={projectTitle}
+        type={question.type}
+        categorie={question.categorie}
+      />
     </Modal>
   );
 }
@@ -667,30 +675,45 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: "#eee",
   },
-  contextContainer: {
+  contextBanner: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 12,
     gap: 8,
   },
-  contextBadge: {
+  contextTypeTag: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f3f4f6",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
     gap: 4,
+    backgroundColor: "#f87b1b",
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    flexShrink: 0,
   },
-  contextText: {
-    fontSize: 12,
-    color: "#6b7280",
-    fontWeight: "500",
+  contextTypeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#fff",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  contextSubText: {
+  contextFolderTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#11224e",
+  },
+  contextProjectRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 0,
+  },
+  contextProjectText: {
     fontSize: 12,
-    color: "#9ca3af",
-    marginBottom: 8,
+    color: "#f87b1b",
+    fontWeight: "600",
   },
   headerTitle: {
     fontSize: 18,
@@ -910,12 +933,18 @@ const styles = StyleSheet.create({
   },
   previewWrapper: {
     width: "100%",
-    height: "100%",
+    height: 270,
+    backgroundColor: "#f9fafb",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    overflow: "hidden",
     position: "relative",
   },
   imagePreviewFull: {
     width: "100%",
     height: "100%",
+    borderRadius: 12,
   },
   removeImageBtn: {
     position: "absolute",

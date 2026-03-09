@@ -340,6 +340,11 @@ export default function FolderQuestionsModal({
               </Text>
             </View>
           ) : null}
+          {folderTitle ? (
+            <Text style={styles.contextFolderTitle} numberOfLines={1}>
+              {folderTitle}
+            </Text>
+          ) : null}
           {projectTitle ? (
             <View style={styles.contextProjectRow}>
               <Ionicons name="business-outline" size={12} color="#f87b1b" />
