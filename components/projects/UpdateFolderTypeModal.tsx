@@ -11,25 +11,25 @@ import * as ImagePicker from "expo-image-picker";
 import { ImagePickerAsset } from "expo-image-picker";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { any } from "zod";
 import AppHeader from "../AppHeader";
 import CreateFolderModal from "./CreateFolderModal";
 import FolderAnswersSummaryModal from "./FolderAnswersSummaryModal";
 import FolderSelectionModal from "./FolderSelectionModal";
-import { any } from "zod";
 
 type Props = {
   visible: boolean;
@@ -367,7 +367,27 @@ export default function UpdateFolderTypeModal({
               </TouchableOpacity>
             </View>
 
-            {/* User Answers Overview Section - Moved to Top */}
+            {/* Create Folder Section - Dedicated Modal Trigger */}
+            <View style={{ marginBottom: 24 }}>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  {
+                    backgroundColor: "#f87b1b",
+                    flexDirection: "row",
+                    gap: 8,
+                  },
+                ]}
+                onPress={() => setShowCreateFolderModal(true)}
+              >
+                <Ionicons name="add-circle-outline" size={20} color="white" />
+                <Text style={styles.submitButtonText}>
+                  Assigner un contrôle
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* User Answers Overview Section */}
             <View>
               <View style={styles.sectionHeaderRow}>
                 <View style={styles.sectionHeader}>
@@ -423,30 +443,6 @@ export default function UpdateFolderTypeModal({
                   ]}
                 >
                   Voir le suivi
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Create Folder Section - Dedicated Modal Trigger */}
-            <View style={styles.createFolderSection}>
-              <View style={styles.sectionHeaderRow}>
-                <View style={styles.sectionHeader}></View>
-              </View>
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  {
-                    backgroundColor: "#f87b1b",
-                    marginTop: 4,
-                    flexDirection: "row",
-                    gap: 8,
-                  },
-                ]}
-                onPress={() => setShowCreateFolderModal(true)}
-              >
-                <Ionicons name="add-circle-outline" size={20} color="white" />
-                <Text style={styles.submitButtonText}>
-                  Assigner un contrôle
                 </Text>
               </TouchableOpacity>
             </View>

@@ -155,10 +155,10 @@ export default function CreateFolderModal({
                   style={[styles.sectionTitle, { flexShrink: 1 }]}
                   numberOfLines={2}
                 >
-                  Créer un contrôle -{" "}
+                  Assigner {" "}
                   {folderType?.title && (
                     <Text style={{ color: "#f87b1b" }}>{folderType.title}</Text>
-                  )}
+                  )} à un agent
                 </Text>
               </View>
             </View>
@@ -313,7 +313,7 @@ export default function CreateFolderModal({
                       },
                     ]}
                   >
-                    Créer le contrôle
+                    Assigner le contrôle
                   </Text>
                 )}
               </TouchableOpacity>
