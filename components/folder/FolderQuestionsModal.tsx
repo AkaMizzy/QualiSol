@@ -1,21 +1,21 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Linking,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Linking,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    SafeAreaView,
-    useSafeAreaInsets,
+  SafeAreaView,
+  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import API_CONFIG from "@/app/config/api";
@@ -318,6 +318,9 @@ export default function FolderQuestionsModal({
           initialAnswer={pendingChanges[selectedQuestion.id]}
           onClose={() => setAnswerModalVisible(false)}
           onSave={handleAnswerSave}
+          folderTitle={folderTitle}
+          projectTitle={projectTitle}
+          folderTypeTitle={folderTypeTitle}
         />
       )}
       <SafeAreaView style={styles.container}>

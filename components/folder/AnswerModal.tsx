@@ -17,7 +17,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -62,6 +61,9 @@ interface AnswerModalProps {
     iddevice?: string;
     captudedate?: string;
   }) => Promise<void>;
+  folderTitle?: string;
+  projectTitle?: string;
+  folderTypeTitle?: string;
 }
 
 export default function AnswerModal({
@@ -70,6 +72,9 @@ export default function AnswerModal({
   initialAnswer,
   onClose,
   onSave,
+  folderTitle,
+  projectTitle,
+  folderTypeTitle,
 }: AnswerModalProps) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -286,13 +291,52 @@ export default function AnswerModal({
     switch (question.type) {
       case "boolean":
         return (
-          <View style={styles.switchContainer}>
-            <Text style={styles.label}>Réponse (Oui/Non)</Text>
-            <Switch
-              value={boolValue}
-              onValueChange={setBoolValue}
-              trackColor={{ false: "#767577", true: "#f87b1b" }}
-            />
+          <View>
+            <View style={styles.booleanContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.booleanButton,
+                  boolValue === true && styles.booleanButtonActiveYes,
+                ]}
+                onPress={() => setBoolValue(true)}
+              >
+                <Ionicons
+                  name="checkmark-circle"
+                  size={24}
+                  color={boolValue === true ? "#fff" : "#10b981"}
+                />
+                <Text
+                  style={[
+                    styles.booleanText,
+                    boolValue === true && styles.booleanTextActive,
+                  ]}
+                >
+                  Oui
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.booleanButton,
+                  boolValue === false && styles.booleanButtonActiveNo,
+                ]}
+                onPress={() => setBoolValue(false)}
+              >
+                <Ionicons
+                  name="close-circle"
+                  size={24}
+                  color={boolValue === false ? "#fff" : "#ef4444"}
+                />
+                <Text
+                  style={[
+                    styles.booleanText,
+                    boolValue === false && styles.booleanTextActive,
+                  ]}
+                >
+                  Non
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         );
       case "date":
@@ -432,8 +476,40 @@ export default function AnswerModal({
           }}
         />
 
-        {/* Question title sub-header */}
+        {/* Context & Question Header */}
         <View style={styles.header}>
+          {/* Context Badges */}
+          <View style={styles.contextContainer}>
+            {projectTitle && (
+              <View style={styles.contextBadge}>
+                <Ionicons name="business-outline" size={14} color="#6b7280" />
+                <Text style={styles.contextText} numberOfLines={1}>
+                  {projectTitle}
+                </Text>
+              </View>
+            )}
+            {folderTitle && (
+              <View style={[styles.contextBadge, { flex: 1 }]}>
+                <Ionicons name="folder-outline" size={14} color="#f87b1b" />
+                <Text
+                  style={[
+                    styles.contextText,
+                    { color: "#f87b1b", fontWeight: "600" },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {folderTitle}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {folderTypeTitle && (
+            <Text style={styles.contextSubText} numberOfLines={1}>
+              {folderTypeTitle}
+            </Text>
+          )}
+
           <Text style={styles.headerTitle} numberOfLines={2}>
             {question.title}
           </Text>
@@ -470,7 +546,7 @@ export default function AnswerModal({
                 <View style={styles.subInputContainer}>
                   <Text style={styles.label}>Quantité</Text>
                   <TextInput
-                    style={[styles.input, { borderColor: "#f87b1b" }]}
+                    style={styles.input}
                     value={quantity}
                     onChangeText={setQuantity}
                     keyboardType="numeric"
@@ -484,7 +560,7 @@ export default function AnswerModal({
                 <View style={styles.subInputContainer}>
                   <Text style={styles.label}>Prix</Text>
                   <TextInput
-                    style={[styles.input, { borderColor: "#f87b1b" }]}
+                    style={styles.input}
                     value={price}
                     onChangeText={setPrice}
                     keyboardType="numeric"
@@ -586,16 +662,41 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 16,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderColor: "#eee",
   },
+  contextContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 8,
+  },
+  contextBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f3f4f6",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  contextText: {
+    fontSize: 12,
+    color: "#6b7280",
+    fontWeight: "500",
+  },
+  contextSubText: {
+    fontSize: 12,
+    color: "#9ca3af",
+    marginBottom: 8,
+  },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "700",
     color: "#11224e",
-    flex: 1,
+    lineHeight: 24,
   },
   content: {
     padding: 16,
@@ -612,25 +713,25 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 12,
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 16,
   },
   label: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#6b7280",
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#4b5563",
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#f87b1b", // Orange border
-    borderRadius: 8,
-    padding: 12,
+    borderColor: "#d1d5db", // Soft gray
+    borderRadius: 12,
+    padding: 14,
     fontSize: 16,
     color: "#1f2937",
-    backgroundColor: "#fff",
+    backgroundColor: "#f9fafb",
   },
   textArea: {
     height: 100,
@@ -639,20 +740,57 @@ const styles = StyleSheet.create({
   subInputContainer: {
     marginTop: 16,
   },
-  switchContainer: {
+  booleanContainer: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  booleanButton: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
+    paddingVertical: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#f9fafb",
+    gap: 8,
+  },
+  booleanButtonActiveYes: {
+    backgroundColor: "#10b981",
+    borderColor: "#10b981",
+    shadowColor: "#10b981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  booleanButtonActiveNo: {
+    backgroundColor: "#ef4444",
+    borderColor: "#ef4444",
+    shadowColor: "#ef4444",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  booleanText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#6b7280",
+  },
+  booleanTextActive: {
+    color: "#fff",
   },
   dateInput: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#f87b1b",
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: "#fff",
+    borderColor: "#d1d5db",
+    borderRadius: 12,
+    padding: 14,
+    backgroundColor: "#f9fafb",
   },
 
   voiceSection: {
@@ -664,9 +802,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f87b1b",
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: "#10b981", // Emerald green for location defined/define
+    padding: 14,
+    borderRadius: 12,
+    shadowColor: "#10b981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
   },
   gpsButtonText: {
     color: "#fff",
@@ -691,8 +834,8 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    padding: 14,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 12,
     backgroundColor: "#f3f4f6",
     alignItems: "center",
   },
@@ -703,10 +846,15 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flex: 2,
-    padding: 14,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 12,
     backgroundColor: "#f87b1b",
     alignItems: "center",
+    shadowColor: "#f87b1b",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   saveButtonText: {
     color: "#fff",
