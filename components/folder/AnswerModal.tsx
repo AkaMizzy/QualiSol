@@ -1,9 +1,11 @@
+import API_CONFIG from "@/app/config/api";
 import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { Ged } from "@/services/gedService";
 import { compressImage } from "@/utils/imageCompression";
 import { Ionicons } from "@expo/vector-icons";
 import { Audio } from "expo-av";
+import { randomUUID } from "expo-crypto";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -55,6 +57,10 @@ interface AnswerModalProps {
     image?: ImagePicker.ImagePickerAsset;
     recordingUri?: string;
     boolValue?: boolean;
+    author?: string;
+    idauthor?: string;
+    iddevice?: string;
+    captudedate?: string;
   }) => Promise<void>;
 }
 
@@ -108,14 +114,21 @@ export default function AnswerModal({
       if (initialAnswer?.image) {
         setImage(initialAnswer.image);
       } else if (question.url) {
-        setImage({ uri: question.url, width: 0, height: 0 } as any);
+        const fullUri = question.url.startsWith("http")
+          ? question.url
+          : `${API_CONFIG.BASE_URL}${question.url}`;
+        setImage({ uri: fullUri, width: 0, height: 0 } as any);
       } else {
         setImage(undefined);
       }
 
-      setVoiceNoteUri(
-        initialAnswer?.recordingUri || question.urlvoice || undefined,
-      );
+      const audioUrl = question.urlvoice
+        ? question.urlvoice.startsWith("http")
+          ? question.urlvoice
+          : `${API_CONFIG.BASE_URL}${question.urlvoice}`
+        : undefined;
+
+      setVoiceNoteUri(initialAnswer?.recordingUri || audioUrl);
 
       // Special handling for GPS text if needed
       if (question.type === "GPS" && !initialAnswer?.latitude && val) {
@@ -170,6 +183,40 @@ export default function AnswerModal({
         finalAnswer = `Lat: ${parseFloat(latitude).toFixed(4)}, Lon: ${parseFloat(longitude).toFixed(4)}`;
       }
 
+      let authorName = "Unknown User";
+
+      if (user) {
+        if (user.identifier) {
+          authorName = user.identifier;
+        } else {
+          const name = [user.firstname, user.lastname]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+          if (name) {
+            authorName = name;
+          } else if (user.email) {
+            authorName = user.email;
+          }
+        }
+      }
+
+      // Extract EXIF date if available, otherwise fallback to current time
+      let captureDateStr = new Date().toISOString();
+      if (image && image.exif) {
+        const exifDate = image.exif.DateTimeOriginal || image.exif.DateTime;
+        if (exifDate) {
+          // EXIF dates are typically "YYYY:MM:DD HH:MM:SS" - parse correctly
+          const parts = exifDate.split(" ");
+          if (parts.length === 2) {
+            const dateParts = parts[0].split(":");
+            if (dateParts.length === 3) {
+              captureDateStr = `${dateParts[0]}-${dateParts[1]}-${dateParts[2]}T${parts[1]}.000Z`;
+            }
+          }
+        }
+      }
+
       await onSave({
         answer: finalAnswer,
         value: finalAnswer,
@@ -180,6 +227,10 @@ export default function AnswerModal({
         image,
         recordingUri: voiceNoteUri,
         boolValue,
+        author: authorName,
+        idauthor: user?.id,
+        iddevice: randomUUID(),
+        captudedate: captureDateStr,
       });
       onClose();
     } catch (error) {
@@ -214,6 +265,7 @@ export default function AnswerModal({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             quality: 0.8,
             allowsEditing: false, // Ensure no forced cropping
+            exif: true,
           });
           if (!result.canceled && result.assets[0]) {
             const compressed = await compressImage(result.assets[0].uri);
@@ -357,9 +409,11 @@ export default function AnswerModal({
             type: "image",
             fileName: media.uri.split("/").pop() || "photo.jpg",
             mimeType: "image/jpeg",
+            exif: media.exif,
           });
           setCaptureModalVisible(false);
         }}
+        exif={true}
       />
       <SafeAreaView
         style={[

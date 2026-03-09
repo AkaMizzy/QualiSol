@@ -2,23 +2,23 @@ import { COLORS } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
 import {
-  CameraType,
-  CameraView,
-  FlashMode,
-  useCameraPermissions,
-  useMicrophonePermissions,
+    CameraType,
+    CameraView,
+    FlashMode,
+    useCameraPermissions,
+    useMicrophonePermissions,
 } from "expo-camera";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Alert,
-  Modal,
-  Platform,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Modal,
+    Platform,
+    SafeAreaView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 interface CaptureModalProps {
@@ -29,13 +29,16 @@ interface CaptureModalProps {
     type: "image" | "video";
     width?: number;
     height?: number;
+    exif?: any;
   }) => void;
+  exif?: boolean;
 }
 
 export default function CaptureModal({
   visible,
   onClose,
   onMediaCaptured,
+  exif,
 }: CaptureModalProps) {
   const [permission, requestPermission] = useCameraPermissions();
   const [micPermission, requestMicPermission] = useMicrophonePermissions();
@@ -95,6 +98,7 @@ export default function CaptureModal({
         const photo = await cameraRef.current.takePictureAsync({
           quality: 0.8,
           skipProcessing: true, // Faster capture
+          exif: exif,
         });
         if (photo) {
           onMediaCaptured({
@@ -102,6 +106,7 @@ export default function CaptureModal({
             type: "image",
             width: photo.width,
             height: photo.height,
+            exif: photo.exif,
           });
           onClose(); // Auto close after capture? Or maybe show preview? For now auto close to return to AddImageModal
         }

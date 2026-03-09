@@ -1,21 +1,21 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Linking,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Linking,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import {
-  SafeAreaView,
-  useSafeAreaInsets,
+    SafeAreaView,
+    useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import API_CONFIG from "@/app/config/api";
@@ -60,6 +60,10 @@ interface AnswerData {
   image?: ImagePicker.ImagePickerAsset;
   recordingUri?: string;
   boolValue?: boolean;
+  author?: string;
+  idauthor?: string;
+  iddevice?: string;
+  captudedate?: string;
 }
 
 function QuestionRow({
@@ -226,13 +230,17 @@ export default function FolderQuestionsModal({
 
     const question = selectedQuestion;
 
-    // Base Payload - only update answer-related fields
+    // Base Payload - only update answer-related fields along with new metadata
     const basePayload: any = {
       quantity: data.quantity,
       price: data.price,
       answer: data.answer || data.value,
       latitude: data.latitude,
       longitude: data.longitude,
+      author: data.author,
+      idauthor: data.idauthor,
+      iddevice: data.iddevice,
+      captudedate: data.captudedate,
     };
 
     try {
