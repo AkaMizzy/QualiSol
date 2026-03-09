@@ -541,7 +541,12 @@ export default function AnswerModal({
               <View style={styles.voiceSection}>
                 <VoiceNoteRecorder
                   initialUri={
-                    initialAnswer?.recordingUri || question.urlvoice || null
+                    initialAnswer?.recordingUri ||
+                    (question.urlvoice
+                      ? question.urlvoice.startsWith("http")
+                        ? question.urlvoice
+                        : `${API_CONFIG.BASE_URL}${question.urlvoice}`
+                      : null)
                   }
                   onRecordingComplete={(uri) =>
                     setVoiceNoteUri(uri || undefined)
