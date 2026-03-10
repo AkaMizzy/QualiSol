@@ -449,7 +449,14 @@ export function CreateChildQualiPhotoForm({
   };
 
   useEffect(() => {
-    handlePickPhoto();
+    // Delay opening the picker to prevent native Alert components
+    // from popping up during the React Navigation modal transition.
+    // This resolves the bug where the Alert queues and triggers inconsistently on modal close.
+    const timer = setTimeout(() => {
+      handlePickPhoto();
+    }, 400);
+
+    return () => clearTimeout(timer);
   }, [handlePickPhoto]);
 
   const openAnnotatorForExisting = () => {

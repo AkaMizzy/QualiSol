@@ -1,10 +1,10 @@
 import { useAuth } from "@/contexts/AuthContext";
 import companyService from "@/services/companyService";
 import {
-    createGed,
-    CreateGedInput,
-    Ged,
-    getAllGeds,
+  createGed,
+  CreateGedInput,
+  Ged,
+  getAllGeds,
 } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { compressImage } from "@/utils/imageCompression";
@@ -15,33 +15,33 @@ import * as Crypto from "expo-crypto";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { any } from "zod";
 import CaptureModal from "../CaptureModal";
 import PictureAnnotator from "../PictureAnnotator";
-import VoiceNoteRecorder from "../VoiceNoteRecorder";
-import { any } from "zod";
+import VoiceNoteRecorder, { VoiceNoteRecorderRef } from "../VoiceNoteRecorder";
 
 export type QualiPhotoItem = {
   id: string;
@@ -99,6 +99,10 @@ function CreateComplementaireQualiPhotoForm({
   const [editingField, setEditingField] = useState<"description" | null>(null);
   const [tempFieldValue, setTempFieldValue] = useState<string>("");
 
+  const voiceNoteRecorderRef = useRef<VoiceNoteRecorderRef>(null);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // Storage quota state
   const [currentStorageGB, setCurrentStorageGB] = useState(0);
   const [storageQuotaGB, setStorageQuotaGB] = useState(0);
@@ -106,9 +110,27 @@ function CreateComplementaireQualiPhotoForm({
   const [loadingLimits, setLoadingLimits] = useState(true);
 
   const canSave = useMemo(
-    () => !!photo && !submitting && !isStorageQuotaReached,
-    [photo, submitting, isStorageQuotaReached],
+    () => !!photo && !submitting && !isUploadingAudio && !isStorageQuotaReached,
+    [photo, submitting, isUploadingAudio, isStorageQuotaReached],
   );
+
+  // Auto-start recording when image is selected
+  useEffect(() => {
+    if (photo && !audioUri) {
+      // Small delay to ensure modal/component is fully ready
+      const timer = setTimeout(() => {
+        voiceNoteRecorderRef.current?.startRecording();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [photo, audioUri]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      voiceNoteRecorderRef.current?.forceStopAndCleanup();
+    };
+  }, []);
 
   useEffect(() => {
     const fetchLimitInfo = async () => {
@@ -305,7 +327,34 @@ function CreateComplementaireQualiPhotoForm({
     setAnnotatorVisible(true);
   };
 
-  const handleSubmit = async () => {
+  const resetForm = async () => {
+    // Force cleanup recording first
+    await voiceNoteRecorderRef.current?.forceStopAndCleanup();
+
+    setTitle("");
+    setComment("");
+    setPhoto(null);
+    setLatitude(null);
+    setLongitude(null);
+    setAudioUri(null);
+    setError(null);
+    setAnnotatorVisible(false);
+    setAnnotatorBaseUri(null);
+    setMode("upload");
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const handleSubmit = async (shouldClose: boolean) => {
+    // Check if recording is active and stop it gracefully to get the URI
+    let currentAudioUri = audioUri;
+    if (voiceNoteRecorderRef.current) {
+      const uri = await voiceNoteRecorderRef.current.stopAndReturnRecording();
+      if (uri) {
+        currentAudioUri = uri;
+        setAudioUri(uri);
+      }
+    }
+
     if (!token || !photo || !user) return;
 
     if (isStorageQuotaReached) {
@@ -340,10 +389,11 @@ function CreateComplementaireQualiPhotoForm({
           : undefined,
         file: photo,
         mode: mode,
-        answer: any
+        answer: any,
       });
 
-      if (audioUri) {
+      if (currentAudioUri) {
+        setIsUploadingAudio(true);
         try {
           const audioPayload: CreateGedInput = {
             idsource: result.data.id,
@@ -362,11 +412,11 @@ function CreateComplementaireQualiPhotoForm({
               ? String(altitudeAccuracy)
               : undefined,
             file: {
-              uri: audioUri,
+              uri: currentAudioUri,
               name: `note_${Date.now()}.m4a`,
               type: "audio/m4a",
             },
-            answer: any
+            answer: any,
           };
           await createGed(token, audioPayload);
         } catch (audioErr: any) {
@@ -374,11 +424,18 @@ function CreateComplementaireQualiPhotoForm({
             "Erreur Audio",
             `La photo a été enregistrée, mais l'envoi de la note vocale a échoué : ${audioErr.message}`,
           );
+        } finally {
+          setIsUploadingAudio(false);
         }
       }
 
       onSuccess(result.data);
-      onClose();
+      if (shouldClose) {
+        onClose();
+      } else {
+        await resetForm();
+        handlePickPhoto();
+      }
     } catch (e: any) {
       setError(e?.message || "Échec de l'enregistrement");
     } finally {
@@ -513,82 +570,210 @@ function CreateComplementaireQualiPhotoForm({
               </TouchableOpacity>
             )}
 
-            <View style={{ marginTop: 16, gap: 12 }}>
-              <View style={[styles.inputWrap]}>
-                <Ionicons name="text-outline" size={16} color="#6b7280" />
-                <TextInput
-                  placeholder="Titre"
-                  placeholderTextColor="#9ca3af"
-                  value={title}
-                  onChangeText={setTitle}
-                  style={styles.input}
-                />
-              </View>
-              <VoiceNoteRecorder onRecordingComplete={setAudioUri} />
+            <View style={styles.compactSection}>
+              <VoiceNoteRecorder
+                ref={voiceNoteRecorderRef}
+                onRecordingComplete={setAudioUri}
+              />
+
               <View
                 style={[
-                  styles.inputWrap,
-                  { minHeight: 120, alignItems: "flex-start", paddingTop: 12 },
+                  styles.buttonContainer,
+                  { paddingHorizontal: 0, marginTop: 16 },
                 ]}
               >
-                <Ionicons
-                  name="document-text-outline"
-                  size={16}
-                  color="#6b7280"
-                  style={{ marginTop: 4 }}
-                />
                 <TouchableOpacity
-                  style={{ flex: 1, paddingVertical: 4 }}
+                  style={[
+                    styles.button,
+                    styles.cancelButton,
+                    ((photo && !canSave) || submitting || isUploadingAudio) &&
+                      styles.submitButtonDisabled,
+                  ]}
+                  disabled={photo ? !canSave : false}
                   onPress={() => {
-                    setTempFieldValue(comment);
-                    setEditingField("description");
+                    if (!photo) {
+                      onClose();
+                    } else {
+                      handleSubmit(true);
+                    }
                   }}
                 >
-                  <Text
-                    style={{
-                      fontSize: 16,
-                      color: comment ? "#111827" : "#9ca3af",
-                    }}
-                    numberOfLines={4}
-                  >
-                    {comment || "Description"}
+                  <Text style={[styles.buttonText, styles.cancelButtonText]}>
+                    Terminer
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => {
-                    setTempFieldValue(comment);
-                    setEditingField("description");
-                  }}
+                  style={[
+                    styles.button,
+                    styles.submitButton,
+                    (!canSave || submitting || isUploadingAudio) &&
+                      styles.submitButtonDisabled,
+                  ]}
+                  disabled={!canSave}
+                  onPress={() => handleSubmit(false)}
                 >
-                  <Ionicons name="create-outline" size={20} color="#f87b1b" />
+                  {submitting ? (
+                    <>
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <Text style={styles.buttonText}>Enregistrement...</Text>
+                    </>
+                  ) : isUploadingAudio ? (
+                    <>
+                      <Ionicons name="mic-outline" size={18} color="#FFFFFF" />
+                      <Text style={styles.buttonText}>Note vocale...</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Ionicons
+                        name="add-circle-outline"
+                        size={18}
+                        color="#FFFFFF"
+                      />
+                      <Text style={styles.buttonText}>Ajouter nouveau</Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               </View>
+
+              {/* PLUS D'OPTIONS TOGGLE */}
+              <TouchableOpacity
+                style={styles.expandButton}
+                onPress={() => setIsExpanded(!isExpanded)}
+              >
+                <Text style={styles.expandButtonText}>
+                  {isExpanded ? "Moins d'options" : "Plus d'options"}
+                </Text>
+                <Ionicons
+                  name={isExpanded ? "chevron-up" : "chevron-down"}
+                  size={20}
+                  color="#f87b1b"
+                />
+              </TouchableOpacity>
             </View>
+
+            {isExpanded && (
+              <View style={[styles.expandedSection, { marginTop: 16 }]}>
+                <View style={[styles.inputWrap]}>
+                  <Ionicons name="text-outline" size={16} color="#6b7280" />
+                  <TextInput
+                    placeholder="Titre"
+                    placeholderTextColor="#9ca3af"
+                    value={title}
+                    onChangeText={setTitle}
+                    style={styles.input}
+                  />
+                </View>
+
+                <View
+                  style={[
+                    styles.inputWrap,
+                    {
+                      minHeight: 120,
+                      alignItems: "flex-start",
+                      paddingTop: 12,
+                      marginTop: 12,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="document-text-outline"
+                    size={16}
+                    color="#6b7280"
+                    style={{ marginTop: 4 }}
+                  />
+                  <TouchableOpacity
+                    style={{ flex: 1, paddingVertical: 4 }}
+                    onPress={() => {
+                      setTempFieldValue(comment);
+                      setEditingField("description");
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        color: comment ? "#111827" : "#9ca3af",
+                      }}
+                      numberOfLines={4}
+                    >
+                      {comment || "Description"}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setTempFieldValue(comment);
+                      setEditingField("description");
+                    }}
+                  >
+                    <Ionicons name="create-outline" size={20} color="#f87b1b" />
+                  </TouchableOpacity>
+                </View>
+
+                <View
+                  style={[
+                    styles.buttonContainer,
+                    { paddingHorizontal: 0, marginTop: 16, marginBottom: 16 },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.button,
+                      styles.cancelButton,
+                      ((photo && !canSave) || submitting || isUploadingAudio) &&
+                        styles.submitButtonDisabled,
+                    ]}
+                    disabled={photo ? !canSave : false}
+                    onPress={() => {
+                      if (!photo) {
+                        onClose();
+                      } else {
+                        handleSubmit(true);
+                      }
+                    }}
+                  >
+                    <Text style={[styles.buttonText, styles.cancelButtonText]}>
+                      Terminer
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.button,
+                      styles.submitButton,
+                      (!canSave || submitting || isUploadingAudio) &&
+                        styles.submitButtonDisabled,
+                    ]}
+                    disabled={!canSave}
+                    onPress={() => handleSubmit(false)}
+                  >
+                    {submitting ? (
+                      <>
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <Text style={styles.buttonText}>Enregistrement...</Text>
+                      </>
+                    ) : isUploadingAudio ? (
+                      <>
+                        <Ionicons
+                          name="mic-outline"
+                          size={18}
+                          color="#FFFFFF"
+                        />
+                        <Text style={styles.buttonText}>Note vocale...</Text>
+                      </>
+                    ) : (
+                      <>
+                        <Ionicons
+                          name="add-circle-outline"
+                          size={18}
+                          color="#FFFFFF"
+                        />
+                        <Text style={styles.buttonText}>Ajouter nouveau</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
         </ScrollView>
-
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              !canSave && styles.submitButtonDisabled,
-            ]}
-            disabled={!canSave}
-            onPress={handleSubmit}
-          >
-            {submitting ? (
-              <>
-                <ActivityIndicator size="small" color="#FFFFFF" />
-                <Text style={styles.submitButtonText}>Enregistrement...</Text>
-              </>
-            ) : (
-              <>
-                <Ionicons name="save" size={20} color="#FFFFFF" />
-                <Text style={styles.submitButtonText}>Enregistrer</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
       </SafeAreaView>
 
       {/* Description Editor Modal */}
@@ -832,33 +1017,67 @@ const styles = StyleSheet.create({
     right: 12,
     zIndex: 1,
   },
-  footer: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 24,
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
+  buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: 12,
+    marginTop: 16,
+  },
+  button: {
+    flex: 1,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    borderRadius: 12,
     gap: 8,
+  },
+  cancelButton: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
   submitButton: {
     backgroundColor: "#f87b1b",
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-    flex: 1,
     shadowColor: "#f87b1b",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
+  },
+  cancelButtonText: {
+    color: "#475569",
+  },
+  buttonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  submitButtonDisabled: {
+    backgroundColor: "#cbd5e1",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  compactSection: {
+    marginTop: 16,
+    gap: 12,
+  },
+  expandedSection: {
+    marginTop: 0,
+    gap: 12,
+  },
+  expandButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    marginTop: 4,
+  },
+  expandButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#f87b1b",
   },
   label: {
     fontSize: 14,
@@ -871,8 +1090,6 @@ const styles = StyleSheet.create({
     height: 100,
     textAlignVertical: "top",
   },
-  submitButtonDisabled: { backgroundColor: "#d1d5db" },
-  submitButtonText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
   limitInfoBanner: {
     flexDirection: "row",
     alignItems: "center",
