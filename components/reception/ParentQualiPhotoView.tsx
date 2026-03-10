@@ -1,18 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Platform,
-  Pressable,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  UIManager,
-  useWindowDimensions,
-  View,
+    ActivityIndicator,
+    Image,
+    Platform,
+    Pressable,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    UIManager,
+    useWindowDimensions,
+    View,
 } from "react-native";
 
 import API_CONFIG from "@/app/config/api";
@@ -252,9 +252,6 @@ export const ParentQualiPhotoView: React.FC<ParentQualiPhotoViewProps> = ({
 
       if (projectTitle) {
         parts.push(`🏗️ Chantier: ${projectTitle}`);
-      }
-      if (zoneTitle) {
-        parts.push(`📍 Zone: ${zoneTitle}`);
       }
 
       // Date, Auteur

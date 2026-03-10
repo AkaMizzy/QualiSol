@@ -140,14 +140,11 @@ function useQualiPhotoDetail({
 
   const subtitle = useMemo(() => {
     if (!item) return "";
-    if (propProjectTitle && propZoneTitle)
-      return `${propProjectTitle} • ${propZoneTitle}`;
+    if (propProjectTitle) return `${propProjectTitle}`;
     const projectTitle =
       projects.find((p) => p.id === item.project_id)?.title || "—";
-    const zoneTitle =
-      zones.find((z: any) => z.id === item.zone_id)?.title || "—";
-    return `${projectTitle} • ${zoneTitle}`;
-  }, [item, projects, zones, propProjectTitle, propZoneTitle]);
+    return `${projectTitle}`;
+  }, [item, projects, propProjectTitle]);
 
   useEffect(() => {
     return () => {

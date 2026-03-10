@@ -294,9 +294,6 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
       if (projectTitle) {
         parts.push(`🏗️ Chantier: ${projectTitle}`);
       }
-      if (zoneTitle) {
-        parts.push(`📍 Zone: ${zoneTitle}`);
-      }
 
       // Date, Auteur (Use item date/author)
       const dateStr = item.created_at
