@@ -24,6 +24,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SignatureFieldQualiphoto from '../signature/SignatureFieldQualiphoto';
 import VoiceNoteRecorder from '../VoiceNoteRecorder';
+import { any } from 'zod';
 
 type Props = {
   visible: boolean;
@@ -229,6 +230,7 @@ export default function QualiPhotoEditModal({
         latitude: latitude?.toString(),
         longitude: longitude?.toString(),
         file: file,
+        answer: any
       });
   
       setSignatures(prev => ({
@@ -318,7 +320,7 @@ export default function QualiPhotoEditModal({
                 </View>
                 <VoiceNoteRecorder
                   onRecordingComplete={() => {}}
-                  onTranscriptionComplete={handleDescriptionTranscription}
+        
                 />
                 <View style={[styles.inputWrap, { alignItems: 'flex-start', marginTop: 8 }]}>
                   <TextInput
@@ -356,7 +358,7 @@ export default function QualiPhotoEditModal({
                 </View>
                 <VoiceNoteRecorder
                   onRecordingComplete={() => {}}
-                  onTranscriptionComplete={handleConclusionTranscription}
+                  
                 />
                 <View style={[styles.inputWrap, { alignItems: 'flex-start', marginTop: 8 }]}>
                   <TextInput

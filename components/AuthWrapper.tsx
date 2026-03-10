@@ -22,11 +22,8 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
     if (isAuthenticated && inAuthGroup) {
       // If the user is authenticated and is in the auth group (e.g., login page),
       // redirect them to the main app. Platform-specific: web goes to webhome, mobile to tabs.
-      if (require('react-native').Platform.OS === 'web') {
-        router.replace('/webhome');
-      } else {
-        router.replace('/(tabs)');
-      }
+      router.replace('/(tabs)');
+      
     } else if (!isAuthenticated && !inAuthGroup) {
       // If the user is not authenticated and is not in the auth group,
       // redirect them to the login page.

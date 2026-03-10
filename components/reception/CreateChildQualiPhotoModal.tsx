@@ -6,10 +6,10 @@ import { Anomalie2, getAllAnomalies2 } from "@/services/anomalie2Service";
 import companyService from "@/services/companyService";
 import { Folder } from "@/services/folderService";
 import {
-    CreateGedInput,
-    Ged,
-    createGed,
-    getAllGeds,
+  CreateGedInput,
+  Ged,
+  createGed,
+  getAllGeds,
 } from "@/services/gedService";
 import { Company } from "@/types/company";
 import { compressImage } from "@/utils/imageCompression";
@@ -20,37 +20,37 @@ import { randomUUID } from "expo-crypto";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-    Alert,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Alert,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import {
-    GestureHandlerRootView,
-    PanGestureHandler,
-    PanGestureHandlerGestureEvent,
+  GestureHandlerRootView,
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
 } from "react-native-gesture-handler";
+import { any } from "zod";
 import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
-import VoiceNoteRecorder from "../VoiceNoteRecorder";
-import { any } from "zod";
+import VoiceNoteRecorder, { VoiceNoteRecorderRef } from "../VoiceNoteRecorder";
 
 type FormProps = {
   onClose: () => void;
@@ -130,10 +130,31 @@ export function CreateChildQualiPhotoForm({
   // Popup modal states
   const [editingField, setEditingField] = useState<"description" | null>(null);
   const [tempFieldValue, setTempFieldValue] = useState<string>("");
+  const [isExpanded, setIsExpanded] = useState(false);
   const canSave = useMemo(
     () => !!photo && !submitting && !isUploadingAudio && !isStorageQuotaReached,
     [photo, submitting, isUploadingAudio, isStorageQuotaReached],
   );
+
+  const voiceNoteRecorderRef = useRef<VoiceNoteRecorderRef>(null);
+
+  // Auto-start recording when image is selected
+  useEffect(() => {
+    if (photo && !audioUri) {
+      // Small delay to ensure modal/component is fully ready
+      const timer = setTimeout(() => {
+        voiceNoteRecorderRef.current?.startRecording();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [photo, audioUri]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      voiceNoteRecorderRef.current?.forceStopAndCleanup();
+    };
+  }, []);
 
   useEffect(() => {
     const fetchLimitInfo = async () => {
@@ -246,7 +267,10 @@ export function CreateChildQualiPhotoForm({
     loadAuthorName();
   }, [token, user]);
 
-  const resetForm = () => {
+  const resetForm = async () => {
+    // Force cleanup recording first
+    await voiceNoteRecorderRef.current?.forceStopAndCleanup();
+
     setTitle("");
     setComment("");
     setPhoto(null);
@@ -452,7 +476,17 @@ export function CreateChildQualiPhotoForm({
     return randomUUID();
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (shouldClose: boolean) => {
+    // Check if recording is active and stop it gracefully to get the URI
+    let currentAudioUri = audioUri;
+    if (voiceNoteRecorderRef.current) {
+      const uri = await voiceNoteRecorderRef.current.stopAndReturnRecording();
+      if (uri) {
+        currentAudioUri = uri;
+        setAudioUri(uri);
+      }
+    }
+
     if (!token || !photo || !user) {
       setError(
         "Impossible de soumettre : informations utilisateur ou photo manquantes.",
@@ -495,12 +529,12 @@ export function CreateChildQualiPhotoForm({
         assigned: assigned || undefined,
         file: photo,
         mode: mode,
-        answer: any
+        answer: any,
       };
 
       const result = await createGed(token, payload);
 
-      if (audioUri) {
+      if (currentAudioUri) {
         setIsUploadingAudio(true);
         try {
           const audioPayload: CreateGedInput = {
@@ -521,11 +555,11 @@ export function CreateChildQualiPhotoForm({
             type: selectedType || undefined,
             categorie: selectedCategorie || undefined,
             file: {
-              uri: audioUri,
+              uri: currentAudioUri,
               name: `note_${Date.now()}.m4a`,
               type: "audio/m4a",
             },
-            answer: any
+            answer: any,
           };
           await createGed(token, audioPayload);
         } catch (audioErr: any) {
@@ -541,28 +575,12 @@ export function CreateChildQualiPhotoForm({
       onSuccess(result.data);
       setCreationCount((prev) => prev + 1);
 
-      setAlertInfo({
-        visible: true,
-        title: "Enregistré",
-        message:
-          "La photo a été enregistrée avec succès. Voulez-vous en ajouter une autre ?",
-        type: "success",
-        buttons: [
-          {
-            text: "Non, Arrêter",
-            onPress: onClose,
-            style: "destructive",
-          },
-          {
-            text: "Oui",
-            onPress: () => {
-              resetForm();
-              handlePickPhoto();
-            },
-            style: "primary",
-          },
-        ],
-      });
+      if (shouldClose) {
+        onClose();
+      } else {
+        await resetForm();
+        handlePickPhoto();
+      }
     } catch (e: any) {
       setError(e?.message || 'Échec de l\'enregistrement de la photo "avant".');
       Alert.alert(
@@ -876,216 +894,352 @@ export function CreateChildQualiPhotoForm({
                   )}
                 </View>
 
-                <VoiceNoteRecorder
-                  key={creationCount}
-                  onRecordingComplete={setAudioUri}
-                />
+                <View style={styles.compactSection}>
+                  <VoiceNoteRecorder
+                    ref={voiceNoteRecorderRef}
+                    key={creationCount}
+                    onRecordingComplete={setAudioUri}
+                    initialUri={audioUri}
+                  />
+
+                  <View style={styles.buttonContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.button,
+                        styles.cancelButton,
+                        ((photo && !canSave) ||
+                          submitting ||
+                          isUploadingAudio) &&
+                          styles.submitButtonDisabled,
+                      ]}
+                      disabled={photo ? !canSave : false}
+                      onPress={() => {
+                        if (!photo) {
+                          onClose();
+                        } else {
+                          handleSubmit(true);
+                        }
+                      }}
+                    >
+                      <Text
+                        style={[styles.buttonText, styles.cancelButtonText]}
+                      >
+                        Terminer
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.button,
+                        styles.submitButton, // reusing submitButton for the primary orange style
+                        (!canSave || submitting || isUploadingAudio) &&
+                          styles.submitButtonDisabled,
+                      ]}
+                      disabled={!canSave}
+                      onPress={() => handleSubmit(false)}
+                    >
+                      {submitting ? (
+                        <>
+                          <Ionicons
+                            name="hourglass"
+                            size={18}
+                            color="#FFFFFF"
+                          />
+                          <Text style={styles.buttonText}>
+                            Enregistrement...
+                          </Text>
+                        </>
+                      ) : isUploadingAudio ? (
+                        <>
+                          <Ionicons
+                            name="mic-outline"
+                            size={18}
+                            color="#FFFFFF"
+                          />
+                          <Text style={styles.buttonText}>Note vocale...</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Ionicons
+                            name="add-circle-outline"
+                            size={18}
+                            color="#FFFFFF"
+                          />
+                          <Text style={styles.buttonText}>Ajouter nouveau</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.expandButton}
+                    onPress={() => setIsExpanded(!isExpanded)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.expandButtonText}>
+                      {isExpanded ? "Moins d'options" : "Plus d'options"}
+                    </Text>
+                    <Ionicons
+                      name={isExpanded ? "chevron-up" : "chevron-down"}
+                      size={20}
+                      color="#f87b1b"
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
 
-              {/* Anomaly Type Selection (from anomalie1) - Only show if there are types available */}
-              {!loadingAnomalies && anomalieTypes.length > 0 && (
-                <View style={styles.sectionContainer}>
-                  <Text style={styles.sectionTitle}>Type d&apos;anomalie</Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.typeScrollView}
-                  >
-                    {anomalieTypes.map((type) => (
-                      <TouchableOpacity
-                        key={type.id}
-                        style={[
-                          styles.typeButton,
-                          selectedType === type.anomalie &&
-                            styles.typeButtonSelected,
-                        ]}
-                        onPress={() => setSelectedType(type.anomalie || null)}
+              {isExpanded && (
+                <View style={styles.expandedSection}>
+                  {/* Anomaly Type Selection (from anomalie1) - Only show if there are types available */}
+                  {!loadingAnomalies && anomalieTypes.length > 0 && (
+                    <View style={styles.sectionContainer}>
+                      <Text style={styles.sectionTitle}>
+                        Type d&apos;anomalie
+                      </Text>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.typeScrollView}
                       >
-                        <Ionicons
-                          name="alert-circle-outline"
-                          size={20}
-                          color={
-                            selectedType === type.anomalie
-                              ? "#FFFFFF"
-                              : "#11224e"
-                          }
-                        />
-                        <Text
-                          style={[
-                            styles.typeButtonText,
-                            selectedType === type.anomalie &&
-                              styles.typeButtonTextSelected,
-                          ]}
-                        >
-                          {type.anomalie || "Sans nom"}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
+                        {anomalieTypes.map((type) => (
+                          <TouchableOpacity
+                            key={type.id}
+                            style={[
+                              styles.typeButton,
+                              selectedType === type.anomalie &&
+                                styles.typeButtonSelected,
+                            ]}
+                            onPress={() =>
+                              setSelectedType(type.anomalie || null)
+                            }
+                          >
+                            <Ionicons
+                              name="alert-circle-outline"
+                              size={20}
+                              color={
+                                selectedType === type.anomalie
+                                  ? "#FFFFFF"
+                                  : "#11224e"
+                              }
+                            />
+                            <Text
+                              style={[
+                                styles.typeButtonText,
+                                selectedType === type.anomalie &&
+                                  styles.typeButtonTextSelected,
+                              ]}
+                            >
+                              {type.anomalie || "Sans nom"}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
 
-              {/* Anomaly Category Selection (from anomalie2) - Only show if there are categories available */}
-              {!loadingAnomalies && anomalieCategories.length > 0 && (
-                <View style={styles.sectionContainer}>
-                  <Text style={styles.sectionTitle}>
-                    Catégorie d&apos;anomalie
-                  </Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.categoryScrollView}
-                  >
-                    {anomalieCategories.map((category) => (
-                      <TouchableOpacity
-                        key={category.id}
-                        style={[
-                          styles.categoryButton,
-                          selectedCategorie === category.anomalie &&
-                            styles.categoryButtonSelected,
-                        ]}
-                        onPress={() =>
-                          setSelectedCategorie(category.anomalie || null)
+                  {/* Anomaly Category Selection (from anomalie2) - Only show if there are categories available */}
+                  {!loadingAnomalies && anomalieCategories.length > 0 && (
+                    <View style={styles.sectionContainer}>
+                      <Text style={styles.sectionTitle}>
+                        Catégorie d&apos;anomalie
+                      </Text>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.categoryScrollView}
+                      >
+                        {anomalieCategories.map((category) => (
+                          <TouchableOpacity
+                            key={category.id}
+                            style={[
+                              styles.categoryButton,
+                              selectedCategorie === category.anomalie &&
+                                styles.categoryButtonSelected,
+                            ]}
+                            onPress={() =>
+                              setSelectedCategorie(category.anomalie || null)
+                            }
+                          >
+                            <Ionicons
+                              name="pricetag-outline"
+                              size={20}
+                              color={
+                                selectedCategorie === category.anomalie
+                                  ? "#FFFFFF"
+                                  : "#11224e"
+                              }
+                            />
+                            <Text
+                              style={[
+                                styles.categoryButtonText,
+                                selectedCategorie === category.anomalie &&
+                                  styles.categoryButtonTextSelected,
+                              ]}
+                            >
+                              {category.anomalie || "Sans nom"}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+
+                  {/* Severity Slider */}
+                  <View style={styles.sectionContainer}>
+                    <Text style={styles.severityTitle}>Niveau de sévérité</Text>
+                    <PanGestureHandler onGestureEvent={onSeverityPan}>
+                      <View
+                        style={styles.severityContainer}
+                        onLayout={(event) =>
+                          setSeveritySliderWidth(event.nativeEvent.layout.width)
                         }
                       >
-                        <Ionicons
-                          name="pricetag-outline"
-                          size={20}
-                          color={
-                            selectedCategorie === category.anomalie
-                              ? "#FFFFFF"
-                              : "#11224e"
-                          }
-                        />
-                        <Text
-                          style={[
-                            styles.categoryButtonText,
-                            selectedCategorie === category.anomalie &&
-                              styles.categoryButtonTextSelected,
-                          ]}
-                        >
-                          {category.anomalie || "Sans nom"}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
+                        <View style={styles.severityHeader}>
+                          <Text
+                            style={[
+                              styles.severityValue,
+                              { color: getSeverityColor(level) },
+                            ]}
+                          >
+                            {level}/10
+                          </Text>
+                          <View
+                            style={[
+                              styles.severityBadge,
+                              { backgroundColor: getSeverityColor(level) },
+                            ]}
+                          >
+                            <Text style={styles.severityBadgeText}>
+                              {getSeverityText(level)}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.severitySlider}>
+                          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
+                            <TouchableOpacity
+                              key={value}
+                              style={[
+                                styles.severityDot,
+                                level >= value && [
+                                  styles.severityDotActive,
+                                  { backgroundColor: getSeverityColor(level) },
+                                ],
+                                level === value && [
+                                  styles.severityDotSelected,
+                                  { borderColor: getSeverityColor(level) },
+                                ],
+                              ]}
+                              onPress={() => setLevel(value)}
+                              activeOpacity={0.7}
+                            />
+                          ))}
+                        </View>
+                      </View>
+                    </PanGestureHandler>
+                  </View>
 
-              {/* Severity Slider */}
-              <View style={styles.sectionContainer}>
-                <Text style={styles.severityTitle}>Niveau de sévérité</Text>
-                <PanGestureHandler onGestureEvent={onSeverityPan}>
-                  <View
-                    style={styles.severityContainer}
-                    onLayout={(event) =>
-                      setSeveritySliderWidth(event.nativeEvent.layout.width)
-                    }
-                  >
-                    <View style={styles.severityHeader}>
+                  <View style={{ marginTop: 16, gap: 12 }}>
+                    <Text style={styles.label}>Description</Text>
+                    <TouchableOpacity
+                      style={styles.fieldPreview}
+                      onPress={() => {
+                        setEditingField("description");
+                        setTempFieldValue(comment);
+                      }}
+                    >
                       <Text
                         style={[
-                          styles.severityValue,
-                          { color: getSeverityColor(level) },
+                          styles.fieldPreviewText,
+                          !comment && styles.fieldPreviewPlaceholder,
                         ]}
+                        numberOfLines={2}
                       >
-                        {level}/10
+                        {comment || "Ajoutez une description..."}
                       </Text>
-                      <View
-                        style={[
-                          styles.severityBadge,
-                          { backgroundColor: getSeverityColor(level) },
-                        ]}
-                      >
-                        <Text style={styles.severityBadgeText}>
-                          {getSeverityText(level)}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.severitySlider}>
-                      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
-                        <TouchableOpacity
-                          key={value}
-                          style={[
-                            styles.severityDot,
-                            level >= value && [
-                              styles.severityDotActive,
-                              { backgroundColor: getSeverityColor(level) },
-                            ],
-                            level === value && [
-                              styles.severityDotSelected,
-                              { borderColor: getSeverityColor(level) },
-                            ],
-                          ]}
-                          onPress={() => setLevel(value)}
-                          activeOpacity={0.7}
-                        />
-                      ))}
-                    </View>
+                      <Ionicons
+                        name="create-outline"
+                        size={20}
+                        color="#f87b1b"
+                        style={styles.fieldEditIcon}
+                      />
+                    </TouchableOpacity>
                   </View>
-                </PanGestureHandler>
-              </View>
 
-              <View style={{ marginTop: 16, gap: 12 }}>
-                <Text style={styles.label}>Description</Text>
-                <TouchableOpacity
-                  style={styles.fieldPreview}
-                  onPress={() => {
-                    setEditingField("description");
-                    setTempFieldValue(comment);
-                  }}
-                >
-                  <Text
+                  <View
                     style={[
-                      styles.fieldPreviewText,
-                      !comment && styles.fieldPreviewPlaceholder,
+                      styles.buttonContainer,
+                      { paddingHorizontal: 16, marginBottom: 16 },
                     ]}
-                    numberOfLines={2}
                   >
-                    {comment || "Ajoutez une description..."}
-                  </Text>
-                  <Ionicons
-                    name="create-outline"
-                    size={20}
-                    color="#f87b1b"
-                    style={styles.fieldEditIcon}
-                  />
-                </TouchableOpacity>
-              </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.button,
+                        styles.cancelButton,
+                        ((photo && !canSave) ||
+                          submitting ||
+                          isUploadingAudio) &&
+                          styles.submitButtonDisabled,
+                      ]}
+                      disabled={photo ? !canSave : false}
+                      onPress={() => {
+                        if (!photo) {
+                          onClose();
+                        } else {
+                          handleSubmit(true);
+                        }
+                      }}
+                    >
+                      <Text
+                        style={[styles.buttonText, styles.cancelButtonText]}
+                      >
+                        Terminer
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.button,
+                        styles.submitButton, // reusing submitButton for the primary orange style
+                        (!canSave || submitting || isUploadingAudio) &&
+                          styles.submitButtonDisabled,
+                      ]}
+                      disabled={!canSave}
+                      onPress={() => handleSubmit(false)}
+                    >
+                      {submitting ? (
+                        <>
+                          <Ionicons
+                            name="hourglass"
+                            size={18}
+                            color="#FFFFFF"
+                          />
+                          <Text style={styles.buttonText}>
+                            Enregistrement...
+                          </Text>
+                        </>
+                      ) : isUploadingAudio ? (
+                        <>
+                          <Ionicons
+                            name="mic-outline"
+                            size={18}
+                            color="#FFFFFF"
+                          />
+                          <Text style={styles.buttonText}>Note vocale...</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Ionicons
+                            name="add-circle-outline"
+                            size={18}
+                            color="#FFFFFF"
+                          />
+                          <Text style={styles.buttonText}>Ajouter nouveau</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </View>
           </ScrollView>
-
-          <View style={styles.footer}>
-            <TouchableOpacity style={styles.footerStopButton} onPress={onClose}>
-              <Ionicons name="close-circle-outline" size={20} color="#dc2626" />
-              <Text style={styles.footerStopButtonText}>Arrêter</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                !canSave && styles.submitButtonDisabled,
-              ]}
-              disabled={!canSave}
-              onPress={handleSubmit}
-            >
-              {submitting ? (
-                <>
-                  <Ionicons name="hourglass" size={18} color="#FFFFFF" />
-                  <Text style={styles.submitButtonText}>Enregistrement...</Text>
-                </>
-              ) : isUploadingAudio ? (
-                <>
-                  <Ionicons name="mic-outline" size={18} color="#FFFFFF" />
-                  <Text style={styles.submitButtonText}>Note vocale...</Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="save" size={18} color="#FFFFFF" />
-                  <Text style={styles.submitButtonText}>Enregistrer</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
         </SafeAreaView>
       </KeyboardAvoidingView>
       {isAnnotatorVisible && annotatorBaseUri && (
@@ -1576,44 +1730,31 @@ const styles = StyleSheet.create({
     borderColor: "#f87b1b",
   },
 
-  footer: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 24,
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
+  compactSection: {
+    marginBottom: 16,
+    width: "100%",
   },
-
-  footerStopButton: {
-    backgroundColor: "#fef2f2",
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+  expandButton: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-    minHeight: 52,
-    flex: 1,
-    borderWidth: 2,
-    borderColor: "#dc2626",
-    shadowColor: "#dc2626",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 6,
+    marginTop: 4,
   },
-
-  footerStopButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#dc2626",
-    letterSpacing: 0.3,
+  expandButtonText: {
+    color: "#f87b1b",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  expandedSection: {
+    marginTop: 0,
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    marginTop: 16,
+    width: "100%",
   },
 
   submitButton: {
@@ -1635,19 +1776,36 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-
   submitButtonDisabled: {
     backgroundColor: "#d1d5db",
     borderColor: "#d1d5db",
     shadowOpacity: 0,
     elevation: 0,
   },
-
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
+  button: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+    minHeight: 52,
+  },
+  cancelButton: {
+    backgroundColor: "#f9fafb",
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+  },
+  buttonText: {
     color: "#FFFFFF",
+    fontSize: 14, // Adjusted from 16 to fit dual buttons better on small screens
+    fontWeight: "700",
     letterSpacing: 0.3,
+  },
+  cancelButtonText: {
+    color: "#4b5563",
   },
   limitInfoBanner: {
     flexDirection: "row",
