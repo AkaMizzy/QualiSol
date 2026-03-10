@@ -774,126 +774,6 @@ export function CreateChildQualiPhotoForm({
               )}
 
               <View style={{ marginTop: 16, gap: 12 }}>
-                <View style={[styles.inputWrap]}>
-                  <Ionicons name="text-outline" size={16} color="#6b7280" />
-                  <TextInput
-                    placeholder="Titre "
-                    placeholderTextColor="#9ca3af"
-                    value={title}
-                    onChangeText={setTitle}
-                    style={styles.input}
-                  />
-                </View>
-
-                {/* Assigned User Select */}
-                <View style={{ gap: 8, marginTop: 12 }}>
-                  <Text
-                    style={{ fontSize: 12, color: "#6b7280", marginLeft: 2 }}
-                  >
-                    Assigné à
-                  </Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.inputWrap,
-                      { justifyContent: "space-between" },
-                    ]}
-                    onPress={() => setAssignedOpen((v) => !v)}
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 8,
-                        flex: 1,
-                      }}
-                    >
-                      <Ionicons
-                        name="person-add-outline"
-                        size={16}
-                        color="#f87b1b"
-                      />
-                      <Text
-                        style={[
-                          styles.input,
-                          { color: assigned ? "#111827" : "#9ca3af" },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {assigned
-                          ? companyUsers.find(
-                              (u) => String(u.id) === String(assigned),
-                            )?.firstname
-                            ? `${companyUsers.find((u) => String(assigned) === String(u.id))?.firstname} ${companyUsers.find((u) => String(assigned) === String(u.id))?.lastname || ""}`
-                            : assigned
-                          : "Choisir un utilisateur"}
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name={assignedOpen ? "chevron-up" : "chevron-down"}
-                      size={16}
-                      color="#f87b1b"
-                    />
-                  </TouchableOpacity>
-                  {assignedOpen && (
-                    <View
-                      style={{
-                        maxHeight: 200,
-                        borderWidth: 1,
-                        borderColor: "#e5e7eb",
-                        borderRadius: 10,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <ScrollView keyboardShouldPersistTaps="handled">
-                        {loadingUsers ? (
-                          <View style={{ padding: 12 }}>
-                            <Text style={{ color: "#6b7280" }}>
-                              Chargement...
-                            </Text>
-                          </View>
-                        ) : companyUsers.length === 0 ? (
-                          <View style={{ padding: 12 }}>
-                            <Text style={{ color: "#6b7280" }}>
-                              Aucun utilisateur
-                            </Text>
-                          </View>
-                        ) : (
-                          companyUsers.map((u) => (
-                            <TouchableOpacity
-                              key={u.id}
-                              onPress={() => {
-                                setAssigned(String(u.id));
-                                setAssignedOpen(false);
-                              }}
-                              style={{
-                                paddingHorizontal: 12,
-                                paddingVertical: 10,
-                                backgroundColor:
-                                  String(assigned) === String(u.id)
-                                    ? "#f1f5f9"
-                                    : "#FFFFFF",
-                                borderBottomWidth: 1,
-                                borderBottomColor: "#f3f4f6",
-                              }}
-                            >
-                              <Text style={{ color: "#11224e" }}>
-                                {u.firstname || ""} {u.lastname || ""}
-                              </Text>
-                              {u.email ? (
-                                <Text
-                                  style={{ color: "#6b7280", fontSize: 12 }}
-                                >
-                                  {u.email}
-                                </Text>
-                              ) : null}
-                            </TouchableOpacity>
-                          ))
-                        )}
-                      </ScrollView>
-                    </View>
-                  )}
-                </View>
-
                 <View style={styles.compactSection}>
                   <VoiceNoteRecorder
                     ref={voiceNoteRecorderRef}
@@ -989,6 +869,132 @@ export function CreateChildQualiPhotoForm({
 
               {isExpanded && (
                 <View style={styles.expandedSection}>
+                  <View style={{ gap: 12, marginBottom: 16 }}>
+                    <View style={[styles.inputWrap]}>
+                      <Ionicons name="text-outline" size={16} color="#6b7280" />
+                      <TextInput
+                        placeholder="Titre "
+                        placeholderTextColor="#9ca3af"
+                        value={title}
+                        onChangeText={setTitle}
+                        style={styles.input}
+                      />
+                    </View>
+
+                    {/* Assigned User Select */}
+                    <View style={{ gap: 8 }}>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          color: "#6b7280",
+                          marginLeft: 2,
+                        }}
+                      >
+                        Assigné à
+                      </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.inputWrap,
+                          { justifyContent: "space-between" },
+                        ]}
+                        onPress={() => setAssignedOpen((v) => !v)}
+                      >
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 8,
+                            flex: 1,
+                          }}
+                        >
+                          <Ionicons
+                            name="person-add-outline"
+                            size={16}
+                            color="#f87b1b"
+                          />
+                          <Text
+                            style={[
+                              styles.input,
+                              { color: assigned ? "#111827" : "#9ca3af" },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {assigned
+                              ? companyUsers.find(
+                                  (u) => String(u.id) === String(assigned),
+                                )?.firstname
+                                ? `${companyUsers.find((u) => String(assigned) === String(u.id))?.firstname} ${companyUsers.find((u) => String(assigned) === String(u.id))?.lastname || ""}`
+                                : assigned
+                              : "Choisir un utilisateur"}
+                          </Text>
+                        </View>
+                        <Ionicons
+                          name={assignedOpen ? "chevron-up" : "chevron-down"}
+                          size={16}
+                          color="#f87b1b"
+                        />
+                      </TouchableOpacity>
+                      {assignedOpen && (
+                        <View
+                          style={{
+                            maxHeight: 200,
+                            borderWidth: 1,
+                            borderColor: "#e5e7eb",
+                            borderRadius: 10,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <ScrollView keyboardShouldPersistTaps="handled">
+                            {loadingUsers ? (
+                              <View style={{ padding: 12 }}>
+                                <Text style={{ color: "#6b7280" }}>
+                                  Chargement...
+                                </Text>
+                              </View>
+                            ) : companyUsers.length === 0 ? (
+                              <View style={{ padding: 12 }}>
+                                <Text style={{ color: "#6b7280" }}>
+                                  Aucun utilisateur
+                                </Text>
+                              </View>
+                            ) : (
+                              companyUsers.map((u) => (
+                                <TouchableOpacity
+                                  key={u.id}
+                                  onPress={() => {
+                                    setAssigned(String(u.id));
+                                    setAssignedOpen(false);
+                                  }}
+                                  style={{
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 10,
+                                    backgroundColor:
+                                      String(assigned) === String(u.id)
+                                        ? "#f1f5f9"
+                                        : "#FFFFFF",
+                                    borderBottomWidth: 1,
+                                    borderBottomColor: "#f3f4f6",
+                                  }}
+                                >
+                                  <Text style={{ color: "#11224e" }}>
+                                    {u.firstname || ""} {u.lastname || ""}
+                                  </Text>
+                                  {u.email ? (
+                                    <Text
+                                      style={{ color: "#6b7280", fontSize: 12 }}
+                                    >
+                                      {u.email}
+                                    </Text>
+                                  ) : null}
+                                </TouchableOpacity>
+                              ))
+                            )}
+                          </ScrollView>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+
                   {/* Anomaly Type Selection (from anomalie1) - Only show if there are types available */}
                   {!loadingAnomalies && anomalieTypes.length > 0 && (
                     <View style={styles.sectionContainer}>
