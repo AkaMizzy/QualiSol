@@ -72,3 +72,8 @@ export async function deleteUser(userId: string): Promise<{ message: string }> {
   const response = await api.delete(`/api/users/${userId}`);
   return response.data;
 }
+
+export async function clearImportantMessage(): Promise<{ message: string }> {
+  const response = await api.put(`/api/users/clear-important`);
+  return response.data;
+}

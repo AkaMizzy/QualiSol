@@ -29,6 +29,8 @@ export interface User {
   timebetween?: number;
   limitpage?: number;
   message?: string | null;
+  user_important?: string | null;
+  company_important?: string | null;
 }
 
 interface AuthState {
