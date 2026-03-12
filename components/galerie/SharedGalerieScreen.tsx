@@ -8,7 +8,7 @@ import { ICONS } from "@/constants/Icons";
 import { COLORS, FONT, SIZES } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { getConnectivity } from "@/services/connectivity";
-import folderService, { Project } from "@/services/folderService";
+import folderService, { Project, Folder } from "@/services/folderService";
 import {
     Ged,
     deleteGed,
@@ -53,6 +53,9 @@ import RenderHTML from "react-native-render-html";
 import { SafeAreaView } from "react-native-safe-area-context";
 import UserSelectionModal from "../UserSelectionModal";
 import BulkAddImageModal from "./BulkAddImageModal";
+import UserFolderSelectionModal from "../folders/UserFolderSelectionModal";
+import ProjectSelectionModal from "../projects/ProjectSelectionModal";
+import CreateFolderModal from "../folders/CreateFolderModal";
 import { any } from "zod";
 
 interface SharedGalerieScreenProps {
@@ -106,7 +109,15 @@ export default function SharedGalerieScreen({
   const [assignModalVisible, setAssignModalVisible] = useState(false);
   const [companyUsers, setCompanyUsers] = useState<CompanyUser[]>([]);
   const [companyProjects, setCompanyProjects] = useState<Project[]>([]);
+  const [companyFolders, setCompanyFolders] = useState<Folder[]>([]);
   const [itemToAssign, setItemToAssign] = useState<Ged | null>(null);
+
+  // Layered assignment modal states
+  const [selectedAssignUser, setSelectedAssignUser] = useState<CompanyUser | null>(null);
+  const [userFolderModalVisible, setUserFolderModalVisible] = useState(false);
+  const [assignProjectModalVisible, setAssignProjectModalVisible] = useState(false);
+  const [createFolderModalVisible, setCreateFolderModalVisible] = useState(false);
+  const [selectedProjectForNewFolder, setSelectedProjectForNewFolder] = useState<Project | null>(null);
 
   const isTablet = width >= 768;
 
@@ -166,6 +177,17 @@ export default function SharedGalerieScreen({
     }
   }, [token]);
 
+  const fetchFolders = useCallback(async () => {
+    if (token) {
+      try {
+        const folders = await folderService.getAllFolders(token);
+        setCompanyFolders(folders);
+      } catch (error) {
+        console.error("Failed to fetch folders:", error);
+      }
+    }
+  }, [token]);
+
   const checkNetworkStatus = useCallback(async () => {
     if (!allowOffline) {
       setNetworkStatus("online"); // Always assume online when offline mode disabled
@@ -183,7 +205,8 @@ export default function SharedGalerieScreen({
 
   useEffect(() => {
     fetchProjects();
-  }, [fetchProjects]);
+    fetchFolders();
+  }, [fetchProjects, fetchFolders]);
 
   // Start sync monitoring when token is available
   useEffect(() => {
@@ -225,6 +248,7 @@ export default function SharedGalerieScreen({
     ]);
     if (enableAssignment) {
       void fetchUsers();
+      void fetchFolders();
     }
     void fetchProjects();
     setRefreshing(false);
@@ -234,6 +258,7 @@ export default function SharedGalerieScreen({
     checkNetworkStatus,
     enableAssignment,
     fetchUsers,
+    fetchFolders,
     fetchProjects,
   ]);
 
@@ -438,23 +463,100 @@ export default function SharedGalerieScreen({
   const handleAssignUser = async (user: CompanyUser) => {
     if (!token || !itemToAssign) return;
 
+    // Instead of directly assigning, open the folder selection modal
+    setSelectedAssignUser(user);
+    setAssignModalVisible(false); // Close the user selection modal
+    setUserFolderModalVisible(true); // Open the folder selection modal
+  };
+
+  const handleSelectUserFolder = async (folderId: string) => {
+    if (!token || !itemToAssign || !selectedAssignUser) return;
+
     try {
       // Optimistic update
-      const updatedGed: Ged = { ...itemToAssign, assigned: user.id };
+      const updatedGed: Ged = { 
+        ...itemToAssign, 
+        assigned: selectedAssignUser.id,
+        idsource: folderId 
+      };
+      
       setGeds((prevGeds) =>
         prevGeds.map((g) => (g.id === itemToAssign.id ? updatedGed : g)),
       );
-      setSelectedItem(updatedGed); // Update preview
+      setSelectedItem(updatedGed);
+
+      // API Call mapping both required fields
+      await updateGed(token, itemToAssign.id, { 
+        assigned: selectedAssignUser.id,
+        idsource: folderId 
+      });
+
+      setUserFolderModalVisible(false);
+      setSelectedAssignUser(null);
+      setItemToAssign(null);
+      console.log(`[Flow] Successfully assigned picture to user ${selectedAssignUser.id} and folder ${folderId}`);
+    } catch (error) {
+      console.error("Failed to assign user and folder:", error);
+      Alert.alert("Erreur", "Impossible d'assigner l'image au dossier sélectionné.");
+    }
+  };
+
+  const handleCreateNewFolderForUser = () => {
+    setUserFolderModalVisible(false);
+    // Use a small timeout to allow the previous modal to completely close
+    // This prevents React Native iOS modal conflicts where opening a new modal 
+    // while another is closing causes the new one to immediately close.
+    setTimeout(() => {
+      setAssignProjectModalVisible(true);
+    }, 400);
+  };
+
+  const handleSelectProjectForNewFolder = (projectId: string) => {
+    const project = companyProjects.find((p) => p.id === projectId);
+    if (project) {
+      setSelectedProjectForNewFolder(project);
+    }
+    setAssignProjectModalVisible(false);
+    
+    // Same modal conflict prevention 
+    setTimeout(() => {
+      setCreateFolderModalVisible(true);
+    }, 400);
+  };
+
+  const handleFolderCreated = async (created: Folder) => {
+    if (!token || !itemToAssign || !selectedAssignUser) return;
+
+    try {
+      // Refresh folders manually so the new folder is available
+      await fetchFolders();
+
+      // Immediately assign to the newly created folder
+      const updatedGed: Ged = { 
+        ...itemToAssign, 
+        assigned: selectedAssignUser.id,
+        idsource: created.id 
+      };
+      
+      setGeds((prevGeds) =>
+        prevGeds.map((g) => (g.id === itemToAssign.id ? updatedGed : g)),
+      );
+      setSelectedItem(updatedGed);
 
       // API Call
-      await updateGed(token, itemToAssign.id, { assigned: user.id });
+      await updateGed(token, itemToAssign.id, { 
+        assigned: selectedAssignUser.id,
+        idsource: created.id 
+      });
 
-      setAssignModalVisible(false);
+      setCreateFolderModalVisible(false);
+      setSelectedAssignUser(null);
+      setSelectedProjectForNewFolder(null);
       setItemToAssign(null);
+      console.log(`[Flow] Created folder ${created.id} and assigned picture to it`);
     } catch (error) {
-      console.error("Failed to assign user:", error);
-      Alert.alert("Erreur", "Impossible d'assigner l'utilisateur.");
-      // Revert optimistic update could be done here if needed
+      console.error("Failed to assign newly created folder:", error);
+      Alert.alert("Erreur", "Le dossier a été créé mais l'assignation a échoué.");
     }
   };
 
@@ -937,6 +1039,40 @@ export default function SharedGalerieScreen({
         onSelect={handleAssignUser}
         users={companyUsers}
       />
+      <UserFolderSelectionModal
+        visible={userFolderModalVisible}
+        onClose={() => {
+          setUserFolderModalVisible(false);
+          setSelectedAssignUser(null);
+        }}
+        user={selectedAssignUser}
+        folders={companyFolders}
+        projects={companyProjects}
+        onSelectFolder={handleSelectUserFolder}
+        onCreateNewFolder={handleCreateNewFolderForUser}
+      />
+      <ProjectSelectionModal
+        visible={assignProjectModalVisible}
+        onClose={() => setAssignProjectModalVisible(false)}
+        projects={companyProjects}
+        onSelect={handleSelectProjectForNewFolder}
+      />
+      {selectedProjectForNewFolder && selectedAssignUser && (
+        <CreateFolderModal
+          visible={createFolderModalVisible}
+          onClose={() => {
+            setCreateFolderModalVisible(false);
+            setSelectedProjectForNewFolder(null);
+            setSelectedAssignUser(null);
+            setItemToAssign(null);
+          }}
+          onSuccess={handleFolderCreated}
+          projectId={selectedProjectForNewFolder.id}
+          projectName={selectedProjectForNewFolder.title}
+          projectOwnerId={selectedAssignUser.id}
+          projectOwnerName={selectedAssignUser.firstname || selectedAssignUser.lastname ? `${selectedAssignUser.firstname || ""} ${selectedAssignUser.lastname || ""}`.trim() : selectedAssignUser.email}
+        />
+      )}
       <Modal visible={isAnnotatorVisible} animationType="slide">
         {annotatorImageUri && (
           <PictureAnnotator
