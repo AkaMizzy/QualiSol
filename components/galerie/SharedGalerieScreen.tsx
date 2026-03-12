@@ -477,7 +477,8 @@ export default function SharedGalerieScreen({
       const updatedGed: Ged = { 
         ...itemToAssign, 
         assigned: selectedAssignUser.id,
-        idsource: folderId 
+        idsource: folderId,
+        kind: "photoavant"
       };
       
       setGeds((prevGeds) =>
@@ -488,7 +489,8 @@ export default function SharedGalerieScreen({
       // API Call mapping both required fields
       await updateGed(token, itemToAssign.id, { 
         assigned: selectedAssignUser.id,
-        idsource: folderId 
+        idsource: folderId,
+        kind: "photoavant"
       });
 
       setUserFolderModalVisible(false);
@@ -535,7 +537,8 @@ export default function SharedGalerieScreen({
       const updatedGed: Ged = { 
         ...itemToAssign, 
         assigned: selectedAssignUser.id,
-        idsource: created.id 
+        idsource: created.id,
+        kind: "photoavant"
       };
       
       setGeds((prevGeds) =>
@@ -546,7 +549,8 @@ export default function SharedGalerieScreen({
       // API Call
       await updateGed(token, itemToAssign.id, { 
         assigned: selectedAssignUser.id,
-        idsource: created.id 
+        idsource: created.id,
+        kind: "photoavant"
       });
 
       setCreateFolderModalVisible(false);

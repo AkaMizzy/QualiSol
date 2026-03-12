@@ -14,6 +14,7 @@ import {
     Text,
     View,
     useWindowDimensions,
+    Platform,
 } from "react-native";
 import RenderHTML from "react-native-render-html";
 
@@ -539,7 +540,15 @@ export default function PreviewModal({
             {onAssign && (
               <Pressable
                 style={styles.actionButton}
-                onPress={onAssign}
+                onPress={() => {
+                  if (Platform.OS === "ios") {
+                    onClose();
+                    setTimeout(onAssign, 400);
+                  } else {
+                    onClose();
+                    onAssign();
+                  }
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="Assigner"
               >
