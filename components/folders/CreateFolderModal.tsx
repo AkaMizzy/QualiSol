@@ -32,6 +32,8 @@ type Props = {
   projectOwnerId?: string;
   projectName?: string;
   projectOwnerName?: string;
+  /** When true, the owner picker is hidden (owner is pre-set via projectOwnerId) */
+  hideOwner?: boolean;
 };
 
 export default function CreateFolderModal({
@@ -42,6 +44,7 @@ export default function CreateFolderModal({
   projectOwnerId,
   projectName,
   projectOwnerName,
+  hideOwner = false,
 }: Props) {
   const { token, user } = useAuth();
 
@@ -316,120 +319,122 @@ export default function CreateFolderModal({
                 />
               </View>
 
-              {/* Owner Selection */}
-              <View style={{ gap: 8, marginTop: 12 }}>
-                <Text style={{ fontSize: 12, color: "#6b7280", marginLeft: 2 }}>
-                  Propriétaire <Text style={{ color: "#ef4444" }}>*</Text>
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    styles.inputWrap,
-                    { justifyContent: "space-between" },
-                  ]}
-                  onPress={() => setShowOwnerPicker(!showOwnerPicker)}
-                  disabled={loadingUsers}
-                >
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                      flex: 1,
-                    }}
+              {/* Owner Selection — hidden when owner is pre-set by the caller */}
+              {!hideOwner && (
+                <View style={{ gap: 8, marginTop: 12 }}>
+                  <Text style={{ fontSize: 12, color: "#6b7280", marginLeft: 2 }}>
+                    Propriétaire <Text style={{ color: "#ef4444" }}>*</Text>
+                  </Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.inputWrap,
+                      { justifyContent: "space-between" },
+                    ]}
+                    onPress={() => setShowOwnerPicker(!showOwnerPicker)}
+                    disabled={loadingUsers}
                   >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 8,
+                        flex: 1,
+                      }}
+                    >
+                      <Ionicons
+                        name="person-circle-outline"
+                        size={16}
+                        color="#f87b1b"
+                      />
+                      <Text
+                        style={[
+                          styles.input,
+                          { color: ownerId ? "#111827" : "#9ca3af" },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {selectedUser
+                          ? `${selectedUser.firstname || ""} ${selectedUser.lastname || ""}`.trim() ||
+                            selectedUser.email
+                          : loadingUsers
+                            ? "Chargement..."
+                            : "Sélectionner un propriétaire"}
+                      </Text>
+                    </View>
                     <Ionicons
-                      name="person-circle-outline"
+                      name={showOwnerPicker ? "chevron-up" : "chevron-down"}
                       size={16}
                       color="#f87b1b"
                     />
-                    <Text
-                      style={[
-                        styles.input,
-                        { color: ownerId ? "#111827" : "#9ca3af" },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {selectedUser
-                        ? `${selectedUser.firstname || ""} ${selectedUser.lastname || ""}`.trim() ||
-                          selectedUser.email
-                        : loadingUsers
-                          ? "Chargement..."
-                          : "Sélectionner un propriétaire"}
-                    </Text>
-                  </View>
-                  <Ionicons
-                    name={showOwnerPicker ? "chevron-up" : "chevron-down"}
-                    size={16}
-                    color="#f87b1b"
-                  />
-                </TouchableOpacity>
+                  </TouchableOpacity>
 
-                {/* Owner Dropdown */}
-                {showOwnerPicker && (
-                  <View
-                    style={{
-                      backgroundColor: "#fff",
-                      borderWidth: 1,
-                      borderColor: "#e5e7eb",
-                      borderRadius: 8,
-                      maxHeight: 200,
-                    }}
-                  >
-                    <ScrollView
-                      nestedScrollEnabled
-                      showsVerticalScrollIndicator={true}
+                  {/* Owner Dropdown */}
+                  {showOwnerPicker && (
+                    <View
+                      style={{
+                        backgroundColor: "#fff",
+                        borderWidth: 1,
+                        borderColor: "#e5e7eb",
+                        borderRadius: 8,
+                        maxHeight: 200,
+                      }}
                     >
-                      {companyUsers.length === 0 && !loadingUsers ? (
-                        <View style={{ padding: 16, alignItems: "center" }}>
-                          <Text style={{ color: "#9ca3af", fontSize: 13 }}>
-                            Aucun utilisateur disponible
-                          </Text>
-                        </View>
-                      ) : (
-                        companyUsers.map((user) => (
-                          <TouchableOpacity
-                            key={user.id}
-                            onPress={() => {
-                              setOwnerId(user.id);
-                              setShowOwnerPicker(false);
-                            }}
-                            style={{
-                              padding: 12,
-                              borderBottomWidth: 1,
-                              borderBottomColor: "#f3f4f6",
-                              backgroundColor:
-                                user.id === ownerId ? "#fef3f2" : "transparent",
-                            }}
-                          >
-                            <Text
+                      <ScrollView
+                        nestedScrollEnabled
+                        showsVerticalScrollIndicator={true}
+                      >
+                        {companyUsers.length === 0 && !loadingUsers ? (
+                          <View style={{ padding: 16, alignItems: "center" }}>
+                            <Text style={{ color: "#9ca3af", fontSize: 13 }}>
+                              Aucun utilisateur disponible
+                            </Text>
+                          </View>
+                        ) : (
+                          companyUsers.map((user) => (
+                            <TouchableOpacity
+                              key={user.id}
+                              onPress={() => {
+                                setOwnerId(user.id);
+                                setShowOwnerPicker(false);
+                              }}
                               style={{
-                                fontSize: 14,
-                                color: "#111827",
-                                fontWeight: user.id === ownerId ? "600" : "400",
+                                padding: 12,
+                                borderBottomWidth: 1,
+                                borderBottomColor: "#f3f4f6",
+                                backgroundColor:
+                                  user.id === ownerId ? "#fef3f2" : "transparent",
                               }}
                             >
-                              {`${user.firstname || ""} ${user.lastname || ""}`.trim() ||
-                                user.email}
-                            </Text>
-                            {user.email &&
-                              (user.firstname || user.lastname) && (
-                                <Text
-                                  style={{
-                                    fontSize: 12,
-                                    color: "#6b7280",
-                                    marginTop: 2,
-                                  }}
-                                >
-                                  {user.email}
-                                </Text>
-                              )}
-                          </TouchableOpacity>
-                        ))
-                      )}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
+                              <Text
+                                style={{
+                                  fontSize: 14,
+                                  color: "#111827",
+                                  fontWeight: user.id === ownerId ? "600" : "400",
+                                }}
+                              >
+                                {`${user.firstname || ""} ${user.lastname || ""}`.trim() ||
+                                  user.email}
+                              </Text>
+                              {user.email &&
+                                (user.firstname || user.lastname) && (
+                                  <Text
+                                    style={{
+                                      fontSize: 12,
+                                      color: "#6b7280",
+                                      marginTop: 2,
+                                    }}
+                                  >
+                                    {user.email}
+                                  </Text>
+                                )}
+                            </TouchableOpacity>
+                          ))
+                        )}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              )}
 
               {/* Description Input */}
               <View

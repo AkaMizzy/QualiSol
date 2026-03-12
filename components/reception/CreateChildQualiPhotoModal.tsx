@@ -89,7 +89,6 @@ export function CreateChildQualiPhotoForm({
   const [creationCount, setCreationCount] = useState(0);
   const [authorName, setAuthorName] = useState("");
   const [audioUri, setAudioUri] = useState<string | null>(null);
-  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
   const [level, setLevel] = useState(5);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedCategorie, setSelectedCategorie] = useState<string | null>(
@@ -132,8 +131,8 @@ export function CreateChildQualiPhotoForm({
   const [tempFieldValue, setTempFieldValue] = useState<string>("");
   const [isExpanded, setIsExpanded] = useState(false);
   const canSave = useMemo(
-    () => !!photo && !submitting && !isUploadingAudio && !isStorageQuotaReached,
-    [photo, submitting, isUploadingAudio, isStorageQuotaReached],
+    () => !!photo && !submitting && !isStorageQuotaReached,
+    [photo, submitting, isStorageQuotaReached],
   );
 
   const voiceNoteRecorderRef = useRef<VoiceNoteRecorderRef>(null);
@@ -539,45 +538,15 @@ export function CreateChildQualiPhotoForm({
         answer: any,
       };
 
-      const result = await createGed(token, payload);
-
       if (currentAudioUri) {
-        setIsUploadingAudio(true);
-        try {
-          const audioPayload: CreateGedInput = {
-            idsource: result.data.id,
-            title: `Note vocale pour ${title || "Situation Avant"}`,
-            kind: "audio",
-            author: authorName,
-            idauthor: user?.id,
-            iddevice: deviceId,
-            captudedate: new Date().toISOString(),
-            chantier: projectTitle,
-            latitude: latitude?.toString(),
-            longitude: longitude?.toString(),
-            altitude: altitude?.toString(),
-            accuracy: accuracy?.toString(),
-            altitudeAccuracy: altitudeAccuracy?.toString(),
-            level: level,
-            type: selectedType || undefined,
-            categorie: selectedCategorie || undefined,
-            file: {
-              uri: currentAudioUri,
-              name: `note_${Date.now()}.m4a`,
-              type: "audio/m4a",
-            },
-            answer: any,
-          };
-          await createGed(token, audioPayload);
-        } catch (audioErr: any) {
-          Alert.alert(
-            "Erreur Audio",
-            `La photo a été enregistrée, mais l'envoi de la note vocale a échoué : ${audioErr.message}`,
-          );
-        } finally {
-          setIsUploadingAudio(false);
-        }
+        payload.audioFile = {
+          uri: currentAudioUri,
+          name: `note_${Date.now()}.m4a`,
+          type: "audio/m4a",
+        };
       }
+
+      const result = await createGed(token, payload);
 
       onSuccess(result.data);
       setCreationCount((prev) => prev + 1);
@@ -794,9 +763,7 @@ export function CreateChildQualiPhotoForm({
                       style={[
                         styles.button,
                         styles.cancelButton,
-                        ((photo && !canSave) ||
-                          submitting ||
-                          isUploadingAudio) &&
+                        ((photo && !canSave) || submitting) &&
                           styles.submitButtonDisabled,
                       ]}
                       disabled={photo ? !canSave : false}
@@ -818,7 +785,7 @@ export function CreateChildQualiPhotoForm({
                       style={[
                         styles.button,
                         styles.submitButton, // reusing submitButton for the primary orange style
-                        (!canSave || submitting || isUploadingAudio) &&
+                        (!canSave || submitting) &&
                           styles.submitButtonDisabled,
                       ]}
                       disabled={!canSave}
@@ -834,15 +801,6 @@ export function CreateChildQualiPhotoForm({
                           <Text style={styles.buttonText}>
                             Enregistrement...
                           </Text>
-                        </>
-                      ) : isUploadingAudio ? (
-                        <>
-                          <Ionicons
-                            name="mic-outline"
-                            size={18}
-                            color="#FFFFFF"
-                          />
-                          <Text style={styles.buttonText}>Note vocale...</Text>
                         </>
                       ) : (
                         <>
@@ -1187,9 +1145,7 @@ export function CreateChildQualiPhotoForm({
                       style={[
                         styles.button,
                         styles.cancelButton,
-                        ((photo && !canSave) ||
-                          submitting ||
-                          isUploadingAudio) &&
+                        ((photo && !canSave) || submitting) &&
                           styles.submitButtonDisabled,
                       ]}
                       disabled={photo ? !canSave : false}
@@ -1211,7 +1167,7 @@ export function CreateChildQualiPhotoForm({
                       style={[
                         styles.button,
                         styles.submitButton, // reusing submitButton for the primary orange style
-                        (!canSave || submitting || isUploadingAudio) &&
+                        (!canSave || submitting) &&
                           styles.submitButtonDisabled,
                       ]}
                       disabled={!canSave}
@@ -1227,15 +1183,6 @@ export function CreateChildQualiPhotoForm({
                           <Text style={styles.buttonText}>
                             Enregistrement...
                           </Text>
-                        </>
-                      ) : isUploadingAudio ? (
-                        <>
-                          <Ionicons
-                            name="mic-outline"
-                            size={18}
-                            color="#FFFFFF"
-                          />
-                          <Text style={styles.buttonText}>Note vocale...</Text>
                         </>
                       ) : (
                         <>

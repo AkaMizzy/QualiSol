@@ -113,12 +113,9 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     setAvantDescription(item.description || "");
   }, [item.description]);
 
-  // Voice notes state
+  // Voice notes state (Avant only now, Apres is inline)
   const [voiceNotesAvant, setVoiceNotesAvant] = useState<Ged[]>([]);
-  const [voiceNotesApres, setVoiceNotesApres] = useState<Ged[]>([]);
   const [isLoadingVoiceNotesAvant, setIsLoadingVoiceNotesAvant] =
-    useState(false);
-  const [isLoadingVoiceNotesApres, setIsLoadingVoiceNotesApres] =
     useState(false);
 
   // Audio playback state
@@ -188,30 +185,6 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
     fetchVoiceNotesAvant();
   }, [item?.id, token]);
 
-  // Fetch voice notes for "Situation après"
-  const firstAfterPhotoId = afterPhotos[0]?.id;
-  useEffect(() => {
-    async function fetchVoiceNotesApres() {
-      if (!token || !firstAfterPhotoId) return;
-
-      setIsLoadingVoiceNotesApres(true);
-      try {
-        const voiceNotes = await getGedsBySource(
-          token,
-          firstAfterPhotoId,
-          "audio",
-        );
-        setVoiceNotesApres(voiceNotes);
-      } catch (error) {
-        console.error("Failed to fetch voice notes apres:", error);
-        setVoiceNotesApres([]);
-      } finally {
-        setIsLoadingVoiceNotesApres(false);
-      }
-    }
-
-    fetchVoiceNotesApres();
-  }, [firstAfterPhotoId, token]);
 
   const handleValidate = async () => {
     const activeStatus = statuses.find((s) => s.status === "Active");
@@ -610,14 +583,15 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
         setIsPlaying(false);
       }
 
-      // If no URL, show error
-      if (!voiceNote.url) {
+      // If no URL (use urlvoice if available, otherwise fallback to url for backward compatibility)
+      const audioUrlRaw = voiceNote.urlvoice || voiceNote.url;
+      if (!audioUrlRaw) {
         Alert.alert("Erreur", "Fichier audio non disponible.");
         return;
       }
 
       // Build full URL
-      const audioUrl = getFullImageUrl(voiceNote.url);
+      const audioUrl = getFullImageUrl(audioUrlRaw);
       if (!audioUrl) {
         Alert.alert("Erreur", "URL audio invalide.");
         return;
@@ -1063,8 +1037,8 @@ export const ChildQualiPhotoView: React.FC<ChildQualiPhotoViewProps> = ({
                   <View style={styles.infoCard}>
                     <Text style={styles.infoLabel}>Notes vocales</Text>
                     {renderVoiceNotesList(
-                      voiceNotesApres,
-                      isLoadingVoiceNotesApres,
+                      afterPhotos[0]?.urlvoice ? [afterPhotos[0]] : [],
+                      false,
                     )}
                   </View>
                 </View>
@@ -1407,6 +1381,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 8,
     fontWeight: "600",
+  },
+  badgeContainer: {
+    position: "absolute",
+    zIndex: 10,
+  },
+  assignedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f87b1b",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  assignedBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "bold",
   },
   infoLabelContainer: {
     flexDirection: "row",

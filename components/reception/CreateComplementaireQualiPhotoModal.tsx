@@ -110,8 +110,8 @@ function CreateComplementaireQualiPhotoForm({
   const [loadingLimits, setLoadingLimits] = useState(true);
 
   const canSave = useMemo(
-    () => !!photo && !submitting && !isUploadingAudio && !isStorageQuotaReached,
-    [photo, submitting, isUploadingAudio, isStorageQuotaReached],
+    () => !!photo && !submitting && !isStorageQuotaReached,
+    [photo, submitting, isStorageQuotaReached],
   );
 
   // Auto-start recording when image is selected
@@ -370,7 +370,7 @@ function CreateComplementaireQualiPhotoForm({
     try {
       const deviceId = await getDeviceId();
 
-      const result = await createGed(token, {
+      const payload: CreateGedInput = {
         idsource: childItem.id,
         title: title || "Situation Après",
         kind: "photoapres",
@@ -390,44 +390,17 @@ function CreateComplementaireQualiPhotoForm({
         file: photo,
         mode: mode,
         answer: any,
-      });
+      };
 
       if (currentAudioUri) {
-        setIsUploadingAudio(true);
-        try {
-          const audioPayload: CreateGedInput = {
-            idsource: result.data.id,
-            title: `Note vocale pour ${title || "Situation Après"}`,
-            kind: "audio",
-            author: `${user.firstname} ${user.lastname}`,
-            idauthor: user.id,
-            iddevice: deviceId,
-            captudedate: new Date().toISOString(),
-            chantier: childItem.project_title || parentTitle || undefined,
-            latitude: latitude ? String(latitude) : undefined,
-            longitude: longitude ? String(longitude) : undefined,
-            altitude: altitude ? String(altitude) : undefined,
-            accuracy: accuracy ? String(accuracy) : undefined,
-            altitudeAccuracy: altitudeAccuracy
-              ? String(altitudeAccuracy)
-              : undefined,
-            file: {
-              uri: currentAudioUri,
-              name: `note_${Date.now()}.m4a`,
-              type: "audio/m4a",
-            },
-            answer: any,
-          };
-          await createGed(token, audioPayload);
-        } catch (audioErr: any) {
-          Alert.alert(
-            "Erreur Audio",
-            `La photo a été enregistrée, mais l'envoi de la note vocale a échoué : ${audioErr.message}`,
-          );
-        } finally {
-          setIsUploadingAudio(false);
-        }
+        payload.audioFile = {
+          uri: currentAudioUri,
+          name: `note_${Date.now()}.m4a`,
+          type: "audio/m4a",
+        };
       }
+
+      const result = await createGed(token, payload);
 
       onSuccess(result.data);
       if (shouldClose) {
@@ -586,50 +559,37 @@ function CreateComplementaireQualiPhotoForm({
                   style={[
                     styles.button,
                     styles.cancelButton,
-                    ((photo && !canSave) || submitting || isUploadingAudio) &&
-                      styles.submitButtonDisabled,
+                    submitting && styles.submitButtonDisabled,
                   ]}
-                  disabled={photo ? !canSave : false}
-                  onPress={() => {
-                    if (!photo) {
-                      onClose();
-                    } else {
-                      handleSubmit(true);
-                    }
-                  }}
+                  disabled={submitting}
+                  onPress={onClose}
                 >
                   <Text style={[styles.buttonText, styles.cancelButtonText]}>
-                    Terminer
+                    Annuler
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
                     styles.button,
                     styles.submitButton,
-                    (!canSave || submitting || isUploadingAudio) &&
-                      styles.submitButtonDisabled,
+                    (!canSave || submitting) && styles.submitButtonDisabled,
                   ]}
                   disabled={!canSave}
-                  onPress={() => handleSubmit(false)}
+                  onPress={() => handleSubmit(true)}
                 >
                   {submitting ? (
                     <>
                       <ActivityIndicator size="small" color="#FFFFFF" />
                       <Text style={styles.buttonText}>Enregistrement...</Text>
                     </>
-                  ) : isUploadingAudio ? (
-                    <>
-                      <Ionicons name="mic-outline" size={18} color="#FFFFFF" />
-                      <Text style={styles.buttonText}>Note vocale...</Text>
-                    </>
                   ) : (
                     <>
                       <Ionicons
-                        name="add-circle-outline"
+                        name="checkmark-circle-outline"
                         size={18}
                         color="#FFFFFF"
                       />
-                      <Text style={styles.buttonText}>Ajouter nouveau</Text>
+                      <Text style={styles.buttonText}>Enregistrer</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -718,54 +678,37 @@ function CreateComplementaireQualiPhotoForm({
                     style={[
                       styles.button,
                       styles.cancelButton,
-                      ((photo && !canSave) || submitting || isUploadingAudio) &&
-                        styles.submitButtonDisabled,
+                      submitting && styles.submitButtonDisabled,
                     ]}
-                    disabled={photo ? !canSave : false}
-                    onPress={() => {
-                      if (!photo) {
-                        onClose();
-                      } else {
-                        handleSubmit(true);
-                      }
-                    }}
+                    disabled={submitting}
+                    onPress={onClose}
                   >
                     <Text style={[styles.buttonText, styles.cancelButtonText]}>
-                      Terminer
+                      Annuler
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
                       styles.button,
                       styles.submitButton,
-                      (!canSave || submitting || isUploadingAudio) &&
-                        styles.submitButtonDisabled,
+                      (!canSave || submitting) && styles.submitButtonDisabled,
                     ]}
                     disabled={!canSave}
-                    onPress={() => handleSubmit(false)}
+                    onPress={() => handleSubmit(true)}
                   >
                     {submitting ? (
                       <>
                         <ActivityIndicator size="small" color="#FFFFFF" />
                         <Text style={styles.buttonText}>Enregistrement...</Text>
                       </>
-                    ) : isUploadingAudio ? (
-                      <>
-                        <Ionicons
-                          name="mic-outline"
-                          size={18}
-                          color="#FFFFFF"
-                        />
-                        <Text style={styles.buttonText}>Note vocale...</Text>
-                      </>
                     ) : (
                       <>
                         <Ionicons
-                          name="add-circle-outline"
+                          name="checkmark-circle-outline"
                           size={18}
                           color="#FFFFFF"
                         />
-                        <Text style={styles.buttonText}>Ajouter nouveau</Text>
+                        <Text style={styles.buttonText}>Enregistrer</Text>
                       </>
                     )}
                   </TouchableOpacity>

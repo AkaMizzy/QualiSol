@@ -74,21 +74,53 @@ function useQualiPhotoDetail({
   }, [initialItem, propFolderTitle]);
 
   const fetchChildren = useCallback(async () => {
-    if (token && item) {
+    if (token && item && user) {
       setIsLoadingChildren(true);
       try {
-        const geds = await getGedsBySource(
+        // Fetch standard 'photoavant' pictures for this folder
+        const photoAvantPromise = getGedsBySource(
           token,
           item.id,
           "photoavant",
           sortOrder,
         );
-        setChildGeds(geds);
+
+        // Fetch assigned 'qualiphoto' pictures for this user in this folder
+        // The backend `getGedsBySource` just requires `idsource` (item.id) and `kind` (qualiphoto)
+        // We will filter by the assigned user ID on the frontend after fetching.
+        const photoAssignedPromise = getGedsBySource(
+          token,
+          item.id,
+          "qualiphoto",
+          sortOrder,
+        );
+
+        const [photoAvantGeds, qualiphotoGeds] = await Promise.all([
+          photoAvantPromise,
+          photoAssignedPromise,
+        ]);
+
+        // Filter qualiphoto records to only include those assigned to the current user
+        const assignedGeds = qualiphotoGeds.filter(
+          (ged) => ged.assigned === user.id
+        );
+
+        // Combine both sets of geds
+        const combinedGeds = [...photoAvantGeds, ...assignedGeds];
+
+        // Ensure they are sorted correctly
+        combinedGeds.sort((a, b) => {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
+        });
+
+        setChildGeds(combinedGeds);
 
         // Check for each child if it has "after" photos
         const afterPhotosMap = new Set<string>();
         await Promise.all(
-          geds.map(async (ged) => {
+          combinedGeds.map(async (ged) => {
             try {
               const afterPhotos = await getGedsBySource(
                 token,
@@ -117,7 +149,7 @@ function useQualiPhotoDetail({
         setIsLoadingChildren(false);
       }
     }
-  }, [token, item, sortOrder]);
+  }, [token, item, user, sortOrder]);
 
   useEffect(() => {
     fetchChildren();

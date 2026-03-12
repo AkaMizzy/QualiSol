@@ -528,17 +528,7 @@ export default function DashboardScreen() {
                 <Text style={styles.foldersSectionTitle}>Contrôles</Text>
               </View>
               <View style={styles.folderSectionHeaderSide}>
-                <Pressable
-                  onPress={() => router.push("/danger")}
-                  style={styles.todoHeaderButton}
-                >
-                  <Image
-                    source={require("../../assets/icons/danger.png")}
-                    style={{ width: 16, height: 16 }}
-                    contentFit="contain"
-                  />
-                  <Text style={styles.todoHeaderText}>To-Do</Text>
-                </Pressable>
+               
               </View>
             </View>
             {/* Contrôle Help Banner */}

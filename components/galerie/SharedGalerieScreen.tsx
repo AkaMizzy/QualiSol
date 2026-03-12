@@ -1071,6 +1071,7 @@ export default function SharedGalerieScreen({
           projectName={selectedProjectForNewFolder.title}
           projectOwnerId={selectedAssignUser.id}
           projectOwnerName={selectedAssignUser.firstname || selectedAssignUser.lastname ? `${selectedAssignUser.firstname || ""} ${selectedAssignUser.lastname || ""}`.trim() : selectedAssignUser.email}
+          hideOwner={true}
         />
       )}
       <Modal visible={isAnnotatorVisible} animationType="slide">
