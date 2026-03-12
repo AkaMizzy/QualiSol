@@ -1,6 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { router, useSegments } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import ConstructionLoadingScreen from './ConstructionLoadingScreen';
 import ImportantMessageScreen from './ImportantMessageScreen';
 import { clearImportantMessage } from '@/services/userService';
@@ -74,21 +75,40 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
 
   if (isLoading) {
     // This is for the initial app load, checking for a stored token.
-    return <ConstructionLoadingScreen onLoadingComplete={() => {}} />;
+    return (
+      <>
+        {children}
+        <View style={StyleSheet.absoluteFill}>
+          <ConstructionLoadingScreen onLoadingComplete={() => {}} />
+        </View>
+      </>
+    );
   }
   
   // After a successful login, show the loading screen before navigating.
   if (isAuthenticated && isPostLoginLoading) {
-    return <ConstructionLoadingScreen onLoadingComplete={completePostLoginLoading} />;
+    return (
+      <>
+        {children}
+        <View style={StyleSheet.absoluteFill}>
+          <ConstructionLoadingScreen onLoadingComplete={completePostLoginLoading} />
+        </View>
+      </>
+    );
   }
 
-  if (showingCompanyMessage && user?.company_important) {
-    return <ImportantMessageScreen content={user.company_important} onClose={handleCompanyMessageClose} />;
-  }
-
-  if (showingUserMessage && user?.user_important) {
-    return <ImportantMessageScreen content={user.user_important} onClose={handleUserMessageClose} />;
-  }
-
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      {showingCompanyMessage && user?.company_important ? (
+        <View style={StyleSheet.absoluteFill}>
+          <ImportantMessageScreen content={user.company_important} onClose={handleCompanyMessageClose} />
+        </View>
+      ) : showingUserMessage && user?.user_important ? (
+        <View style={StyleSheet.absoluteFill}>
+          <ImportantMessageScreen content={user.user_important} onClose={handleUserMessageClose} />
+        </View>
+      ) : null}
+    </>
+  );
 }
