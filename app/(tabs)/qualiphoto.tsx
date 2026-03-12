@@ -6,9 +6,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import companyService from "@/services/companyService";
 import folderService, { Folder, Project } from "@/services/folderService";
 import { getArchivedStatusId } from "@/services/statusService";
-import { getUsers } from "@/services/userService";
+import { getUsers } from "@/services/userService";  
 import { CompanyUser } from "@/types/user";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -67,6 +68,7 @@ export default function QualiPhotoGalleryScreen() {
 
   // Filter states
   const [projects, setProjects] = useState<Project[]>([]);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<CompanyUser[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | undefined>(
     undefined,
@@ -166,12 +168,14 @@ export default function QualiPhotoGalleryScreen() {
       .catch(() => {});
   }, [token]);
 
-  // Load folders on mount/token change
-  useEffect(() => {
-    if (token) {
-      fetchFolders();
-    }
-  }, [token, fetchFolders]);
+  // Load folders on focus (and token change)
+  useFocusEffect(
+    useCallback(() => {
+      if (token) {
+        fetchFolders();
+      }
+    }, [token, fetchFolders])
+  );
 
   // Load projects on mount
   useEffect(() => {
@@ -180,6 +184,7 @@ export default function QualiPhotoGalleryScreen() {
       setLoadingProjects(true);
       try {
         const fetchedProjects = await folderService.getAllProjects(token);
+        setAllProjects(fetchedProjects);
 
         // Show projects where they are assigned as owner/admin
         const userProjects = fetchedProjects.filter(
@@ -215,8 +220,12 @@ export default function QualiPhotoGalleryScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: Folder }) => {
+      const projectObj = allProjects.find((p) => p.id === item.project_id);
       const projectTitle = item.project_id
-        ? projects.find((p) => p.id === item.project_id)?.title
+        ? projectObj?.title ||
+          (item as any).project?.title ||
+          (item as any).project_title ||
+          null
         : null;
       // Check if current user is assigned as the technician for this folder
       const isAssignedAsTechnician =
@@ -282,7 +291,7 @@ export default function QualiPhotoGalleryScreen() {
         </Pressable>
       );
     },
-    [projects, user?.id],
+    [allProjects, users, user?.id],
   );
 
   const keyExtractor = useCallback((item: Folder) => item.id, []);
@@ -569,7 +578,7 @@ export default function QualiPhotoGalleryScreen() {
           setDetailVisible(false);
           setSelectedItem(null);
         }}
-        projects={projects}
+        projects={allProjects}
         projectTitle={detailProjectTitle}
         folderTitle={detailFolderTitle}
       />

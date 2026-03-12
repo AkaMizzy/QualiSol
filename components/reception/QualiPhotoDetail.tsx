@@ -173,8 +173,12 @@ function useQualiPhotoDetail({
   const subtitle = useMemo(() => {
     if (!item) return "";
     if (propProjectTitle) return `${propProjectTitle}`;
+    const projectObj = projects.find((p) => p.id === item.project_id);
     const projectTitle =
-      projects.find((p) => p.id === item.project_id)?.title || "—";
+      projectObj?.title ||
+      (item as any).project?.title ||
+      (item as any).project_title ||
+      "—";
     return `${projectTitle}`;
   }, [item, projects, propProjectTitle]);
 
@@ -217,7 +221,10 @@ function useQualiPhotoDetail({
     () =>
       propProjectTitle ||
       (item
-        ? projects.find((p) => p.id === item.project_id)?.title || "N/A"
+        ? projects.find((p) => p.id === item.project_id)?.title ||
+          (item as any).project?.title ||
+          (item as any).project_title ||
+          "N/A"
         : "N/A"),
     [item, projects, propProjectTitle],
   );
