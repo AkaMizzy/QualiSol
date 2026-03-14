@@ -455,8 +455,25 @@ export default function SharedGalerieScreen({
 
   const handleOpenAssignModal = () => {
     if (selectedItem) {
-      setItemToAssign(selectedItem);
-      setAssignModalVisible(true);
+      if (selectedItem.assigned) {
+        Alert.alert(
+          "Attention",
+          "Cette image est déjà assignée à un utilisateur. Voulez-vous la réassigner ?",
+          [
+            { text: "Annuler", style: "cancel" },
+            {
+              text: "Continuer",
+              onPress: () => {
+                setItemToAssign(selectedItem);
+                setAssignModalVisible(true);
+              },
+            },
+          ]
+        );
+      } else {
+        setItemToAssign(selectedItem);
+        setAssignModalVisible(true);
+      }
     }
   };
 
