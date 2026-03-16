@@ -1,3 +1,4 @@
+import API_CONFIG from "@/app/config/api";
 import AppHeader from "@/components/AppHeader";
 import CreateProjectModal from "@/components/projects/CreateProjectModal";
 import ProjectDetailModal from "@/components/projects/ProjectDetailModal";
@@ -48,14 +49,22 @@ export default function ProjectsScreen() {
         );
         setProjects(filtered);
 
+        // Update selectedProject if it exists to reflect newest data in detail modal
+        if (selectedProject) {
+          const updated = filtered.find((p) => p.id === selectedProject.id);
+          if (updated) setSelectedProject(updated);
+        }
+
         // Fetch plan images for these projects
         const projectIds = filtered.map((p) => p.id);
         if (projectIds.length > 0) {
           try {
             const planGeds = await getGedsBySource(token, projectIds, "plan");
             const planMap: Record<string, string> = {};
+            // getGedsBySource returns newest first (desc). 
+            // We only want to keep the first (newest) one for each project.
             planGeds.forEach((ged) => {
-              if (ged.url) {
+              if (ged.url && !planMap[ged.idsource]) {
                 planMap[ged.idsource] = ged.url;
               }
             });
@@ -161,7 +170,7 @@ export default function ProjectsScreen() {
                   >
                     {projectPlans[item.id] ? (
                       <ImageBackground
-                        source={{ uri: projectPlans[item.id] }}
+                        source={{ uri: `${API_CONFIG.BASE_URL}${projectPlans[item.id]}` }}
                         style={styles.cardImageBackground}
                         resizeMode="cover"
                       >

@@ -1,3 +1,4 @@
+import API_CONFIG from "@/app/config/api";
 import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import folderService, { Folder } from "@/services/folderService";
@@ -39,6 +40,7 @@ import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CreateFolderModal from "../folders/CreateFolderModal";
 import FolderContextModal from "./FolderContextModal";
+import PreviewModal from "../PreviewModal";
 
 type Props = {
   visible: boolean;
@@ -95,6 +97,8 @@ export default function ProjectDetailModal({
     null,
   );
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
+  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
 
   // Rotate chevrons
   const rotateAnim = useRef({
@@ -210,7 +214,8 @@ export default function ProjectDetailModal({
 
   const handleOpenReport = (url: string | null | undefined) => {
     if (url) {
-      Linking.openURL(url).catch((err) =>
+      const fullUrl = url.startsWith("http") ? url : `${API_CONFIG.BASE_URL}${url}`;
+      Linking.openURL(fullUrl).catch((err) =>
         Alert.alert("Erreur", "Impossible d'ouvrir le lien"),
       );
     } else {
@@ -396,7 +401,10 @@ export default function ProjectDetailModal({
             </Text>
             {planImage?.url && (
               <TouchableOpacity
-                onPress={() => handleOpenReport(planImage.url)}
+                onPress={() => {
+                  setPreviewUrl(`${API_CONFIG.BASE_URL}${planImage.url}`);
+                  setIsPreviewVisible(true);
+                }}
                 style={{
                   padding: 4,
                   backgroundColor: "#fef2f2",
@@ -709,7 +717,7 @@ export default function ProjectDetailModal({
                       />
                     ) : planImage?.url ? (
                       <Image
-                        source={{ uri: planImage.url }}
+                        source={{ uri: `${API_CONFIG.BASE_URL}${planImage.url}` }}
                         style={{ width: "100%", height: "100%" }}
                         resizeMode="contain"
                       />
@@ -1008,6 +1016,14 @@ export default function ProjectDetailModal({
               ? `${owner.firstname ?? ""} ${owner.lastname ?? ""}`.trim()
               : undefined;
           })()}
+        />
+
+        <PreviewModal
+          visible={isPreviewVisible}
+          onClose={() => setIsPreviewVisible(false)}
+          mediaUrl={previewUrl}
+          mediaType="image"
+          title="Plan du chantier"
         />
 
         {/* Date Pickers */}

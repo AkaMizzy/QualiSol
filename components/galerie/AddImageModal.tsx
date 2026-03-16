@@ -43,6 +43,9 @@ import {
 import CaptureModal from "../CaptureModal";
 import CustomAlert from "../CustomAlert";
 import PictureAnnotator from "../PictureAnnotator";
+import PreviewModal from "../PreviewModal";
+import API_CONFIG from "@/app/config/api";
+import { getGedById, Ged } from "@/services/gedService";
 
 interface AddImageModalProps {
   visible: boolean;
@@ -167,6 +170,11 @@ export default function AddImageModal({
 
   const [captureModalVisible, setCaptureModalVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Plan preview state
+  const [planGed, setPlanGed] = useState<Ged | null>(null);
+  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Auto-save state
   const [autoSaveCountdown, setAutoSaveCountdown] = useState<number | null>(
@@ -600,6 +608,29 @@ export default function AddImageModal({
     }
   }, [loadingContext, folders]);
 
+  // Fetch plan GED when folder changes
+  useEffect(() => {
+    const fetchPlan = async () => {
+      if (!selectedFolderId || !token) {
+        setPlanGed(null);
+        return;
+      }
+      const folder = folders.find((f) => f.id === selectedFolderId);
+      if (folder?.plan) {
+        try {
+          const ged = await getGedById(token, folder.plan);
+          setPlanGed(ged);
+        } catch (error) {
+          console.error("Failed to fetch folder plan GED", error);
+          setPlanGed(null);
+        }
+      } else {
+        setPlanGed(null);
+      }
+    };
+    fetchPlan();
+  }, [selectedFolderId, folders, token]);
+
   useEffect(() => {
     const fetchLocation = async () => {
       try {
@@ -924,6 +955,19 @@ export default function AddImageModal({
                   <Ionicons name="close" size={32} color={COLORS.primary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{modalTitle}</Text>
+                
+                {planGed && (
+                  <TouchableOpacity
+                    style={styles.planPreviewButton}
+                    onPress={() => {
+                      setPreviewUrl(`${API_CONFIG.BASE_URL}${planGed.url}`);
+                      setIsPreviewVisible(true);
+                    }}
+                  >
+                    <Ionicons name="eye-outline" size={24} color={COLORS.primary} />
+                  </TouchableOpacity>
+                )}
+
                 {/* Network Status Indicator - only show when offline */}
                 {networkStatus === "offline" && (
                   <View style={styles.networkStatusBadge}>
@@ -1387,6 +1431,14 @@ export default function AddImageModal({
         </View>
       </KeyboardAvoidingView>
 
+      <PreviewModal
+        visible={isPreviewVisible}
+        onClose={() => setIsPreviewVisible(false)}
+        mediaUrl={previewUrl || ""}
+        mediaType="image"
+        title="Plan du dossier"
+      />
+
       {/* Text Field Editor Popup Modal */}
       <Modal
         visible={editingField !== null}
@@ -1593,6 +1645,11 @@ const styles = StyleSheet.create({
     fontFamily: FONT.bold,
     fontSize: SIZES.xLarge,
     color: "#f87b1b",
+    flex: 1,
+  },
+  planPreviewButton: {
+    padding: 4,
+    marginRight: 8,
   },
   labelContainer: {
     flexDirection: "row",

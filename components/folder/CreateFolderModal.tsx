@@ -290,7 +290,7 @@ export default function CreateFolderModal({
               <View style={[styles.inputWrap, { marginBottom: 16 }]}>
                 <Ionicons name="text-outline" size={16} color="#f87b1b" />
                 <TextInput
-                  placeholder="Titre"
+                  placeholder="sdsdsd"
                   placeholderTextColor="#9ca3af"
                   value={title}
                   onChangeText={setTitle}

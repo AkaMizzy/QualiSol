@@ -8,6 +8,7 @@ import {
   deleteGed,
   Ged,
   getFolderGedPdfUrl,
+  getGedById,
   getGedsBySource,
 } from "@/services/gedService";
 import { getArchivedStatusId } from "@/services/statusService";
@@ -63,6 +64,9 @@ export default function FolderContextModal({
   const [isArchiving, setIsArchiving] = useState(false);
   const [archivedStatusId, setArchivedStatusId] = useState<string | null>(null);
   const [isPdfGenerating, setIsPdfGenerating] = useState(false);
+  const [planGed, setPlanGed] = useState<Ged | null>(null);
+  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setCurrentFolder(folder);
@@ -234,8 +238,23 @@ export default function FolderContextModal({
   useEffect(() => {
     if (visible && folder && token) {
       loadGeds();
+      loadPlanGed();
     }
   }, [visible, folder, token]);
+
+  const loadPlanGed = async () => {
+    if (!folder?.plan || !token) {
+      setPlanGed(null);
+      return;
+    }
+    try {
+      const g = await getGedById(token, folder.plan);
+      setPlanGed(g);
+    } catch (error) {
+      console.error("Failed to load folder plan", error);
+      setPlanGed(null);
+    }
+  };
 
   const loadGeds = async () => {
     if (!folder || !token) return;
@@ -395,6 +414,18 @@ export default function FolderContextModal({
               />
             </TouchableOpacity>
 
+            {planGed && (
+              <TouchableOpacity
+                onPress={() => {
+                  setPreviewUrl(`${API_CONFIG.BASE_URL}${planGed.url}`);
+                  setIsPreviewVisible(true);
+                }}
+                style={{ padding: 4 }}
+              >
+                <Ionicons name="eye-outline" size={22} color="#f87b1b" />
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               onPress={handleDownloadGedPdf}
               disabled={isPdfGenerating}
@@ -545,6 +576,14 @@ export default function FolderContextModal({
             onDelete={handleDeleteGed}
           />
         )}
+
+        <PreviewModal
+          visible={isPreviewVisible}
+          onClose={() => setIsPreviewVisible(false)}
+          mediaUrl={previewUrl || ""}
+          mediaType="image"
+          title="Plan du dossier"
+        />
 
         <UserSelectionModal
           visible={isUserModalVisible}

@@ -7,20 +7,24 @@ import folderService, {
   Folder,
 } from "@/services/folderService";
 import { Company } from "@/types/company";
+import { compressImage } from "@/utils/imageCompression";
+import { createGed } from "@/services/gedService";
+import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -52,6 +56,7 @@ export default function CreateFolderModal({
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [ownerId, setOwnerId] = useState("");
+  const [plan, setPlan] = useState<ImagePicker.ImagePickerAsset | null>(null);
 
   // UI state
   const [showOwnerPicker, setShowOwnerPicker] = useState(false);
@@ -197,6 +202,45 @@ export default function CreateFolderModal({
       };
 
       const created = await folderService.createFolder(payload, token);
+      
+      const folderId = created.id;
+
+      // Upload Plan image if selected
+      if (plan && folderId) {
+        try {
+          const gedRes = await createGed(token, {
+            idsource: folderId,
+            kind: "plan",
+            title: "Plan du dossier",
+            file: {
+              uri: plan.uri,
+              type: plan.mimeType || "image/jpeg",
+              name: plan.fileName || "plan.jpg",
+            },
+            author: user?.id || "Unknown",
+            idauthor: user?.id,
+            answer: null,
+            description: "Plan du dossier",
+            mode: "upload",
+          });
+
+          const gedId = gedRes.data?.id;
+
+          if (gedId) {
+            // Update the folder with the GED ID in the 'plan' field
+            await folderService.updateFolder(folderId, {
+              plan: gedId,
+            }, token);
+          }
+        } catch (uploadError) {
+          console.error("Folder plan upload/assignment failed", uploadError);
+          Alert.alert(
+            "Info",
+            "Le dossier a été créé mais le plan n'a pas pu être téléchargé.",
+          );
+        }
+      }
+
       onSuccess && onSuccess(created);
       handleClose();
     } catch (e: any) {
@@ -221,6 +265,7 @@ export default function CreateFolderModal({
     setTitle("");
     setDescription("");
     setOwnerId(projectOwnerId || user?.id || "");
+    setPlan(null);
     setShowOwnerPicker(false);
     setError(null);
     onClose();
@@ -317,6 +362,102 @@ export default function CreateFolderModal({
                   onChangeText={setTitle}
                   style={styles.input}
                 />
+              </View>
+
+              {/* Plan Upload */}
+              <View style={{ alignItems: "center", marginBottom: 24, marginTop: 8 }}>
+                <TouchableOpacity
+                  onPress={async () => {
+                    const { status } =
+                      await ImagePicker.requestMediaLibraryPermissionsAsync();
+                    if (status !== "granted") {
+                      Alert.alert(
+                        "Permission refusée",
+                        "Nous avons besoin de votre permission pour accéder à la galerie.",
+                      );
+                      return;
+                    }
+                    const result = await ImagePicker.launchImageLibraryAsync({
+                      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                      allowsEditing: true,
+                      quality: 0.8,
+                    });
+
+                    if (!result.canceled && result.assets[0]) {
+                      const compressed = await compressImage(
+                        result.assets[0].uri,
+                      );
+                      setPlan({
+                        ...result.assets[0],
+                        uri: compressed.uri,
+                        width: compressed.width,
+                        height: compressed.height,
+                      } as ImagePicker.ImagePickerAsset);
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    height: 150,
+                    borderRadius: 12,
+                    backgroundColor: "#fff",
+                    borderWidth: 1,
+                    borderColor: "#f87b1b",
+                    borderStyle: "dashed",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    overflow: "hidden",
+                  }}
+                >
+                  {plan ? (
+                    <Image
+                      source={{ uri: plan.uri }}
+                      style={{ width: "100%", height: "100%" }}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <View style={{ alignItems: "center" }}>
+                      <Ionicons
+                        name="map-outline"
+                        size={40}
+                        color="#94a3b8"
+                      />
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          color: "#94a3b8",
+                          marginTop: 8,
+                        }}
+                      >
+                        Plan du dossier
+                      </Text>
+                    </View>
+                  )}
+                  {plan && (
+                    <View
+                      style={{
+                        position: "absolute",
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        backgroundColor: "rgba(0,0,0,0.4)",
+                        height: 30,
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Ionicons name="create" size={16} color="#FFF" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: "#64748B",
+                    marginTop: 8,
+                  }}
+                >
+                  Ajouter un plan (optionnel)
+                </Text>
               </View>
 
               {/* Owner Selection — hidden when owner is pre-set by the caller */}
