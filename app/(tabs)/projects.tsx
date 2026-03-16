@@ -3,21 +3,24 @@ import CreateProjectModal from "@/components/projects/CreateProjectModal";
 import ProjectDetailModal from "@/components/projects/ProjectDetailModal";
 import ProjectTypeManagerModal from "@/components/projects/ProjectTypeManagerModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { getGedsBySource } from "@/services/gedService";
 import { getAllProjects, Project } from "@/services/projectService";
 import { getUsers } from "@/services/userService";
 import { CompanyUser } from "@/types/user";
 import { formatDisplayDate } from "@/utils/dateFormat";
 import Ionicons from "@expo/vector-icons/build/Ionicons";
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  ImageBackground,
   StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ProjectsScreen() {
@@ -31,6 +34,7 @@ export default function ProjectsScreen() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [projectTypeManagerVisible, setProjectTypeManagerVisible] =
     useState<boolean>(false);
+  const [projectPlans, setProjectPlans] = useState<Record<string, string>>({});
 
   const refreshProjects = useCallback(async () => {
     if (!token) return;
@@ -43,6 +47,23 @@ export default function ProjectsScreen() {
           (p) => String(p.company_id) === String(user.company_id),
         );
         setProjects(filtered);
+
+        // Fetch plan images for these projects
+        const projectIds = filtered.map((p) => p.id);
+        if (projectIds.length > 0) {
+          try {
+            const planGeds = await getGedsBySource(token, projectIds, "plan");
+            const planMap: Record<string, string> = {};
+            planGeds.forEach((ged) => {
+              if (ged.url) {
+                planMap[ged.idsource] = ged.url;
+              }
+            });
+            setProjectPlans(planMap);
+          } catch (e) {
+            console.error("Failed to fetch project plan images", e);
+          }
+        }
       } else {
         // If user has no company assigned, show no projects
         setProjects([]);
@@ -133,42 +154,110 @@ export default function ProjectsScreen() {
                         width: cardWidth,
                         borderColor: "#e5e7eb",
                         shadowColor: "#000",
+                        padding: 0, // Reset padding for child layouts
+                        overflow: "hidden", // Clip background image
                       },
                     ]}
                   >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <Text style={styles.cardTitle} numberOfLines={1}>
-                        {item.title}
-                      </Text>
-                    </View>
-                    <View style={{ marginTop: 6 }}>
-                      <Text style={styles.cardSub}>
-                        Du {formatDisplayDate(item.dd)} au{" "}
-                        {formatDisplayDate(item.df)}
-                      </Text>
-                      {item.project_type_title ? (
-                        <Text style={styles.cardMeta}>
-                          Type · {item.project_type_title}
-                        </Text>
-                      ) : null}
-                      {(() => {
-                        const owner = users.find((u) => u.id === item.owner_id);
-                        if (owner) {
-                          return (
-                            <Text style={styles.cardMeta}>
-                              {owner.firstname} {owner.lastname}
+                    {projectPlans[item.id] ? (
+                      <ImageBackground
+                        source={{ uri: projectPlans[item.id] }}
+                        style={styles.cardImageBackground}
+                        resizeMode="cover"
+                      >
+                        <LinearGradient
+                          colors={[
+                            "rgba(0,0,0,0.1)",
+                            "rgba(0,0,0,0.4)",
+                            "rgba(0,0,0,0.7)",
+                          ]}
+                          style={styles.cardOverlay}
+                        >
+                          <View style={styles.cardContent}>
+                            <Text
+                              style={[styles.cardTitle, { color: "white" }]}
+                              numberOfLines={1}
+                            >
+                              {item.title}
                             </Text>
-                          );
-                        }
-                        return null;
-                      })()}
-                    </View>
+                            <View style={{ marginTop: 6 }}>
+                              <Text
+                                style={[styles.cardSub, { color: "#e5e7eb" }]}
+                              >
+                                Du {formatDisplayDate(item.dd)} au{" "}
+                                {formatDisplayDate(item.df)}
+                              </Text>
+                              {item.project_type_title ? (
+                                <Text
+                                  style={[
+                                    styles.cardMeta,
+                                    { color: "#f87b1b" },
+                                  ]}
+                                >
+                                  Type · {item.project_type_title}
+                                </Text>
+                              ) : null}
+                              {(() => {
+                                const owner = users.find(
+                                  (u) => u.id === item.owner_id,
+                                );
+                                if (owner) {
+                                  return (
+                                    <Text
+                                      style={[
+                                        styles.cardMeta,
+                                        { color: "#f87b1b" },
+                                      ]}
+                                    >
+                                      {owner.firstname} {owner.lastname}
+                                    </Text>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </View>
+                          </View>
+                        </LinearGradient>
+                      </ImageBackground>
+                    ) : (
+                      <View style={[styles.cardContent, { padding: 12 }]}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Text style={styles.cardTitle} numberOfLines={1}>
+                            {item.title}
+                          </Text>
+                        </View>
+                        <View style={{ marginTop: 6 }}>
+                          <Text style={styles.cardSub}>
+                            Du {formatDisplayDate(item.dd)} au{" "}
+                            {formatDisplayDate(item.df)}
+                          </Text>
+                          {item.project_type_title ? (
+                            <Text style={styles.cardMeta}>
+                              Type · {item.project_type_title}
+                            </Text>
+                          ) : null}
+                          {(() => {
+                            const owner = users.find(
+                              (u) => u.id === item.owner_id,
+                            );
+                            if (owner) {
+                              return (
+                                <Text style={styles.cardMeta}>
+                                  {owner.firstname} {owner.lastname}
+                                </Text>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </View>
+                      </View>
+                    )}
                   </TouchableOpacity>
                 );
               }}
@@ -273,6 +362,19 @@ const styles = StyleSheet.create({
   cardSub: {
     marginTop: 4,
     color: "#374151",
+  },
+  cardImageBackground: {
+    width: "100%",
+    height: "100%",
+  },
+  cardOverlay: {
+    flex: 1,
+    padding: 12,
+    justifyContent: "flex-end",
+  },
+  cardContent: {
+    flex: 1,
+    justifyContent: "center",
   },
   cardMeta: {
     marginTop: 4,
