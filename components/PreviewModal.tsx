@@ -10,6 +10,7 @@ import {
     Modal,
     Pressable,
     Share,
+    ScrollView,
     StyleSheet,
     Text,
     View,
@@ -86,14 +87,17 @@ export default function PreviewModal({
   wait = 0, // Default wait time 0
   ianalyse,
   onTimerEnd,
+  iatxt,
 }: PreviewModalProps) {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [showMetadata, setShowMetadata] = useState(mediaType === "image");
+  const [showMetadata, setShowMetadata] = useState(true);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [isAiTextExpanded, setIsAiTextExpanded] = useState(false);
+  const [isAudioTextExpanded, setIsAudioTextExpanded] = useState(false);
   const [timeLeft, setTimeLeft] = useState(wait);
   const { width } = useWindowDimensions();
 
@@ -368,51 +372,35 @@ export default function PreviewModal({
             {mediaUrl?.split("/").pop() || "Voice Recording"}
           </Text>
           <Text style={styles.voiceFileInfo}>Voice message</Text>
-          <View style={styles.audioPlayerContainer}>
-            {/* Custom Audio Player */}
-            <View style={styles.audioControls}>
-              {/* Play/Pause Button */}
-              <Pressable
-                style={styles.playButton}
-                onPress={handlePlayPause}
-                disabled={isLoading}
-              >
-                <Ionicons
-                  name={isPlaying ? "pause" : "play"}
-                  size={24}
-                  color="#FFFFFF"
-                />
-              </Pressable>
-
-              {/* Time Display */}
-              <View style={styles.timeDisplay}>
-                <Text style={styles.timeText}>{formatTime(position)}</Text>
-                <Text style={styles.timeText}>{formatTime(duration)}</Text>
+          <View style={styles.audioSection}>
+            <View style={styles.audioPlayerCard}>
+              <View style={styles.audioControlsRow}>
+                <Pressable
+                  style={styles.audioPlayButton}
+                  onPress={handlePlayPause}
+                  disabled={isLoading}
+                >
+                  <Ionicons
+                    name={isPlaying ? "pause" : "play"}
+                    size={24}
+                    color="#FFFFFF"
+                  />
+                </Pressable>
+                <View style={styles.audioProgressCol}>
+                  <View style={styles.audioProgressBarBase}>
+                    <View
+                      style={[
+                        styles.audioProgressFill,
+                        { width: `${duration > 0 ? (position / duration) * 100 : 0}%` },
+                      ]}
+                    />
+                  </View>
+                  <View style={styles.audioTimeRow}>
+                    <Text style={styles.audioTimeText}>{formatTime(position)}</Text>
+                    <Text style={styles.audioTimeText}>{formatTime(duration)}</Text>
+                  </View>
+                </View>
               </View>
-            </View>
-
-            {/* Progress Bar */}
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${duration > 0 ? (position / duration) * 100 : 0}%`,
-                    },
-                  ]}
-                />
-              </View>
-              <Pressable
-                style={styles.progressTouchable}
-                onPress={(event) => {
-                  const { locationX } = event.nativeEvent;
-                  const progressBarWidth = screenWidth * 0.6; // Approximate width
-                  const percentage = locationX / progressBarWidth;
-                  const newPosition = percentage * duration;
-                  handleSeek(newPosition);
-                }}
-              />
             </View>
           </View>
         </View>
@@ -422,115 +410,133 @@ export default function PreviewModal({
     return null;
   };
 
+  const renderExpandableText = (
+    text: string,
+    isExpanded: boolean,
+    setIsExpanded: (val: boolean) => void,
+    label?: string,
+    icon?: any,
+    isHtml = false,
+  ) => {
+    const trimmedText = text?.trim();
+    if (!trimmedText || trimmedText === "<p></p>" || trimmedText === "<br>") return null;
+
+    const shouldShowExpand = trimmedText.length > 200 || trimmedText.includes("<br") || trimmedText.includes("<p");
+
+    return (
+      <View style={styles.expandableSection}>
+        {label && (
+          <View style={styles.sectionHeader}>
+            {icon && <Ionicons name={icon} size={18} color="#f87b1b" style={{ marginRight: 8 }} />}
+            <Text style={styles.metadataLabel}>{label}</Text>
+          </View>
+        )}
+        <Pressable onPress={() => setIsExpanded(!isExpanded)} style={styles.textContainer}>
+          {isHtml ? (
+            <View style={!isExpanded && styles.collapsedTextContainer}>
+              <RenderHTML
+                contentWidth={width - 40}
+                source={{ html: text }}
+                baseStyle={{
+                  fontSize: 15,
+                  color: "#E0E0E0",
+                  lineHeight: 22,
+                }}
+                tagsStyles={{
+                  b: { fontWeight: "bold", color: "#FFFFFF" },
+                  strong: { fontWeight: "bold", color: "#f87b1b" },
+                  h1: { fontSize: 22, fontWeight: "bold", color: "#FFFFFF", marginBottom: 12, marginTop: 8 },
+                  h2: { fontSize: 20, fontWeight: "bold", color: "#f87b1b", marginBottom: 10, marginTop: 6 },
+                  h3: { fontSize: 18, fontWeight: "bold", color: "#FFFFFF", marginBottom: 8, marginTop: 4 },
+                  h4: { fontSize: 16, fontWeight: "bold", color: "#f87b1b", marginBottom: 6 },
+                  p: { marginBottom: 10, lineHeight: 22 },
+                  ul: { marginBottom: 10, marginLeft: 10 },
+                  ol: { marginBottom: 10, marginLeft: 10 },
+                  li: { marginBottom: 6, color: "#E0E0E0" },
+                  table: { borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 15, borderRadius: 8, overflow: 'hidden' },
+                  th: { backgroundColor: "rgba(248, 123, 27, 0.1)", padding: 8, fontWeight: 'bold', color: '#f87b1b' },
+                  td: { padding: 8, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.05)", color: '#E0E0E0' },
+                }}
+              />
+            </View>
+          ) : (
+            <Text
+              style={[styles.metadataValue, !isExpanded && styles.collapsedText]}
+              numberOfLines={isExpanded ? undefined : 3}
+            >
+              {text}
+            </Text>
+          )}
+          {shouldShowExpand && (
+            <View style={styles.expandButton}>
+              <Text style={styles.expandButtonText}>
+                {isExpanded ? "Voir moins" : "Voir plus"}
+              </Text>
+              <Ionicons
+                name={isExpanded ? "chevron-up" : "chevron-down"}
+                size={16}
+                color="#f87b1b"
+              />
+            </View>
+          )}
+        </Pressable>
+      </View>
+    );
+  };
+
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="slide"
       onRequestClose={onClose}
     >
       <View style={styles.container}>
-        {/* Header */}
+        {/* Header - Fixed at top */}
         <View style={styles.header}>
-          <View style={styles.headerContent}></View>
-
+          <View style={styles.headerContent}>
+             <Text style={styles.headerTitle} numberOfLines={1}>{title || ""}</Text>
+          </View>
           <View style={styles.headerActions}>
-            {/* Share Button moved here or beside others */}
-            <Pressable
-              style={styles.actionButton}
-              onPress={handleShare}
-              accessibilityRole="button"
-              accessibilityLabel="Partager"
-            >
-              <Ionicons name="share-social-outline" size={24} color="#f87b1b" />
+            <Pressable style={styles.actionButton} onPress={handleShare}>
+              <Ionicons name="share-social-outline" size={22} color="#f87b1b" />
             </Pressable>
-
-            {(mediaType === "image" || mediaType === "video") &&
-              hasMetadata && (
-                <Pressable
-                  style={styles.actionButton}
-                  onPress={() => setShowMetadata(!showMetadata)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Toggle metadata"
-                >
-                  <Ionicons
-                    name={showMetadata ? "information" : "information-outline"}
-                    size={24}
-                    color="#FFFFFF"
-                  />
-                </Pressable>
-              )}
+            
             {mediaType === "image" && onAutoDescribe && (
               <Pressable
                 style={styles.actionButton}
                 onPress={onAutoDescribe}
                 disabled={isDescribing}
-                accessibilityRole="button"
-                accessibilityLabel="Generate AI description"
               >
                 {isDescribing ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color="#f87b1b" />
                 ) : (
-                  <Ionicons name="sparkles-outline" size={24} color="#FFFFFF" />
+                  <Ionicons name="sparkles-outline" size={22} color="#f87b1b" />
                 )}
               </Pressable>
             )}
 
-            {/* Conditional rendering for Edit and Delete buttons */}
             {(() => {
-              // Check if action should be restricted
-              // Restricted if:
-              // 1. Timer is active (visible=0 and timeLeft > 0)
-              // 2. ianalyse is 0
               const isTimerActive = isVisibleProp === 0 && timeLeft > 0;
               const isActionRestricted = isTimerActive || ianalyse === 0;
 
               return (
                 <>
                   {mediaType === "image" && onEdit && !isActionRestricted && (
-                    <Pressable
-                      style={styles.actionButton}
-                      onPress={onEdit}
-                      accessibilityRole="button"
-                      accessibilityLabel="Edit photo"
-                    >
-                      <Ionicons
-                        name="create-outline"
-                        size={24}
-                        color="#FFFFFF"
-                      />
+                    <Pressable style={styles.actionButton} onPress={onEdit}>
+                      <Ionicons name="create-outline" size={22} color="#f87b1b" />
                     </Pressable>
                   )}
 
-                  {(mediaType === "image" || mediaType === "video") &&
-                    onAnnotate &&
-                    !isActionRestricted && (
-                      <Pressable
-                        style={styles.actionButton}
-                        onPress={onAnnotate}
-                        accessibilityRole="button"
-                        accessibilityLabel="Annoter"
-                      >
-                        <Ionicons
-                          name="brush-outline"
-                          size={24}
-                          color="#f87b1b"
-                        />
-                      </Pressable>
-                    )}
+                  {(mediaType === "image" || mediaType === "video") && onAnnotate && !isActionRestricted && (
+                    <Pressable style={styles.actionButton} onPress={onAnnotate}>
+                      <Ionicons name="brush-outline" size={22} color="#f87b1b" />
+                    </Pressable>
+                  )}
 
                   {onDelete && !isActionRestricted && (
-                    <Pressable
-                      style={styles.actionButton}
-                      onPress={onDelete}
-                      accessibilityRole="button"
-                      accessibilityLabel="Delete"
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={24}
-                        color="#FF3B30"
-                      />
+                    <Pressable style={styles.actionButton} onPress={onDelete}>
+                      <Ionicons name="trash-outline" size={22} color="#FF3B30" />
                     </Pressable>
                   )}
                 </>
@@ -541,281 +547,184 @@ export default function PreviewModal({
               <Pressable
                 style={styles.actionButton}
                 onPress={() => {
-                  if (Platform.OS === "ios") {
-                    onClose();
-                    setTimeout(onAssign, 400);
-                  } else {
-                    onClose();
-                    onAssign();
-                  }
+                  onClose();
+                  setTimeout(onAssign, Platform.OS === "ios" ? 400 : 0);
                 }}
-                accessibilityRole="button"
-                accessibilityLabel="Assigner"
               >
-                <Ionicons name="person-add-outline" size={24} color="#f87b1b" />
+                <Ionicons name="person-add-outline" size={22} color="#f87b1b" />
               </Pressable>
             )}
 
-            {/* Only show close button if visible is 1 (default) OR forced (timer ended) */}
-            {(isVisibleProp === 1 ||
-              isVisibleProp === undefined ||
-              forceShowClose) && (
-              <Pressable
-                style={styles.actionButton}
-                onPress={onClose}
-                accessibilityRole="button"
-                accessibilityLabel="Close preview"
-              >
-                <Ionicons name="close" size={28} color="#f87b1b" />
+            {(isVisibleProp === 1 || isVisibleProp === undefined || forceShowClose) && (
+              <Pressable style={styles.actionButton} onPress={onClose}>
+                <Ionicons name="close" size={26} color="#f87b1b" />
               </Pressable>
             )}
 
-            {/* Show timer if auto-closing */}
             {isVisibleProp === 0 && (
-              <View
-                style={[
-                  styles.actionButton,
-                  { backgroundColor: "rgba(255, 68, 68, 0.8)" },
-                ]}
-              >
-                <Text style={{ color: "white", fontWeight: "bold" }}>
-                  {timeLeft}s
-                </Text>
+              <View style={[styles.actionButton, { backgroundColor: "rgba(255, 68, 68, 0.2)" }]}>
+                <Text style={{ color: "#FF4444", fontWeight: "bold" }}>{timeLeft}s</Text>
               </View>
             )}
           </View>
         </View>
 
-        {/* Media Content */}
-        <View style={styles.mediaContainer}>{renderMedia()}</View>
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Media Section */}
+          <View style={styles.mainMediaContainer}>
+            {renderMedia()}
+          </View>
 
-        {/* Metadata Overlay */}
-        {(mediaType === "image" || mediaType === "video") &&
-          showMetadata &&
-          hasMetadata && (
-            <View style={styles.metadataOverlay}>
-              <View style={styles.metadataCard}>
-                <View style={styles.metadataRow}>
-                  {author && (
-                    <View style={styles.metadataItem}>
-                      <Ionicons
-                        name="person-outline"
-                        size={16}
-                        color="#f87b1b"
-                      />
-                      <Text style={styles.metadataSmallValue}>{author}</Text>
-                    </View>
-                  )}
-                  {createdAt && (
-                    <View style={styles.metadataItem}>
-                      <Ionicons
-                        name="calendar-outline"
-                        size={16}
-                        color="#f87b1b"
-                      />
-                      <Text style={styles.metadataSmallValue}>
-                        {formatDate(createdAt)}
-                      </Text>
-                    </View>
-                  )}
-                  {level !== undefined && (
-                    <View style={styles.metadataItem}>
-                      <Ionicons
-                        name="warning-outline"
-                        size={16}
-                        color="#f87b1b"
-                      />
-                      <Text style={styles.metadataSmallValue}>{level}</Text>
-                    </View>
-                  )}
-                  {mode && (
-                    <View style={styles.metadataItem}>
-                      <Ionicons
-                        name={
-                          mode === "capture"
-                            ? "camera-outline"
-                            : "cloud-upload-outline"
-                        }
-                        size={16}
-                        color="#f87b1b"
-                      />
-                      <Text style={styles.metadataSmallValue}>
-                        {mode === "capture" ? "Capturé" : "Importé"}
-                      </Text>
-                    </View>
-                  )}
-                  {chantier && (
-                    <View style={styles.metadataItem}>
-                      <Ionicons
-                        name="business-outline"
-                        size={16}
-                        color="#f87b1b"
-                      />
-                      <Text style={styles.metadataSmallValue}>{chantier}</Text>
-                    </View>
-                  )}
+          {/* Audio Section (Voice Note associated with image) */}
+          {mediaType === "image" && voiceNoteUrl && (
+            <View style={styles.audioSection}>
+              <View style={styles.audioPlayerCard}>
+                <View style={styles.audioHeader}>
+                  <Ionicons name="mic" size={20} color="#f87b1b" />
+                  <Text style={styles.audioTitle}>Note Vocale</Text>
                 </View>
-                {voiceNoteUrl && (
-                  <View style={styles.metadataSection}>
-                    <View style={styles.miniPlayerContainer}>
-                      <Pressable
-                        style={styles.miniPlayButton}
-                        onPress={handlePlayPause}
-                        disabled={isLoading}
-                      >
-                        <Ionicons
-                          name={isPlaying ? "pause" : "play"}
-                          size={20}
-                          color="#FFFFFF"
-                        />
-                      </Pressable>
-                      <View style={styles.miniProgressContainer}>
-                        <View style={styles.miniProgressBar}>
-                          <View
-                            style={[
-                              styles.miniProgressFill,
-                              {
-                                width: `${duration > 0 ? (position / duration) * 100 : 0}%`,
-                              },
-                            ]}
-                          />
-                        </View>
-                        <Pressable
-                          style={styles.progressTouchable}
-                          onPress={(event) => {
-                            const { locationX } = event.nativeEvent;
-                            const progressBarWidth = screenWidth * 0.5; // Approximate width (adjust based on layouts)
-                            const percentage = locationX / progressBarWidth;
-                            const newPosition = percentage * duration;
-                            handleSeek(newPosition);
-                          }}
-                        />
-                      </View>
-                      <Text style={styles.miniTimeText}>
-                        {formatTime(position)} / {formatTime(duration)}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-                {/* Audio Text Display */}
-                {audiotxt && (
-                  <View style={styles.metadataSection}>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                        marginBottom: 4,
-                      }}
-                    >
-                      <Ionicons name="mic-outline" size={16} color="#f87b1b" />
-                    </View>
-                    <Text style={styles.metadataValue}>{audiotxt}</Text>
-                  </View>
-                )}
-
-                {/* Title Section (Moved here as requested) */}
-                {title && (
-                  <View style={styles.metadataSection}>
-                    <Text style={styles.metadataValue}>{title}</Text>
-                  </View>
-                )}
-
-                {/* Assigned User Display */}
-                {assignedTo && (
-                  <View style={styles.metadataSection}>
-                    <Text style={styles.metadataLabel}>Assigné à</Text>
-                    <View
-                      style={{ flexDirection: "row", alignItems: "center" }}
-                    >
-                      <Ionicons
-                        name="person-circle-outline"
-                        size={20}
-                        color="#f87b1b"
-                        style={{ marginRight: 6 }}
-                      />
-                      <Text style={styles.metadataValue}>
-                        {typeof assignedTo === "string"
-                          ? assignedTo
-                          : `${assignedTo.firstname} ${assignedTo.lastname}`}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-                {description && (
-                  <View style={styles.metadataSection}>
-                    <View style={{ width: "100%", marginTop: 4 }}>
-                      <RenderHTML
-                        contentWidth={width - 64}
-                        source={{ html: description }}
-                        baseStyle={{
-                          fontSize: 15,
-                          color: "#E0E0E0",
-                          lineHeight: 20,
-                        }}
-                        defaultTextProps={{ selectable: true }}
-                        tagsStyles={{
-                          b: { fontWeight: "bold", color: "#FFFFFF" },
-                          strong: { fontWeight: "bold", color: "#FFFFFF" },
-                          u: { textDecorationLine: "underline" },
-                          i: { fontStyle: "italic" },
-                          em: { fontStyle: "italic" },
-                          h1: {
-                            fontSize: 17,
-                            fontWeight: "bold",
-                            color: "#FFFFFF",
-                            marginBottom: 4,
-                          },
-                          h2: {
-                            fontSize: 15,
-                            fontWeight: "bold",
-                            color: "#f87b1b",
-                            marginBottom: 2,
-                          },
-                          h3: {
-                            fontSize: 14,
-                            fontWeight: "600",
-                            color: "#CCCCCC",
-                            marginBottom: 2,
-                          },
-                        }}
+                <View style={styles.audioControlsRow}>
+                  <Pressable
+                    style={styles.audioPlayButton}
+                    onPress={handlePlayPause}
+                    disabled={isLoading}
+                  >
+                    <Ionicons
+                      name={isPlaying ? "pause" : "play"}
+                      size={24}
+                      color="#FFFFFF"
+                    />
+                  </Pressable>
+                  <View style={styles.audioProgressCol}>
+                    <View style={styles.audioProgressBarBase}>
+                      <View
+                        style={[
+                          styles.audioProgressFill,
+                          { width: `${duration > 0 ? (position / duration) * 100 : 0}%` },
+                        ]}
                       />
                     </View>
+                    <View style={styles.audioTimeRow}>
+                      <Text style={styles.audioTimeText}>{formatTime(position)}</Text>
+                      <Text style={styles.audioTimeText}>{formatTime(duration)}</Text>
+                    </View>
                   </View>
-                )}
-
-                {(type || categorie) && (
-                  <View style={styles.metadataRow}>
-                    {type && (
-                      <View style={styles.badge}>
-                        <Ionicons
-                          name="pricetag-outline"
-                          size={14}
-                          color="#007AFF"
-                        />
-                        <Text style={styles.badgeText}>{type}</Text>
-                      </View>
-                    )}
-                    {categorie && (
-                      <View style={styles.badge}>
-                        <Ionicons
-                          name="folder-outline"
-                          size={14}
-                          color="#007AFF"
-                        />
-                        <Text style={styles.badgeText}>{categorie}</Text>
-                      </View>
-                    )}
-                  </View>
-                )}
+                </View>
               </View>
             </View>
           )}
 
-        {/* Backdrop for closing */}
-        <Pressable style={styles.backdrop} onPress={onClose} />
+          {/* Metadata Section */}
+          <View style={styles.detailsContainer}>
+            {/* Quick Info Badges */}
+            {(author || createdAt || level !== undefined) && (
+              <View style={styles.badgesRow}>
+                {author && (
+                  <View style={styles.infoBadge}>
+                    <Ionicons name="person-outline" size={14} color="#f87b1b" />
+                    <Text style={styles.infoBadgeText}>{author}</Text>
+                  </View>
+                )}
+                {createdAt && (
+                  <View style={styles.infoBadge}>
+                    <Ionicons name="calendar-outline" size={14} color="#f87b1b" />
+                    <Text style={styles.infoBadgeText}>{formatDate(createdAt)}</Text>
+                  </View>
+                )}
+                {level !== undefined && (
+                  <View style={[styles.infoBadge, { borderColor: level > 7 ? "#FF3B30" : "#f87b1b" }]}>
+                    <Ionicons name="alert-circle-outline" size={14} color={level > 7 ? "#FF3B30" : "#f87b1b"} />
+                    <Text style={[styles.infoBadgeText, level > 7 && { color: "#FF3B30" }]}>Nv. {level}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Structured Info */}
+            {(chantier || zoneTitle || assignedTo) && (
+              <View style={styles.infoGrid}>
+                {chantier && (
+                  <View style={styles.gridItem}>
+                    <Ionicons name="business-outline" size={16} color="#f87b1b" />
+                    <View>
+                      <Text style={styles.gridLabel}>Chantier</Text>
+                      <Text style={styles.gridValue}>{chantier}</Text>
+                    </View>
+                  </View>
+                )}
+                {zoneTitle && (
+                  <View style={styles.gridItem}>
+                    <Ionicons name="location-outline" size={16} color="#f87b1b" />
+                    <View>
+                      <Text style={styles.gridLabel}>Zone</Text>
+                      <Text style={styles.gridValue}>{zoneTitle}</Text>
+                    </View>
+                  </View>
+                )}
+                {assignedTo && (
+                  <View style={styles.gridItem}>
+                    <Ionicons name="people-outline" size={16} color="#f87b1b" />
+                    <View>
+                      <Text style={styles.gridLabel}>Assigné à</Text>
+                      <Text style={styles.gridValue}>
+                        {typeof assignedTo === "string" ? assignedTo : `${assignedTo.firstname} ${assignedTo.lastname}`}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Expandable Descriptions */}
+            {renderExpandableText(
+              description || "",
+              isDescriptionExpanded,
+              setIsDescriptionExpanded,
+              "Description",
+              "document-text-outline",
+              true
+            )}
+
+            {renderExpandableText(
+              iatxt || "",
+              isAiTextExpanded,
+              setIsAiTextExpanded,
+              "Analyse IA",
+              "sparkles-outline",
+              true
+            )}
+
+            {renderExpandableText(
+              audiotxt || "",
+              isAudioTextExpanded,
+              setIsAudioTextExpanded,
+              "Transcription Audio",
+              "mic-outline",
+              true
+            )}
+
+            {(type || categorie) && (
+              <View style={styles.categoriesRow}>
+                {type && (
+                  <View style={styles.categoryTag}>
+                    <Text style={styles.categoryTagText}>{type}</Text>
+                  </View>
+                )}
+                {categorie && (
+                  <View style={[styles.categoryTag, { backgroundColor: "rgba(0, 122, 255, 0.1)" }]}>
+                    <Text style={[styles.categoryTagText, { color: "#007AFF" }]}>{categorie}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+          
+          <View style={{ height: 40 }} />
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -824,81 +733,304 @@ export default function PreviewModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.9)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: "#0A0A0B", // Deep dark background
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: 120, // Space for fixed header
+    paddingBottom: 40,
   },
   header: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 10,
+    zIndex: 100,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === "ios" ? 50 : 40,
+    paddingBottom: 16,
+    backgroundColor: "rgba(10, 10, 11, 0.8)",
+    // @ts-ignore
+    backdropFilter: "blur(20px)",
   },
   headerContent: {
     flex: 1,
-    marginRight: 20,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: 0.5,
   },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
   },
-  title: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
   actionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "rgba(248, 123, 27, 0.1)", // Subtle orange tint
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: 10,
+    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: "rgba(248, 123, 27, 0.2)",
   },
-  mediaContainer: {
-    flex: 1,
+  mainMediaContainer: {
     width: screenWidth,
-    height: screenHeight,
-    justifyContent: "center",
-    alignItems: "center",
+    height: screenHeight * 0.5, // Properly scaled image at top
+    backgroundColor: "#000",
+    marginBottom: 20,
+    overflow: "hidden",
   },
   mediaContent: {
-    width: screenWidth,
-    height: screenHeight * 0.8,
+    width: "100%",
+    height: "100%",
   },
+  audioSection: {
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  audioPlayerCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  audioHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 8,
+  },
+  audioTitle: {
+    color: "#f87b1b",
+    fontSize: 14,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  audioControlsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  audioPlayButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#f87b1b",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#f87b1b",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  audioProgressCol: {
+    flex: 1,
+    gap: 8,
+  },
+  audioProgressBarBase: {
+    height: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  audioProgressFill: {
+    height: "100%",
+    backgroundColor: "#f87b1b",
+    borderRadius: 3,
+  },
+  audioTimeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  audioTimeText: {
+    color: "#8E8E93",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  detailsContainer: {
+    paddingHorizontal: 16,
+  },
+  badgesRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 20,
+    justifyContent: "center",
+  },
+  infoBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    gap: 6,
+  },
+  infoBadgeText: {
+    color: "#E0E0E0",
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  infoGrid: {
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
+    borderRadius: 20,
+    padding: 16,
+    gap: 16,
+    marginBottom: 24,
+  },
+  gridItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  gridLabel: {
+    color: "#8E8E93",
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  gridValue: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  expandableSection: {
+    marginBottom: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.05)",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  metadataLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#f87b1b",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  textContainer: {
+    position: "relative",
+  },
+  collapsedTextContainer: {
+    maxHeight: 100,
+    overflow: "hidden",
+  },
+  collapsedText: {
+    // Basic fallback if not using numberOfLines
+  },
+  metadataValue: {
+    fontSize: 15,
+    color: "#E0E0E0",
+    lineHeight: 24,
+  },
+  expandButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.05)",
+    gap: 4,
+  },
+  expandButtonText: {
+    color: "#f87b1b",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  categoriesRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
+  },
+  categoryTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: "rgba(248, 123, 27, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(248, 123, 27, 0.2)",
+  },
+  categoryTagText: {
+    color: "#f87b1b",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  // Voice recording screen specific (if used independently)
+  voiceContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+  },
+  voiceIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(248, 123, 27, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  voiceFileName: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  voiceFileInfo: {
+    fontSize: 14,
+    color: "#8E8E93",
+    textAlign: "center",
+    marginBottom: 32,
+  },
+  // File screen specific
   fileContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 40,
+    padding: 40,
   },
   fileIconContainer: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "rgba(0, 122, 255, 0.1)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 24,
   },
   fileName: {
-    fontSize: 24,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "700",
     color: "#FFFFFF",
     textAlign: "center",
     marginBottom: 8,
   },
   fileInfo: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#8E8E93",
     textAlign: "center",
     marginBottom: 32,
@@ -908,261 +1040,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#007AFF",
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 14,
+    borderRadius: 16,
     gap: 8,
   },
   downloadButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "600",
-  },
-  voiceContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 40,
-  },
-  voiceIconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  voiceFileName: {
-    fontSize: 24,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  voiceFileInfo: {
-    fontSize: 16,
-    color: "#8E8E93",
-    textAlign: "center",
-    marginBottom: 32,
-  },
-  audioPlayerContainer: {
-    width: screenWidth * 0.8,
-    height: 120,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderRadius: 12,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    padding: 16,
-  },
-  audioControls: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  playButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#FF6B6B",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  timeDisplay: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  timeText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  progressContainer: {
-    position: "relative",
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: "#FF6B6B",
-    borderRadius: 2,
-  },
-  progressTouchable: {
-    position: "absolute",
-    top: -8,
-    left: 0,
-    right: 0,
-    bottom: -8,
+    fontWeight: "700",
   },
   backdrop: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: -1,
-  },
-  metadataOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 5,
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-  },
-  metadataCard: {
-    backgroundColor: "rgba(17, 34, 78, 0.92)",
-    borderRadius: 16,
-    padding: 16,
-    gap: 12,
-    backdropFilter: "blur(10px)",
-    borderWidth: 1,
-    borderColor: "#f87b1b",
-  },
-  metadataSection: {
-    gap: 4,
-  },
-  metadataLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#f87b1b",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  metadataValue: {
-    fontSize: 15,
-    color: "#FFFFFF",
-    lineHeight: 20,
-  },
-  metadataRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 12,
-  },
-  metadataItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  metadataSmallValue: {
-    fontSize: 13,
-    color: "#FFFFFF",
-  },
-  badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 122, 255, 0.15)",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: "rgba(0, 122, 255, 0.3)",
-  },
-  badgeText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#007AFF",
-  },
-  miniPlayerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderRadius: 8,
-    padding: 8,
-    gap: 12,
-  },
-  miniPlayButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#FF6B6B",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  miniProgressContainer: {
-    flex: 1,
-    height: 20,
-    justifyContent: "center",
-  },
-  miniProgressBar: {
-    height: 4,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  miniProgressFill: {
-    height: "100%",
-    backgroundColor: "#FF6B6B",
-    borderRadius: 2,
-  },
-  miniTimeText: {
-    fontSize: 10,
-    color: "#8E8E93",
-    fontVariant: ["tabular-nums"],
-    width: 65,
-    textAlign: "right",
-  },
-  // ── HTML-style description renderer styles ──────────────────────────────
-  descContainer: {
-    gap: 2,
-  },
-  descH1: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    marginBottom: 4,
-    letterSpacing: 0.3,
-  },
-  descH2: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#f87b1b",
-    marginBottom: 2,
-    letterSpacing: 0.2,
-  },
-  descH3: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#CCCCCC",
-    marginBottom: 2,
-  },
-  descHr: {
-    height: 1,
-    backgroundColor: "rgba(248, 123, 27, 0.4)",
-    marginVertical: 6,
-    borderRadius: 1,
-  },
-  descParagraph: {
-    fontSize: 14,
-    color: "#E0E0E0",
-    lineHeight: 20,
-    flexShrink: 1,
-  },
-  descBold: {
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  descSpacer: {
-    height: 6,
-  },
-  descListItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 6,
-    paddingLeft: 4,
-  },
-  descBullet: {
-    fontSize: 14,
-    color: "#f87b1b",
-    lineHeight: 20,
-    marginTop: 1,
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "transparent",
   },
 });

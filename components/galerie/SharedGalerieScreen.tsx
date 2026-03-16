@@ -308,10 +308,7 @@ export default function SharedGalerieScreen({
       return;
     }
 
-    // If offline mode is disabled and we are online, we still use direct upload
-    // (non-offline screens keep their real-time behaviour)
     if (!allowOffline && isOnline) {
-      // Import createGed lazily to avoid top-level import for offline-first screens
       const { createGed } = await import("@/services/gedService");
       try {
         const idsource = "00000000-0000-0000-0000-000000000000";
@@ -381,11 +378,6 @@ export default function SharedGalerieScreen({
       return;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // OFFLINE-FIRST PATH (allowOffline = true)
-    // Both online and offline devices save locally first, then sync in background.
-    // This eliminates data loss / inconsistency under slow or unstable connections.
-    // ─────────────────────────────────────────────────────────────────────────
     try {
       await createOfflineRecord({
         idsource: "00000000-0000-0000-0000-000000000000",
