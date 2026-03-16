@@ -1,6 +1,7 @@
 import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import folderService, { Folder } from "@/services/folderService";
+import { createGed, Ged, getGedById } from "@/services/gedService";
 import {
   deleteProject,
   Project,
@@ -10,15 +11,18 @@ import { getArchivedStatusId } from "@/services/statusService";
 import { getUsers } from "@/services/userService";
 import { CompanyUser } from "@/types/user";
 import { formatDisplayDate } from "@/utils/dateFormat";
+import { compressImage } from "@/utils/imageCompression";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Animated,
   Easing,
+  Image,
   LayoutAnimation,
   Linking,
   Modal,
@@ -85,6 +89,13 @@ export default function ProjectDetailModal({
   const [isDdPickerVisible, setDdPickerVisible] = useState(false);
   const [isDfPickerVisible, setDfPickerVisible] = useState(false);
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
+
+  // Project Plan state
+  const [planImage, setPlanImage] = useState<Ged | null>(null);
+  const [newPlan, setNewPlan] = useState<ImagePicker.ImagePickerAsset | null>(
+    null,
+  );
+  const [isLoadingPlan, setIsLoadingPlan] = useState(false);
 
   // Rotate chevrons
   const rotateAnim = useRef({
@@ -304,7 +315,26 @@ export default function ProjectDetailModal({
         if (!cancelled) setIsLoadingFolders(false);
       }
     }
+
+    async function loadPlan() {
+      if (!project?.plan || !token) {
+        setPlanImage(null);
+        return;
+      }
+      setIsLoadingPlan(true);
+      try {
+        const ged = await getGedById(token, project.plan);
+        if (!cancelled) setPlanImage(ged);
+      } catch (e) {
+        console.error("Failed to load plan image", e);
+        if (!cancelled) setPlanImage(null);
+      } finally {
+        if (!cancelled) setIsLoadingPlan(false);
+      }
+    }
+
     loadData();
+    loadPlan();
     return () => {
       cancelled = true;
     };
@@ -448,13 +478,48 @@ export default function ProjectDetailModal({
                   }
                   try {
                     setIsSaving(true);
+
+                    let finalPlanId = project.plan;
+
+                    // If a new plan is picked, upload it first
+                    if (newPlan) {
+                      try {
+                        const gedRes = await createGed(token, {
+                          idsource: project.id,
+                          kind: "plan",
+                          title: "Plan du chantier",
+                          file: {
+                            uri: newPlan.uri,
+                            type: newPlan.mimeType || "image/jpeg",
+                            name: newPlan.fileName || "plan.jpg",
+                          },
+                          author: user?.id || "Unknown",
+                          idauthor: user?.id,
+                          answer: null,
+                          description: "Plan du chantier (Mis à jour)",
+                          mode: "upload",
+                        });
+                        if (gedRes.data?.id) {
+                          finalPlanId = gedRes.data.id;
+                        }
+                      } catch (uploadError) {
+                        console.error("Plan upload failed", uploadError);
+                        Alert.alert(
+                          "Info",
+                          "Le projet a été mis à jour mais le nouveau plan n'a pas pu être téléchargé.",
+                        );
+                      }
+                    }
+
                     await updateProject(token, project.id, {
                       title: editTitle,
                       description: editDescription || undefined,
                       dd: editDd,
                       df: editDf,
+                      plan: finalPlanId,
                     });
                     setIsEditing(false);
+                    setNewPlan(null);
                     if (onUpdated) onUpdated();
                     Alert.alert("Succès", "Projet mis à jour avec succès");
                   } catch (e: any) {
@@ -480,6 +545,7 @@ export default function ProjectDetailModal({
                     setEditDescription(project.description || "");
                     setEditDd(project.dd || "");
                     setEditDf(project.df || "");
+                    setNewPlan(null);
                   }
                 }}
                 style={[styles.ctaButton, styles.cancelButton]}
@@ -571,9 +637,194 @@ export default function ProjectDetailModal({
                     )}
                   </TouchableOpacity>
                 </View>
+
+                {/* Plan Update Section */}
+                <View style={{ marginTop: 16 }}>
+                  <Text
+                    style={[
+                      styles.cardTitle,
+                      { fontSize: 12, marginBottom: 8, color: "#9ca3af" },
+                    ]}
+                  >
+                    PLAN DU CHANTIER
+                  </Text>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      const { status } =
+                        await ImagePicker.requestMediaLibraryPermissionsAsync();
+                      if (status !== "granted") {
+                        Alert.alert(
+                          "Permission refusée",
+                          "Nous avons besoin de votre permission pour accéder à la galerie.",
+                        );
+                        return;
+                      }
+                      const result = await ImagePicker.launchImageLibraryAsync({
+                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                        allowsEditing: true,
+                        quality: 0.8,
+                      });
+
+                      if (!result.canceled && result.assets[0]) {
+                        const compressed = await compressImage(
+                          result.assets[0].uri,
+                        );
+                        setNewPlan({
+                          ...result.assets[0],
+                          uri: compressed.uri,
+                          width: compressed.width,
+                          height: compressed.height,
+                        } as ImagePicker.ImagePickerAsset);
+                      }
+                    }}
+                    style={{
+                      width: "100%",
+                      height: 150,
+                      borderRadius: 12,
+                      backgroundColor: "#F1F5F9",
+                      borderWidth: 1,
+                      borderColor: "#f87b1b",
+                      borderStyle: "dashed",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {newPlan ? (
+                      <Image
+                        source={{ uri: newPlan.uri }}
+                        style={{ width: "100%", height: "100%" }}
+                        resizeMode="contain"
+                      />
+                    ) : planImage?.url ? (
+                      <Image
+                        source={{ uri: planImage.url }}
+                        style={{ width: "100%", height: "100%" }}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <View style={{ alignItems: "center" }}>
+                        {isLoadingPlan ? (
+                          <ActivityIndicator size="small" color="#f87b1b" />
+                        ) : (
+                          <>
+                            <Ionicons
+                              name="map-outline"
+                              size={40}
+                              color="#94a3b8"
+                            />
+                            <Text
+                              style={{
+                                fontSize: 14,
+                                color: "#94a3b8",
+                                marginTop: 8,
+                              }}
+                            >
+                              Aucun plan défini
+                            </Text>
+                          </>
+                        )}
+                      </View>
+                    )}
+                    {(newPlan || planImage?.url) && (
+                      <View
+                        style={{
+                          position: "absolute",
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          backgroundColor: "rgba(0,0,0,0.4)",
+                          height: 30,
+                          justifyContent: "center",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Ionicons name="create" size={16} color="#FFF" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      color: "#64748B",
+                      marginTop: 6,
+                      textAlign: "center",
+                    }}
+                  >
+                    {newPlan
+                      ? "Nouveau plan sélectionné"
+                      : "Cliquez pour modifier le plan"}
+                  </Text>
+                </View>
               </View>
             </View>
           ) : null}
+
+          {/* Overview Section (Visible when not editing) */}
+          {!isEditing && (
+            <View style={styles.card}>
+              <TouchableOpacity
+                onPress={() => toggleSection("overview")}
+                style={styles.cardHeader}
+              >
+                <Text style={styles.cardTitle}>VUE D'ENSEMBLE</Text>
+                <Chevron section="overview" />
+              </TouchableOpacity>
+              {openOverview && (
+                <View style={{ marginTop: 12, gap: 12 }}>
+                  {/* Plan display in Overview */}
+                  {planImage?.url ? (
+                    <View style={{ marginBottom: 8 }}>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          color: "#9ca3af",
+                          fontWeight: "700",
+                          marginBottom: 8,
+                        }}
+                      >
+                        PLAN DU CHANTIER
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => handleOpenReport(planImage.url)}
+                        activeOpacity={0.9}
+                        style={{
+                          width: "100%",
+                          height: 200,
+                          borderRadius: 12,
+                          backgroundColor: "#F1F5F9",
+                          overflow: "hidden",
+                          borderWidth: 1,
+                          borderColor: "#e5e7eb",
+                        }}
+                      >
+                        <Image
+                          source={{ uri: planImage.url }}
+                          style={{ width: "100%", height: "100%" }}
+                          resizeMode="contain"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+
+                  {project.description ? (
+                    <View>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          color: "#9ca3af",
+                          fontWeight: "700",
+                        }}
+                      >
+                        DESCRIPTION
+                      </Text>
+                      <Text style={styles.meta}>{project.description}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Folders List Section (New) */}
           <View style={styles.card}>

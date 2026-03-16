@@ -3,7 +3,11 @@ import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import companyService from "@/services/companyService";
 import { createGed } from "@/services/gedService";
-import { createProject, getAllProjects } from "@/services/projectService";
+import {
+  createProject,
+  getAllProjects,
+  updateProject,
+} from "@/services/projectService";
 
 import { Company } from "@/types/company";
 import { compressImage } from "@/utils/imageCompression";
@@ -43,6 +47,7 @@ export default function CreateProjectModal({
 
   const [title, setTitle] = useState("");
   const [logo, setLogo] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [plan, setPlan] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [dd, setDd] = useState("");
   const [df, setDf] = useState("");
   const [ownerId, setOwnerId] = useState("");
@@ -203,6 +208,8 @@ export default function CreateProjectModal({
         technicien_id: undefined,
       });
 
+      const projectId = res.data?.id;
+
       // Upload Logo if selected
       if (logo && res.data?.id) {
         try {
@@ -230,8 +237,45 @@ export default function CreateProjectModal({
         }
       }
 
+      // Upload Plan image if selected
+      if (plan && projectId) {
+        try {
+          const gedRes = await createGed(token, {
+            idsource: projectId,
+            kind: "plan",
+            title: "Plan du chantier",
+            file: {
+              uri: plan.uri,
+              type: plan.mimeType || "image/jpeg",
+              name: plan.fileName || "plan.jpg",
+            },
+            author: user?.id || "Unknown",
+            idauthor: user?.id,
+            answer: null,
+            description: "Plan du chantier",
+            mode: "upload",
+          });
+
+          const gedId = gedRes.data?.id;
+
+          if (gedId) {
+            // Update the project with the GED ID in the 'plan' field
+            await updateProject(token, projectId, {
+              plan: gedId,
+            });
+          }
+        } catch (uploadError) {
+          console.error("Plan upload/assignment failed", uploadError);
+          Alert.alert(
+            "Info",
+            "Le chantier a été créé mais le plan n'a pas pu être téléchargé.",
+          );
+        }
+      }
+
       setTitle("");
       setLogo(null);
+      setPlan(null);
       setDd("");
       setDf("");
       setOwnerId("");
@@ -438,6 +482,102 @@ export default function CreateProjectModal({
                     }}
                   >
                     Ajouter un logo (optionnel)
+                  </Text>
+                </View>
+
+                {/* Plan Upload */}
+                <View style={{ alignItems: "center", marginBottom: 24 }}>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      const { status } =
+                        await ImagePicker.requestMediaLibraryPermissionsAsync();
+                      if (status !== "granted") {
+                        Alert.alert(
+                          "Permission refusée",
+                          "Nous avons besoin de votre permission pour accéder à la galerie.",
+                        );
+                        return;
+                      }
+                      const result = await ImagePicker.launchImageLibraryAsync({
+                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                        allowsEditing: true,
+                        quality: 0.8,
+                      });
+
+                      if (!result.canceled && result.assets[0]) {
+                        const compressed = await compressImage(
+                          result.assets[0].uri,
+                        );
+                        setPlan({
+                          ...result.assets[0],
+                          uri: compressed.uri,
+                          width: compressed.width,
+                          height: compressed.height,
+                        } as ImagePicker.ImagePickerAsset);
+                      }
+                    }}
+                    style={{
+                      width: "100%",
+                      height: 150,
+                      borderRadius: 12,
+                      backgroundColor: "#F1F5F9",
+                      borderWidth: 1,
+                      borderColor: "#cbd5e1",
+                      borderStyle: "dashed",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {plan ? (
+                      <Image
+                        source={{ uri: plan.uri }}
+                        style={{ width: "100%", height: "100%" }}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <View style={{ alignItems: "center" }}>
+                        <Ionicons
+                          name="map-outline"
+                          size={40}
+                          color="#94a3b8"
+                        />
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: "#94a3b8",
+                            marginTop: 8,
+                          }}
+                        >
+                          Plan du chantier
+                        </Text>
+                      </View>
+                    )}
+                    {plan && (
+                      <View
+                        style={{
+                          position: "absolute",
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          backgroundColor: "rgba(0,0,0,0.4)",
+                          height: 30,
+                          justifyContent: "center",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Ionicons name="create" size={16} color="#FFF" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: "#64748B",
+                      marginTop: 8,
+                    }}
+                  >
+                    Ajouter un plan (optionnel)
                   </Text>
                 </View>
 

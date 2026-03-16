@@ -1040,7 +1040,7 @@ export default function AddImageModal({
                     onPress={() => handleAdd(true)}
                   >
                     <Text style={styles.terminerQuickButtonText}>
-                      Terminer
+                      STOP
                     </Text>
                   </TouchableOpacity>
                 </View>

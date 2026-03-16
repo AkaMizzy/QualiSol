@@ -23,6 +23,7 @@ export type Project = {
   altitudeAccuracy: string | null;
   project_type_title?: string | null; // This might need to be fetched separately
   company_title?: string | null; // Company name for display
+  plan: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -60,6 +61,7 @@ type UpdateProjectInput = Partial<{
   altitude: string | null;
   accuracy: string | null;
   altitudeAccuracy: string | null;
+  plan: string | null;
 }>;
 
 export async function getAllProjects(token: string): Promise<Project[]> {
