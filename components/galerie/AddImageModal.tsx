@@ -1028,10 +1028,22 @@ export default function AddImageModal({
 
               {/* COMPACT SECTION - Always Visible */}
               <View style={styles.compactSection}>
-                <VoiceNoteRecorder
-                  ref={voiceNoteRecorderRef}
-                  onRecordingComplete={handleRecordingComplete}
-                />
+                <View style={styles.recorderActionRow}>
+                  <View style={styles.recorderWrapper}>
+                    <VoiceNoteRecorder
+                      ref={voiceNoteRecorderRef}
+                      onRecordingComplete={handleRecordingComplete}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.button, styles.terminerQuickButton]}
+                    onPress={() => handleAdd(true)}
+                  >
+                    <Text style={styles.terminerQuickButtonText}>
+                      Terminer
+                    </Text>
+                  </TouchableOpacity>
+                </View>
 
                 {/* ACTIVE FOLDERS SECTION */}
                 {!hideFolderSelection && (
@@ -1118,28 +1130,19 @@ export default function AddImageModal({
                 )}
 
                 {/* First Button Set - Compact Section */}
-                <View style={styles.buttonContainer}>
-                  <TouchableOpacity
-                    style={[styles.button, styles.cancelButton]}
-                    onPress={() => handleAdd(true)}
-                  >
-                    <Text style={[styles.buttonText, styles.cancelButtonText]}>
-                      Terminer
-                    </Text>
-                  </TouchableOpacity>
                   <TouchableOpacity
                     style={[
                       styles.button,
                       styles.addButton,
                       (isStorageQuotaReached || isSessionLimitReached) &&
                         styles.addButtonDisabled,
+                      { marginLeft: 0 } // Take full width if single
                     ]}
                     onPress={() => handleAdd(false)}
                     disabled={isStorageQuotaReached || isSessionLimitReached}
                   >
                     <Text style={styles.buttonText}>{buttonText}</Text>
                   </TouchableOpacity>
-                </View>
 
                 {/* Expand/Collapse Button */}
                 <TouchableOpacity
@@ -1345,29 +1348,13 @@ export default function AddImageModal({
                     </TouchableOpacity>
                   </View>
 
-                  <View style={styles.buttonContainer}>
-                    <TouchableOpacity
-                      style={[styles.button, styles.cancelButton]}
-                      onPress={() => {
-                        if (autoSaveCountdown !== null) {
-                          setAutoSaveCountdown(null);
-                        } else {
-                          handleAdd(true);
-                        }
-                      }}
-                    >
-                      <Text
-                        style={[styles.buttonText, styles.cancelButtonText]}
-                      >
-                        {autoSaveCountdown !== null ? "Arrêter" : "Terminer"}
-                      </Text>
-                    </TouchableOpacity>
                     <TouchableOpacity
                       style={[
                         styles.button,
                         styles.addButton,
                         (isStorageQuotaReached || isSessionLimitReached) &&
                           styles.addButtonDisabled,
+                        { marginLeft: 0 }
                       ]}
                       onPress={() => {
                         setAutoSaveCountdown(null);
@@ -1381,7 +1368,6 @@ export default function AddImageModal({
                           : buttonText}
                       </Text>
                     </TouchableOpacity>
-                  </View>
                 </View>
               )}
             </ScrollView>
@@ -2280,5 +2266,29 @@ const styles = StyleSheet.create({
   },
   activeFolderSubtitleSelected: {
     color: "rgba(255,255,255,0.8)",
+  },
+  recorderActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    width: "100%",
+  },
+  recorderWrapper: {
+    flex: 1,
+  },
+  terminerQuickButton: {
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+    borderRadius: 10,
+    marginTop: 12,
+    height: 50,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  terminerQuickButtonText: {
+    color: "#11224e", // Match VoiceNoteRecorder idle text color
+    fontWeight: "600",
+    fontSize: 14,
   },
 });

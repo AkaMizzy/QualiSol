@@ -232,7 +232,7 @@ const VoiceNoteRecorder = forwardRef<
           style={[
             styles.container,
             styles.recordedContainer,
-            { marginTop: 0, paddingHorizontal: 50 },
+            { marginTop: 0 },
           ]}
           onPress={playSound}
           disabled={status === "playing"}
@@ -242,7 +242,6 @@ const VoiceNoteRecorder = forwardRef<
             size={24}
             color="#11224e"
           />
-          <Text style={styles.recordedText}>{formatDuration(duration)}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -261,7 +260,7 @@ const VoiceNoteRecorder = forwardRef<
   return (
     <TouchableOpacity style={styles.container} onPress={startRecording}>
       <Ionicons name="mic-outline" size={24} color="#f87b1b" />
-      <Text style={styles.text}>Ajouter une note vocale</Text>
+      <Text style={styles.text}>note vocale</Text>
     </TouchableOpacity>
   );
 });
@@ -274,6 +273,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     marginTop: 12,
+    flex: 1, // Ensure it fills the recorderWrapper in AddImageModal
   },
   container: {
     flexDirection: "row",
@@ -286,6 +286,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
     gap: 8,
     marginTop: 12,
+    flex: 1, // Fill available space when used in a row
   },
   text: {
     color: "#11224e",
@@ -312,6 +313,8 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
     backgroundColor: "#e0e7ff",
     borderColor: "#a5b4fc",
+    flex: 1, // Allow it to take available space
+    paddingHorizontal: 15, // Reduced from implicit large padding
   },
   recordedText: {
     color: "#3730a3",
