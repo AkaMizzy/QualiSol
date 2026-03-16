@@ -75,7 +75,6 @@ export default function ProjectDetailModal({
   }
 
   // Collapsible sections state
-  const [openOverview, setOpenOverview] = useState(true);
   // Relations section removed
   const [foldersOpen, setFoldersOpen] = useState(true);
   const [openMore, setOpenMore] = useState(false);
@@ -99,16 +98,14 @@ export default function ProjectDetailModal({
 
   // Rotate chevrons
   const rotateAnim = useRef({
-    overview: new Animated.Value(1),
     folders: new Animated.Value(1),
     more: new Animated.Value(0),
   }).current;
   const archivedStatusIdRef = useRef<string | null>(null);
 
-  function toggleSection(section: "overview" | "folders" | "more") {
+  function toggleSection(section: "folders" | "more") {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     const map = {
-      overview: [openOverview, setOpenOverview],
       folders: [foldersOpen, setFoldersOpen],
       more: [openMore, setOpenMore],
     } as const;
@@ -122,7 +119,7 @@ export default function ProjectDetailModal({
     }).start();
   }
 
-  function Chevron({ section }: { section: "overview" | "folders" | "more" }) {
+  function Chevron({ section }: { section: "folders" | "more" }) {
     const spin = rotateAnim[section].interpolate({
       inputRange: [0, 1],
       outputRange: ["0deg", "180deg"],
@@ -397,6 +394,20 @@ export default function ProjectDetailModal({
             <Text style={styles.headerTitle} numberOfLines={1}>
               {project.title || "Chantier"}
             </Text>
+            {planImage?.url && (
+              <TouchableOpacity
+                onPress={() => handleOpenReport(planImage.url)}
+                style={{
+                  padding: 4,
+                  backgroundColor: "#fef2f2",
+                  borderRadius: 6,
+                  borderWidth: 1,
+                  borderColor: "#fecaca",
+                }}
+              >
+                <Ionicons name="eye-outline" size={18} color="#f87b1b" />
+              </TouchableOpacity>
+            )}
           </View>
           <View style={styles.subInfoRow}>
             {(() => {
@@ -760,71 +771,6 @@ export default function ProjectDetailModal({
             </View>
           ) : null}
 
-          {/* Overview Section (Visible when not editing) */}
-          {!isEditing && (
-            <View style={styles.card}>
-              <TouchableOpacity
-                onPress={() => toggleSection("overview")}
-                style={styles.cardHeader}
-              >
-                <Text style={styles.cardTitle}>VUE D'ENSEMBLE</Text>
-                <Chevron section="overview" />
-              </TouchableOpacity>
-              {openOverview && (
-                <View style={{ marginTop: 12, gap: 12 }}>
-                  {/* Plan display in Overview */}
-                  {planImage?.url ? (
-                    <View style={{ marginBottom: 8 }}>
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          color: "#9ca3af",
-                          fontWeight: "700",
-                          marginBottom: 8,
-                        }}
-                      >
-                        PLAN DU CHANTIER
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => handleOpenReport(planImage.url)}
-                        activeOpacity={0.9}
-                        style={{
-                          width: "100%",
-                          height: 200,
-                          borderRadius: 12,
-                          backgroundColor: "#F1F5F9",
-                          overflow: "hidden",
-                          borderWidth: 1,
-                          borderColor: "#e5e7eb",
-                        }}
-                      >
-                        <Image
-                          source={{ uri: planImage.url }}
-                          style={{ width: "100%", height: "100%" }}
-                          resizeMode="contain"
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  ) : null}
-
-                  {project.description ? (
-                    <View>
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          color: "#9ca3af",
-                          fontWeight: "700",
-                        }}
-                      >
-                        DESCRIPTION
-                      </Text>
-                      <Text style={styles.meta}>{project.description}</Text>
-                    </View>
-                  ) : null}
-                </View>
-              )}
-            </View>
-          )}
 
           {/* Folders List Section (New) */}
           <View style={styles.card}>
