@@ -514,6 +514,7 @@ export default function UpdateFolderTypeModal({
           <CreateFolderModal
             visible={showCreateFolderModal}
             onClose={() => setShowCreateFolderModal(false)}
+            onSuccess={() => loadFolders()}
             folderType={folderType}
             users={users}
             projects={projects}

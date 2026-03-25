@@ -29,6 +29,7 @@ import UserSelectionModal from "./UserSelectionModal";
 interface CreateFolderModalProps {
   visible: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   folderType: FolderType;
   users: CompanyUser[];
   projects: Project[];
@@ -37,6 +38,7 @@ interface CreateFolderModalProps {
 export default function CreateFolderModal({
   visible,
   onClose,
+  onSuccess,
   folderType,
   users,
   projects,
@@ -113,6 +115,9 @@ export default function CreateFolderModal({
       setNewFolderTitle("");
       setDdDate(null);
       setDfDate(null);
+      if (onSuccess) {
+        onSuccess();
+      }
       onClose();
     } catch (error) {
       console.error("Failed to create folder from type:", error);
@@ -155,10 +160,11 @@ export default function CreateFolderModal({
                   style={[styles.sectionTitle, { flexShrink: 1 }]}
                   numberOfLines={2}
                 >
-                  Assigner {" "}
+                  Assigner{" "}
                   {folderType?.title && (
                     <Text style={{ color: "#f87b1b" }}>{folderType.title}</Text>
-                  )} à un agent
+                  )}{" "}
+                  à un agent
                 </Text>
               </View>
             </View>
