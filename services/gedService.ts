@@ -76,6 +76,7 @@ export interface Ged {
   quantity?: number;
   price?: number;
   mask?: string | null;
+  bloc?: string | null;
   mode?: "upload" | "capture";
   created_at: string;
   value?: string;

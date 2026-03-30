@@ -192,6 +192,23 @@ export default function FolderAnswersSummaryModal({
     }
   };
 
+  const getSortedGroupedData = () => {
+    const withIndex = data.map((d, i) => ({ questionWithAnswers: d, originalIndex: i }));
+    return withIndex.sort((aObj, bObj) => {
+      const a = aObj.questionWithAnswers.question;
+      const b = bObj.questionWithAnswers.question;
+
+      const blocA = (a.bloc || "").trim().toLowerCase();
+      const blocB = (b.bloc || "").trim().toLowerCase();
+
+      if (!blocA && blocB) return 1;
+      if (blocA && !blocB) return -1;
+      if (blocA !== blocB) return blocA.localeCompare(blocB);
+
+      return aObj.originalIndex - bObj.originalIndex;
+    });
+  };
+
   return (
     <Modal
       visible={visible}
@@ -301,7 +318,10 @@ export default function FolderAnswersSummaryModal({
               </Text>
             ) : (
               <View style={styles.mainContainerList}>
-                {data.map((item, index) => {
+                {getSortedGroupedData().map((itemObj, index, arr) => {
+                  const item = itemObj.questionWithAnswers;
+                  const isFirstOfBloc = index === 0 || arr[index - 1].questionWithAnswers.question.bloc !== item.question.bloc;
+                  
                   let questionBgColor = "white";
                   let textColor = "#11224e";
 
@@ -321,13 +341,20 @@ export default function FolderAnswersSummaryModal({
                   }
 
                   return (
-                    <View
-                      key={item.question.id}
-                      style={[
-                        styles.listItemRow,
-                        { backgroundColor: questionBgColor },
-                      ]}
-                    >
+                    <React.Fragment key={item.question.id}>
+                      {isFirstOfBloc && (
+                        <View style={styles.blocGroupHeader}>
+                          <Text style={styles.blocGroupHeaderText}>
+                            {item.question.bloc ? item.question.bloc.toUpperCase() : "SANS BLOC"}
+                          </Text>
+                        </View>
+                      )}
+                      <View
+                        style={[
+                          styles.listItemRow,
+                          { backgroundColor: questionBgColor },
+                        ]}
+                      >
                       {/* Question Section */}
                       <View style={styles.questionSection}>
                         <Text
@@ -403,6 +430,7 @@ export default function FolderAnswersSummaryModal({
                         )}
                       </View>
                     </View>
+                    </React.Fragment>
                   );
                 })}
               </View>
@@ -599,8 +627,29 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   voiceText: {
-    color: "white",
     fontSize: 12,
     fontWeight: "500",
+  },
+  blocGroupHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#f87b1b",
+    marginTop: 16,
+    marginBottom: 8,
+    marginHorizontal: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#f87b1b",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  blocGroupHeaderText: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#ffffff",
+    letterSpacing: 1.5,
   },
 });

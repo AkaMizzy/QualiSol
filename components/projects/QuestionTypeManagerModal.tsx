@@ -639,7 +639,9 @@ export default function QuestionTypeManagerModal({
           <Ionicons name="reorder-two" size={24} color="#9ca3af" />
         </TouchableOpacity>
         <View style={styles.itemTextContainer}>
-          <Text style={styles.itemTitle}>{item.title}</Text>
+          <Text style={styles.itemTitle}>
+            {index + 1}. {item.title}
+          </Text>
           <Text
             style={[
               styles.itemDescription,
