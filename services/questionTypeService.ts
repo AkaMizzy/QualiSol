@@ -58,6 +58,7 @@ export type CreateQuestionTypeDto = {
     | "list"
     | "taux"
     | "voice";
+  mask?: string | null;
   quantity?: number;
   price?: number;
 };
@@ -88,6 +89,7 @@ export type UpdateQuestionTypeDto = {
     | "list"
     | "taux"
     | "voice";
+  mask?: string | null;
   quantity?: number;
   price?: number;
 };

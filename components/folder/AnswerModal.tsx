@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  FlatList,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -103,6 +104,7 @@ export default function AnswerModal({
   const [isMapVisible, setMapVisible] = useState(false);
   const [isCaptureModalVisible, setCaptureModalVisible] = useState(false);
   const [isPreviewModalVisible, setPreviewModalVisible] = useState(false);
+  const [isDropdownVisible, setDropdownVisible] = useState(false);
 
   // Audio Playback
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -419,7 +421,157 @@ export default function AnswerModal({
             />
           </View>
         );
-      default: // text, number, taux, list (treated as text for now unless list items provided)
+      case "list": {
+        // Parse options from question.mask (comma-separated: "val1,val2,val3")
+        let listOptions: string[] = [];
+        if (question.mask) {
+          listOptions = question.mask
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean);
+        }
+
+        // Fallback: free-text if no options defined
+        if (listOptions.length === 0) {
+          return (
+            <View>
+              <Text style={styles.label}>Réponse</Text>
+              <TextInput
+                style={styles.input}
+                value={answer}
+                onChangeText={setAnswer}
+                placeholder="Votre réponse..."
+              />
+            </View>
+          );
+        }
+
+        // ≤ 3 options → inline radio chips
+        if (listOptions.length <= 3) {
+          return (
+            <View>
+              <Text style={styles.label}>Sélectionner une valeur</Text>
+              <View style={styles.listOptionsContainer}>
+                {listOptions.map((option) => {
+                  const isSelected = answer === option;
+                  return (
+                    <TouchableOpacity
+                      key={option}
+                      style={[
+                        styles.listOptionChip,
+                        isSelected && styles.listOptionChipSelected,
+                      ]}
+                      onPress={() => setAnswer(isSelected ? "" : option)}
+                      activeOpacity={0.75}
+                    >
+                      {/* Radio circle */}
+                      <View style={[
+                        styles.radioOuter,
+                        isSelected && styles.radioOuterSelected,
+                      ]}>
+                        {isSelected && <View style={styles.radioInner} />}
+                      </View>
+                      <Text
+                        style={[
+                          styles.listOptionText,
+                          isSelected && styles.listOptionTextSelected,
+                        ]}
+                      >
+                        {option}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          );
+        }
+
+        // > 3 options → dropdown modal picker
+        return (
+          <View>
+            <Text style={styles.label}>Sélectionner une valeur</Text>
+
+            {/* Trigger button */}
+            <TouchableOpacity
+              style={styles.dropdownTrigger}
+              onPress={() => setDropdownVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.dropdownTriggerText,
+                  !answer && styles.dropdownTriggerPlaceholder,
+                ]}
+                numberOfLines={1}
+              >
+                {answer || "Choisir une option..."}
+              </Text>
+              <Ionicons
+                name="chevron-down-outline"
+                size={20}
+                color="#f87b1b"
+              />
+            </TouchableOpacity>
+
+            {/* Picker modal */}
+            <Modal
+              visible={isDropdownVisible}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setDropdownVisible(false)}
+            >
+              <TouchableOpacity
+                style={styles.dropdownOverlay}
+                activeOpacity={1}
+                onPress={() => setDropdownVisible(false)}
+              >
+                <View style={styles.dropdownContainer}>
+                  <Text style={styles.dropdownTitle}>
+                    {question.title}
+                  </Text>
+                  <FlatList
+                    data={listOptions}
+                    keyExtractor={(item) => item}
+                    renderItem={({ item }) => {
+                      const isSelected = answer === item;
+                      return (
+                        <TouchableOpacity
+                          style={[
+                            styles.dropdownOption,
+                            isSelected && styles.dropdownOptionSelected,
+                          ]}
+                          onPress={() => {
+                            setAnswer(item);
+                            setDropdownVisible(false);
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.dropdownOptionText,
+                              isSelected && styles.dropdownOptionTextSelected,
+                            ]}
+                          >
+                            {item}
+                          </Text>
+                          {isSelected && (
+                            <Ionicons
+                              name="checkmark"
+                              size={18}
+                              color="#f87b1b"
+                            />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    }}
+                  />
+                </View>
+              </TouchableOpacity>
+            </Modal>
+          </View>
+        );
+      }
+      default: // text, number, taux
         const isNumeric =
           question.type === "number" || question.type === "taux";
         return (
@@ -958,5 +1110,132 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
+  },
+  // List type answer styles
+  listOptionsContainer: {
+    gap: 10,
+  },
+  listOptionChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#f87b1b",
+    backgroundColor: "#fffaf5",
+  },
+  listOptionChipSelected: {
+    backgroundColor: "#f87b1b",
+    borderColor: "#f87b1b",
+    shadowColor: "#f87b1b",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  listOptionText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#f87b1b",
+    flex: 1,
+  },
+  listOptionTextSelected: {
+    color: "#fff",
+  },
+  // Radio button styles (≤ 3 options)
+  radioOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#f87b1b",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  radioOuterSelected: {
+    borderColor: "#fff",
+    backgroundColor: "transparent",
+  },
+  radioInner: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: "#fff",
+  },
+  // Dropdown styles (> 3 options)
+  dropdownTrigger: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1.5,
+    borderColor: "#f87b1b",
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: "#fffaf5",
+  },
+  dropdownTriggerText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#11224e",
+    flex: 1,
+  },
+  dropdownTriggerPlaceholder: {
+    color: "#f87b1b",
+    fontWeight: "400",
+  },
+  dropdownOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  dropdownContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    width: "100%",
+    maxHeight: 360,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  dropdownTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#11224e",
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6",
+  },
+  dropdownOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f9fafb",
+  },
+  dropdownOptionSelected: {
+    backgroundColor: "#fff7ed",
+  },
+  dropdownOptionText: {
+    fontSize: 15,
+    color: "#11224e",
+  },
+  dropdownOptionTextSelected: {
+    color: "#f87b1b",
+    fontWeight: "700",
   },
 });

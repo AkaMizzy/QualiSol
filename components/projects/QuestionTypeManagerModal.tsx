@@ -43,11 +43,15 @@ type FormComponentProps = {
   type: QuestionType["type"] | null;
   quantity: boolean;
   price: boolean;
+  listItems: string[];
+  listPendingValue: string;
   onTitleChange: (text: string) => void;
   onDescriptionChange: (text: string) => void;
   onTypeChange: (type: QuestionType["type"] | null) => void;
   onQuantityChange: (value: boolean) => void;
   onPriceChange: (value: boolean) => void;
+  onListItemsChange: (items: string[]) => void;
+  onListPendingValueChange: (value: string) => void;
   onSubmit: () => void;
   onCancel: () => void;
 };
@@ -61,15 +65,20 @@ const FormComponent = ({
   type,
   quantity,
   price,
+  listItems,
+  listPendingValue,
   onTitleChange,
   onDescriptionChange,
   onTypeChange,
   onQuantityChange,
   onPriceChange,
+  onListItemsChange,
+  onListPendingValueChange,
   onSubmit,
   onCancel,
 }: FormComponentProps) => {
   const [isPickerVisible, setPickerVisible] = useState(false);
+  // newListValue is now controlled by the parent via listPendingValue / onListPendingValueChange
   const typeOptions = [
     { label: "Oui / Non", value: "boolean" },
     { label: "Date", value: "date" },
@@ -134,6 +143,73 @@ const FormComponent = ({
                   color="#f87b1b"
                 />
               </TouchableOpacity>
+
+               {/* List Values Editor — only shown when type is "list" */}
+              {type === "list" && (
+                <View style={styles.listEditorContainer}>
+                  <View style={styles.listEditorHeader}>
+                    <Ionicons name="list-outline" size={18} color="#f87b1b" />
+                    <Text style={styles.listEditorTitle}>Valeurs de la liste</Text>
+                  </View>
+
+                  {listItems.map((item, index) => (
+                    <View key={index} style={styles.listEditorRow}>
+                      <TextInput
+                        style={styles.listEditorInput}
+                        value={item}
+                        onChangeText={(text) => {
+                          const updated = [...listItems];
+                          updated[index] = text;
+                          onListItemsChange(updated);
+                        }}
+                        placeholder={`Option ${index + 1}`}
+                        placeholderTextColor="#aaa"
+                        returnKeyType="done"
+                        onSubmitEditing={Keyboard.dismiss}
+                      />
+                      <TouchableOpacity
+                        onPress={() =>
+                          onListItemsChange(listItems.filter((_, i) => i !== index))
+                        }
+                        style={styles.listEditorDeleteBtn}
+                      >
+                        <Ionicons name="close-circle" size={22} color="#ef4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+
+                  <View style={styles.listEditorAddRow}>
+                    <TextInput
+                      style={styles.listEditorInput}
+                      value={listPendingValue}
+                      onChangeText={onListPendingValueChange}
+                      placeholder="Nouvelle valeur..."
+                      placeholderTextColor="#aaa"
+                      returnKeyType="done"
+                      onSubmitEditing={() => {
+                        const v = listPendingValue.trim();
+                        if (v) {
+                          onListItemsChange([...listItems, v]);
+                          onListPendingValueChange("");
+                        }
+                      }}
+                    />
+                    <TouchableOpacity
+                      onPress={() => {
+                        const v = listPendingValue.trim();
+                        if (v) {
+                          onListItemsChange([...listItems, v]);
+                          onListPendingValueChange("");
+                          Keyboard.dismiss();
+                        }
+                      }}
+                      style={styles.listEditorAddBtn}
+                    >
+                      <Ionicons name="add-circle" size={22} color="#f87b1b" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
 
               <View style={styles.switchRow}>
                 <View style={styles.switchTextContainer}>
@@ -271,6 +347,8 @@ export default function QuestionTypeManagerModal({
   const [type, setType] = useState<QuestionType["type"] | null>("boolean");
   const [quantity, setQuantity] = useState(false);
   const [price, setPrice] = useState(false);
+  const [listItems, setListItems] = useState<string[]>([]);
+  const [listPendingValue, setListPendingValue] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
@@ -316,6 +394,16 @@ export default function QuestionTypeManagerModal({
     setType(item.type || null);
     setQuantity(!!item.quantity);
     setPrice(!!item.price);
+    // Parse list items from mask (comma-separated) if type is list
+    if (item.type === "list" && item.mask) {
+      const parsed = item.mask
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean);
+      setListItems(parsed);
+    } else {
+      setListItems([]);
+    }
   };
 
   const handleBeginAdd = () => {
@@ -326,6 +414,8 @@ export default function QuestionTypeManagerModal({
     setType("boolean");
     setQuantity(false);
     setPrice(false);
+    setListItems([]);
+    setListPendingValue("");
   };
 
   const handleCancel = () => {
@@ -336,6 +426,8 @@ export default function QuestionTypeManagerModal({
     setType("boolean");
     setQuantity(false);
     setPrice(false);
+    setListItems([]);
+    setListPendingValue("");
   };
 
   const handleSubmit = async () => {
@@ -349,13 +441,24 @@ export default function QuestionTypeManagerModal({
 
     setIsSubmitting(true);
     try {
-      const questionData = {
-        title,
-        description: description.trim() ? description : undefined,
-        type,
-        quantity: quantity ? 1 : 0,
-        price: price ? 1 : 0,
-      };
+        // Build final list — include any unsaved pending text input
+        const pendingTrimmed = listPendingValue.trim();
+        const finalListItems =
+          pendingTrimmed && !listItems.includes(pendingTrimmed)
+            ? [...listItems, pendingTrimmed]
+            : listItems;
+
+        const questionData = {
+          title,
+          description: description.trim() ? description : undefined,
+          type,
+          quantity: quantity ? 1 : 0,
+          price: price ? 1 : 0,
+          mask:
+            type === "list" && finalListItems.length > 0
+              ? finalListItems.join(",")
+              : undefined,
+        };
 
       if (isEditing) {
         const updated = await updateQuestionType(
@@ -546,11 +649,15 @@ export default function QuestionTypeManagerModal({
               type={type}
               quantity={quantity}
               price={price}
+              listItems={listItems}
+              listPendingValue={listPendingValue}
               onTitleChange={setTitle}
               onDescriptionChange={setDescription}
               onTypeChange={setType}
               onQuantityChange={setQuantity}
               onPriceChange={setPrice}
+              onListItemsChange={setListItems}
+              onListPendingValueChange={setListPendingValue}
               onSubmit={handleSubmit}
               onCancel={handleCancel}
             />
@@ -831,5 +938,57 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     fontSize: 16,
     paddingHorizontal: 20,
+  },
+  // List editor styles
+  listEditorContainer: {
+    borderWidth: 1,
+    borderColor: "#f87b1b",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 15,
+    backgroundColor: "#fffaf5",
+  },
+  listEditorHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 10,
+  },
+  listEditorTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#f87b1b",
+  },
+  listEditorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 8,
+  },
+  listEditorInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 15,
+    color: "#11224e",
+    backgroundColor: "#fff",
+  },
+  listEditorDeleteBtn: {
+    padding: 2,
+  },
+  listEditorAddRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+    paddingTop: 8,
+  },
+  listEditorAddBtn: {
+    padding: 2,
   },
 });

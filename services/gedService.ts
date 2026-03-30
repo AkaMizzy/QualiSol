@@ -75,6 +75,7 @@ export interface Ged {
   iatxt?: string;
   quantity?: number;
   price?: number;
+  mask?: string | null;
   mode?: "upload" | "capture";
   created_at: string;
   value?: string;
