@@ -45,8 +45,10 @@ type FormComponentProps = {
   price: boolean;
   listItems: string[];
   listPendingValue: string;
+  bloc: string;
   onTitleChange: (text: string) => void;
   onDescriptionChange: (text: string) => void;
+  onBlocChange: (text: string) => void;
   onTypeChange: (type: QuestionType["type"] | null) => void;
   onQuantityChange: (value: boolean) => void;
   onPriceChange: (value: boolean) => void;
@@ -67,8 +69,10 @@ const FormComponent = ({
   price,
   listItems,
   listPendingValue,
+  bloc,
   onTitleChange,
   onDescriptionChange,
+  onBlocChange,
   onTypeChange,
   onQuantityChange,
   onPriceChange,
@@ -117,6 +121,18 @@ const FormComponent = ({
               </Text>
 
               <View style={styles.inputContainer}>
+                <Ionicons name="folder-open-outline" size={20} color="#f87b1b" />
+                <TextInput
+                  placeholder="Titre du bloc (optionnel)"
+                  placeholderTextColor="#f87b1b"
+                  value={bloc}
+                  onChangeText={onBlocChange}
+                  style={styles.input}
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                />
+              </View>
+              <View style={styles.inputContainer}>
                 <Ionicons name="text-outline" size={20} color="#f87b1b" />
                 <TextInput
                   placeholder="la question"
@@ -128,6 +144,8 @@ const FormComponent = ({
                   onSubmitEditing={Keyboard.dismiss}
                 />
               </View>
+
+              
 
               <TouchableOpacity
                 style={styles.inputContainer}
@@ -326,6 +344,36 @@ const FormComponent = ({
   );
 };
 
+// Helper: Sort group elements by their bloc, then by order, then by creation date (oldest first)
+const sortQuestions = (questions: QuestionType[]) => {
+  return [...questions].sort((a, b) => {
+    const blocA = (a.bloc || "").trim().toLowerCase();
+    const blocB = (b.bloc || "").trim().toLowerCase();
+    
+    // Group by bloc, pushing empty ones to the bottom
+    if (!blocA && blocB) return 1;
+    if (blocA && !blocB) return -1;
+    if (blocA !== blocB) return blocA.localeCompare(blocB);
+
+    // Then prioritize custom user ordering if defined
+    const hasOrderA = a.order != null;
+    const hasOrderB = b.order != null;
+
+    if (hasOrderA && !hasOrderB) return -1; // A has order, B doesn't -> A top
+    if (!hasOrderA && hasOrderB) return 1;  // B has order, A doesn't -> B top
+    
+    // If both have order and they differ, use order
+    if (hasOrderA && hasOrderB && a.order !== b.order) {
+      return a.order! - b.order!;
+    }
+
+    // Otherwise strictly chronological (first created is top)
+    const dateA = a.created_at || "";
+    const dateB = b.created_at || "";
+    return dateA.localeCompare(dateB);
+  });
+};
+
 type Props = {
   visible: boolean;
   onClose: () => void;
@@ -344,6 +392,7 @@ export default function QuestionTypeManagerModal({
   const [isAdding, setIsAdding] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [bloc, setBloc] = useState("");
   const [type, setType] = useState<QuestionType["type"] | null>("boolean");
   const [quantity, setQuantity] = useState(false);
   const [price, setPrice] = useState(false);
@@ -358,21 +407,7 @@ export default function QuestionTypeManagerModal({
     setIsLoading(true);
     try {
       const types = await getQuestionTypesByFolder(folderType.id, token);
-      // Ensure we sort by order and fallback to created_at if order is not set
-      const sorted = [...types].sort((a, b) => {
-        if (
-          a.order !== null &&
-          a.order !== undefined &&
-          b.order !== null &&
-          b.order !== undefined
-        ) {
-          return a.order - b.order;
-        }
-        return (
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        );
-      });
-      setQuestionTypes(sorted);
+      setQuestionTypes(sortQuestions(types));
     } catch (error) {
       console.error("Failed to fetch question types:", error);
     } finally {
@@ -391,6 +426,7 @@ export default function QuestionTypeManagerModal({
     setIsAdding(true);
     setTitle(item.title);
     setDescription(item.description || "");
+    setBloc(item.bloc || "");
     setType(item.type || null);
     setQuantity(!!item.quantity);
     setPrice(!!item.price);
@@ -451,6 +487,7 @@ export default function QuestionTypeManagerModal({
         const questionData = {
           title,
           description: description.trim() ? description : undefined,
+          bloc: bloc.trim() ? bloc : undefined,
           type,
           quantity: quantity ? 1 : 0,
           price: price ? 1 : 0,
@@ -467,14 +504,15 @@ export default function QuestionTypeManagerModal({
           token,
         );
         setQuestionTypes((prev) =>
-          prev.map((t) => (t.id === updated.id ? updated : t)),
+          sortQuestions(prev.map((t) => (t.id === updated.id ? updated : t))),
         );
       } else {
         const newQuestion = await createQuestionType(
           { ...questionData, foldertype_id: folderType.id },
           token,
         );
-        setQuestionTypes((prev) => [newQuestion, ...prev]);
+        // Append at the bottom and resort logically
+        setQuestionTypes((prev) => sortQuestions([...prev, newQuestion]));
       }
       handleCancel();
     } catch (error) {
@@ -569,21 +607,34 @@ export default function QuestionTypeManagerModal({
     item,
     drag,
     isActive,
-  }: RenderItemParams<QuestionType>) => (
-    <ScaleDecorator>
-      <TouchableOpacity
-        activeOpacity={1}
-        onLongPress={drag}
-        disabled={isActive}
-        style={[
-          styles.itemCard,
-          isActive && {
-            backgroundColor: "#f3f4f6",
-            elevation: 5,
-            shadowOpacity: 0.2,
-          },
-        ]}
-      >
+    getIndex,
+  }: RenderItemParams<QuestionType>) => {
+    const index = getIndex() || 0;
+    const isFirstOfBloc = index === 0 || questionTypes[index - 1]?.bloc !== item.bloc;
+
+    return (
+      <>
+        {isFirstOfBloc && (
+          <View style={styles.blocGroupHeader}>
+            <Text style={styles.blocGroupHeaderText}>
+              {item.bloc ? item.bloc.toUpperCase() : "SANS BLOC"}
+            </Text>
+          </View>
+        )}
+        <ScaleDecorator>
+          <TouchableOpacity
+            activeOpacity={1}
+            onLongPress={drag}
+            disabled={isActive}
+            style={[
+              styles.itemCard,
+              isActive && {
+                backgroundColor: "#f3f4f6",
+                elevation: 5,
+                shadowOpacity: 0.2,
+              },
+            ]}
+          >
         <TouchableOpacity onPressIn={drag} style={styles.dragHandle}>
           <Ionicons name="reorder-two" size={24} color="#9ca3af" />
         </TouchableOpacity>
@@ -595,26 +646,28 @@ export default function QuestionTypeManagerModal({
               { fontStyle: "italic", marginTop: 4 },
             ]}
           >
-            Type: {item.type}
+            Type: {item.type} {item.bloc ? ` • Bloc: ${item.bloc}` : ""}
           </Text>
         </View>
-        <View style={styles.itemActions}>
-          <TouchableOpacity
-            onPress={() => handleBeginEdit(item)}
-            style={styles.iconButton}
-          >
-            <Ionicons name="pencil" size={20} color="#11224e" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => handleDelete(item.id)}
-            style={styles.iconButton}
-          >
-            <Ionicons name="trash" size={20} color="#ef4444" />
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    </ScaleDecorator>
+          <View style={styles.itemActions}>
+            <TouchableOpacity
+              onPress={() => handleBeginEdit(item)}
+              style={styles.iconButton}
+            >
+              <Ionicons name="pencil" size={20} color="#11224e" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => handleDelete(item.id)}
+              style={styles.iconButton}
+            >
+              <Ionicons name="trash" size={20} color="#ef4444" />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </ScaleDecorator>
+    </>
   );
+};
 
   return (
     <Modal
@@ -651,8 +704,10 @@ export default function QuestionTypeManagerModal({
               price={price}
               listItems={listItems}
               listPendingValue={listPendingValue}
+              bloc={bloc}
               onTitleChange={setTitle}
               onDescriptionChange={setDescription}
+              onBlocChange={setBloc}
               onTypeChange={setType}
               onQuantityChange={setQuantity}
               onPriceChange={setPrice}
@@ -990,5 +1045,26 @@ const styles = StyleSheet.create({
   },
   listEditorAddBtn: {
     padding: 2,
+  },
+  blocGroupHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#f87b1b",
+    marginTop: 16,
+    marginBottom: 8,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#f87b1b",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  blocGroupHeaderText: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#ffffff",
+    letterSpacing: 1.5,
   },
 });

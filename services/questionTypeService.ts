@@ -22,6 +22,7 @@ export type QuestionType = {
   mask?: string | null;
   quantity?: number | null;
   price?: number | null;
+  bloc?: string | null;
   order?: number | null;
   status_id: string;
   status?: string | null;
@@ -61,6 +62,7 @@ export type CreateQuestionTypeDto = {
   mask?: string | null;
   quantity?: number;
   price?: number;
+  bloc?: string;
 };
 
 export async function createQuestionType(
@@ -92,6 +94,7 @@ export type UpdateQuestionTypeDto = {
   mask?: string | null;
   quantity?: number;
   price?: number;
+  bloc?: string;
 };
 
 export async function updateQuestionType(
