@@ -23,6 +23,23 @@ import { useAuth } from "@/contexts/AuthContext";
 import * as gedService from "@/services/gedService";
 import { Ged, generateFolderQaPdf } from "@/services/gedService";
 
+// Sort questions: group by bloc (empty blocs last), then alphabetically by bloc, then by creation date
+const sortQuestions = (questions: Ged[]): Ged[] => {
+  return [...questions].sort((a, b) => {
+    const blocA = (a.bloc || "").trim().toLowerCase();
+    const blocB = (b.bloc || "").trim().toLowerCase();
+
+    if (!blocA && blocB) return 1;   // A has no bloc → push to bottom
+    if (blocA && !blocB) return -1;  // B has no bloc → push to bottom
+    if (blocA !== blocB) return blocA.localeCompare(blocB);
+
+    // Within the same bloc: sort chronologically (oldest first)
+    const dateA = a.created_at || "";
+    const dateB = b.created_at || "";
+    return dateA.localeCompare(dateB);
+  });
+};
+
 import AppHeader from "@/components/AppHeader";
 import * as ImagePicker from "expo-image-picker";
 import AnswerModal from "./AnswerModal";
@@ -182,9 +199,12 @@ export default function FolderQuestionsModal({
           (g) => g.type && SUPPORTED_TYPES.includes(g.type),
         );
 
+        // Sort by bloc (unassigned last), then chronologically within each bloc
+        const sortedQuestions = sortQuestions(validQuestions);
+
         const initialPending: Record<string, AnswerData> = {};
 
-        validQuestions.forEach((q) => {
+        sortedQuestions.forEach((q) => {
           const val = q.answer || q.value || "";
           if (
             val ||
@@ -208,7 +228,7 @@ export default function FolderQuestionsModal({
           }
         });
 
-        setGeds(validQuestions);
+        setGeds(sortedQuestions);
         setPendingChanges(initialPending);
       } catch (err) {
         console.error(err);
@@ -372,14 +392,28 @@ export default function FolderQuestionsModal({
             style={{ flex: 1 }}
           >
             <ScrollView contentContainerStyle={styles.listContent}>
-              {geds.map((question) => (
-                <QuestionRow
-                  key={question.id}
-                  item={question}
-                  answer={pendingChanges[question.id]}
-                  onOpenAnswerModal={handleOpenAnswerModal}
-                />
-              ))}
+              {geds.map((question, index) => {
+                const isFirstOfBloc =
+                  index === 0 || geds[index - 1].bloc !== question.bloc;
+                return (
+                  <React.Fragment key={question.id}>
+                    {isFirstOfBloc && (
+                      <View style={styles.blocGroupHeader}>
+                        <Text style={styles.blocGroupHeaderText}>
+                          {question.bloc
+                            ? question.bloc.toUpperCase()
+                            : "SANS BLOC"}
+                        </Text>
+                      </View>
+                    )}
+                    <QuestionRow
+                      item={question}
+                      answer={pendingChanges[question.id]}
+                      onOpenAnswerModal={handleOpenAnswerModal}
+                    />
+                  </React.Fragment>
+                );
+              })}
             </ScrollView>
           </KeyboardAvoidingView>
         )}
@@ -408,6 +442,28 @@ export default function FolderQuestionsModal({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
+  blocGroupHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#f87b1b",
+    marginTop: 16,
+    marginBottom: 8,
+    marginHorizontal: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#f87b1b",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  blocGroupHeaderText: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#ffffff",
+    letterSpacing: 1.5,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
